@@ -1,0 +1,115 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Theme tokens for the PR sequence view. All colors in that view come from
+   these variables so the dark variant only swaps values, never markup. */
+:root {
+    --seq-surface-0: #ffffff;
+    --seq-surface-1: #f4f4f5;
+    --seq-border: #e4e4e7;
+    --seq-text: #18181b;
+    --seq-muted: #71717a;
+    --seq-faint: #a1a1aa;
+    --seq-accent: #4338ca;
+    --seq-danger: #dc2626;
+    --seq-pill-bg: #18181b;
+    --seq-pill-text: #fafafa;
+    --seq-pill-badge: rgb(255 255 255 / 0.22);
+
+    --seq-amber-rail: #f59e0b;
+    --seq-amber-tint: rgb(245 158 11 / 0.14);
+    --seq-amber-row: rgb(245 158 11 / 0.06);
+    --seq-amber-text: #92400e;
+
+    --seq-red-rail: #ef4444;
+    --seq-red-rail-soft: rgb(239 68 68 / 0.5);
+    --seq-red-tint: rgb(239 68 68 / 0.12);
+    --seq-red-text: #991b1b;
+
+    --seq-green-rail: #22c55e;
+    --seq-green-tint: rgb(34 197 94 / 0.14);
+    --seq-green-text: #166534;
+
+    --seq-teal-rail: #14b8a6;
+    --seq-teal-tint: rgb(20 184 166 / 0.14);
+    --seq-teal-text: #0f766e;
+
+    /* Status-Farbschema: beansprucht=hellblau, in Analyse=blau,
+       in Arbeit=dunkelblau, in Review=lila. */
+    --seq-sky-rail: #0ea5e9;
+    --seq-sky-tint: rgb(14 165 233 / 0.14);
+    --seq-sky-text: #075985;
+
+    --seq-blue-rail: #3b82f6;
+    --seq-blue-tint: rgb(59 130 246 / 0.14);
+    --seq-blue-text: #1e40af;
+
+    --seq-navy-rail: #1e40af;
+    --seq-navy-tint: rgb(30 64 175 / 0.16);
+    --seq-navy-text: #1e3a8a;
+
+    --seq-purple-rail: #9333ea;
+    --seq-purple-tint: rgb(147 51 234 / 0.14);
+    --seq-purple-text: #6b21a8;
+
+    /* Zeilen-Hintergrund für aktive Arbeit (Analyse/Arbeit/Review). */
+    --seq-active-row: rgb(59 130 246 / 0.06);
+}
+
+@media (prefers-color-scheme: dark) {
+    :root {
+        --seq-surface-0: #1c1c1f;
+        --seq-surface-1: #27272a;
+        --seq-border: #3f3f46;
+        --seq-text: #f4f4f5;
+        --seq-muted: #a1a1aa;
+        --seq-faint: #71717a;
+        --seq-accent: #a5b4fc;
+        --seq-danger: #f87171;
+        --seq-pill-bg: #fafafa;
+        --seq-pill-text: #18181b;
+        --seq-pill-badge: rgb(0 0 0 / 0.15);
+
+        --seq-amber-row: rgb(245 158 11 / 0.09);
+        --seq-amber-text: #fbbf24;
+        --seq-red-text: #fca5a5;
+        --seq-green-text: #86efac;
+        --seq-teal-text: #5eead4;
+
+        --seq-sky-text: #7dd3fc;
+        --seq-blue-text: #93c5fd;
+        --seq-navy-rail: #60a5fa;
+        --seq-navy-text: #bfdbfe;
+        --seq-purple-text: #d8b4fe;
+        --seq-active-row: rgb(59 130 246 / 0.10);
+    }
+}
+
+/* Rendered-markdown surface (task descriptions, status docs …). Kept here as a
+   single source so any <x-markdown> renders consistently outside the Tailwind
+   reset. */
+.md-content { color: #1f2937; font-size: .875rem; line-height: 1.6; }
+.md-content > :first-child { margin-top: 0; }
+.md-content > :last-child { margin-bottom: 0; }
+.md-content h1 { font-size: 1.4rem; font-weight: 700; color: #111827; margin: 1.25rem 0 .6rem; }
+.md-content h2 { font-size: 1.15rem; font-weight: 600; color: #1f2937; margin: 1.25rem 0 .5rem; }
+.md-content h3 { font-size: 1rem; font-weight: 600; color: #374151; margin: 1rem 0 .4rem; }
+.md-content h4 { font-size: .9rem; font-weight: 600; color: #374151; margin: .9rem 0 .35rem; }
+.md-content p { margin: .5rem 0; }
+.md-content a { color: #4338ca; text-decoration: underline; }
+.md-content ul { list-style: disc; padding-left: 1.4rem; margin: .5rem 0; }
+.md-content ol { list-style: decimal; padding-left: 1.4rem; margin: .5rem 0; }
+.md-content li { margin: .2rem 0; }
+.md-content li > ul, .md-content li > ol { margin: .2rem 0; }
+.md-content code { background: #f3f4f6; padding: .05rem .3rem; border-radius: .25rem; font-size: .8em; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+.md-content pre { background: #f3f4f6; padding: .75rem 1rem; border-radius: .5rem; overflow-x: auto; margin: .75rem 0; }
+.md-content pre code { background: none; padding: 0; font-size: .8rem; }
+.md-content blockquote { border-left: 3px solid #d1d5db; padding-left: .8rem; color: #6b7280; margin: .75rem 0; }
+.md-content hr { border: 0; border-top: 1px solid #e5e7eb; margin: 1rem 0; }
+.md-content table { width: 100%; border-collapse: collapse; font-size: .8rem; margin: .75rem 0; }
+.md-content th, .md-content td { border: 1px solid #e5e7eb; padding: .35rem .55rem; text-align: left; vertical-align: top; }
+.md-content th { background: #f9fafb; font-weight: 600; color: #374151; }
+.md-content tbody tr:nth-child(even) { background: #fafafa; }
+.md-content strong { color: #111827; font-weight: 600; }
+.md-content img { max-width: 100%; height: auto; }

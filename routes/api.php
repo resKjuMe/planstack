@@ -1,0 +1,62 @@
+<?php
+
+use App\Http\Controllers\Api\McpController;
+use App\Http\Controllers\Api\PhaseController;
+use App\Http\Controllers\Api\ProjectController;
+use App\Http\Controllers\Api\TaskController;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Route;
+
+/*
+|--------------------------------------------------------------------------
+| API-Routen (Token-Auth via Sanctum)
+|--------------------------------------------------------------------------
+|
+| Alle Routen sind mit dem Präfix /api gebunden. Authentifizierung erfolgt
+| über Bearer-Personal-Access-Tokens (Sanctum). Ohne gültiges Token → 401.
+| Projekte werden über ihren Alias gebunden, Tasks über die id.
+|
+*/
+
+Route::middleware('auth:sanctum')->group(function () {
+    // Wer bin ich? (Smoke-Test für Token-Auth)
+    Route::get('/user', fn (Request $request) => $request->user());
+
+    // Projekte
+    Route::get('projects', [ProjectController::class, 'index']);
+    Route::post('projects', [ProjectController::class, 'store']);
+    Route::get('projects/{project}', [ProjectController::class, 'show']);
+    Route::patch('projects/{project}', [ProjectController::class, 'update']);
+
+    // Board-Read (pickable/Aggregate/Gates) — Einstieg für Board-Clients
+    Route::get('projects/{project}/board', [ProjectController::class, 'board']);
+
+    // MCP-Server (Streamable-HTTP, JSON-RPC 2.0) — pro Projekt, gleiche Token-Auth
+    Route::match(['get', 'post'], 'projects/{project}/mcp', McpController::class)->name('projects.mcp');
+
+    // Phasen
+    Route::get('projects/{project}/phases', [PhaseController::class, 'index']);
+    Route::post('projects/{project}/phases', [PhaseController::class, 'store']);
+    Route::match(['put', 'patch'], 'projects/{project}/phases/{phase}', [PhaseController::class, 'update'])->scopeBindings();
+    Route::delete('projects/{project}/phases/{phase}', [PhaseController::class, 'destroy'])->scopeBindings();
+
+    // Tasks (CRUD)
+    Route::get('projects/{project}/tasks', [TaskController::class, 'index']);
+    Route::post('projects/{project}/tasks', [TaskController::class, 'store']);
+    Route::get('projects/{project}/tasks/{task}', [TaskController::class, 'show'])->scopeBindings();
+    Route::match(['put', 'patch'], 'projects/{project}/tasks/{task}', [TaskController::class, 'update'])->scopeBindings();
+    Route::delete('projects/{project}/tasks/{task}', [TaskController::class, 'destroy'])->scopeBindings();
+
+    // Task-Aktionen (Write)
+    Route::scopeBindings()->group(function () {
+        Route::post('projects/{project}/tasks/{task}/claim', [TaskController::class, 'claim']);
+        Route::post('projects/{project}/tasks/{task}/release', [TaskController::class, 'release']);
+        Route::post('projects/{project}/tasks/{task}/status', [TaskController::class, 'status']);
+        Route::post('projects/{project}/tasks/{task}/pr', [TaskController::class, 'pr']);
+        Route::post('projects/{project}/tasks/{task}/merge', [TaskController::class, 'merge']);
+        Route::post('projects/{project}/tasks/{task}/gate', [TaskController::class, 'gate']);
+        Route::post('projects/{project}/tasks/{task}/concern', [TaskController::class, 'concern']);
+        Route::delete('projects/{project}/tasks/{task}/concern', [TaskController::class, 'resolveConcern']);
+        Route::post('projects/{project}/tasks/{task}/split', [TaskController::class, 'split']);
+    });
+});

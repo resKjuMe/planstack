@@ -1,0 +1,32 @@
+<?php
+
+namespace App\Policies;
+
+use App\Models\Team;
+use App\Models\User;
+
+class TeamPolicy
+{
+    public function view(User $user, Team $team): bool
+    {
+        return $team->hasMember($user);
+    }
+
+    public function create(User $user): bool
+    {
+        return true;
+    }
+
+    public function delete(User $user, Team $team): bool
+    {
+        return $team->isOwner($user);
+    }
+
+    /**
+     * Only the creator may add/remove team members.
+     */
+    public function manageMembers(User $user, Team $team): bool
+    {
+        return $team->isOwner($user);
+    }
+}
