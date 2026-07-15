@@ -22,10 +22,16 @@ class ProjectController extends Controller
         // done_sp spiegelt TaskBoardService::isDelivered() (PR vorhanden oder
         // COMPLETED/MERGED) — dieselbe Definition wie die Phasen-Fortschrittsbalken
         // im Status-Bereich, nur hier als Aggregat statt in PHP je Task berechnet.
+        // closed_tasks_count ist bewusst enger (nur COMPLETED/MERGED, kein offener
+        // PR): für die Kopfzeile zählt "offen" den Task-Lifecycle, nicht das
+        // SP-Gate.
         $projects = Project::query()
             ->where('created_by_id', $userId)
             ->orWhereHas('memberships', fn ($q) => $q->where('user_id', $userId))
             ->withCount('tasks')
+            ->withCount(['tasks as closed_tasks_count' => fn (Builder $q) => $q->whereIn(
+                'status', [TaskStatus::COMPLETED, TaskStatus::MERGED]
+            )])
             ->withSum('tasks as total_sp', 'effort_story_points')
             ->withSum(['tasks as done_sp' => fn (Builder $q) => $q->where(
                 fn (Builder $q) => $q->whereNotNull('pr_number')
@@ -35,7 +41,10 @@ class ProjectController extends Controller
             ->latest()
             ->get();
 
-        return view('projects.index', compact('projects'));
+        $openTasks = $projects->sum(fn (Project $p) => $p->tasks_count - $p->closed_tasks_count);
+        $totalSp = (int) $projects->sum('total_sp');
+
+        return view('projects.index', compact('projects', 'userId', 'openTasks', 'totalSp'));
     }
 
     public function create(): View
