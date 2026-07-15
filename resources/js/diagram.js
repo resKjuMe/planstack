@@ -164,12 +164,76 @@ function nodeLabel(n, showDesc = false) {
     return parts.join('');
 }
 
+// Nach wie vielen nebeneinanderstehenden Knoten umgebrochen wird — sowohl bei
+// unabhängigen Knoten (kein Pfad zueinander) als auch bei "Geschwistern", die
+// zufällig im selben Rang landen (z. B. 8 Tasks, die alle vom selben Parent
+// freigeschaltet werden). Ohne Deckel würde ELK sie beliebig breit nebeneinander
+// packen und der Graph liefe aus dem sichtbaren Bereich.
+const MAX_ROW_WIDTH = 5;
+
+// Unsichtbare Kanten (~~~) zwischen Knoten i und i+MAX_ROW_WIDTH derselben
+// Gruppe zwingen ELK, jedes 6. Element eine Zeile tiefer zu setzen (TB-Layout:
+// eine Kante verschiebt das Ziel immer in einen späteren Rang) — die Gruppe
+// wickelt sich so als Raster mit maximal MAX_ROW_WIDTH Spalten ab, ohne dass
+// eine sichtbare Linie/Pfeil entsteht.
+function wrapLinks(group) {
+    const links = [];
+    for (let i = 0; i + MAX_ROW_WIDTH < group.length; i++) {
+        links.push(`${group[i].key} ~~~ ${group[i + MAX_ROW_WIDTH].key}`);
+    }
+    return links;
+}
+
+// Rang je Knoten über den längsten Pfad ab den Wurzeln (Kahn-Reihenfolge),
+// damit wir wissen, welche verbundenen Knoten ELK vermutlich in dieselbe
+// Zeile packen würde — nur Knoten mit mindestens einer Kante nehmen teil.
+function computeRanks(nodes, edges) {
+    const rank = new Map(nodes.map((n) => [n.key, 0]));
+    const indegree = new Map(nodes.map((n) => [n.key, 0]));
+    const adj = new Map(nodes.map((n) => [n.key, []]));
+    for (const e of edges) {
+        adj.get(e.from)?.push(e.to);
+        indegree.set(e.to, (indegree.get(e.to) ?? 0) + 1);
+    }
+
+    const queue = nodes.filter((n) => (indegree.get(n.key) ?? 0) === 0).map((n) => n.key);
+    while (queue.length) {
+        const key = queue.shift();
+        for (const next of adj.get(key) ?? []) {
+            rank.set(next, Math.max(rank.get(next), rank.get(key) + 1));
+            indegree.set(next, indegree.get(next) - 1);
+            if (indegree.get(next) === 0) queue.push(next);
+        }
+    }
+    return rank;
+}
+
+// Gruppiert die verbundenen Knoten (mind. eine Kante) nach Rang — das sind
+// die Kandidaten für "zufällig nebeneinander gelandete Geschwister".
+function rankGroups(nodes, edges) {
+    const connected = new Set();
+    for (const e of edges) {
+        connected.add(e.from);
+        connected.add(e.to);
+    }
+    const involved = nodes.filter((n) => connected.has(n.key));
+    const rank = computeRanks(involved, edges);
+
+    const groups = new Map();
+    for (const n of involved) {
+        const r = rank.get(n.key) ?? 0;
+        if (!groups.has(r)) groups.set(r, []);
+        groups.get(r).push(n);
+    }
+    return [...groups.values()];
+}
+
 // Tasks ohne jede Kante (weder Vorgänger noch Nachfolger) haben für den Layout-
 // Algorithmus keinen Grund, in unterschiedliche Ränge zu wandern — sie landen
 // sonst alle im selben Rang und reihen sich in einer einzigen, breiten Zeile
-// auf. Unsichtbare Kanten (~~~) verketten sie stattdessen zu einer einzigen
-// Spalte, ohne dass eine sichtbare Linie/Pfeil entsteht.
-function independentColumnLinks(nodes, edges) {
+// auf. Wie bei den Geschwister-Gruppen wird auch hier nur bis MAX_ROW_WIDTH
+// nebeneinander gestellt, der Rest wickelt sich darunter ab.
+function rowWrapLinks(nodes, edges) {
     const connected = new Set();
     for (const e of edges) {
         connected.add(e.from);
@@ -177,9 +241,9 @@ function independentColumnLinks(nodes, edges) {
     }
     const loose = nodes.filter((n) => !connected.has(n.key));
 
-    const links = [];
-    for (let i = 1; i < loose.length; i++) {
-        links.push(`${loose[i - 1].key} ~~~ ${loose[i].key}`);
+    const links = [...wrapLinks(loose)];
+    for (const group of rankGroups(nodes, edges)) {
+        links.push(...wrapLinks(group));
     }
     return links;
 }
@@ -201,7 +265,7 @@ function buildSource(nodes, edges, showDesc = false) {
         styles.push(`linkStyle ${i} ${e.met ? EDGE_MET : EDGE_OPEN}`);
     });
     lines.push(...styles);
-    lines.push(...independentColumnLinks(nodes, edges));
+    lines.push(...rowWrapLinks(nodes, edges));
 
     return lines.join('\n');
 }
