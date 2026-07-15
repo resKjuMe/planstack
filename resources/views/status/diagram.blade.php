@@ -82,7 +82,7 @@
          data-diagram
          data-diagram-name="{{ $project->alias }}"
          data-graph='@json($graph, JSON_HEX_APOS | JSON_HEX_QUOT)'>
-        <div class="ps-graph flex min-h-[280px] items-start justify-center"></div>
+        <div class="ps-graph min-h-[280px]"></div>
         <p class="ps-diagram-empty hidden py-10 text-center text-sm text-gray-400">Keine offenen PRs.</p>
     </div>
 
@@ -97,12 +97,18 @@
             box-shadow: inset 0 0 0 1px #6366f1;
         }
 
+        /* Zentriert das SVG nur, solange es in den Container passt; ist es
+           breiter (useMaxWidth:false in diagram.js lässt es in echter Größe
+           rendern), scrollt .ps-diagram (overflow-auto) bis an beide Ränder.
+           Mit flex+justify-center (früher hier) klemmt der Browser bei
+           zentriertem Overflow beide Seiten gleichermaßen ab — mit
+           margin:auto auf einem Block-Element passiert das nicht.
+           overflow:visible, damit die Eck-Badges (Flaschenhals, PR-Nummer
+           erledigter Knoten), die bewusst über den Knotenrand hinausragen,
+           nicht am SVG-Rand gekappt werden. */
+        .ps-graph svg { display: block; margin: 0 auto; overflow: visible; }
         /* Klickbarer Knoten; die Chain-Hervorhebung dimmt alles Übrige stark. */
         .ps-graph .node { cursor: pointer; }
-        /* Eck-Badges (Flaschenhals, PR-Nummer erledigter Knoten) ragen bewusst
-           über den Knotenrand hinaus. foreignObject beschneidet Inhalt per
-           Default — hier freigeben, sonst wird der obere Teil der Badges gekappt. */
-        .ps-graph svg { overflow: visible; }
         .ps-graph foreignObject,
         .ps-graph foreignObject > div { overflow: visible; }
         .ps-graph.has-focus .node,
