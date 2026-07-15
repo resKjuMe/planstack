@@ -240,7 +240,7 @@
                                                             ? 'border-[#D97757] bg-[#D97757]/5 text-gray-900 ring-1 ring-[#D97757]'
                                                             : 'border-gray-200 text-gray-700 hover:border-gray-300 hover:bg-gray-50'">
                                                     <span class="mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-gray-100 text-xs font-semibold text-gray-500"
-                                                          x-text="String.fromCharCode(97 + i)"></span>
+                                                          x-text="String.fromCharCode(65 + i)"></span>
                                                     <span x-text="opt"></span>
                                                 </button>
                                             </template>
