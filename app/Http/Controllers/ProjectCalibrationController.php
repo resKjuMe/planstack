@@ -150,9 +150,33 @@ class ProjectCalibrationController extends Controller
                 default => 'keine Dateischätzungen bei gemergten Tasks mit PR-Daten',
             },
             'avgDurationPerSp' => $avgDurationPerSp,
+            'avgDurationPerSpLabel' => $avgDurationPerSp !== null ? $this->formatDurationSmart($avgDurationPerSp) : null,
+            'storyPointsPerEightHours' => $avgDurationPerSp !== null && $avgDurationPerSp > 0
+                ? 8 / ($avgDurationPerSp * 24)
+                : null,
             'hits' => $withDeviation->filter(fn (array $r) => abs($r['deviationPct']) <= 25)->count(),
             'hitsTotal' => $withDeviation->count(),
         ];
+    }
+
+    /**
+     * Wählt automatisch die passende Einheit (Minuten/Stunden/Tage), da
+     * Dauer-je-SP-Werte je nach Story-Point-Größe stark streuen.
+     */
+    private function formatDurationSmart(float $days): string
+    {
+        $minutes = $days * 24 * 60;
+
+        if ($minutes < 60) {
+            return number_format(max(0, $minutes), 0, ',', '').' Min';
+        }
+
+        $hours = $minutes / 60;
+        if ($hours < 24) {
+            return number_format($hours, 1, ',', '').' Std';
+        }
+
+        return number_format($days, 1, ',', '').' Tage';
     }
 
     /**
