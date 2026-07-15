@@ -23,9 +23,10 @@ mermaid.initialize({
         // Roomy spacing so the done-node corner badge (5a) never crowds a
         // neighbour or an edge — mermaid can't inflate the dagre box for an
         // out-of-flow badge, so we buy the clearance here instead.
-        nodeSpacing: 50,
-        rankSpacing: 68,
+        nodeSpacing: 70,
+        rankSpacing: 120,
         padding: 8,
+        useMaxWidth: false,
     },
 });
 
@@ -164,92 +165,12 @@ function nodeLabel(n, showDesc = false) {
     return parts.join('');
 }
 
-// Nach wie vielen nebeneinanderstehenden Knoten umgebrochen wird — sowohl bei
-// unabhängigen Knoten (kein Pfad zueinander) als auch bei "Geschwistern", die
-// zufällig im selben Rang landen (z. B. 8 Tasks, die alle vom selben Parent
-// freigeschaltet werden). Ohne Deckel würde ELK sie beliebig breit nebeneinander
-// packen und der Graph liefe aus dem sichtbaren Bereich.
-const MAX_ROW_WIDTH = 5;
-
-// Verbindet zwei Knotenlisten vollständig (jeder mit jedem) über unsichtbare
-// Kanten (~~~). Das zwingt ELK, jeden Knoten von `overflow` einen Rang tiefer
-// zu setzen als jeden Knoten von `row` (TB-Layout: eine Kante verschiebt das
-// Ziel immer in einen späteren Rang) — ohne dass eine sichtbare Linie/Pfeil
-// entsteht. Wichtig ist "jeder mit jedem" statt nur einer Diagonalen: nur so
-// bekommt *jeder* Knoten von `overflow` mindestens eine Kante und wird damit
-// Teil derselben Komponente. Mit einer schwächeren Verkettung blieben einzelne
-// Knoten ganz ohne Kante übrig — und ELK packt sie dann wieder als eigene,
-// separate Komponente neben die Gruppe.
-function connectAll(row, overflow) {
-    const links = [];
-    for (const a of row) {
-        for (const b of overflow) {
-            links.push(`${a.key} ~~~ ${b.key}`);
-        }
-    }
-    return links;
-}
-
-// Rang je Knoten über den längsten Pfad ab den Wurzeln (Kahn-Reihenfolge),
-// damit wir wissen, welche verbundenen Knoten ELK vermutlich in dieselbe
-// Zeile packen würde — nur Knoten mit mindestens einer Kante nehmen teil.
-function computeRanks(nodes, edges) {
-    const rank = new Map(nodes.map((n) => [n.key, 0]));
-    const indegree = new Map(nodes.map((n) => [n.key, 0]));
-    const adj = new Map(nodes.map((n) => [n.key, []]));
-    for (const e of edges) {
-        adj.get(e.from)?.push(e.to);
-        indegree.set(e.to, (indegree.get(e.to) ?? 0) + 1);
-    }
-
-    const queue = nodes.filter((n) => (indegree.get(n.key) ?? 0) === 0).map((n) => n.key);
-    while (queue.length) {
-        const key = queue.shift();
-        for (const next of adj.get(key) ?? []) {
-            rank.set(next, Math.max(rank.get(next), rank.get(key) + 1));
-            indegree.set(next, indegree.get(next) - 1);
-            if (indegree.get(next) === 0) queue.push(next);
-        }
-    }
-    return rank;
-}
-
-// Gruppiert die verbundenen Knoten (mind. eine Kante) nach Rang — das sind
-// die Kandidaten für "zufällig nebeneinander gelandete Geschwister".
-function rankGroups(nodes, edges) {
-    const connected = new Set();
-    for (const e of edges) {
-        connected.add(e.from);
-        connected.add(e.to);
-    }
-    const involved = nodes.filter((n) => connected.has(n.key));
-    const rank = computeRanks(involved, edges);
-
-    const groups = new Map();
-    for (const n of involved) {
-        const r = rank.get(n.key) ?? 0;
-        if (!groups.has(r)) groups.set(r, []);
-        groups.get(r).push(n);
-    }
-    return groups;
-}
-
 // Tasks ohne jede Kante (weder Vorgänger noch Nachfolger) haben für den Layout-
 // Algorithmus keinen Grund, in unterschiedliche Ränge zu wandern — sie landen
-// sonst optisch ganz oben, auf Höhe von Rang 0. Deswegen zählen sie für den
-// Breiten-Deckel MIT den echten Rang-0-Wurzelknoten zusammen: ELK behandelt
-// unverbundene Knoten(-gruppen) sonst als eigene Komponenten und packt sie
-// nebeneinander — zwei für sich genommene Grüppchen blieben so unbemerkt unter
-// dem Deckel, ergäben zusammen aber wieder mehr als MAX_ROW_WIDTH nebeneinander.
-//
-// Der Deckel muss zeilenweise von oben nach unten kaskadieren: Was aus Rang r
-// herausfällt, landet nicht in einer leeren Zeile, sondern zusammen mit dem
-// ECHTEN Inhalt von Rang r+1 — der dadurch selbst wieder zu breit werden kann
-// und seinerseits weiterreichen muss (das war der zweite beobachtete Bug: 6
-// echte Geschwister in Rang 1 + 2 durchgereichte Ausreißer aus Rang 0 = 8 in
-// einer Zeile). Eine einmalige Rang-Berechnung im Voraus kann das nicht
-// abbilden, weil das Verschieben selbst neue Überbreite erzeugt.
-function rowWrapLinks(nodes, edges) {
+// sonst alle im selben Rang und reihen sich in einer einzigen, breiten Zeile
+// auf. Unsichtbare Kanten (~~~) verketten sie stattdessen zu einer einzigen
+// Spalte, ohne dass eine sichtbare Linie/Pfeil entsteht.
+function independentColumnLinks(nodes, edges) {
     const connected = new Set();
     for (const e of edges) {
         connected.add(e.from);
@@ -257,19 +178,9 @@ function rowWrapLinks(nodes, edges) {
     }
     const loose = nodes.filter((n) => !connected.has(n.key));
 
-    const groups = rankGroups(nodes, edges);
-    groups.set(0, [...(groups.get(0) ?? []), ...loose]);
-
-    const maxRank = groups.size ? Math.max(...groups.keys()) : -1;
     const links = [];
-    let carry = [];
-    for (let r = 0; r <= maxRank || carry.length > 0; r++) {
-        const bucket = [...(groups.get(r) ?? []), ...carry];
-        carry = [];
-        if (bucket.length <= MAX_ROW_WIDTH) continue;
-        const row = bucket.slice(0, MAX_ROW_WIDTH);
-        carry = bucket.slice(MAX_ROW_WIDTH);
-        links.push(...connectAll(row, carry));
+    for (let i = 1; i < loose.length; i++) {
+        links.push(`${loose[i - 1].key} ~~~ ${loose[i].key}`);
     }
     return links;
 }
@@ -291,7 +202,7 @@ function buildSource(nodes, edges, showDesc = false) {
         styles.push(`linkStyle ${i} ${e.met ? EDGE_MET : EDGE_OPEN}`);
     });
     lines.push(...styles);
-    lines.push(...rowWrapLinks(nodes, edges));
+    lines.push(...independentColumnLinks(nodes, edges));
 
     return lines.join('\n');
 }
