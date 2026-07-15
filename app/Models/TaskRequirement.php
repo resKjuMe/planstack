@@ -2,11 +2,13 @@
 
 namespace App\Models;
 
+use iamfarhad\LaravelAuditLog\Traits\Auditable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class TaskRequirement extends Model
 {
+    use Auditable;
     protected $fillable = [
         'task_id',
         'parent_id',

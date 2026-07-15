@@ -51,6 +51,8 @@ Route::middleware('auth')->group(function () {
         ->name('projects.status.pr-sequence');
     Route::get('projects/{project}/status/summary', [ProjectStatusController::class, 'summary'])
         ->name('projects.status.summary');
+    Route::get('projects/{project}/status/changelog', [ProjectStatusController::class, 'changelog'])
+        ->name('projects.status.changelog');
 
     // Pull PR merge status from GitHub and tag merged tasks
     Route::post('projects/{project}/sync-prs', ProjectPrSyncController::class)

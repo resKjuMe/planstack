@@ -7,6 +7,7 @@
     "license": "proprietary",
     "require": {
         "php": "^8.3",
+        "iamfarhad/laravel-audit-log": "^1.7",
         "laravel/framework": "^13.8",
         "laravel/sanctum": "^4.3",
         "laravel/tinker": "^3.0"

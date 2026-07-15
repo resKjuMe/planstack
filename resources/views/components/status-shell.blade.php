@@ -5,6 +5,7 @@
         'diagram' => ['label' => 'Diagramm', 'route' => 'projects.status.diagram'],
         'pr-sequence' => ['label' => 'PR-Sequenz', 'route' => 'projects.status.pr-sequence'],
         'summary' => ['label' => 'Summary', 'route' => 'projects.status.summary'],
+        'changelog' => ['label' => 'Changelog', 'route' => 'projects.status.changelog'],
     ];
 @endphp
 

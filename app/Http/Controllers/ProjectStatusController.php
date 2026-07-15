@@ -3,14 +3,30 @@
 namespace App\Http\Controllers;
 
 use App\Enums\TaskStatus;
+use App\Models\Phase;
 use App\Models\Project;
+use App\Models\ProjectMembership;
 use App\Models\Task;
+use App\Models\TaskConcern;
+use App\Models\TaskRequirement;
+use App\Models\User;
 use App\Support\TaskBoardService;
+use Carbon\Carbon;
+use iamfarhad\LaravelAuditLog\Models\EloquentAuditLog;
+use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\View\View;
 
 class ProjectStatusController extends Controller
 {
+    /**
+     * Changelog diff fields that hold a user id — resolved to a name via a
+     * single batched lookup instead of showing the raw id.
+     */
+    private const USER_REF_FIELDS = ['created_by_id', 'claimed_by_id', 'user_id'];
+
     public function __construct(private readonly TaskBoardService $board) {}
 
     /**
@@ -105,6 +121,246 @@ class ProjectStatusController extends Controller
             'rows' => $this->phaseRows($project, $tasks, $byId),
             'pickable' => $tasks->filter(fn ($t) => $t->x_pickable)->sortByDesc('x_unlocks')->values(),
         ]);
+    }
+
+    /**
+     * View 4 — combined, paginated changelog across the project itself and
+     * everything hanging off it (tasks, phases, concerns, dependencies,
+     * memberships). Each of those models writes to its own audit table, so
+     * the feed is built as a UNION ALL across the tables that actually have
+     * rows for this project, then sorted and paginated as one result set.
+     */
+    public function changelog(Project $project): View
+    {
+        $this->authorize('view', $project);
+
+        $tasksById = $project->tasks()->pluck('name', 'id');
+        $phasesById = $project->phases()->pluck('name', 'id');
+        $concernTaskById = TaskConcern::whereIn('task_id', $tasksById->keys())->pluck('task_id', 'id');
+        $requirementsById = TaskRequirement::whereIn('task_id', $tasksById->keys())->get(['id', 'task_id', 'parent_id'])->keyBy('id');
+        $membershipUserById = $project->memberships()->pluck('user_id', 'id');
+
+        $sources = [
+            Project::class => ['label' => 'Projekt', 'ids' => collect([$project->id])],
+            Task::class => ['label' => 'Task', 'ids' => $tasksById->keys()],
+            Phase::class => ['label' => 'Phase', 'ids' => $phasesById->keys()],
+            TaskConcern::class => ['label' => 'Concern', 'ids' => $concernTaskById->keys()],
+            TaskRequirement::class => ['label' => 'Abhängigkeit', 'ids' => $requirementsById->keys()],
+            ProjectMembership::class => ['label' => 'Mitgliedschaft', 'ids' => $membershipUserById->keys()],
+        ];
+
+        $query = null;
+        foreach ($sources as $class => $meta) {
+            if ($meta['ids']->isEmpty() || ! Schema::hasTable(EloquentAuditLog::forEntity($class)->getTable())) {
+                continue;
+            }
+
+            $sub = EloquentAuditLog::forEntity($class)
+                ->whereIn('entity_id', $meta['ids'])
+                ->selectRaw(
+                    '? as entity_label, ? as entity_class, entity_id, action, old_values, new_values, causer_type, causer_id, source, created_at',
+                    [$meta['label'], $class]
+                );
+
+            $query = $query ? $query->unionAll($sub) : $sub;
+        }
+
+        if ($query === null) {
+            $changes = new LengthAwarePaginator([], 0, 25);
+        } else {
+            $changes = $query->orderByDesc('created_at')->paginate(25)->withQueryString();
+            $logs = $changes->getCollection();
+
+            $userRefIds = $logs->flatMap(fn ($log) => [
+                ...array_values(Arr::only($log->old_values ?? [], self::USER_REF_FIELDS)),
+                ...array_values(Arr::only($log->new_values ?? [], self::USER_REF_FIELDS)),
+            ]);
+            $userIds = $logs->pluck('causer_id')
+                ->merge($membershipUserById->values())
+                ->merge($userRefIds)
+                ->filter()
+                ->unique();
+            $usersById = User::whereIn('id', $userIds)->pluck('name', 'id');
+            $refs = ['users' => $usersById, 'tasks' => $tasksById, 'phases' => $phasesById];
+
+            $changes->setCollection($logs->map(fn ($log) => [
+                'when' => Carbon::parse($log->created_at),
+                'entity_label' => $log->entity_label,
+                'action_label' => $this->auditActionLabel($log->action),
+                'action_badge' => $this->auditActionBadge($log->action),
+                'subject' => $this->auditSubject($log, $project, $tasksById, $phasesById, $concernTaskById, $requirementsById, $membershipUserById, $usersById),
+                'causer' => $log->causer_id ? ($usersById[$log->causer_id] ?? "Nutzer #{$log->causer_id}") : 'System',
+                'source' => $log->source,
+                'changes' => $this->auditDiff($log, $refs),
+            ]));
+        }
+
+        return view('status.changelog', [
+            'project' => $project,
+            'active' => 'changelog',
+            'changes' => $changes,
+        ]);
+    }
+
+    /**
+     * @param  array{users: Collection, tasks: Collection, phases: Collection}  $refs
+     * @return array<int, array{field: string, old: ?string, new: ?string}>
+     */
+    private function auditDiff(EloquentAuditLog $log, array $refs): array
+    {
+        $old = $log->old_values ?? [];
+        $new = $log->new_values ?? [];
+        $skip = ['id', 'created_at', 'updated_at'];
+
+        $rows = [];
+        foreach (array_unique([...array_keys($old), ...array_keys($new)]) as $key) {
+            if (in_array($key, $skip, true)) {
+                continue;
+            }
+
+            $rows[] = [
+                'field' => $this->auditFieldLabel($key),
+                'old' => array_key_exists($key, $old) ? $this->auditFormatValue($key, $old[$key], $refs) : null,
+                'new' => array_key_exists($key, $new) ? $this->auditFormatValue($key, $new[$key], $refs) : null,
+            ];
+        }
+
+        return $rows;
+    }
+
+    /**
+     * Best-effort human label for the changed row: the task/phase name for
+     * direct changes, or "related to task X" for concerns/dependencies/etc.
+     * Falls back to the id when the referenced record no longer exists and
+     * the audit snapshot doesn't carry the name either.
+     */
+    private function auditSubject(
+        EloquentAuditLog $log,
+        Project $project,
+        Collection $tasksById,
+        Collection $phasesById,
+        Collection $concernTaskById,
+        Collection $requirementsById,
+        Collection $membershipUserById,
+        Collection $usersById,
+    ): string {
+        $id = (int) $log->entity_id;
+        $values = $log->new_values ?: ($log->old_values ?: []);
+        $taskLabel = fn (mixed $taskId) => $taskId ? ($tasksById[$taskId] ?? "Task #{$taskId}") : '?';
+
+        return match ($log->entity_class) {
+            Project::class => $project->alias,
+            Task::class => $tasksById[$id] ?? ($values['name'] ?? "Task #{$id}"),
+            Phase::class => $phasesById[$id] ?? ($values['name'] ?? "Phase #{$id}"),
+            TaskConcern::class => 'Concern zu '.$taskLabel($values['task_id'] ?? $concernTaskById[$id] ?? null),
+            TaskRequirement::class => $taskLabel($values['task_id'] ?? $requirementsById[$id]->task_id ?? null)
+                .' ← '.$taskLabel($values['parent_id'] ?? $requirementsById[$id]->parent_id ?? null),
+            ProjectMembership::class => 'Mitgliedschaft: '.(function () use ($values, $membershipUserById, $id, $usersById) {
+                $userId = $values['user_id'] ?? $membershipUserById[$id] ?? null;
+
+                return $userId ? ($usersById[$userId] ?? "Nutzer #{$userId}") : "Mitgliedschaft #{$id}";
+            })(),
+            default => "#{$id}",
+        };
+    }
+
+    private function auditActionLabel(string $action): string
+    {
+        return match ($action) {
+            'created' => 'Erstellt',
+            'updated' => 'Aktualisiert',
+            'deleted' => 'Gelöscht',
+            'restored' => 'Wiederhergestellt',
+            default => ucfirst($action),
+        };
+    }
+
+    private function auditActionBadge(string $action): string
+    {
+        return match ($action) {
+            'created' => 'bg-green-100 text-green-700',
+            'updated' => 'bg-blue-100 text-blue-700',
+            'deleted' => 'bg-red-100 text-red-700',
+            'restored' => 'bg-amber-100 text-amber-700',
+            default => 'bg-gray-100 text-gray-700',
+        };
+    }
+
+    private function auditFieldLabel(string $key): string
+    {
+        return match ($key) {
+            'name' => 'Name',
+            'alias' => 'Kürzel',
+            'summary' => 'Zusammenfassung',
+            'description' => 'Beschreibung',
+            'description_acceptance_criteria' => 'Akzeptanzkriterien',
+            'github_repo' => 'GitHub-Repo',
+            'skill_description' => 'Skill-Beschreibung',
+            'status' => 'Status',
+            'phase_id' => 'Phase',
+            'position' => 'Position',
+            'effort_story_points' => 'Story Points',
+            'effort_man_days' => 'Personentage',
+            'effort_tokens' => 'Tokens',
+            'affected_files' => 'Dateien',
+            'pr_number' => 'PR-Nummer',
+            'claimed_by_id' => 'Beansprucht von',
+            'claimed_at' => 'Beansprucht am',
+            'merged_at' => 'Gemergt am',
+            'created_by_id' => 'Erstellt von',
+            'task_id' => 'Task',
+            'parent_id' => 'Abhängig von',
+            'role' => 'Rolle',
+            'user_id' => 'Benutzer',
+            'project_id' => 'Projekt',
+            default => ucfirst(str_replace('_', ' ', $key)),
+        };
+    }
+
+    /**
+     * @param  array{users: Collection, tasks: Collection, phases: Collection}  $refs
+     */
+    private function auditFormatValue(string $key, mixed $value, array $refs): string
+    {
+        if ($value === null) {
+            return '—';
+        }
+
+        if (is_bool($value)) {
+            return $value ? 'Ja' : 'Nein';
+        }
+
+        if (is_array($value)) {
+            return json_encode($value) ?: '—';
+        }
+
+        if (in_array($key, self::USER_REF_FIELDS, true)) {
+            return $refs['users'][$value] ?? "Nutzer #{$value}";
+        }
+
+        if (in_array($key, ['task_id', 'parent_id'], true)) {
+            return $refs['tasks'][$value] ?? "Task #{$value}";
+        }
+
+        if ($key === 'phase_id') {
+            return $refs['phases'][$value] ?? "Phase #{$value}";
+        }
+
+        if (str_ends_with($key, '_at')) {
+            try {
+                return Carbon::parse($value)->format('d.m.Y H:i');
+            } catch (\Throwable) {
+                return (string) $value;
+            }
+        }
+
+        if ($key === 'status') {
+            return TaskStatus::tryFrom((string) $value)?->label() ?? (string) $value;
+        }
+
+        $str = (string) $value;
+
+        return mb_strlen($str) > 120 ? mb_substr($str, 0, 120).'…' : $str;
     }
 
     /**

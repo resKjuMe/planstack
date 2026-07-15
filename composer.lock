@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "8404219cfdfc592e5f55aad0cf031218",
+    "content-hash": "dd0fdc80a31212abd6bc220dcabb0953",
     "packages": [
         {
             "name": "brick/math",
@@ -1056,6 +1056,78 @@
                 }
             ],
             "time": "2026-07-08T16:19:22+00:00"
+        },
+        {
+            "name": "iamfarhad/laravel-audit-log",
+            "version": "1.7.1",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/iamfarhad/laravel-audit-log.git",
+                "reference": "95b80489c53a0c00aa8faaef8d51352acad202b7"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/iamfarhad/laravel-audit-log/zipball/95b80489c53a0c00aa8faaef8d51352acad202b7",
+                "reference": "95b80489c53a0c00aa8faaef8d51352acad202b7",
+                "shasum": ""
+            },
+            "require": {
+                "illuminate/config": "^10.0|^11.0|^12.0|^13.0",
+                "illuminate/database": "^10.0|^11.0|^12.0|^13.0",
+                "illuminate/events": "^10.0|^11.0|^12.0|^13.0",
+                "illuminate/support": "^10.0|^11.0|^12.0|^13.0",
+                "php": "^8.1"
+            },
+            "require-dev": {
+                "laravel/pint": "^1.10",
+                "mockery/mockery": "^1.5",
+                "orchestra/testbench": "^8.0|^9.0|^10.0|^11.0",
+                "phpstan/phpstan": "^1.10",
+                "phpstan/phpstan-strict-rules": "^1.5",
+                "phpunit/phpunit": "^9.0|^10.0|^11.0"
+            },
+            "type": "library",
+            "extra": {
+                "laravel": {
+                    "providers": [
+                        "iamfarhad\\LaravelAuditLog\\AuditLoggerServiceProvider"
+                    ]
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "iamfarhad\\LaravelAuditLog\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Farhad Zand",
+                    "email": "farhad.pd@gmail.com"
+                }
+            ],
+            "description": "Comprehensive entity-level audit logging package for Laravel applications with model-specific tables, field exclusion, and batch processing support",
+            "keywords": [
+                "Audit",
+                "activity-log",
+                "audit-trail",
+                "change-tracking",
+                "data-integrity",
+                "database-history",
+                "laravel",
+                "logging",
+                "model-auditing",
+                "model-history",
+                "user-activity"
+            ],
+            "support": {
+                "issues": "https://github.com/iamfarhad/laravel-audit-log/issues",
+                "source": "https://github.com/iamfarhad/laravel-audit-log/tree/1.7.1"
+            },
+            "time": "2026-05-10T08:16:46+00:00"
         },
         {
             "name": "laravel/framework",

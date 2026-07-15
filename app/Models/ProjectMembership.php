@@ -3,11 +3,13 @@
 namespace App\Models;
 
 use App\Enums\ProjectRole;
+use iamfarhad\LaravelAuditLog\Traits\Auditable;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\Pivot;
 
 class ProjectMembership extends Pivot
 {
+    use Auditable;
     protected $table = 'users_to_projects';
 
     /**
