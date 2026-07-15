@@ -171,15 +171,28 @@ function nodeLabel(n, showDesc = false) {
 // packen und der Graph liefe aus dem sichtbaren Bereich.
 const MAX_ROW_WIDTH = 5;
 
-// Unsichtbare Kanten (~~~) zwischen Knoten i und i+MAX_ROW_WIDTH derselben
-// Gruppe zwingen ELK, jedes 6. Element eine Zeile tiefer zu setzen (TB-Layout:
-// eine Kante verschiebt das Ziel immer in einen späteren Rang) — die Gruppe
-// wickelt sich so als Raster mit maximal MAX_ROW_WIDTH Spalten ab, ohne dass
-// eine sichtbare Linie/Pfeil entsteht.
+// Zerlegt eine Gruppe, die sonst in einer Zeile landen würde, in Zeilen zu je
+// maximal MAX_ROW_WIDTH Knoten und verbindet jede Zeile mit der nächsten
+// vollständig (jeder mit jedem) über unsichtbare Kanten (~~~). Das zwingt ELK,
+// die Folgezeile einen Rang tiefer zu setzen (TB-Layout: eine Kante verschiebt
+// das Ziel immer in einen späteren Rang) — ohne dass eine sichtbare
+// Linie/Pfeil entsteht. Wichtig ist "jeder mit jedem" statt nur einer
+// Diagonalen: nur so bekommt *jeder* Knoten der Folgezeile mindestens eine
+// Kante und wird damit Teil derselben Komponente. Mit einer schwächeren
+// Verkettung (z. B. nur Knoten i mit i+MAX_ROW_WIDTH) blieben bei Zeilen, die
+// nicht exakt ein Vielfaches von MAX_ROW_WIDTH sind, einzelne Knoten ganz ohne
+// Kante übrig — und ELK packt sie dann wieder als eigene, separate Komponente
+// neben die Gruppe.
 function wrapLinks(group) {
     const links = [];
-    for (let i = 0; i + MAX_ROW_WIDTH < group.length; i++) {
-        links.push(`${group[i].key} ~~~ ${group[i + MAX_ROW_WIDTH].key}`);
+    for (let start = 0; start + MAX_ROW_WIDTH < group.length; start += MAX_ROW_WIDTH) {
+        const row = group.slice(start, start + MAX_ROW_WIDTH);
+        const next = group.slice(start + MAX_ROW_WIDTH, start + 2 * MAX_ROW_WIDTH);
+        for (const a of row) {
+            for (const b of next) {
+                links.push(`${a.key} ~~~ ${b.key}`);
+            }
+        }
     }
     return links;
 }
@@ -225,14 +238,17 @@ function rankGroups(nodes, edges) {
         if (!groups.has(r)) groups.set(r, []);
         groups.get(r).push(n);
     }
-    return [...groups.values()];
+    return groups;
 }
 
 // Tasks ohne jede Kante (weder Vorgänger noch Nachfolger) haben für den Layout-
 // Algorithmus keinen Grund, in unterschiedliche Ränge zu wandern — sie landen
-// sonst alle im selben Rang und reihen sich in einer einzigen, breiten Zeile
-// auf. Wie bei den Geschwister-Gruppen wird auch hier nur bis MAX_ROW_WIDTH
-// nebeneinander gestellt, der Rest wickelt sich darunter ab.
+// sonst optisch ganz oben, auf Höhe von Rang 0. Deswegen zählen sie für den
+// Breiten-Deckel MIT den echten Rang-0-Wurzelknoten zusammen: ELK behandelt
+// unverbundene Knoten(-gruppen) sonst als eigene Komponenten und packt sie
+// nebeneinander — zwei für sich genommene Grüppchen von je 3 und 4 Knoten
+// blieben so unbemerkt unter dem Deckel, ergäben zusammen aber wieder 7
+// nebeneinander (genau der hier beobachtete Bug).
 function rowWrapLinks(nodes, edges) {
     const connected = new Set();
     for (const e of edges) {
@@ -241,8 +257,11 @@ function rowWrapLinks(nodes, edges) {
     }
     const loose = nodes.filter((n) => !connected.has(n.key));
 
-    const links = [...wrapLinks(loose)];
-    for (const group of rankGroups(nodes, edges)) {
+    const groups = rankGroups(nodes, edges);
+    groups.set(0, [...(groups.get(0) ?? []), ...loose]);
+
+    const links = [];
+    for (const group of groups.values()) {
         links.push(...wrapLinks(group));
     }
     return links;
