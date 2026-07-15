@@ -37,19 +37,43 @@ class ProjectChangelogController extends Controller
     {
         $this->authorize('view', $project);
 
+        // Live tables only know about records that still exist — a deleted
+        // task simply isn't there anymore. Its "deleted" audit row always
+        // carries the full old snapshot though, so its id (and its own
+        // deleted concerns/dependencies, scoped through it) is recovered from
+        // there instead, or the delete itself would never show up.
         $tasksById = $project->tasks()->pluck('name', 'id');
+        $allTaskIds = $tasksById->keys()
+            ->merge($this->deletedEntityIds(Task::class, 'project_id', $project->id))
+            ->unique()->values();
+
         $phasesById = $project->phases()->pluck('name', 'id');
-        $concernTaskById = TaskConcern::whereIn('task_id', $tasksById->keys())->pluck('task_id', 'id');
-        $requirementsById = TaskRequirement::whereIn('task_id', $tasksById->keys())->get(['id', 'task_id', 'parent_id'])->keyBy('id');
+        $allPhaseIds = $phasesById->keys()
+            ->merge($this->deletedEntityIds(Phase::class, 'project_id', $project->id))
+            ->unique()->values();
+
+        $concernTaskById = TaskConcern::whereIn('task_id', $allTaskIds)->pluck('task_id', 'id');
+        $allConcernIds = $concernTaskById->keys()
+            ->merge($this->deletedEntityIds(TaskConcern::class, 'task_id', $allTaskIds))
+            ->unique()->values();
+
+        $requirementsById = TaskRequirement::whereIn('task_id', $allTaskIds)->get(['id', 'task_id', 'parent_id'])->keyBy('id');
+        $allRequirementIds = $requirementsById->keys()
+            ->merge($this->deletedEntityIds(TaskRequirement::class, 'task_id', $allTaskIds))
+            ->unique()->values();
+
         $membershipUserById = $project->memberships()->pluck('user_id', 'id');
+        $allMembershipIds = $membershipUserById->keys()
+            ->merge($this->deletedEntityIds(ProjectMembership::class, 'project_id', $project->id))
+            ->unique()->values();
 
         $sources = [
             Project::class => ['label' => 'Projekt', 'ids' => collect([$project->id])],
-            Task::class => ['label' => 'Task', 'ids' => $tasksById->keys()],
-            Phase::class => ['label' => 'Phase', 'ids' => $phasesById->keys()],
-            TaskConcern::class => ['label' => 'Concern', 'ids' => $concernTaskById->keys()],
-            TaskRequirement::class => ['label' => 'Abhängigkeit', 'ids' => $requirementsById->keys()],
-            ProjectMembership::class => ['label' => 'Mitgliedschaft', 'ids' => $membershipUserById->keys()],
+            Task::class => ['label' => 'Task', 'ids' => $allTaskIds],
+            Phase::class => ['label' => 'Phase', 'ids' => $allPhaseIds],
+            TaskConcern::class => ['label' => 'Concern', 'ids' => $allConcernIds],
+            TaskRequirement::class => ['label' => 'Abhängigkeit', 'ids' => $allRequirementIds],
+            ProjectMembership::class => ['label' => 'Mitgliedschaft', 'ids' => $allMembershipIds],
         ];
 
         $query = null;
@@ -135,6 +159,35 @@ class ProjectChangelogController extends Controller
             'active' => 'changelog',
             'changes' => $changes,
         ]);
+    }
+
+    /**
+     * Ids of entities of $class that were later deleted, but whose "deleted"
+     * audit row's snapshot (old_values, always the full attribute set) still
+     * points at $scopeValue via $scopeColumn — e.g. a deleted task's own
+     * project_id, or a deleted concern's task_id being one of this project's
+     * (possibly also-deleted) tasks.
+     *
+     * @param  int|\Illuminate\Support\Collection<int, int>  $scopeValue
+     */
+    private function deletedEntityIds(string $class, string $scopeColumn, $scopeValue): Collection
+    {
+        if (! Schema::hasTable(EloquentAuditLog::forEntity($class)->getTable())) {
+            return collect();
+        }
+
+        $query = EloquentAuditLog::forEntity($class)->where('action', 'deleted');
+
+        if ($scopeValue instanceof Collection) {
+            if ($scopeValue->isEmpty()) {
+                return collect();
+            }
+            $query->whereIn("old_values->{$scopeColumn}", $scopeValue);
+        } else {
+            $query->where("old_values->{$scopeColumn}", $scopeValue);
+        }
+
+        return $query->pluck('entity_id')->map(fn ($id) => (int) $id);
     }
 
     /**
@@ -277,6 +330,16 @@ class ProjectChangelogController extends Controller
     }
 
     /**
+     * "Jonas Grobe" → "JG", for the compact claimer suffix on the status arrow.
+     */
+    private function initials(string $name): string
+    {
+        $parts = preg_split('/\s+/', trim($name));
+
+        return implode('', array_map(fn ($p) => mb_strtoupper(mb_substr($p, 0, 1)), $parts));
+    }
+
+    /**
      * @param  array{users: Collection, tasks: Collection, phases: Collection}  $refs
      * @return array<int, array{field: string, old: ?string, new: ?string}>
      */
@@ -340,6 +403,12 @@ class ProjectChangelogController extends Controller
                     $text(' → '),
                     ['t' => 'status', 'v' => $this->statusLabel($new['status']), 'cls' => $this->statusBadge($new['status'])],
                 ];
+                if ($new['status'] === TaskStatus::CLAIMED->value && ! empty($new['claimed_by_id'])) {
+                    $claimer = $usersById[$new['claimed_by_id']] ?? null;
+                    if ($claimer) {
+                        $segments[] = $text(' ('.$this->initials($claimer).')');
+                    }
+                }
                 if (! empty($new['pr_number'])) {
                     $segments[] = $text(' #'.$new['pr_number']);
                 }

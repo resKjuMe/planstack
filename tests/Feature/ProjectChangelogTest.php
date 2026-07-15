@@ -174,4 +174,64 @@ class ProjectChangelogTest extends TestCase
         $this->assertNotNull($prRow);
         $this->assertSame('8076', $prRow['new']);
     }
+
+    /**
+     * Claiming a task sets claimed_by_id/claimed_at/status in one update, so
+     * the claimer's initials should ride along on the status arrow headline.
+     */
+    public function test_claiming_a_task_shows_the_claimers_initials(): void
+    {
+        $user = User::factory()->create(['name' => 'Jonas Grobe']);
+        $project = Project::factory()->create(['created_by_id' => $user->id]);
+        $this->actingAs($user);
+
+        $task = Task::factory()->create([
+            'project_id' => $project->id,
+            'created_by_id' => $user->id,
+            'name' => 'T1',
+            'status' => TaskStatus::PICKABLE,
+        ]);
+
+        $task->update([
+            'claimed_by_id' => $user->id,
+            'claimed_at' => now(),
+            'status' => TaskStatus::CLAIMED->value,
+        ]);
+
+        $response = $this->get(route('projects.changelog', $project));
+        $response->assertOk();
+
+        $rows = collect($response->viewData('changes')->items());
+        $claimRow = $rows->first(fn ($row) => str_starts_with($this->headlineText($row), 'T1 → '));
+
+        $this->assertNotNull($claimRow);
+        $this->assertStringContainsString('beansprucht (JG)', $this->headlineText($claimRow));
+    }
+
+    /**
+     * A deleted task's own "deleted" audit row carries the full old
+     * snapshot (incl. project_id) even though the task itself is gone from
+     * the live table — the changelog must still surface it instead of
+     * silently dropping every deletion.
+     */
+    public function test_deleted_task_still_shows_up_in_the_changelog(): void
+    {
+        $user = User::factory()->create(['name' => 'Ada Lovelace']);
+        $project = Project::factory()->create(['created_by_id' => $user->id]);
+        $this->actingAs($user);
+
+        $task = Task::factory()->create([
+            'project_id' => $project->id,
+            'created_by_id' => $user->id,
+            'name' => 'T1',
+        ]);
+        $task->delete();
+
+        $response = $this->get(route('projects.changelog', $project));
+        $response->assertOk();
+
+        $rows = collect($response->viewData('changes')->items());
+        $deletedRow = $rows->first(fn ($row) => $this->headlineText($row) === 'T1 gelöscht');
+        $this->assertNotNull($deletedRow);
+    }
 }
