@@ -5,6 +5,7 @@ namespace App\Support;
 use App\Enums\TaskStatus;
 use App\Models\Project;
 use App\Models\Task;
+use App\Models\TaskPullRequest;
 use Carbon\Carbon;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\PendingRequest;
@@ -115,6 +116,21 @@ class GitHubPrSync
                 $mergedAt = ! empty($data['merged_at']) ? Carbon::parse($data['merged_at']) : now();
                 foreach ($tasksForPr as $task) {
                     $task->update(['status' => TaskStatus::MERGED->value, 'merged_at' => $mergedAt]);
+
+                    TaskPullRequest::updateOrCreate(
+                        ['task_id' => $task->id, 'pull_request_id' => $prNumber],
+                        [
+                            'changed_files' => $data['changed_files'] ?? 0,
+                            'additions' => $data['additions'] ?? 0,
+                            'deletions' => $data['deletions'] ?? 0,
+                            'commits' => $data['commits'] ?? 0,
+                            'comments' => $data['comments'] ?? 0,
+                            'review_comments' => $data['review_comments'] ?? 0,
+                            'opened_at' => ! empty($data['created_at']) ? Carbon::parse($data['created_at']) : null,
+                            'merged_at' => $mergedAt,
+                        ],
+                    );
+
                     $result['merged']++;
                 }
             }

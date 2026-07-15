@@ -99,4 +99,9 @@ class Task extends Model
     {
         return $this->hasOne(TaskConcern::class, 'task_id');
     }
+
+    public function pullRequests(): HasMany
+    {
+        return $this->hasMany(TaskPullRequest::class);
+    }
 }
