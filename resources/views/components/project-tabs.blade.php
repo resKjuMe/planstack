@@ -7,6 +7,7 @@
         'summary' => ['label' => 'Summary', 'route' => 'projects.summary'],
         'board' => ['label' => 'Board', 'route' => 'projects.show'],
         'changelog' => ['label' => 'Changelog', 'route' => 'projects.changelog'],
+        'calibration' => ['label' => 'Kalibrierung', 'route' => 'projects.calibration'],
     ];
 @endphp
 

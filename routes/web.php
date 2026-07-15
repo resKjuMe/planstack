@@ -3,6 +3,7 @@
 use App\Http\Controllers\ApiDocsController;
 use App\Http\Controllers\ApiTokenController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\ProjectCalibrationController;
 use App\Http\Controllers\ProjectChangelogController;
 use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\ProjectDiagramController;
@@ -58,6 +59,8 @@ Route::middleware('auth')->group(function () {
         ->name('projects.summary');
     Route::get('projects/{project}/changelog', ProjectChangelogController::class)
         ->name('projects.changelog');
+    Route::get('projects/{project}/kalibrierung', ProjectCalibrationController::class)
+        ->name('projects.calibration');
 
     // Legacy URLs (formerly nested under /status/...) redirect permanently.
     Route::permanentRedirect('projects/{project}/status/diagram', '/projects/{project}/diagram');
