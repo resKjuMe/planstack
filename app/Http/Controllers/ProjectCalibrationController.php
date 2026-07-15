@@ -46,8 +46,8 @@ class ProjectCalibrationController extends Controller
         $prs = $task->pullRequests;
 
         $filesActual = (int) $prs->sum('changed_files');
-        $filesEstimated = (int) $task->affected_files;
-        $deviationPct = $filesEstimated > 0
+        $filesEstimated = $task->affected_files !== null ? (int) $task->affected_files : null;
+        $deviationPct = $filesEstimated !== null && $filesEstimated > 0
             ? (int) round((($filesActual - $filesEstimated) / $filesEstimated) * 100)
             : null;
 
@@ -141,10 +141,13 @@ class ProjectCalibrationController extends Controller
             'avgDeviationLabel' => $this->deviationLabel($avgDeviation),
             'avgDeviationClass' => $this->deviationClass($avgDeviation),
             'avgDeviationHint' => match (true) {
-                $avgDeviation === null => null,
-                $avgDeviation > 5 => 'wir schätzen zu klein',
-                $avgDeviation < -5 => 'wir schätzen zu groß',
-                default => 'im Rahmen',
+                $avgDeviation !== null => match (true) {
+                    $avgDeviation > 5 => 'wir schätzen zu klein',
+                    $avgDeviation < -5 => 'wir schätzen zu groß',
+                    default => 'im Rahmen',
+                },
+                $rows->isEmpty() => 'keine gemergten Tasks mit PR-Daten',
+                default => 'keine Dateischätzungen bei gemergten Tasks mit PR-Daten',
             },
             'avgDurationPerSp' => $avgDurationPerSp,
             'hits' => $withDeviation->filter(fn (array $r) => abs($r['deviationPct']) <= 25)->count(),

@@ -22,7 +22,7 @@
                     <div class="mt-1 text-sm text-gray-500">{{ $kpis['avgDeviationHint'] }}</div>
                 @else
                     <div class="mt-1 text-2xl font-bold text-gray-300">—</div>
-                    <div class="mt-1 text-sm text-gray-500">keine Schätzungen vorhanden</div>
+                    <div class="mt-1 text-sm text-gray-500">{{ $kpis['avgDeviationHint'] }}</div>
                 @endif
             </div>
 
