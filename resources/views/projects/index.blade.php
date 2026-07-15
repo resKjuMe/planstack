@@ -20,7 +20,7 @@
             @else
                 <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                     @foreach ($projects as $project)
-                        <a href="{{ route('projects.show', $project) }}"
+                        <a href="{{ route('projects.status.diagram', $project) }}"
                            class="block bg-white rounded-lg shadow hover:shadow-md transition p-5">
                             <div class="flex items-center justify-between">
                                 <span class="inline-flex items-center rounded bg-gray-800 px-2 py-0.5 text-xs font-mono font-semibold text-white">
