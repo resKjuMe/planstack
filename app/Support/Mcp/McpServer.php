@@ -121,7 +121,10 @@ class McpServer
                     'context' => ['type' => 'string'],
                     'blocker' => ['type' => 'string'],
                     'misconception' => ['type' => 'string'],
-                    'decisions' => ['type' => 'string'],
+                    'decisions' => [
+                        'type' => 'string',
+                        'description' => 'Offene Entscheidungen, eine pro Zeile im Format "Frage;Option A;Option B;Option C" (Semikolon-getrennt). Optionen NICHT im Fragetext auflisten, z. B. nicht "Frage: (a) ... (b) ... (c) ...", sondern jede Option als eigenes Feld hinter einem Semikolon.',
+                    ],
                 ], ['task', 'summary']),
             ],
             [

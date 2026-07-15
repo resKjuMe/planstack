@@ -140,6 +140,16 @@
                             if ($question === null || $question === '') {
                                 continue;
                             }
+
+                            // Manche Concerns betten Option (a) direkt in den Fragetext
+                            // ein, statt sie wie (b)/(c) als eigenes Feld abzutrennen
+                            // (z. B. "Frage: Optionen: (a) ... ;(b) ...;(c) ..."). An
+                            // "(a) " splitten, wenn danach noch Optionen folgen.
+                            if (count($parts) && preg_match('/^(.*?)\(a\)\s*(.+)$/su', $question, $m)) {
+                                $question = trim($m[1], " \t\n\r\0\x0B:-") ?: 'Entscheidung';
+                                array_unshift($parts, trim($m[2]));
+                            }
+
                             $decisions[] = [
                                 'question' => $question,
                                 'options' => array_values(array_filter($parts, fn ($o) => $o !== '')),
