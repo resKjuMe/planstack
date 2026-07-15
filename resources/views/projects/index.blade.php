@@ -47,7 +47,7 @@
                     Noch keine Projekte. Lege dein erstes Projekt an.
                 </div>
             @else
-                <div class="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                <div class="mt-6 grid items-stretch gap-4 sm:grid-cols-2 lg:grid-cols-3">
                     @foreach ($projects as $project)
                         @php
                             $sp = (int) $project->total_sp;
@@ -80,7 +80,7 @@
                             $avatarPalette = ['bg-emerald-600', 'bg-indigo-600', 'bg-rose-600', 'bg-amber-600', 'bg-sky-600', 'bg-fuchsia-600'];
                             $avatarClass = $avatarPalette[($project->created_by_id ?? 0) % count($avatarPalette)];
                         @endphp
-                        <div x-show="
+                        <div class="h-full" x-show="
                                 (filter === 'all'
                                     || (filter === 'mine' && {{ $isMine ? 'true' : 'false' }})
                                     || filter === @js($category))
@@ -100,24 +100,29 @@
                                 <h3 class="mt-3 text-lg font-semibold text-gray-900">{{ $project->name }}</h3>
                                 <x-markdown :content="$project->description" class="mt-1 text-sm text-gray-500 line-clamp-2" />
 
-                                <div class="mt-5">
-                                    <div class="flex items-center justify-between text-sm">
-                                        <span class="text-gray-500">Fortschritt</span>
-                                        <span class="font-semibold text-gray-900">{{ number_format($pct, 1, ',', '') }} %</span>
+                                {{-- mt-auto schiebt Fortschritt+Owner+Tasks als Block an den unteren
+                                     Kachelrand — unabhängig davon, wie kurz Titel/Beschreibung sind.
+                                     Setzt voraus, dass <a> weiter oben flex + flex-col + h-full ist. --}}
+                                <div class="mt-auto pt-5">
+                                    <div>
+                                        <div class="flex items-center justify-between text-sm">
+                                            <span class="text-gray-500">Fortschritt</span>
+                                            <span class="font-semibold text-gray-900">{{ number_format($pct, 1, ',', '') }} %</span>
+                                        </div>
+                                        <div class="mt-1.5 h-1.5 rounded-full bg-gray-100">
+                                            <div class="h-1.5 rounded-full {{ $barClass }}" style="width: {{ max(2, min(100, $pct)) }}%"></div>
+                                        </div>
                                     </div>
-                                    <div class="mt-1.5 h-1.5 rounded-full bg-gray-100">
-                                        <div class="h-1.5 rounded-full {{ $barClass }}" style="width: {{ max(2, min(100, $pct)) }}%"></div>
-                                    </div>
-                                </div>
 
-                                <div class="mt-4 flex items-center justify-between">
-                                    <div class="flex items-center gap-2">
-                                        <span class="inline-flex h-7 w-7 items-center justify-center rounded-full {{ $avatarClass }} text-xs font-semibold text-white">
-                                            {{ $initials }}
-                                        </span>
-                                        <span class="text-sm text-gray-700">{{ $project->owner?->name }}</span>
+                                    <div class="mt-4 flex items-center justify-between">
+                                        <div class="flex items-center gap-2">
+                                            <span class="inline-flex h-7 w-7 items-center justify-center rounded-full {{ $avatarClass }} text-xs font-semibold text-white">
+                                                {{ $initials }}
+                                            </span>
+                                            <span class="text-sm text-gray-700">{{ $project->owner?->name }}</span>
+                                        </div>
+                                        <span class="text-xs text-gray-400">{{ $project->tasks_count }} Tasks · {{ $sp }} SP</span>
                                     </div>
-                                    <span class="text-xs text-gray-400">{{ $project->tasks_count }} Tasks · {{ $sp }} SP</span>
                                 </div>
                             </a>
                         </div>
