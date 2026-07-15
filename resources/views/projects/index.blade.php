@@ -86,8 +86,14 @@
                                     || filter === @js($category))
                                 && (q === '' || @js(Str::lower($project->alias.' '.$project->name)).includes(q.toLowerCase()))
                             ">
-                            <a href="{{ route('projects.status.diagram', $project) }}"
-                               class="flex h-full flex-col rounded-lg bg-white p-6 shadow transition hover:shadow-md">
+                            {{-- Kein umschließendes <a>: die Beschreibung kann über <x-markdown>
+                                 selbst Links enthalten (z. B. "in Jira öffnen"), und <a> darf laut
+                                 HTML-Spec nicht in <a> verschachtelt werden — der Browser schließt
+                                 den äußeren Link dann an der Stelle des inneren automatisch, wodurch
+                                 alles danach (Fortschritt/Footer) aus dem Link herausfällt. Stattdessen
+                                 ein klickbares div, das Klicks auf echte Links durchlässt (siehe @click). --}}
+                            <div @click="if (!$event.target.closest('a')) { window.location = @js(route('projects.status.diagram', $project)) }"
+                                 class="flex h-full cursor-pointer flex-col rounded-lg bg-white p-6 shadow transition hover:shadow-md">
                                 <div class="flex items-center justify-between">
                                     <span class="inline-flex items-center rounded bg-indigo-100 px-2 py-0.5 font-mono text-xs font-semibold text-indigo-700">
                                         {{ $project->alias }}
@@ -97,12 +103,14 @@
                                     </span>
                                 </div>
 
-                                <h3 class="mt-3 text-lg font-semibold text-gray-900">{{ $project->name }}</h3>
+                                <h3 class="mt-3 text-lg font-semibold text-gray-900">
+                                    <a href="{{ route('projects.status.diagram', $project) }}" class="hover:underline">{{ $project->name }}</a>
+                                </h3>
                                 <x-markdown :content="$project->description" class="mt-1 text-sm text-gray-500 line-clamp-2" />
 
                                 {{-- mt-auto schiebt Fortschritt+Owner+Tasks als Block an den unteren
                                      Kachelrand — unabhängig davon, wie kurz Titel/Beschreibung sind.
-                                     Setzt voraus, dass <a> weiter oben flex + flex-col + h-full ist. --}}
+                                     Setzt voraus, dass das div weiter oben flex + flex-col + h-full ist. --}}
                                 <div class="mt-auto pt-5">
                                     <div>
                                         <div class="flex items-center justify-between text-sm">
@@ -124,7 +132,7 @@
                                         <span class="text-xs text-gray-400">{{ $project->tasks_count }} Tasks · {{ $sp }} SP</span>
                                     </div>
                                 </div>
-                            </a>
+                            </div>
                         </div>
                     @endforeach
                 </div>
