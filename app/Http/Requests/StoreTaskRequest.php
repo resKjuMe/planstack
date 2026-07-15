@@ -32,6 +32,7 @@ class StoreTaskRequest extends FormRequest
             'effort_story_points' => ['nullable', 'integer', 'min:0'],
             'effort_tokens' => ['nullable', 'integer', 'min:0'],
             'affected_files' => ['nullable', 'integer', 'min:0'],
+            'pr_number' => ['nullable', 'integer', 'min:1'],
             'status' => ['nullable', Rule::enum(TaskStatus::class)],
             'prerequisites' => ['nullable', 'array'],
             'prerequisites.*' => [Rule::exists('tasks', 'id')->where('project_id', $project->id)],

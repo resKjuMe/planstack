@@ -92,7 +92,7 @@
                                  den äußeren Link dann an der Stelle des inneren automatisch, wodurch
                                  alles danach (Fortschritt/Footer) aus dem Link herausfällt. Stattdessen
                                  ein klickbares div, das Klicks auf echte Links durchlässt (siehe @click). --}}
-                            <div @click="if (!$event.target.closest('a')) { window.location = @js(route('projects.status.diagram', $project)) }"
+                            <div @click="if (!$event.target.closest('a')) { window.location = @js(route('projects.diagram', $project)) }"
                                  class="flex h-full cursor-pointer flex-col rounded-lg bg-white p-6 shadow transition hover:shadow-md">
                                 <div class="flex items-center justify-between">
                                     <span class="inline-flex items-center rounded bg-gray-800 px-2 py-0.5 font-mono text-xs font-semibold text-white">
@@ -104,7 +104,7 @@
                                 </div>
 
                                 <h3 class="mt-3 text-lg font-semibold text-gray-900">
-                                    <a href="{{ route('projects.status.diagram', $project) }}" class="hover:underline">{{ $project->name }}</a>
+                                    <a href="{{ route('projects.diagram', $project) }}" class="hover:underline">{{ $project->name }}</a>
                                 </h3>
                                 <x-markdown :content="$project->description" class="mt-1 text-sm text-gray-500 line-clamp-2" />
 

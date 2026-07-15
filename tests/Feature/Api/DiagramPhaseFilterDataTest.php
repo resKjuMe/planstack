@@ -30,7 +30,7 @@ class DiagramPhaseFilterDataTest extends TestCase
         ]);
 
         $response = $this->actingAs($user)
-            ->get(route('projects.status.diagram', $project));
+            ->get(route('projects.diagram', $project));
 
         $response->assertOk();
 

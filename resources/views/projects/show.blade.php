@@ -6,55 +6,15 @@
 
 <x-app-layout>
     <x-slot name="header">
-        <div class="flex flex-wrap items-center justify-between gap-3">
-            <div class="flex items-center gap-3">
-                <span class="inline-flex items-center rounded bg-gray-800 px-2.5 py-1 text-sm font-mono font-semibold text-white">
-                    {{ $project->alias }}
-                </span>
-                <h2 class="font-semibold text-xl text-gray-800 leading-tight">{{ $project->name }}</h2>
-            </div>
-            <div class="flex items-center gap-2">
-                <a href="{{ route('projects.status.summary', $project) }}"
-                   class="inline-flex items-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-700 ring-1 ring-gray-300 hover:bg-gray-50">
-                    Status
-                </a>
-                <a href="{{ route('projects.skill', $project) }}"
-                   class="inline-flex items-center gap-1.5 rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-700 ring-1 ring-gray-300 hover:bg-gray-50"
-                   title="Planstack-Skill für Claude Code (SKILL.md + vorausgefüllte config.json) herunterladen">
-                    <svg class="h-4 w-4 text-gray-500" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                        <path d="M10.75 2.75a.75.75 0 0 0-1.5 0v8.614L6.295 8.235a.75.75 0 1 0-1.09 1.03l4.25 4.5a.75.75 0 0 0 1.09 0l4.25-4.5a.75.75 0 0 0-1.09-1.03l-2.955 3.129V2.75Z" />
-                        <path d="M3.5 12.75a.75.75 0 0 0-1.5 0v2.5A2.75 2.75 0 0 0 4.75 18h10.5A2.75 2.75 0 0 0 18 15.25v-2.5a.75.75 0 0 0-1.5 0v2.5c0 .69-.56 1.25-1.25 1.25H4.75c-.69 0-1.25-.56-1.25-1.25v-2.5Z" />
-                    </svg>
-                    Skill
-                </a>
-                @can('contribute', $project)
-                    <a href="{{ route('projects.tasks.create', $project) }}"
-                       class="inline-flex items-center rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white hover:bg-indigo-500">
-                        + Task
-                    </a>
-                @endcan
-                @can('update', $project)
-                    <form method="POST" action="{{ route('projects.sync-prs', $project) }}"
-                          onsubmit="return confirm('Merge-Status aller offenen PRs von GitHub abrufen und gemergte Tasks taggen?');">
-                        @csrf
-                        <button class="inline-flex items-center gap-1.5 rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-700 ring-1 ring-gray-300 hover:bg-gray-50">
-                            <svg class="h-4 w-4 text-gray-500" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                                <path fill-rule="evenodd" d="M15.312 11.424a5.5 5.5 0 01-9.201 2.466l-.312-.311h2.433a.75.75 0 000-1.5H3.989a.75.75 0 00-.75.75v4.242a.75.75 0 001.5 0v-2.43l.31.31a7 7 0 0011.712-3.138.75.75 0 00-1.449-.39zm1.23-3.723a.75.75 0 00.219-.53V2.929a.75.75 0 00-1.5 0V5.36l-.31-.31A7 7 0 003.239 8.188a.75.75 0 101.448.389A5.5 5.5 0 0113.89 6.11l.311.311h-2.432a.75.75 0 000 1.5h4.243a.75.75 0 00.53-.219z" clip-rule="evenodd" />
-                            </svg>
-                            PRs abgleichen
-                        </button>
-                    </form>
-                    <a href="{{ route('projects.edit', $project) }}"
-                       class="inline-flex items-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-700 ring-1 ring-gray-300 hover:bg-gray-50">
-                        Einstellungen
-                    </a>
-                @endcan
-            </div>
-        </div>
+        <x-project-header-bar :project="$project" />
+    </x-slot>
+
+    <x-slot name="subheader">
+        <x-project-tabs :project="$project" active="board" />
     </x-slot>
 
     <div class="py-8">
-        <div class="max-w-full mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
             <x-flash />
 
             @if ($project->description)

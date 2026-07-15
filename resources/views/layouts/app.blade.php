@@ -31,6 +31,16 @@
                 </header>
             @endisset
 
+            <!-- Optional sub-navigation directly under the page heading (e.g. the
+                 project tabs), spanning the full width in its own light band. -->
+            @isset($subheader)
+                <div class="bg-gray-50 border-b border-gray-200">
+                    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                        {{ $subheader }}
+                    </div>
+                </div>
+            @endisset
+
             <!-- Page Content -->
             <main>
                 {{ $slot }}

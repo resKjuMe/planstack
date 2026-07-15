@@ -80,11 +80,19 @@
         </div>
     </div>
 
-    <div>
-        <x-input-label for="affected_files" value="Betroffene Dateien (geschätzt)" />
-        <x-text-input id="affected_files" name="affected_files" type="number" min="0" class="mt-1 block w-full sm:w-40"
-                      :value="old('affected_files', $task?->affected_files)" />
-        <x-input-error :messages="$errors->get('affected_files')" class="mt-2" />
+    <div class="grid gap-5 sm:grid-cols-2">
+        <div>
+            <x-input-label for="affected_files" value="Betroffene Dateien (geschätzt)" />
+            <x-text-input id="affected_files" name="affected_files" type="number" min="0" class="mt-1 block w-full sm:w-40"
+                          :value="old('affected_files', $task?->affected_files)" />
+            <x-input-error :messages="$errors->get('affected_files')" class="mt-2" />
+        </div>
+        <div>
+            <x-input-label for="pr_number" value="PR-Nummer" />
+            <x-text-input id="pr_number" name="pr_number" type="number" min="1" class="mt-1 block w-full sm:w-40"
+                          :value="old('pr_number', $task?->pr_number)" />
+            <x-input-error :messages="$errors->get('pr_number')" class="mt-2" />
+        </div>
     </div>
 
     @if ($candidates->isNotEmpty())

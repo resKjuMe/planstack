@@ -16,7 +16,7 @@ use Tests\TestCase;
  * locks that the route renders and that both created- and updated-actions
  * show up with a resolved headline and causer.
  */
-class ProjectStatusChangelogTest extends TestCase
+class ProjectChangelogTest extends TestCase
 {
     use RefreshDatabase;
 
@@ -41,7 +41,7 @@ class ProjectStatusChangelogTest extends TestCase
         ]);
         $task->update(['summary' => 'Updated summary']);
 
-        $response = $this->get(route('projects.status.changelog', $project));
+        $response = $this->get(route('projects.changelog', $project));
 
         $response->assertOk();
 
@@ -82,7 +82,7 @@ class ProjectStatusChangelogTest extends TestCase
             'summary' => 'Etwas blockiert',
         ])->assertRedirect();
 
-        $response = $this->get(route('projects.status.changelog', $project));
+        $response = $this->get(route('projects.changelog', $project));
         $response->assertOk();
 
         $rows = collect($response->viewData('changes')->items());
@@ -100,5 +100,78 @@ class ProjectStatusChangelogTest extends TestCase
         $this->assertNotNull($taskSection);
         $statusRow = collect($taskSection['visible'])->firstWhere('field', 'Status');
         $this->assertSame('problematisch', $statusRow['new']);
+    }
+
+    /**
+     * A status change should get the highlighted arrow headline even when
+     * another field changes in the same update (e.g. MERGED also stamps
+     * merged_at) — not just for pure, single-field status flips.
+     */
+    public function test_status_change_is_highlighted_even_with_other_fields_changed_too(): void
+    {
+        $user = User::factory()->create(['name' => 'Ada Lovelace']);
+        $project = Project::factory()->create(['created_by_id' => $user->id]);
+        $this->actingAs($user);
+
+        $task = Task::factory()->create([
+            'project_id' => $project->id,
+            'created_by_id' => $user->id,
+            'name' => 'T1',
+            'status' => TaskStatus::IN_REVIEW,
+        ]);
+
+        $task->update(['status' => TaskStatus::MERGED->value, 'merged_at' => now()]);
+
+        $response = $this->get(route('projects.changelog', $project));
+        $response->assertOk();
+
+        $rows = collect($response->viewData('changes')->items());
+        $mergeRow = $rows->first(fn ($row) => str_starts_with($this->headlineText($row), 'T1 → '));
+
+        $this->assertNotNull($mergeRow);
+        $this->assertStringContainsString('gemerged', $this->headlineText($mergeRow));
+        $this->assertStringContainsString('vorher: in Review', $this->headlineText($mergeRow));
+    }
+
+    /**
+     * Setting a PR number and flipping the status to IN_REVIEW are two
+     * separate requests (TaskController::pr / ::status) but happen moments
+     * apart — the PR-number-only row should fold into the status row instead
+     * of appearing as its own "T1 aktualisiert" line.
+     */
+    public function test_pr_number_folds_into_the_accompanying_status_change(): void
+    {
+        $user = User::factory()->create(['name' => 'Ada Lovelace']);
+        $project = Project::factory()->create(['created_by_id' => $user->id]);
+        $this->actingAs($user);
+
+        $task = Task::factory()->create([
+            'project_id' => $project->id,
+            'created_by_id' => $user->id,
+            'name' => 'T1',
+            'status' => TaskStatus::IN_PROGRESS,
+        ]);
+
+        $task->update(['pr_number' => 8076]);
+        $task->update(['status' => TaskStatus::IN_REVIEW->value]);
+
+        $response = $this->get(route('projects.changelog', $project));
+        $response->assertOk();
+
+        $rows = collect($response->viewData('changes')->items());
+
+        // No standalone "T1 aktualisiert" row just for the PR number.
+        $standalone = $rows->first(fn ($row) => $this->headlineText($row) === 'T1 aktualisiert');
+        $this->assertNull($standalone);
+
+        $mergeRow = $rows->first(fn ($row) => str_starts_with($this->headlineText($row), 'T1 → '));
+        $this->assertNotNull($mergeRow);
+        $this->assertStringContainsString('in Review', $this->headlineText($mergeRow));
+        $this->assertStringContainsString('#8076', $this->headlineText($mergeRow));
+
+        $fieldRows = collect($mergeRow['sections'][0]['visible'])->merge($mergeRow['sections'][0]['hidden']);
+        $prRow = $fieldRows->firstWhere('field', 'PR-Nummer');
+        $this->assertNotNull($prRow);
+        $this->assertSame('8076', $prRow['new']);
     }
 }

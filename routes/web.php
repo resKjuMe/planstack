@@ -3,11 +3,14 @@
 use App\Http\Controllers\ApiDocsController;
 use App\Http\Controllers\ApiTokenController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\ProjectChangelogController;
 use App\Http\Controllers\ProjectController;
+use App\Http\Controllers\ProjectDiagramController;
 use App\Http\Controllers\ProjectMemberController;
+use App\Http\Controllers\ProjectPrSequenceController;
 use App\Http\Controllers\ProjectPrSyncController;
 use App\Http\Controllers\ProjectSkillController;
-use App\Http\Controllers\ProjectStatusController;
+use App\Http\Controllers\ProjectSummaryController;
 use App\Http\Controllers\ProjectTeamController;
 use App\Http\Controllers\TaskConcernController;
 use App\Http\Controllers\TaskController;
@@ -44,15 +47,23 @@ Route::middleware('auth')->group(function () {
     // Projects
     Route::resource('projects', ProjectController::class);
 
-    // Status views (Diagramm / PR-Sequenz / Summary)
-    Route::get('projects/{project}/status/diagram', [ProjectStatusController::class, 'diagram'])
-        ->name('projects.status.diagram');
-    Route::get('projects/{project}/status/pr-sequence', [ProjectStatusController::class, 'prSequence'])
-        ->name('projects.status.pr-sequence');
-    Route::get('projects/{project}/status/summary', [ProjectStatusController::class, 'summary'])
-        ->name('projects.status.summary');
-    Route::get('projects/{project}/status/changelog', [ProjectStatusController::class, 'changelog'])
-        ->name('projects.status.changelog');
+    // Status views (Diagramm / PR-Sequenz / Summary / Changelog) — top-level,
+    // same nesting depth as the board itself (see the redirects below for the
+    // former /status/... URLs).
+    Route::get('projects/{project}/diagram', ProjectDiagramController::class)
+        ->name('projects.diagram');
+    Route::get('projects/{project}/pr-sequence', ProjectPrSequenceController::class)
+        ->name('projects.pr-sequence');
+    Route::get('projects/{project}/summary', ProjectSummaryController::class)
+        ->name('projects.summary');
+    Route::get('projects/{project}/changelog', ProjectChangelogController::class)
+        ->name('projects.changelog');
+
+    // Legacy URLs (formerly nested under /status/...) redirect permanently.
+    Route::permanentRedirect('projects/{project}/status/diagram', '/projects/{project}/diagram');
+    Route::permanentRedirect('projects/{project}/status/pr-sequence', '/projects/{project}/pr-sequence');
+    Route::permanentRedirect('projects/{project}/status/summary', '/projects/{project}/summary');
+    Route::permanentRedirect('projects/{project}/status/changelog', '/projects/{project}/changelog');
 
     // Pull PR merge status from GitHub and tag merged tasks
     Route::post('projects/{project}/sync-prs', ProjectPrSyncController::class)
