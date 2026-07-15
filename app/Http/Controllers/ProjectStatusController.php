@@ -171,6 +171,12 @@ class ProjectStatusController extends Controller
             $changes = $query->orderByDesc('created_at')->paginate(25)->withQueryString();
             $logs = $changes->getCollection();
 
+            // Filing/updating a concern flips the task to CONCERNED in the same
+            // request — that's one edit from the user's perspective, so the
+            // status change is folded into the concern row instead of showing
+            // as its own "Task aktualisiert" line right next to it.
+            $mergedStatus = $this->mergeConcernStatusFlips($logs, $concernTaskById);
+
             $userRefIds = $logs->flatMap(fn ($log) => [
                 ...array_values(Arr::only($log->old_values ?? [], self::USER_REF_FIELDS)),
                 ...array_values(Arr::only($log->new_values ?? [], self::USER_REF_FIELDS)),
@@ -182,17 +188,38 @@ class ProjectStatusController extends Controller
                 ->unique();
             $usersById = User::whereIn('id', $userIds)->pluck('name', 'id');
             $refs = ['users' => $usersById, 'tasks' => $tasksById, 'phases' => $phasesById];
+            $lookups = [$project, $tasksById, $phasesById, $concernTaskById, $requirementsById, $membershipUserById, $usersById];
 
-            $changes->setCollection($logs->map(fn ($log) => [
-                'when' => Carbon::parse($log->created_at),
-                'entity_label' => $log->entity_label,
-                'action_label' => $this->auditActionLabel($log->action),
-                'action_badge' => $this->auditActionBadge($log->action),
-                'subject' => $this->auditSubject($log, $project, $tasksById, $phasesById, $concernTaskById, $requirementsById, $membershipUserById, $usersById),
-                'causer' => $log->causer_id ? ($usersById[$log->causer_id] ?? "Nutzer #{$log->causer_id}") : 'System',
-                'source' => $log->source,
-                'changes' => $this->auditDiff($log, $refs),
-            ]));
+            $changes->setCollection($logs->map(function ($log, $key) use ($refs, $lookups, $mergedStatus) {
+                $merged = $mergedStatus[$key] ?? null;
+
+                $sections = [[
+                    'label' => $merged ? "{$log->entity_label} ".$this->auditActionVerb($log->action) : null,
+                    'rows' => $this->auditDiff($log, $refs),
+                ]];
+                if ($merged) {
+                    array_unshift($sections, [
+                        'label' => 'Task '.$this->auditActionVerb('updated'),
+                        'rows' => [[
+                            'field' => $this->auditFieldLabel('status'),
+                            'old' => $this->statusLabel($merged['old']),
+                            'new' => $this->statusLabel($merged['new']),
+                        ]],
+                    ]);
+                }
+
+                return [
+                    'when' => Carbon::parse($log->created_at),
+                    'headline' => $this->auditHeadline($log, ...$lookups, merged: $merged),
+                    'causer' => $log->causer_id ? ($refs['users'][$log->causer_id] ?? "Nutzer #{$log->causer_id}") : 'System',
+                    'causer_short' => $log->causer_id ? $this->shortName($refs['users'][$log->causer_id] ?? "Nutzer #{$log->causer_id}") : 'System',
+                    'sections' => array_map(fn ($s) => [
+                        'label' => $s['label'],
+                        'visible' => array_slice($s['rows'], 0, 3),
+                        'hidden' => array_slice($s['rows'], 3),
+                    ], $sections),
+                ];
+            })->values());
         }
 
         return view('status.changelog', [
@@ -200,6 +227,91 @@ class ProjectStatusController extends Controller
             'active' => 'changelog',
             'changes' => $changes,
         ]);
+    }
+
+    /**
+     * Finds Task rows whose *only* change is a flip to CONCERNED and pairs
+     * each with the TaskConcern row that caused it (same task, same instant).
+     * The Task row is dropped from $logs (by reference); the raw old/new
+     * status values come back keyed by the concern row's key in $logs, for
+     * the caller to fold into that row's headline and diff sections.
+     *
+     * @return array<int|string, array{old: ?string, new: ?string}>
+     */
+    private function mergeConcernStatusFlips(Collection $logs, Collection $concernTaskById): array
+    {
+        $statusFlips = [];
+        foreach ($logs as $key => $log) {
+            // getChanges() (and thus new_values) always carries 'updated_at'
+            // alongside the actual change, so that's ignored for the "only
+            // the status changed" check.
+            $new = Arr::except($log->new_values ?? [], ['updated_at']);
+            if ($log->entity_class === Task::class && $log->action === 'updated'
+                && array_keys($new) === ['status'] && ($new['status'] ?? null) === TaskStatus::CONCERNED->value) {
+                $statusFlips[(int) $log->entity_id][] = $key;
+            }
+        }
+
+        if (! $statusFlips) {
+            return [];
+        }
+
+        $merged = [];
+        foreach ($logs as $key => $log) {
+            if ($log->entity_class !== TaskConcern::class) {
+                continue;
+            }
+
+            $taskId = (int) ($log->new_values['task_id'] ?? $log->old_values['task_id'] ?? $concernTaskById[(int) $log->entity_id] ?? 0);
+            if (! $taskId || empty($statusFlips[$taskId])) {
+                continue;
+            }
+
+            foreach ($statusFlips[$taskId] as $i => $taskLogKey) {
+                $taskLog = $logs[$taskLogKey];
+                if (Carbon::parse($taskLog->created_at)->diffInSeconds(Carbon::parse($log->created_at), true) > 5) {
+                    continue;
+                }
+
+                $merged[$key] = [
+                    'old' => $taskLog->old_values['status'] ?? null,
+                    'new' => $taskLog->new_values['status'] ?? null,
+                ];
+                $logs->forget($taskLogKey);
+                unset($statusFlips[$taskId][$i]);
+
+                break;
+            }
+        }
+
+        return $merged;
+    }
+
+    private function statusLabel(?string $value): string
+    {
+        if ($value === null) {
+            return '—';
+        }
+
+        return TaskStatus::tryFrom($value)?->label() ?? $value;
+    }
+
+    private function statusBadge(?string $value): string
+    {
+        return TaskStatus::tryFrom((string) $value)?->badgeClasses() ?? 'bg-gray-100 text-gray-600';
+    }
+
+    /**
+     * "Christian Mietze" → "C. Mietze", for the compact causer chip.
+     */
+    private function shortName(string $name): string
+    {
+        $parts = preg_split('/\s+/', trim($name));
+        if (count($parts) < 2) {
+            return $name;
+        }
+
+        return mb_substr($parts[0], 0, 1).'. '.array_pop($parts);
     }
 
     /**
@@ -229,12 +341,14 @@ class ProjectStatusController extends Controller
     }
 
     /**
-     * Best-effort human label for the changed row: the task/phase name for
-     * direct changes, or "related to task X" for concerns/dependencies/etc.
-     * Falls back to the id when the referenced record no longer exists and
-     * the audit snapshot doesn't carry the name either.
+     * Compact, one-line "sentence" for the row header: a plain description
+     * for most entities ("Phase X aktualisiert"), but a richer one for the
+     * two cases worth reading at a glance — a task's status arrow and a
+     * concern (optionally folded together with the status change it caused).
+     *
+     * @return array<int, array{t: string, v: string, cls?: string}>
      */
-    private function auditSubject(
+    private function auditHeadline(
         EloquentAuditLog $log,
         Project $project,
         Collection $tasksById,
@@ -243,46 +357,84 @@ class ProjectStatusController extends Controller
         Collection $requirementsById,
         Collection $membershipUserById,
         Collection $usersById,
-    ): string {
+        ?array $merged = null,
+    ): array {
         $id = (int) $log->entity_id;
         $values = $log->new_values ?: ($log->old_values ?: []);
+        $verb = $this->auditActionVerb($log->action);
         $taskLabel = fn (mixed $taskId) => $taskId ? ($tasksById[$taskId] ?? "Task #{$taskId}") : '?';
+        $text = fn (string $v) => ['t' => 'text', 'v' => $v];
+        $tag = fn (string $v) => ['t' => 'tag', 'v' => $v];
+
+        if ($log->entity_class === Task::class) {
+            $statusOnly = Arr::except($log->new_values ?? [], ['updated_at']);
+            if ($log->action === 'updated' && array_keys($statusOnly) === ['status']) {
+                $old = $log->old_values['status'] ?? null;
+                $segments = [
+                    $tag($tasksById[$id] ?? ($values['name'] ?? "Task #{$id}")),
+                    $text(' → '),
+                    ['t' => 'status', 'v' => $this->statusLabel($statusOnly['status']), 'cls' => $this->statusBadge($statusOnly['status'])],
+                ];
+                if ($old !== null) {
+                    $segments[] = $text(' (vorher: '.$this->statusLabel($old).')');
+                }
+
+                return $segments;
+            }
+
+            return [$tag($tasksById[$id] ?? ($values['name'] ?? "Task #{$id}")), $text(' '.$verb)];
+        }
+
+        if ($log->entity_class === TaskConcern::class) {
+            $taskId = $values['task_id'] ?? $concernTaskById[$id] ?? null;
+            $segments = [$text('Concern zu '), $tag($taskLabel($taskId))];
+
+            if ($merged) {
+                $segments[] = $text(' · Status → ');
+                $segments[] = ['t' => 'status', 'v' => $this->statusLabel($merged['new']), 'cls' => $this->statusBadge($merged['new'])];
+            } else {
+                $segments[] = $text(' '.$verb);
+            }
+
+            $summary = $values['summary'] ?? null;
+            if ($summary) {
+                $segments[] = $text(' · ');
+                $segments[] = ['t' => 'quote', 'v' => mb_strlen($summary) > 60 ? mb_substr($summary, 0, 60).'…' : $summary];
+            }
+
+            return $segments;
+        }
 
         return match ($log->entity_class) {
-            Project::class => $project->alias,
-            Task::class => $tasksById[$id] ?? ($values['name'] ?? "Task #{$id}"),
-            Phase::class => $phasesById[$id] ?? ($values['name'] ?? "Phase #{$id}"),
-            TaskConcern::class => 'Concern zu '.$taskLabel($values['task_id'] ?? $concernTaskById[$id] ?? null),
-            TaskRequirement::class => $taskLabel($values['task_id'] ?? $requirementsById[$id]->task_id ?? null)
-                .' ← '.$taskLabel($values['parent_id'] ?? $requirementsById[$id]->parent_id ?? null),
-            ProjectMembership::class => 'Mitgliedschaft: '.(function () use ($values, $membershipUserById, $id, $usersById) {
-                $userId = $values['user_id'] ?? $membershipUserById[$id] ?? null;
+            Project::class => [$text('Projekt '), $tag($project->alias), $text(' '.$verb)],
+            Phase::class => [$text('Phase '), $tag($phasesById[$id] ?? ($values['name'] ?? "#{$id}")), $text(' '.$verb)],
+            TaskRequirement::class => [
+                $tag($taskLabel($values['task_id'] ?? $requirementsById[$id]->task_id ?? null)),
+                $text(' ← '),
+                $tag($taskLabel($values['parent_id'] ?? $requirementsById[$id]->parent_id ?? null)),
+                $text(' '.$verb),
+            ],
+            ProjectMembership::class => [
+                $text('Mitgliedschaft: '),
+                $tag((function () use ($values, $membershipUserById, $id, $usersById) {
+                    $userId = $values['user_id'] ?? $membershipUserById[$id] ?? null;
 
-                return $userId ? ($usersById[$userId] ?? "Nutzer #{$userId}") : "Mitgliedschaft #{$id}";
-            })(),
-            default => "#{$id}",
+                    return $userId ? ($usersById[$userId] ?? "Nutzer #{$userId}") : "#{$id}";
+                })()),
+                $text(' '.$verb),
+            ],
+            default => [$text("#{$id} ".$verb)],
         };
     }
 
-    private function auditActionLabel(string $action): string
+    private function auditActionVerb(string $action): string
     {
         return match ($action) {
-            'created' => 'Erstellt',
-            'updated' => 'Aktualisiert',
-            'deleted' => 'Gelöscht',
-            'restored' => 'Wiederhergestellt',
-            default => ucfirst($action),
-        };
-    }
-
-    private function auditActionBadge(string $action): string
-    {
-        return match ($action) {
-            'created' => 'bg-green-100 text-green-700',
-            'updated' => 'bg-blue-100 text-blue-700',
-            'deleted' => 'bg-red-100 text-red-700',
-            'restored' => 'bg-amber-100 text-amber-700',
-            default => 'bg-gray-100 text-gray-700',
+            'created' => 'erstellt',
+            'updated' => 'aktualisiert',
+            'deleted' => 'gelöscht',
+            'restored' => 'wiederhergestellt',
+            default => $action,
         };
     }
 

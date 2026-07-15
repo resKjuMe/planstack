@@ -1,47 +1,81 @@
 <x-status-shell :project="$project" :active="$active" :bare="true">
-    <div class="bg-white rounded-lg shadow divide-y divide-gray-100">
+    @php $lastDate = null; @endphp
+    <div class="space-y-2">
         @forelse ($changes as $entry)
-            <div x-data="{ open: false }" class="p-4">
-                <div class="flex flex-wrap items-center justify-between gap-2">
-                    <div class="flex flex-wrap items-center gap-2">
-                        <span class="text-xs font-mono text-gray-400">{{ $entry['when']->format('d.m.Y H:i') }}</span>
-                        <span class="inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600">{{ $entry['entity_label'] }}</span>
-                        <span class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium {{ $entry['action_badge'] }}">{{ $entry['action_label'] }}</span>
-                        <span class="font-medium text-gray-800">{{ $entry['subject'] }}</span>
-                    </div>
-                    <div class="flex items-center gap-3 text-xs text-gray-500">
-                        <span>{{ $entry['causer'] }}</span>
-                        @if (! empty($entry['changes']))
-                            <button type="button" @click="open = !open" class="text-indigo-600 hover:underline">
-                                <span x-show="!open">Details anzeigen</span>
-                                <span x-show="open" x-cloak>Details ausblenden</span>
-                            </button>
-                        @endif
-                    </div>
-                </div>
+            @php $date = $entry['when']->format('d.m.Y'); @endphp
+            @if ($date !== $lastDate)
+                <div class="{{ $loop->first ? '' : 'pt-4' }} text-xs font-medium text-gray-400">{{ $date }}</div>
+                @php $lastDate = $date; @endphp
+            @endif
 
-                @if (! empty($entry['changes']))
-                    <div x-show="open" x-cloak class="mt-3 border-t border-gray-100 pt-3 overflow-x-auto">
-                        <table class="w-full text-sm">
-                            <thead>
-                                <tr class="text-left text-xs text-gray-400">
-                                    <th class="pr-4 py-1 font-medium">Feld</th>
-                                    <th class="pr-4 py-1 font-medium">Vorher</th>
-                                    <th class="py-1 font-medium">Nachher</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @foreach ($entry['changes'] as $change)
-                                    <tr class="align-top">
-                                        <td class="pr-4 py-1 whitespace-nowrap text-gray-500">{{ $change['field'] }}</td>
-                                        <td class="pr-4 py-1 text-gray-600">{{ $change['old'] ?? '—' }}</td>
-                                        <td class="py-1 text-gray-800">{{ $change['new'] ?? '—' }}</td>
+            <div x-data="{ open: false }" class="rounded-xl bg-white p-3 ring-1 ring-gray-200">
+                <button type="button" @click="open = !open" class="flex w-full items-center gap-3 text-left">
+                    <span class="w-10 shrink-0 text-xs text-gray-400">{{ $entry['when']->format('H:i') }}</span>
+                    <span class="flex-1 text-sm text-gray-800">
+                        @foreach ($entry['headline'] as $seg)
+                            @switch($seg['t'])
+                                @case('text')
+                                    {{ $seg['v'] }}
+                                    @break
+                                @case('tag')
+                                    <span class="font-mono font-medium text-indigo-600">{{ $seg['v'] }}</span>
+                                    @break
+                                @case('status')
+                                    <span class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium {{ $seg['cls'] }}">{{ $seg['v'] }}</span>
+                                    @break
+                                @case('quote')
+                                    <span class="text-gray-500">&bdquo;{{ $seg['v'] }}&ldquo;</span>
+                                    @break
+                            @endswitch
+                        @endforeach
+                    </span>
+                    <span class="shrink-0 text-xs text-gray-400">{{ $entry['causer_short'] }}</span>
+                    <svg class="h-4 w-4 shrink-0 text-gray-400 transition-transform" :class="open && 'rotate-90'"
+                         viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M9 6l6 6l-6 6" />
+                    </svg>
+                </button>
+
+                <div x-show="open" x-cloak class="mt-3 space-y-3 border-t border-gray-100 pt-3">
+                    @foreach ($entry['sections'] as $section)
+                        <div x-data="{ moreOpen: false }">
+                            @if ($section['label'])
+                                <div class="mb-1 text-xs font-medium text-gray-400">{{ $section['label'] }}</div>
+                            @endif
+                            <table class="w-full text-sm">
+                                <thead>
+                                    <tr class="text-left text-xs text-gray-400">
+                                        <th class="pr-4 py-1 font-medium">Feld</th>
+                                        <th class="pr-4 py-1 font-medium">Vorher</th>
+                                        <th class="py-1 font-medium">Nachher</th>
                                     </tr>
-                                @endforeach
-                            </tbody>
-                        </table>
-                    </div>
-                @endif
+                                </thead>
+                                <tbody>
+                                    @foreach ($section['visible'] as $row)
+                                        <tr class="align-top">
+                                            <td class="pr-4 py-1 whitespace-nowrap text-gray-500">{{ $row['field'] }}</td>
+                                            <td class="pr-4 py-1 text-gray-600">{{ $row['old'] ?? '—' }}</td>
+                                            <td class="py-1 font-medium text-gray-800">{{ $row['new'] ?? '—' }}</td>
+                                        </tr>
+                                    @endforeach
+                                    @foreach ($section['hidden'] as $row)
+                                        <tr x-show="moreOpen" x-cloak class="align-top">
+                                            <td class="pr-4 py-1 whitespace-nowrap text-gray-500">{{ $row['field'] }}</td>
+                                            <td class="pr-4 py-1 text-gray-600">{{ $row['old'] ?? '—' }}</td>
+                                            <td class="py-1 font-medium text-gray-800">{{ $row['new'] ?? '—' }}</td>
+                                        </tr>
+                                    @endforeach
+                                </tbody>
+                            </table>
+                            @if (! empty($section['hidden']))
+                                <button type="button" @click="moreOpen = !moreOpen" class="mt-1 text-xs text-indigo-600 hover:underline">
+                                    <span x-show="!moreOpen">+ {{ count($section['hidden']) }} weitere Felder</span>
+                                    <span x-show="moreOpen" x-cloak>weniger anzeigen</span>
+                                </button>
+                            @endif
+                        </div>
+                    @endforeach
+                </div>
             </div>
         @empty
             <p class="p-6 text-sm text-gray-400">Noch keine Änderungen protokolliert.</p>
