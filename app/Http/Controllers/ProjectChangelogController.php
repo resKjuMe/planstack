@@ -405,16 +405,15 @@ class ProjectChangelogController extends Controller
                         $statusLabel .= ' ('.$this->initials($claimer).')';
                     }
                 }
-                $segments = [
-                    $tag($tasksById[$id] ?? ($values['name'] ?? "Task #{$id}")),
-                    $text(' → '),
-                    ['t' => 'status', 'v' => $statusLabel, 'cls' => $this->statusBadge($new['status'])],
-                ];
-                if (! empty($new['pr_number'])) {
-                    $segments[] = $text(' #'.$new['pr_number']);
-                }
+                $segments = [$tag($tasksById[$id] ?? ($values['name'] ?? "Task #{$id}")), $text(' ')];
                 if ($old !== null) {
-                    $segments[] = $text(' (vorher: '.$this->statusLabel($old).')');
+                    $segments[] = ['t' => 'status', 'v' => $this->statusLabel($old), 'cls' => $this->statusBadge($old)];
+                    $segments[] = $text(' → ');
+                }
+                $segments[] = ['t' => 'status', 'v' => $statusLabel, 'cls' => $this->statusBadge($new['status'])];
+                if (! empty($new['pr_number'])) {
+                    $segments[] = $text(' ');
+                    $segments[] = ['t' => 'status', 'v' => '#'.$new['pr_number'], 'cls' => 'bg-gray-100 text-gray-600'];
                 }
 
                 return $segments;

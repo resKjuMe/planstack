@@ -25,6 +25,15 @@ class ProjectChangelogTest extends TestCase
         return collect($row['headline'])->pluck('v')->implode('');
     }
 
+    /**
+     * True for a task's own status-arrow headline ("T1 oldLabel → newLabel"),
+     * as opposed to a generic "T1 aktualisiert" or a merged concern row.
+     */
+    private function isTaskStatusArrow(array $row): bool
+    {
+        return (bool) preg_match('/^T1\s.*→/', $this->headlineText($row));
+    }
+
     public function test_changelog_combines_project_and_task_changes(): void
     {
         $user = User::factory()->create(['name' => 'Ada Lovelace']);
@@ -87,8 +96,8 @@ class ProjectChangelogTest extends TestCase
 
         $rows = collect($response->viewData('changes')->items());
 
-        // No standalone "T1 → problematisch" row — it should be folded away.
-        $standalone = $rows->first(fn ($row) => str_starts_with($this->headlineText($row), 'T1 → '));
+        // No standalone task status-arrow row — it should be folded away.
+        $standalone = $rows->first(fn ($row) => $this->isTaskStatusArrow($row));
         $this->assertNull($standalone);
 
         $concernRow = $rows->first(fn ($row) => str_contains($this->headlineText($row), 'Concern zu'));
@@ -126,11 +135,11 @@ class ProjectChangelogTest extends TestCase
         $response->assertOk();
 
         $rows = collect($response->viewData('changes')->items());
-        $mergeRow = $rows->first(fn ($row) => str_starts_with($this->headlineText($row), 'T1 → '));
+        $mergeRow = $rows->first(fn ($row) => $this->isTaskStatusArrow($row));
 
         $this->assertNotNull($mergeRow);
         $this->assertStringContainsString('gemerged', $this->headlineText($mergeRow));
-        $this->assertStringContainsString('vorher: in Review', $this->headlineText($mergeRow));
+        $this->assertStringContainsString('in Review', $this->headlineText($mergeRow));
     }
 
     /**
@@ -164,7 +173,7 @@ class ProjectChangelogTest extends TestCase
         $standalone = $rows->first(fn ($row) => $this->headlineText($row) === 'T1 aktualisiert');
         $this->assertNull($standalone);
 
-        $mergeRow = $rows->first(fn ($row) => str_starts_with($this->headlineText($row), 'T1 → '));
+        $mergeRow = $rows->first(fn ($row) => $this->isTaskStatusArrow($row));
         $this->assertNotNull($mergeRow);
         $this->assertStringContainsString('in Review', $this->headlineText($mergeRow));
         $this->assertStringContainsString('#8076', $this->headlineText($mergeRow));
@@ -202,7 +211,7 @@ class ProjectChangelogTest extends TestCase
         $response->assertOk();
 
         $rows = collect($response->viewData('changes')->items());
-        $claimRow = $rows->first(fn ($row) => str_starts_with($this->headlineText($row), 'T1 → '));
+        $claimRow = $rows->first(fn ($row) => $this->isTaskStatusArrow($row));
 
         $this->assertNotNull($claimRow);
         $this->assertStringContainsString('beansprucht (JG)', $this->headlineText($claimRow));
