@@ -3,10 +3,12 @@
 namespace App\Http\Controllers;
 
 use App\Enums\ProjectRole;
+use App\Enums\TaskStatus;
 use App\Http\Requests\StoreProjectRequest;
 use App\Http\Requests\UpdateProjectRequest;
 use App\Models\Project;
 use App\Support\SkillTemplate;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\View\View;
@@ -17,10 +19,18 @@ class ProjectController extends Controller
     {
         $userId = Auth::id();
 
+        // done_sp spiegelt TaskBoardService::isDelivered() (PR vorhanden oder
+        // COMPLETED/MERGED) — dieselbe Definition wie die Phasen-Fortschrittsbalken
+        // im Status-Bereich, nur hier als Aggregat statt in PHP je Task berechnet.
         $projects = Project::query()
             ->where('created_by_id', $userId)
             ->orWhereHas('memberships', fn ($q) => $q->where('user_id', $userId))
             ->withCount('tasks')
+            ->withSum('tasks as total_sp', 'effort_story_points')
+            ->withSum(['tasks as done_sp' => fn (Builder $q) => $q->where(
+                fn (Builder $q) => $q->whereNotNull('pr_number')
+                    ->orWhereIn('status', [TaskStatus::COMPLETED, TaskStatus::MERGED])
+            )], 'effort_story_points')
             ->with('owner')
             ->latest()
             ->get();

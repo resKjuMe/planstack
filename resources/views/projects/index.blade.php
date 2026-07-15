@@ -20,13 +20,17 @@
             @else
                 <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                     @foreach ($projects as $project)
+                        @php
+                            $totalSp = (int) $project->total_sp;
+                            $pct = $totalSp > 0 ? (int) $project->done_sp / $totalSp * 100 : 0;
+                        @endphp
                         <a href="{{ route('projects.status.diagram', $project) }}"
                            class="block bg-white rounded-lg shadow hover:shadow-md transition p-5">
                             <div class="flex items-center justify-between">
                                 <span class="inline-flex items-center rounded bg-gray-800 px-2 py-0.5 text-xs font-mono font-semibold text-white">
                                     {{ $project->alias }}
                                 </span>
-                                <span class="text-xs text-gray-400">{{ $project->tasks_count }} Tasks</span>
+                                <span class="text-xs text-gray-400">{{ $project->tasks_count }} Tasks · {{ $totalSp }} SP · {{ number_format($pct, 1, ',', '') }}%</span>
                             </div>
                             <h3 class="mt-3 font-semibold text-gray-900">{{ $project->name }}</h3>
                             <p class="mt-1 text-sm text-gray-500 line-clamp-2">{{ $project->description }}</p>
