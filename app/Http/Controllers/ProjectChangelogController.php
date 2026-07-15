@@ -405,7 +405,7 @@ class ProjectChangelogController extends Controller
                         $statusLabel .= ' ('.$this->initials($claimer).')';
                     }
                 }
-                $segments = [$tag($tasksById[$id] ?? ($values['name'] ?? "Task #{$id}")), $text(' ')];
+                $segments = [$tag($tasksById[$id] ?? ($values['name'] ?? "Task #{$id}")), $text(' · ')];
                 if ($old !== null) {
                     $segments[] = ['t' => 'status', 'v' => $this->statusLabel($old), 'cls' => $this->statusBadge($old)];
                     $segments[] = $text(' → ');
@@ -419,7 +419,7 @@ class ProjectChangelogController extends Controller
                 return $segments;
             }
 
-            return [$tag($tasksById[$id] ?? ($values['name'] ?? "Task #{$id}")), $text(' '.$verb)];
+            return [$tag($tasksById[$id] ?? ($values['name'] ?? "Task #{$id}")), $text(' · '.$verb)];
         }
 
         if ($log->entity_class === TaskConcern::class) {

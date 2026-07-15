@@ -169,8 +169,8 @@ class ProjectChangelogTest extends TestCase
 
         $rows = collect($response->viewData('changes')->items());
 
-        // No standalone "T1 aktualisiert" row just for the PR number.
-        $standalone = $rows->first(fn ($row) => $this->headlineText($row) === 'T1 aktualisiert');
+        // No standalone "T1 · aktualisiert" row just for the PR number.
+        $standalone = $rows->first(fn ($row) => $this->headlineText($row) === 'T1 · aktualisiert');
         $this->assertNull($standalone);
 
         $mergeRow = $rows->first(fn ($row) => $this->isTaskStatusArrow($row));
