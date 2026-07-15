@@ -141,7 +141,7 @@ class ProjectChangelogController extends Controller
                 }
 
                 return [
-                    'when' => Carbon::parse($log->created_at),
+                    'when' => Carbon::parse($log->created_at)->setTimezone('Europe/Berlin'),
                     'headline' => $this->auditHeadline($log, ...$lookups, merged: $merged),
                     'causer' => $log->causer_id ? ($refs['users'][$log->causer_id] ?? "Nutzer #{$log->causer_id}") : 'System',
                     'causer_short' => $log->causer_id ? $this->shortName($refs['users'][$log->causer_id] ?? "Nutzer #{$log->causer_id}") : 'System',
@@ -537,7 +537,7 @@ class ProjectChangelogController extends Controller
 
         if (str_ends_with($key, '_at')) {
             try {
-                return Carbon::parse($value)->format('d.m.Y H:i');
+                return Carbon::parse($value)->setTimezone('Europe/Berlin')->format('d.m.Y H:i');
             } catch (\Throwable) {
                 return (string) $value;
             }
