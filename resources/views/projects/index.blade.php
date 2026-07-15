@@ -95,7 +95,7 @@
                             <div @click="if (!$event.target.closest('a')) { window.location = @js(route('projects.status.diagram', $project)) }"
                                  class="flex h-full cursor-pointer flex-col rounded-lg bg-white p-6 shadow transition hover:shadow-md">
                                 <div class="flex items-center justify-between">
-                                    <span class="inline-flex items-center rounded bg-indigo-100 px-2 py-0.5 font-mono text-xs font-semibold text-indigo-700">
+                                    <span class="inline-flex items-center rounded bg-gray-800 px-2 py-0.5 font-mono text-xs font-semibold text-white">
                                         {{ $project->alias }}
                                     </span>
                                     <span class="inline-flex items-center rounded-full px-3 py-1 text-xs font-medium {{ $badgeClass }}">
