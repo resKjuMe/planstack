@@ -398,17 +398,18 @@ class ProjectChangelogController extends Controller
             // those still show up in the expandable diff below.
             if ($log->action === 'updated' && array_key_exists('status', $new)) {
                 $old = $log->old_values['status'] ?? null;
-                $segments = [
-                    $tag($tasksById[$id] ?? ($values['name'] ?? "Task #{$id}")),
-                    $text(' → '),
-                    ['t' => 'status', 'v' => $this->statusLabel($new['status']), 'cls' => $this->statusBadge($new['status'])],
-                ];
+                $statusLabel = $this->statusLabel($new['status']);
                 if ($new['status'] === TaskStatus::CLAIMED->value && ! empty($new['claimed_by_id'])) {
                     $claimer = $usersById[$new['claimed_by_id']] ?? null;
                     if ($claimer) {
-                        $segments[] = $text(' ('.$this->initials($claimer).')');
+                        $statusLabel .= ' ('.$this->initials($claimer).')';
                     }
                 }
+                $segments = [
+                    $tag($tasksById[$id] ?? ($values['name'] ?? "Task #{$id}")),
+                    $text(' → '),
+                    ['t' => 'status', 'v' => $statusLabel, 'cls' => $this->statusBadge($new['status'])],
+                ];
                 if (! empty($new['pr_number'])) {
                     $segments[] = $text(' #'.$new['pr_number']);
                 }
