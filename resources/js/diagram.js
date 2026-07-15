@@ -235,6 +235,10 @@ class DependencyGraph {
         this.edgeEls = [];          // [{ from, to, el }]
         this.parents = new Map();   // key -> Set(parentKeys)
         this.children = new Map();  // key -> Set(childKeys)
+
+        // Ctrl+Mausrad-Zoom (siehe wireZoom); bleibt über Re-Renders hinweg
+        // erhalten, da nur canvas.innerHTML ersetzt wird, nicht canvas selbst.
+        this.zoom = 1;
     }
 
     async init() {
@@ -244,6 +248,7 @@ class DependencyGraph {
             return;
         }
         this.wireToolbar();
+        this.wireZoom();
         await this.render();
     }
 
@@ -463,6 +468,35 @@ class DependencyGraph {
                 });
             }
         }
+    }
+
+    // Strg+Mausrad zoomt das Diagramm (Trackpad-Pinch setzt ctrlKey ebenfalls,
+    // funktioniert also mit); normales Wheel scrollt weiter wie gewohnt.
+    // preventDefault() auf dem nicht-passiven Listener unterdrückt dabei den
+    // sonst greifenden Browser-Zoom der ganzen Seite. Skaliert wird per CSS-
+    // Transform auf .ps-graph (transform-origin 0 0, siehe diagram.blade.php),
+    // mit Scroll-Ausgleich, damit der Punkt unter dem Mauszeiger stehen bleibt.
+    wireZoom() {
+        const MIN_ZOOM = 0.25;
+        const MAX_ZOOM = 3;
+
+        this.root.addEventListener('wheel', (ev) => {
+            if (!ev.ctrlKey) return;
+            ev.preventDefault();
+
+            const rect = this.root.getBoundingClientRect();
+            const cursorX = ev.clientX - rect.left + this.root.scrollLeft;
+            const cursorY = ev.clientY - rect.top + this.root.scrollTop;
+
+            const factor = Math.exp(-ev.deltaY * 0.0015);
+            const nextZoom = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, this.zoom * factor));
+            const ratio = nextZoom / this.zoom;
+            this.zoom = nextZoom;
+
+            this.canvas.style.transform = `scale(${this.zoom})`;
+            this.root.scrollLeft = cursorX * ratio - (ev.clientX - rect.left);
+            this.root.scrollTop = cursorY * ratio - (ev.clientY - rect.top);
+        }, { passive: false });
     }
 
     updateResetButton() {

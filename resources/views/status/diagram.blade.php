@@ -107,6 +107,10 @@
            erledigter Knoten), die bewusst über den Knotenrand hinausragen,
            nicht am SVG-Rand gekappt werden. */
         .ps-graph svg { display: block; margin: 0 auto; overflow: visible; }
+        /* Strg+Mausrad-Zoom (diagram.js: wireZoom) skaliert per Transform ab
+           der oberen linken Ecke, damit die Scroll-Ausgleichsrechnung dort
+           einfach bleibt. */
+        .ps-graph { transform-origin: 0 0; }
         /* Klickbarer Knoten; die Chain-Hervorhebung dimmt alles Übrige stark. */
         .ps-graph .node { cursor: pointer; }
         .ps-graph foreignObject,
