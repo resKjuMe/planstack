@@ -150,9 +150,17 @@
                                 array_unshift($parts, trim($m[2]));
                             }
 
+                            // Führende Buchstaben-Label wie "(a) "/"(b) " aus den
+                            // Optionstexten entfernen; die Reihenfolge liefert das
+                            // Label fürs UI (Pill) stattdessen selbst.
+                            $options = array_map(
+                                fn ($o) => preg_replace('/^\([a-z]\)\s*/i', '', $o),
+                                array_filter($parts, fn ($o) => $o !== ''),
+                            );
+
                             $decisions[] = [
                                 'question' => $question,
-                                'options' => array_values(array_filter($parts, fn ($o) => $o !== '')),
+                                'options' => array_values($options),
                             ];
                         }
                     @endphp
@@ -227,10 +235,12 @@
                                             <template x-for="(opt, i) in current.options" :key="i">
                                                 <button type="button"
                                                         @click="choose(opt)"
-                                                        class="w-full text-left rounded-md border px-3 py-2 text-sm transition"
+                                                        class="flex w-full items-start gap-2 rounded-md border px-3 py-2 text-left text-sm transition"
                                                         :class="answers[step] === opt
                                                             ? 'border-[#D97757] bg-[#D97757]/5 text-gray-900 ring-1 ring-[#D97757]'
                                                             : 'border-gray-200 text-gray-700 hover:border-gray-300 hover:bg-gray-50'">
+                                                    <span class="mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-gray-100 text-xs font-semibold text-gray-500"
+                                                          x-text="String.fromCharCode(97 + i)"></span>
                                                     <span x-text="opt"></span>
                                                 </button>
                                             </template>
