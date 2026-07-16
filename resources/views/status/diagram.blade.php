@@ -171,6 +171,7 @@
         .ps-node .t .pr:hover { text-decoration: underline; }
         .ps-node .t .who { font-weight: 400; color: var(--ps-sub); }
         .ps-node .s { font-size: 10px; margin-top: 2px; color: var(--ps-sub); }
+        .ps-node .s .ps-ico { width: 11px; height: 11px; margin-right: 2px; vertical-align: -0.1em; }
         /* Problem-Grund: normale Schrift, erbt die Concern-Textfarbe (#991B1B). */
         .ps-node .r { font-size: 10px; margin-top: 2px; font-style: normal; }
         /* Optionale Kurzbeschreibung (Checkbox in der Toolbar): mehrzeilig, in der

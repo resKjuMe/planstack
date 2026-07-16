@@ -138,6 +138,7 @@ class ProjectDiagramController extends Controller
                 'phase' => $task->phase_id,
                 'done' => $this->board->isDone($task->status),
                 'sp' => (int) $task->effort_story_points,
+                'files' => $task->affected_files,
                 'pr' => $task->pr_number,
                 'prUrl' => $task->x_pr_url,
                 'statusLabel' => $ds->label(),

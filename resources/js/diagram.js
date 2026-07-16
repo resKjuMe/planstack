@@ -51,6 +51,7 @@ const STATUS_ICONS = {
     done: '<path d="M5 12l5 5l10 -10"/>',
 };
 const BOTTLENECK_ICON = '<path d="M6.5 7h11"/><path d="M6.5 17h11"/><path d="M6 20v-2a6 6 0 1 1 12 0v2a1 1 0 0 1 -1 1h-10a1 1 0 0 1 -1 -1z"/><path d="M6 4v2a6 6 0 1 0 12 0v-2a1 1 0 0 0 -1 -1h-10a1 1 0 0 0 -1 1z"/>';
+const FILE_ICON = '<path d="M14 3v4a1 1 0 0 0 1 1h4"/><path d="M17 21h-10a2 2 0 0 1 -2 -2v-14a2 2 0 0 1 2 -2h7l5 5v11a2 2 0 0 1 -2 2z"/>';
 
 function svgIcon(paths) {
     return `<svg class='ps-ico' xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round' aria-hidden='true'>${paths}</svg>`;
@@ -98,10 +99,11 @@ function collectDiagramCss() {
     return css;
 }
 
-// Subtitle text per status bucket. SP is always shown; the assignee's initials
-// live in the title line, not here.
+// Subtitle text per status bucket. SP + geschätzte Dateianzahl sind immer
+// sichtbar; die Initialen des Bearbeiters leben in der Titelzeile, nicht hier.
 function subtitle(n) {
-    const sp = `${n.sp} SP`;
+    const files = n.files === null ? '---' : n.files;
+    const sp = `${n.sp} SP · ${svgIcon(FILE_ICON)}${files}`;
     if (n.cat === 'pickable') {
         return n.unlocks > 0 ? `${sp} · schaltet ${n.unlocks} frei` : sp;
     }
