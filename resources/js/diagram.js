@@ -117,7 +117,8 @@ function subtitle(n) {
 }
 
 function nodeLabel(n, showDesc = false) {
-    const cls = `ps-node cat-${n.cat}${n.done ? ' is-done' : ''}${n.bottleneck ? ' has-bn' : ''}`;
+    const reviewed = n.cat === 'inreview' && n.reviewedBy ? ' is-reviewed' : '';
+    const cls = `ps-node cat-${n.cat}${reviewed}${n.done ? ' is-done' : ''}${n.bottleneck ? ' has-bn' : ''}`;
     const parts = [`<div class='${cls}'>`];
 
     // Title line: status icon · name (links to the ticket, click handled in

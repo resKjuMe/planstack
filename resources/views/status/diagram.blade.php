@@ -156,6 +156,9 @@
         .ps-node.cat-analyzing,  .ps-diagram-legend .cat-analyzing  { background:var(--status-analyzing-bg);  border:1px solid var(--status-analyzing-border);  color:var(--status-analyzing-text);  --ps-sub:var(--status-analyzing-sub); }
         .ps-node.cat-inprogress, .ps-diagram-legend .cat-inprogress { background:var(--status-inprogress-bg); border:2px solid var(--status-inprogress-border); color:var(--status-inprogress-text); --ps-sub:var(--status-inprogress-sub); }
         .ps-node.cat-inreview,   .ps-diagram-legend .cat-inreview   { background:var(--status-inreview-bg);   border:1px solid var(--status-inreview-border);   color:var(--status-inreview-text);   --ps-sub:var(--status-inreview-sub); outline:1px solid var(--status-inreview-outline); outline-offset:2px; }
+        /* In Review MIT zugewiesenem Reviewer: eigener grüner Ton (nicht in der
+           Legende). Kräftiger Rahmen #7DAD9B auf hellem Grund #EDF7F2. */
+        .ps-node.cat-inreview.is-reviewed { background:#EDF7F2; border-color:#7DAD9B; color:#2F5D4C; --ps-sub:#4C8571; outline-color:#7DAD9B; }
         .ps-node.cat-blocked,    .ps-diagram-legend .cat-blocked    { background:var(--status-blocked-bg);    border:1px dashed var(--status-blocked-border);   color:var(--status-blocked-text);    --ps-sub:var(--status-blocked-sub); }
         .ps-node.cat-concern,    .ps-diagram-legend .cat-concern    { background:var(--status-concern-bg);    border:2px solid var(--status-concern-border);    color:var(--status-concern-text);    --ps-sub:var(--status-concern-sub); }
         .ps-node.cat-done,       .ps-diagram-legend .cat-done       { background:var(--status-done-bg);       border:1px solid var(--status-done-border);       color:var(--status-done-text);       --ps-sub:var(--status-done-sub); }
