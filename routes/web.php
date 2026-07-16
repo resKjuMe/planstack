@@ -24,6 +24,10 @@ Route::get('/', fn () => redirect()->route(auth()->check() ? 'projects.index' : 
 // Öffentliche API-Dokumentation (kein Login erforderlich)
 Route::get('/api-docs', ApiDocsController::class)->name('api.docs');
 
+// Öffentliche Einrichtungs-/Anleitungsseite für die CI-Status-Anzeige
+// (Userscript + lokaler ci-server) — kein Login erforderlich.
+Route::view('/planstack-ci', 'planstack-ci.setup')->name('planstack-ci.setup');
+
 Route::get('/dashboard', fn () => redirect()->route('projects.index'))
     ->middleware(['auth', 'verified'])
     ->name('dashboard');

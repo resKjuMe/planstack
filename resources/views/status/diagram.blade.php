@@ -1,4 +1,10 @@
 <x-status-shell :project="$project" :active="$active">
+    {{-- CI-Status-Teaser über der Diagramm-Card (blendet sich aus, sobald das
+         Userscript läuft; sonst Einrichten-/Update-Hinweis). --}}
+    <x-slot:beforeCard>
+        @include('status.partials.ci-teaser')
+    </x-slot>
+
     {{-- Schmale Phasen-Kopfzeile (Name + %); Details stehen im Summary-Tab.
          Klick auf eine Phase filtert das Diagramm auf ihre Tasks (diagram.js). --}}
     <div class="flex flex-wrap items-center gap-x-2 gap-y-1.5 mb-4">
