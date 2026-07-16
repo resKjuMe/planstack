@@ -18,6 +18,15 @@
                             <span class="text-xs text-gray-400">{{ \Illuminate\Support\Carbon::parse($release['date'])->translatedFormat('d. F Y') }}</span>
                         @endif
                     </div>
+                    @if (!empty($release['tldr']))
+                        <p class="mt-3 text-sm text-gray-800">
+                            <span class="text-xs font-medium uppercase tracking-wide text-gray-400">TL;DR</span>
+                            @foreach ($release['tldr'] as $kw)
+                                <span class="font-bold">{{ $kw }}</span>@unless ($loop->last)<span class="mx-1 text-gray-300">·</span>@endunless
+                            @endforeach
+                        </p>
+                    @endif
+
                     <ul class="mt-4 space-y-2">
                         @foreach ($release['changes'] as $change)
                             <li class="flex gap-2 text-sm text-gray-700">

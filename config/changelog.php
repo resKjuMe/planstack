@@ -8,6 +8,8 @@ return [
         [
             'version' => '1.0.0',
             'date' => '2026-07-16',
+            // TL;DR: nur Stichwörter (werden fett dargestellt).
+            'tldr' => ['CI-Status im Diagramm', 'Velocity', 'Teams umbenennen', 'Changelog'],
             'changes' => [
                 'Neu: CI-/Merge-Status jedes Pull Requests direkt im Projekt-Diagramm — auf einen Blick sehen, was grün ist, was fehlschlägt und was bereit zum Mergen ist. Einrichtung über den Menüpunkt „TamperMonkey Script".',
                 'Neu: Velocity in der Kalibrierung — wie viele Story Points pro Tag tatsächlich fertig werden (gemessen vom ersten Claim bis zum letzten Merge).',
