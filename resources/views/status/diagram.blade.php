@@ -137,7 +137,7 @@
             --status-claimed-bg:#E0F2FE;     --status-claimed-border:#7DD3FC;    --status-claimed-text:#075985;    --status-claimed-sub:#0369A1;
             --status-analyzing-bg:#E0F2FE;   --status-analyzing-border:#7DD3FC;  --status-analyzing-text:#075985;  --status-analyzing-sub:#0369A1;
             --status-inprogress-bg:#E0F2FE;  --status-inprogress-border:#2563EB; --status-inprogress-text:#1E40AF; --status-inprogress-sub:#2563EB;
-            --status-inreview-bg:#F6F2FC;    --status-inreview-border:#B18AE3;   --status-inreview-text:#6B21A8;   --status-inreview-sub:#9333EA;   --status-inreview-outline:#B18AE3;
+            --status-inreview-bg:#FAF5FF;    --status-inreview-border:#A855F7;   --status-inreview-text:#6B21A8;   --status-inreview-sub:#9333EA;   --status-inreview-outline:#D8B4FE;
             --status-blocked-bg:#FCFCFD;     --status-blocked-border:#C4C4CC;    --status-blocked-text:#52525B;    --status-blocked-sub:#71717A;
             --status-concern-bg:#FEF2F2;     --status-concern-border:#DC2626;    --status-concern-text:#991B1B;    --status-concern-sub:#B91C1C;
             --status-done-bg:#F5F5F5;        --status-done-border:#D4D4D8;       --status-done-text:#52525B;       --status-done-sub:#71717A;
@@ -156,9 +156,10 @@
         .ps-node.cat-analyzing,  .ps-diagram-legend .cat-analyzing  { background:var(--status-analyzing-bg);  border:1px solid var(--status-analyzing-border);  color:var(--status-analyzing-text);  --ps-sub:var(--status-analyzing-sub); }
         .ps-node.cat-inprogress, .ps-diagram-legend .cat-inprogress { background:var(--status-inprogress-bg); border:2px solid var(--status-inprogress-border); color:var(--status-inprogress-text); --ps-sub:var(--status-inprogress-sub); }
         .ps-node.cat-inreview,   .ps-diagram-legend .cat-inreview   { background:var(--status-inreview-bg);   border:1px solid var(--status-inreview-border);   color:var(--status-inreview-text);   --ps-sub:var(--status-inreview-sub); outline:1px solid var(--status-inreview-outline); outline-offset:2px; }
-        /* In Review MIT zugewiesenem Reviewer: eigener grüner Ton (nicht in der
-           Legende). Kräftiger Rahmen #7DAD9B auf hellem Grund #EDF7F2. */
-        .ps-node.cat-inreview.is-reviewed { background:#EDF7F2; border-color:#7DAD9B; color:#2F5D4C; --ps-sub:#4C8571; outline-color:#7DAD9B; }
+        /* In Review MIT zugewiesenem Reviewer: eigener Ton (nicht in der
+           Legende). Rahmen #B18AE3 auf hellem Grund #F6F2FC; Text/Unterton
+           erben vom In-Review-Basiston. */
+        .ps-node.cat-inreview.is-reviewed { background:#F6F2FC; border-color:#B18AE3; outline-color:#B18AE3; }
         .ps-node.cat-blocked,    .ps-diagram-legend .cat-blocked    { background:var(--status-blocked-bg);    border:1px dashed var(--status-blocked-border);   color:var(--status-blocked-text);    --ps-sub:var(--status-blocked-sub); }
         .ps-node.cat-concern,    .ps-diagram-legend .cat-concern    { background:var(--status-concern-bg);    border:2px solid var(--status-concern-border);    color:var(--status-concern-text);    --ps-sub:var(--status-concern-sub); }
         .ps-node.cat-done,       .ps-diagram-legend .cat-done       { background:var(--status-done-bg);       border:1px solid var(--status-done-border);       color:var(--status-done-text);       --ps-sub:var(--status-done-sub); }
