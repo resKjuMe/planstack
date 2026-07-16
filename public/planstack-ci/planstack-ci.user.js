@@ -29,7 +29,7 @@
 
     // ── KONFIG ──────────────────────────────────────────────────────────────
     // Lokaler ci-server (ci-server.js), der `gh` mit deiner CLI-Auth aufruft.
-    // Einrichtung siehe https://planstack.eskju.net/planstack-ci
+    // Einrichtung siehe https://planstack.eskju.net/planstack-ci/setup
     const CI_SERVER = 'http://127.0.0.1:8757';
 
     // ── Badge-Farben (nach dem Flow-Diagramm) ───────────────────────────────
@@ -156,7 +156,7 @@
         }
         if (err) {
             row.innerHTML = pill('CI status fetch failed', C.darkred);
-            row.title = err + '\n\nLäuft der lokale ci-server? Einrichtung: ' + location.origin + '/planstack-ci';
+            row.title = err + '\n\nLäuft der lokale ci-server? Einrichtung: ' + location.origin + '/planstack-ci/setup';
             return;
         }
         const lbl = decide(state);
