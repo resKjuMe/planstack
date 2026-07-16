@@ -17,6 +17,14 @@ class TeamPolicy
         return true;
     }
 
+    /**
+     * Only the creator may rename the team.
+     */
+    public function update(User $user, Team $team): bool
+    {
+        return $team->isOwner($user);
+    }
+
     public function delete(User $user, Team $team): bool
     {
         return $team->isOwner($user);

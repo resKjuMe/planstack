@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\StoreTeamRequest;
 use App\Models\Team;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\View\View;
 
@@ -54,6 +55,21 @@ class TeamController extends Controller
         $team->load(['owner', 'members']);
 
         return view('teams.show', compact('team'));
+    }
+
+    public function update(Request $request, Team $team): RedirectResponse
+    {
+        $this->authorize('update', $team);
+
+        $validated = $request->validate([
+            'name' => ['required', 'string', 'max:100'],
+        ]);
+
+        $team->update($validated);
+
+        return redirect()
+            ->route('teams.show', $team)
+            ->with('status', "Team umbenannt in \"{$team->name}\".");
     }
 
     public function destroy(Team $team): RedirectResponse

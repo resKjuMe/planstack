@@ -45,6 +45,7 @@ Route::middleware('auth')->group(function () {
     // Teams
     Route::resource('teams', TeamController::class)
         ->only(['index', 'create', 'store', 'show', 'destroy']);
+    Route::patch('teams/{team}', [TeamController::class, 'update'])->name('teams.update');
     Route::post('teams/{team}/members', [TeamMemberController::class, 'store'])
         ->name('teams.members.store');
     Route::delete('teams/{team}/members/{user}', [TeamMemberController::class, 'destroy'])

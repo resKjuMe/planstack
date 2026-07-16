@@ -9,6 +9,23 @@
         <div class="max-w-3xl mx-auto sm:px-6 lg:px-8 space-y-6">
             <x-flash />
 
+            @can('update', $team)
+                <div class="bg-white rounded-lg shadow p-6">
+                    <h3 class="font-semibold text-gray-900 mb-4">Team umbenennen</h3>
+                    <form method="POST" action="{{ route('teams.update', $team) }}" class="flex flex-wrap items-end gap-3">
+                        @csrf
+                        @method('PATCH')
+                        <div class="flex-1 min-w-64">
+                            <x-input-label for="name" value="Teamname" />
+                            <x-text-input id="name" name="name" type="text" class="mt-1 block w-full"
+                                          :value="old('name', $team->name)" required maxlength="100" />
+                            <x-input-error :messages="$errors->get('name')" class="mt-1" />
+                        </div>
+                        <x-primary-button>Speichern</x-primary-button>
+                    </form>
+                </div>
+            @endcan
+
             <div class="bg-white rounded-lg shadow p-6">
                 <h3 class="font-semibold text-gray-900 mb-4">Mitglieder</h3>
 
