@@ -25,6 +25,10 @@
            class="shrink-0 self-center rounded-md bg-orange-600 px-3 py-2 text-sm font-semibold text-white hover:bg-orange-500">
             Einrichten
         </a>
+        <button type="button" data-dismiss title="Für diese Version ausblenden"
+                class="shrink-0 self-center rounded-md border border-orange-600 px-3 py-2 text-sm font-semibold text-orange-600 hover:bg-orange-600 hover:text-white">
+            Ausblenden
+        </button>
     </div>
 
     {{-- Variante „Update" (Userscript läuft, aber ältere Version) --}}
@@ -39,6 +43,10 @@
            class="shrink-0 self-center rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white hover:bg-indigo-500">
             Aktualisieren
         </a>
+        <button type="button" data-dismiss title="Für diese Version ausblenden"
+                class="shrink-0 self-center rounded-md border border-indigo-600 px-3 py-2 text-sm font-semibold text-indigo-600 hover:bg-indigo-600 hover:text-white">
+            Ausblenden
+        </button>
     </div>
 
     <script>
@@ -46,6 +54,10 @@
         var host = document.getElementById('psci-teaser');
         if (!host) return;
         var current = host.dataset.current;
+        var DKEY = 'psci-teaser-dismissed'; // gespeichert: die ausgeblendete Version
+
+        function isDismissed() { try { return localStorage.getItem(DKEY) === current; } catch (e) { return false; } }
+        function dismiss() { try { localStorage.setItem(DKEY, current); } catch (e) {} host.hidden = true; }
 
         function cmp(a, b) { // -1 / 0 / 1
             var pa = String(a || '0').split('.').map(Number), pb = String(b || '0').split('.').map(Number);
@@ -61,6 +73,7 @@
             });
         }
         function evaluate() {
+            if (isDismissed()) { host.hidden = true; return; }    // für diese Version ausgeblendet
             var installed = document.documentElement.getAttribute('data-planstack-ci');
             if (!installed) { show('install'); return; }          // Userscript läuft nicht → einrichten
             if (cmp(installed, current) < 0) {                     // installiert & ältere Version → update
@@ -71,6 +84,11 @@
             }
             host.hidden = true;                                    // installiert & aktuell → nichts
         }
+
+        // „Ausblenden"-Buttons: für die aktuelle Version merken und Balken schließen.
+        host.querySelectorAll('[data-dismiss]').forEach(function (b) {
+            b.addEventListener('click', dismiss);
+        });
 
         // Sofort prüfen, auf das „ready"-Event des Userscripts hören und kurz nachfassen.
         document.addEventListener('planstack-ci-ready', evaluate);

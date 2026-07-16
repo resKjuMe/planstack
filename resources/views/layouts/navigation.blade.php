@@ -41,6 +41,12 @@
                             {{ __('Profile') }}
                         </x-dropdown-link>
 
+                        {{-- CI-Status-Hinweis wieder einblenden (falls versehentlich ausgeblendet) --}}
+                        <x-dropdown-link href="#"
+                                onclick="event.preventDefault(); try { localStorage.removeItem('psci-teaser-dismissed'); } catch (e) {} window.location.reload();">
+                            {{ __('CI-Status-Hinweis einblenden') }}
+                        </x-dropdown-link>
+
                         <!-- Authentication -->
                         <form method="POST" action="{{ route('logout') }}">
                             @csrf
@@ -88,6 +94,12 @@
             <div class="mt-3 space-y-1">
                 <x-responsive-nav-link :href="route('profile.edit')">
                     {{ __('Profile') }}
+                </x-responsive-nav-link>
+
+                {{-- CI-Status-Hinweis wieder einblenden --}}
+                <x-responsive-nav-link href="#"
+                        onclick="event.preventDefault(); try { localStorage.removeItem('psci-teaser-dismissed'); } catch (e) {} window.location.reload();">
+                    {{ __('CI-Status-Hinweis einblenden') }}
                 </x-responsive-nav-link>
 
                 <!-- Authentication -->
