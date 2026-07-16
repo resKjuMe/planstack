@@ -54,10 +54,11 @@
         var host = document.getElementById('psci-teaser');
         if (!host) return;
         var current = host.dataset.current;
-        var DKEY = 'psci-teaser-dismissed'; // gespeichert: die ausgeblendete Version
-
-        function isDismissed() { try { return localStorage.getItem(DKEY) === current; } catch (e) { return false; } }
-        function dismiss() { try { localStorage.setItem(DKEY, current); } catch (e) {} host.hidden = true; }
+        // Merker pro Variante (install/update): so unterdrückt ein ausgeblendeter
+        // Einrichten-Teaser nicht auch den Update-Teaser (und umgekehrt).
+        function keyFor(v) { return 'psci-teaser-dismissed:' + v; }
+        function isDismissed(v) { try { return localStorage.getItem(keyFor(v)) === current; } catch (e) { return false; } }
+        function dismiss(v) { try { localStorage.setItem(keyFor(v), current); } catch (e) {} host.hidden = true; }
 
         function cmp(a, b) { // -1 / 0 / 1
             var pa = String(a || '0').split('.').map(Number), pb = String(b || '0').split('.').map(Number);
@@ -73,10 +74,14 @@
             });
         }
         function evaluate() {
-            if (isDismissed()) { host.hidden = true; return; }    // für diese Version ausgeblendet
             var installed = document.documentElement.getAttribute('data-planstack-ci');
-            if (!installed) { show('install'); return; }          // Userscript läuft nicht → einrichten
+            if (!installed) {                                      // Userscript läuft nicht → einrichten
+                if (isDismissed('install')) { host.hidden = true; return; }
+                show('install');
+                return;
+            }
             if (cmp(installed, current) < 0) {                     // installiert & ältere Version → update
+                if (isDismissed('update')) { host.hidden = true; return; }
                 var slot = host.querySelector('[data-installed]');
                 if (slot) slot.textContent = 'v' + installed;
                 show('update');
@@ -85,9 +90,12 @@
             host.hidden = true;                                    // installiert & aktuell → nichts
         }
 
-        // „Ausblenden"-Buttons: für die aktuelle Version merken und Balken schließen.
+        // „Ausblenden"-Buttons: die jeweilige Variante für diese Version merken.
         host.querySelectorAll('[data-dismiss]').forEach(function (b) {
-            b.addEventListener('click', dismiss);
+            b.addEventListener('click', function () {
+                var wrap = b.closest('[data-variant]');
+                dismiss(wrap ? wrap.getAttribute('data-variant') : 'install');
+            });
         });
 
         // Sofort prüfen, auf das „ready"-Event des Userscripts hören und kurz nachfassen.
