@@ -97,9 +97,15 @@
 
     <div>
         <x-input-label for="reviewed_by" value="Reviewed by" />
-        <x-text-input id="reviewed_by" name="reviewed_by" type="text" class="mt-1 block w-full"
-                      :value="old('reviewed_by', $task?->reviewed_by)" maxlength="255"
-                      placeholder="z.B. Hagen Drees" />
+        <select id="reviewed_by" name="reviewed_by" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
+            <option value="">—</option>
+            @foreach ($project->accessUsers() as $member)
+                <option value="{{ $member->id }}"
+                    @selected((int) old('reviewed_by', $task?->reviewed_by) === $member->id)>
+                    {{ $member->name }}
+                </option>
+            @endforeach
+        </select>
         <x-input-error :messages="$errors->get('reviewed_by')" class="mt-2" />
     </div>
 

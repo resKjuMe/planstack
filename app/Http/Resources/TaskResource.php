@@ -46,6 +46,7 @@ class TaskResource extends JsonResource
             'pr_number' => $this->pr_number,
             'pr_url' => $this->x_pr_url ?? null,
             'reviewed_by' => $this->reviewed_by,
+            'reviewed_by_name' => $this->whenLoaded('reviewer', fn () => $this->reviewer?->name),
             'claimed_by_id' => $this->claimed_by_id,
             'claimed_by' => $this->whenLoaded('claimer', fn () => $this->claimer?->name),
             'claimed_at' => $this->claimed_at,

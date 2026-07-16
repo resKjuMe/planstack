@@ -24,7 +24,7 @@ class ProjectChangelogController extends Controller
      * Changelog diff fields that hold a user id — resolved to a name via a
      * single batched lookup instead of showing the raw id.
      */
-    private const USER_REF_FIELDS = ['created_by_id', 'claimed_by_id', 'user_id'];
+    private const USER_REF_FIELDS = ['created_by_id', 'claimed_by_id', 'reviewed_by', 'user_id'];
 
     /**
      * Combined, paginated changelog across the project itself and everything

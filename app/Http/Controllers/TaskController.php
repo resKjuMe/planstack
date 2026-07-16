@@ -134,7 +134,7 @@ class TaskController extends Controller
             return back()->with('status', 'Review kann für diesen Task nicht übernommen werden.');
         }
 
-        $task->update(['reviewed_by' => $user->name]);
+        $task->update(['reviewed_by' => $user->id]);
 
         return back()->with('status', "Du reviewst jetzt Task \"{$task->name}\".");
     }

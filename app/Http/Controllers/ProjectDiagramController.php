@@ -23,7 +23,7 @@ class ProjectDiagramController extends Controller
         $this->authorize('view', $project);
 
         $tasks = $this->board->decorate($project);
-        $tasks->load('concern:id,task_id,summary,description_blocker');
+        $tasks->load('concern:id,task_id,summary,description_blocker', 'reviewer:id,name');
         $this->board->attachUnlocks($tasks); // x_unlocks / x_dependents over the full set
 
         return view('status.diagram', [
@@ -120,7 +120,6 @@ class ProjectDiagramController extends Controller
         $threshold = $avg + sqrt($variance);
 
         $userId = auth()->id();
-        $userName = auth()->user()?->name;
 
         $nodes = [];
         foreach ($tasks as $task) {
@@ -150,11 +149,12 @@ class ProjectDiagramController extends Controller
                 'depTotal' => $depTotal,
                 'depMet' => $depMet,
                 'reason' => $cat === 'concern' ? $reason : null,
-                // Reviewer name is shown in every status once it is set.
-                'reviewedBy' => $task->reviewed_by,
+                // Reviewer name (resolved from the user FK) is shown in every
+                // status once a reviewer is set.
+                'reviewedBy' => $task->reviewer?->name,
                 // Whether the active viewer is that reviewer — drives the
                 // colour split (own review vs. someone else reviewing).
-                'reviewedByMe' => $task->reviewed_by !== null && $task->reviewed_by === $userName,
+                'reviewedByMe' => $task->reviewed_by !== null && $task->reviewed_by === $userId,
                 // In review, no reviewer yet, and the viewer is not the task's
                 // own assignee → offer a "claim" button to become the reviewer.
                 'reviewClaimUrl' => ($cat === 'inreview'

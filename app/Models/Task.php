@@ -45,6 +45,7 @@ class Task extends Model
             'effort_story_points' => 'integer',
             'effort_tokens' => 'integer',
             'affected_files' => 'integer',
+            'reviewed_by' => 'integer',
             'claimed_at' => 'datetime',
             'merged_at' => 'datetime',
         ];
@@ -68,6 +69,11 @@ class Task extends Model
     public function claimer(): BelongsTo
     {
         return $this->belongsTo(User::class, 'claimed_by_id');
+    }
+
+    public function reviewer(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'reviewed_by');
     }
 
     /**

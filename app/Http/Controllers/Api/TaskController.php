@@ -26,7 +26,7 @@ class TaskController extends ApiController
         $this->authorize('view', $project);
 
         $tasks = $this->board->board($project);
-        $tasks->each->load('phase', 'claimer', 'concern');
+        $tasks->each->load('phase', 'claimer', 'concern', 'reviewer');
 
         return TaskResource::collection($tasks);
     }
@@ -334,7 +334,7 @@ class TaskController extends ApiController
             'effort_story_points' => ['nullable', 'integer', 'min:0'],
             'effort_tokens' => ['nullable', 'integer', 'min:0'],
             'affected_files' => ['nullable', 'integer', 'min:0'],
-            'reviewed_by' => ['nullable', 'string', 'max:255'],
+            'reviewed_by' => ['nullable', 'integer', Rule::exists('users', 'id')],
             'status' => ['nullable', Rule::enum(TaskStatus::class)],
         ]);
 
@@ -390,7 +390,7 @@ class TaskController extends ApiController
     {
         $tasks = $this->board->board($project);
         $decorated = $tasks->firstWhere('id', $task->id) ?? $task;
-        $decorated->load('phase', 'claimer', 'concern');
+        $decorated->load('phase', 'claimer', 'concern', 'reviewer');
 
         return $decorated;
     }
