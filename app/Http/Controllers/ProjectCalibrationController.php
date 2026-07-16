@@ -59,6 +59,7 @@ class ProjectCalibrationController extends Controller
             'task' => $task,
             'name' => $task->name,
             'storyPoints' => $task->effort_story_points,
+            'claimedAt' => $task->claimed_at,
             'mergedAt' => $mergedAt,
             'filesEstimated' => $filesEstimated,
             'filesActual' => $filesActual,
@@ -125,14 +126,25 @@ class ProjectCalibrationController extends Controller
     private function kpis(Collection $rows): array
     {
         $withDeviation = $rows->filter(fn (array $r) => $r['deviationPct'] !== null);
-        $withSp = $rows->filter(fn (array $r) => $r['storyPoints'] && $r['durationDays'] !== null);
 
         $avgDeviation = $withDeviation->isNotEmpty()
             ? (int) round($withDeviation->avg('deviationPct'))
             : null;
 
-        $avgDurationPerSp = $withSp->isNotEmpty()
-            ? $withSp->avg(fn (array $r) => $r['durationDays'] / $r['storyPoints'])
+        // Durchsatz auf Kalenderbasis: fertiggestellte SP im Zeitraum zwischen dem
+        // ersten Claim und dem letzten Merge (statt der wenig aussagekräftigen
+        // Ist-Dauer je Task). Beide Kennzahlen (Dauer je SP und SP pro Tag) leiten
+        // sich daraus ab und sind Kehrwerte voneinander.
+        $completedSp = (int) $rows->sum(fn (array $r) => (int) $r['storyPoints']);
+        $firstClaim = $rows->pluck('claimedAt')->filter()->min();
+        $lastMerge = $rows->pluck('mergedAt')->filter()->max();
+        $spanDays = $firstClaim && $lastMerge ? $firstClaim->floatDiffInDays($lastMerge) : null;
+
+        $spPerDay = $spanDays !== null && $spanDays > 0 && $completedSp > 0
+            ? $completedSp / $spanDays
+            : null;
+        $daysPerSp = $spanDays !== null && $completedSp > 0
+            ? $spanDays / $completedSp
             : null;
 
         return [
@@ -149,11 +161,11 @@ class ProjectCalibrationController extends Controller
                 $rows->isEmpty() => 'keine gemergten Tasks mit PR-Daten',
                 default => 'keine Dateischätzungen bei gemergten Tasks mit PR-Daten',
             },
-            'avgDurationPerSp' => $avgDurationPerSp,
-            'avgDurationPerSpLabel' => $avgDurationPerSp !== null ? $this->formatDurationSmart($avgDurationPerSp) : null,
-            'storyPointsPerEightHours' => $avgDurationPerSp !== null && $avgDurationPerSp > 0
-                ? 8 / ($avgDurationPerSp * 24)
-                : null,
+            'daysPerSp' => $daysPerSp,
+            'daysPerSpLabel' => $daysPerSp !== null ? $this->formatDurationSmart($daysPerSp) : null,
+            'spPerDay' => $spPerDay,
+            'completedSp' => $completedSp,
+            'spanDays' => $spanDays,
             'hits' => $withDeviation->filter(fn (array $r) => abs($r['deviationPct']) <= 25)->count(),
             'hitsTotal' => $withDeviation->count(),
         ];

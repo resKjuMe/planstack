@@ -27,18 +27,18 @@
             </div>
 
             <div class="rounded-lg bg-white p-4 ring-1 ring-gray-200">
-                <div class="text-xs font-medium text-gray-400">Ø Dauer je Story Point</div>
-                @if ($kpis['avgDurationPerSp'] !== null)
-                    <div class="mt-1 text-2xl font-bold text-gray-900">{{ $kpis['avgDurationPerSpLabel'] }}</div>
+                <div class="text-xs font-medium text-gray-400">Dauer je Story Point</div>
+                @if ($kpis['daysPerSp'] !== null)
+                    <div class="mt-1 text-2xl font-bold text-gray-900">{{ $kpis['daysPerSpLabel'] }}</div>
                     <div class="mt-1 text-sm text-gray-500">
-                        PR-Erstellung bis Merge
-                        @if ($kpis['storyPointsPerEightHours'] !== null)
-                            &middot; &asymp; {{ number_format($kpis['storyPointsPerEightHours'], 1, ',', '') }} SP pro 8-Std-Tag
+                        1. Claim bis letzter Merge
+                        @if ($kpis['spPerDay'] !== null)
+                            &middot; &asymp; {{ number_format($kpis['spPerDay'], 1, ',', '') }} SP pro Tag
                         @endif
                     </div>
                 @else
                     <div class="mt-1 text-2xl font-bold text-gray-300">—</div>
-                    <div class="mt-1 text-sm text-gray-500">PR-Erstellung bis Merge</div>
+                    <div class="mt-1 text-sm text-gray-500">1. Claim bis letzter Merge</div>
                 @endif
             </div>
 
