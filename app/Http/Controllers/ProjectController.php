@@ -25,9 +25,13 @@ class ProjectController extends Controller
         // closed_tasks_count ist bewusst enger (nur COMPLETED/MERGED, kein offener
         // PR): für die Kopfzeile zählt "offen" den Task-Lifecycle, nicht das
         // SP-Gate.
+        // Zugriff kommt über Teamzuweisung (Project::hasMember()); memberships
+        // (users_to_projects) trägt nur noch die Rolle, nicht mehr den Zugriff —
+        // reine WORKER ohne expliziten Rollen-Datensatz müssen daher über
+        // teams.members geprüft werden, sonst sehen sie ihre Projekte hier nicht.
         $projects = Project::query()
             ->where('created_by_id', $userId)
-            ->orWhereHas('memberships', fn ($q) => $q->where('user_id', $userId))
+            ->orWhereHas('teams.members', fn ($q) => $q->where('users.id', $userId))
             ->withCount('tasks')
             ->withCount(['tasks as closed_tasks_count' => fn (Builder $q) => $q->whereIn(
                 'status', [TaskStatus::COMPLETED, TaskStatus::MERGED]
