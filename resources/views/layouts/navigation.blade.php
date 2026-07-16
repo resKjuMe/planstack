@@ -24,7 +24,7 @@
 
             <!-- Settings Dropdown -->
             <div class="hidden sm:flex sm:items-center sm:ms-6">
-                <x-dropdown align="right" width="48">
+                <x-dropdown align="right" width="w-56">
                     <x-slot name="trigger">
                         <button class="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-gray-500 bg-white hover:text-gray-700 focus:outline-none transition ease-in-out duration-150">
                             <span class="js-psci-update me-1 align-middle text-indigo-600" style="display:none" title="Update für die CI-Status-Anzeige verfügbar">
@@ -46,9 +46,9 @@
                         </x-dropdown-link>
 
                         {{-- Einrichtungs-/Downloadseite der CI-Status-Anzeige --}}
-                        <x-dropdown-link :href="url('/planstack-ci/setup')">
+                        <x-dropdown-link :href="url('/planstack-ci/setup')" class="whitespace-nowrap">
                             {{ __('TamperMonkey Script') }}
-                            <span class="js-psci-update ms-2 rounded-full bg-indigo-600 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white align-middle" style="display:none">new</span>
+                            <span class="js-psci-update ms-2 rounded-full bg-indigo-600 px-1.5 py-0.5 text-[10px] font-semibold text-white align-middle" style="display:none">v{{ $ciVersion }}</span>
                         </x-dropdown-link>
 
                         <!-- Authentication -->
@@ -103,7 +103,7 @@
                 {{-- Einrichtungs-/Downloadseite der CI-Status-Anzeige --}}
                 <x-responsive-nav-link :href="url('/planstack-ci/setup')">
                     {{ __('TamperMonkey Script') }}
-                    <span class="js-psci-update ms-2 rounded-full bg-indigo-600 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white align-middle" style="display:none">new</span>
+                    <span class="js-psci-update ms-2 rounded-full bg-indigo-600 px-1.5 py-0.5 text-[10px] font-semibold text-white align-middle" style="display:none">v{{ $ciVersion }}</span>
                 </x-responsive-nav-link>
 
                 <!-- Authentication -->
