@@ -19,7 +19,7 @@
 
                         <span class="min-w-0 flex-1 truncate text-sm">
                             @if (!empty($release['tldr']))
-                                @foreach ($release['tldr'] as $kw)<span class="font-bold text-gray-900">{{ $kw }}</span>@unless ($loop->last)<span class="mx-1.5 text-gray-500">·</span>@endunless @endforeach
+                                @foreach ($release['tldr'] as $kw)<span class="font-bold text-gray-900">{{ $kw }}</span>@unless ($loop->last)<span class="text-gray-500">&nbsp;·&nbsp;&nbsp;</span>@endunless@endforeach
                             @endif
                         </span>
 
