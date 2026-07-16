@@ -150,8 +150,8 @@ function nodeLabel(n, showDesc = false) {
     }
 
     // In Review: Reviewer kursiv anzeigen — oder, solange niemand reviewt und
-    // der Betrachter nicht selbst Bearbeiter ist, ein schmaler „claim"-Button,
-    // der den aktiven Nutzer per Formular-POST als Reviewer einträgt.
+    // der Betrachter nicht selbst Bearbeiter ist, ein schmaler „claim review"-
+    // Button, der den aktiven Nutzer per Formular-POST als Reviewer einträgt.
     if (n.cat === 'inreview') {
         if (n.reviewedBy) {
             parts.push(`<div class='rv'>Reviewed by ${esc(n.reviewedBy)}</div>`);
@@ -159,7 +159,7 @@ function nodeLabel(n, showDesc = false) {
             parts.push(
                 `<form class='rv-claim' method='POST' action='${esc(n.reviewClaimUrl)}'>`
                 + `<input type='hidden' name='_token' value='${esc(CSRF_TOKEN)}'>`
-                + `<button type='submit' class='rv-claim-btn'>claim</button>`
+                + `<button type='submit' class='rv-claim-btn'>claim review</button>`
                 + '</form>'
             );
         }

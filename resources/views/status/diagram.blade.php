@@ -174,11 +174,13 @@
         .ps-node .s .ps-ico { width: 11px; height: 11px; margin-right: 2px; vertical-align: -0.1em; }
         /* Problem-Grund: normale Schrift, erbt die Concern-Textfarbe (#991B1B). */
         .ps-node .r { font-size: 10px; margin-top: 2px; font-style: normal; }
-        /* Reviewer-Zeile (in Review): kursiv, gedämpfte Status-Unterton-Farbe. */
-        .ps-node .rv { font-size: 10px; margin-top: 2px; font-style: italic; color: var(--ps-sub); }
-        /* „claim"-Button, wenn noch kein Reviewer gesetzt ist: schmales Pill im
-           Review-Ton, das den aktiven Nutzer als Reviewer einträgt. */
-        .ps-node .rv-claim { margin-top: 3px; }
+        /* Reviewer-Zeile (in Review): kursiv, gedämpfte Status-Unterton-Farbe.
+           Der große obere Abstand setzt eine Leerzeile vor „Reviewed by". */
+        .ps-node .rv { font-size: 10px; margin-top: 12px; font-style: italic; color: var(--ps-sub); overflow-wrap: anywhere; }
+        /* „claim review"-Button, wenn noch kein Reviewer gesetzt ist: schmales
+           Pill im Review-Ton, das den aktiven Nutzer als Reviewer einträgt.
+           Gleiche Leerzeile davor wie bei der Reviewer-Zeile. */
+        .ps-node .rv-claim { margin-top: 12px; }
         .ps-node .rv-claim-btn {
             font-size: 10px; line-height: 1; cursor: pointer;
             padding: 2px 8px; border-radius: 9999px;
@@ -192,6 +194,9 @@
         .ps-node .d {
             font-size: 10px; opacity: .75; margin-top: 3px;
             max-width: 220px; white-space: normal; line-height: 1.3;
+            /* Lange Tokens ohne Leerzeichen (z. B. Pfade wie A/B/C) sonst über
+               den Kachelrand hinaus — hart umbrechen statt überlaufen. */
+            overflow-wrap: anywhere; word-break: break-word;
         }
 
         /* PR-Nummer erledigter Knoten als gedämpftes Pill-Badge, oben rechts
