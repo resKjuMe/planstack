@@ -137,7 +137,7 @@
             --status-claimed-bg:#E0F2FE;     --status-claimed-border:#7DD3FC;    --status-claimed-text:#075985;    --status-claimed-sub:#0369A1;
             --status-analyzing-bg:#E0F2FE;   --status-analyzing-border:#7DD3FC;  --status-analyzing-text:#075985;  --status-analyzing-sub:#0369A1;
             --status-inprogress-bg:#E0F2FE;  --status-inprogress-border:#2563EB; --status-inprogress-text:#1E40AF; --status-inprogress-sub:#2563EB;
-            --status-inreview-bg:#FAF5FF;    --status-inreview-border:#A855F7;   --status-inreview-text:#6B21A8;   --status-inreview-sub:#9333EA;   --status-inreview-outline:#D8B4FE;
+            --status-inreview-bg:#F6F2FC;    --status-inreview-border:#B18AE3;   --status-inreview-text:#6B21A8;   --status-inreview-sub:#9333EA;   --status-inreview-outline:#B18AE3;
             --status-blocked-bg:#FCFCFD;     --status-blocked-border:#C4C4CC;    --status-blocked-text:#52525B;    --status-blocked-sub:#71717A;
             --status-concern-bg:#FEF2F2;     --status-concern-border:#DC2626;    --status-concern-text:#991B1B;    --status-concern-sub:#B91C1C;
             --status-done-bg:#F5F5F5;        --status-done-border:#D4D4D8;       --status-done-text:#52525B;       --status-done-sub:#71717A;
