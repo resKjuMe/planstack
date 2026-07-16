@@ -119,6 +119,8 @@ class ProjectDiagramController extends Controller
         $variance = $n ? array_sum(array_map(fn ($v) => ($v - $avg) ** 2, $transitive)) / $n : 0;
         $threshold = $avg + sqrt($variance);
 
+        $userId = auth()->id();
+
         $nodes = [];
         foreach ($tasks as $task) {
             $ds = $task->x_display_status;
@@ -147,6 +149,15 @@ class ProjectDiagramController extends Controller
                 'depTotal' => $depTotal,
                 'depMet' => $depMet,
                 'reason' => $cat === 'concern' ? $reason : null,
+                // Reviewer name is only surfaced while the task sits in review.
+                'reviewedBy' => $cat === 'inreview' ? $task->reviewed_by : null,
+                // In review, no reviewer yet, and the viewer is not the task's
+                // own assignee → offer a "claim" button to become the reviewer.
+                'reviewClaimUrl' => ($cat === 'inreview'
+                    && $task->reviewed_by === null
+                    && $task->claimed_by_id !== $userId)
+                    ? route('projects.tasks.review-claim', [$project, $task])
+                    : null,
                 'claimer' => in_array($cat, ['claimed', 'analyzing', 'inprogress', 'inreview'], true)
                     ? $task->claimer?->name
                     : null,

@@ -97,6 +97,11 @@ Route::middleware('auth')->group(function () {
         ->scopeBindings()
         ->name('projects.tasks.claim');
 
+    // Claim the review of a task (sets reviewed_by to the current user).
+    Route::post('projects/{project}/tasks/{task}/review-claim', [TaskController::class, 'reviewClaim'])
+        ->scopeBindings()
+        ->name('projects.tasks.review-claim');
+
     // Task concern (1:1, upsert)
     Route::get('projects/{project}/tasks/{task}/concern/edit', [TaskConcernController::class, 'edit'])
         ->scopeBindings()

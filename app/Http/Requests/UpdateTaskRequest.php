@@ -34,6 +34,7 @@ class UpdateTaskRequest extends FormRequest
             'effort_tokens' => ['nullable', 'integer', 'min:0'],
             'affected_files' => ['nullable', 'integer', 'min:0'],
             'pr_number' => ['nullable', 'integer', 'min:1'],
+            'reviewed_by' => ['nullable', 'string', 'max:255'],
             'status' => ['required', Rule::enum(TaskStatus::class)],
             'prerequisites' => ['nullable', 'array'],
             'prerequisites.*' => [

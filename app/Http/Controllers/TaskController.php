@@ -116,4 +116,26 @@ class TaskController extends Controller
 
         return back()->with('status', $message);
     }
+
+    /**
+     * Claim the review of a task: stamp the current user as reviewer. Only
+     * possible while the task is in review, has no reviewer yet, and the user is
+     * not its own assignee (you don't review your own work).
+     */
+    public function reviewClaim(Project $project, Task $task): RedirectResponse
+    {
+        $this->authorize('update', $task);
+
+        $user = request()->user();
+
+        if ($task->status !== TaskStatus::IN_REVIEW
+            || $task->reviewed_by !== null
+            || $task->claimed_by_id === $user->id) {
+            return back()->with('status', 'Review kann für diesen Task nicht übernommen werden.');
+        }
+
+        $task->update(['reviewed_by' => $user->name]);
+
+        return back()->with('status', "Du reviewst jetzt Task \"{$task->name}\".");
+    }
 }

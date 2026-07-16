@@ -174,6 +174,19 @@
         .ps-node .s .ps-ico { width: 11px; height: 11px; margin-right: 2px; vertical-align: -0.1em; }
         /* Problem-Grund: normale Schrift, erbt die Concern-Textfarbe (#991B1B). */
         .ps-node .r { font-size: 10px; margin-top: 2px; font-style: normal; }
+        /* Reviewer-Zeile (in Review): kursiv, gedämpfte Status-Unterton-Farbe. */
+        .ps-node .rv { font-size: 10px; margin-top: 2px; font-style: italic; color: var(--ps-sub); }
+        /* „claim"-Button, wenn noch kein Reviewer gesetzt ist: schmales Pill im
+           Review-Ton, das den aktiven Nutzer als Reviewer einträgt. */
+        .ps-node .rv-claim { margin-top: 3px; }
+        .ps-node .rv-claim-btn {
+            font-size: 10px; line-height: 1; cursor: pointer;
+            padding: 2px 8px; border-radius: 9999px;
+            background: var(--status-inreview-bg);
+            border: 1px solid var(--status-inreview-border);
+            color: var(--status-inreview-text);
+        }
+        .ps-node .rv-claim-btn:hover { background: var(--status-inreview-outline); }
         /* Optionale Kurzbeschreibung (Checkbox in der Toolbar): mehrzeilig, in der
            Breite gedeckelt, damit der Knoten nicht auseinanderläuft. */
         .ps-node .d {

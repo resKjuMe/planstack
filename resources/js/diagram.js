@@ -67,6 +67,9 @@ function initials(name) {
 const EDGE_OPEN = 'stroke:#64748b,stroke-width:1.5px';
 const EDGE_MET = 'stroke:#cbd5e1,stroke-width:1px,stroke-dasharray:4 4';
 
+// CSRF token for the inline review-claim form (from the app layout meta tag).
+const CSRF_TOKEN = document.querySelector('meta[name="csrf-token"]')?.content ?? '';
+
 function esc(value) {
     return String(value ?? '').replace(/[&<>"]/g, (c) => ({
         '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;',
@@ -144,6 +147,22 @@ function nodeLabel(n, showDesc = false) {
     // Problem-Grund: normale Schrift (kein Kursiv), erbt die Concern-Textfarbe.
     if (n.cat === 'concern' && n.reason) {
         parts.push(`<div class='r'>${esc(truncate(n.reason))}</div>`);
+    }
+
+    // In Review: Reviewer kursiv anzeigen — oder, solange niemand reviewt und
+    // der Betrachter nicht selbst Bearbeiter ist, ein schmaler „claim"-Button,
+    // der den aktiven Nutzer per Formular-POST als Reviewer einträgt.
+    if (n.cat === 'inreview') {
+        if (n.reviewedBy) {
+            parts.push(`<div class='rv'>Reviewed by ${esc(n.reviewedBy)}</div>`);
+        } else if (n.reviewClaimUrl) {
+            parts.push(
+                `<form class='rv-claim' method='POST' action='${esc(n.reviewClaimUrl)}'>`
+                + `<input type='hidden' name='_token' value='${esc(CSRF_TOKEN)}'>`
+                + `<button type='submit' class='rv-claim-btn'>claim</button>`
+                + '</form>'
+            );
+        }
     }
 
     // Corner PR badge for done nodes only; muted grey, links to the PR, and is
@@ -385,9 +404,9 @@ class DependencyGraph {
                 if (!this.lockedKey) this.clearFocus();
             });
             g.addEventListener('click', (ev) => {
-                // Let the detail link and PR links (inline or corner badge)
-                // navigate without toggling the selection.
-                if (ev.target.closest('a.detail, a.pr, a.pr-badge')) {
+                // Let the detail link, PR links (inline or corner badge) and the
+                // review-claim button act without toggling the selection.
+                if (ev.target.closest('a.detail, a.pr, a.pr-badge, .rv-claim-btn')) {
                     ev.stopPropagation();
                     return;
                 }

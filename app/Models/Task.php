@@ -31,6 +31,7 @@ class Task extends Model
         'effort_tokens',
         'affected_files',
         'pr_number',
+        'reviewed_by',
         'status',
         'claimed_at',
         'merged_at',

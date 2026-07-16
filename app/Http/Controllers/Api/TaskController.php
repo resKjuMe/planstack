@@ -334,6 +334,7 @@ class TaskController extends ApiController
             'effort_story_points' => ['nullable', 'integer', 'min:0'],
             'effort_tokens' => ['nullable', 'integer', 'min:0'],
             'affected_files' => ['nullable', 'integer', 'min:0'],
+            'reviewed_by' => ['nullable', 'string', 'max:255'],
             'status' => ['nullable', Rule::enum(TaskStatus::class)],
         ]);
 

@@ -493,6 +493,7 @@ class ProjectChangelogController extends Controller
             'effort_tokens' => 'Tokens',
             'affected_files' => 'Dateien',
             'pr_number' => 'PR-Nummer',
+            'reviewed_by' => 'Reviewed by',
             'claimed_by_id' => 'Beansprucht von',
             'claimed_at' => 'Beansprucht am',
             'merged_at' => 'Gemergt am',
