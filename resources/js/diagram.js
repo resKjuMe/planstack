@@ -149,20 +149,19 @@ function nodeLabel(n, showDesc = false) {
         parts.push(`<div class='r'>${esc(truncate(n.reason))}</div>`);
     }
 
-    // In Review: Reviewer kursiv anzeigen — oder, solange niemand reviewt und
-    // der Betrachter nicht selbst Bearbeiter ist, ein schmaler „claim review"-
-    // Button, der den aktiven Nutzer per Formular-POST als Reviewer einträgt.
-    if (n.cat === 'inreview') {
-        if (n.reviewedBy) {
-            parts.push(`<div class='rv'>Reviewed by ${esc(n.reviewedBy)}</div>`);
-        } else if (n.reviewClaimUrl) {
-            parts.push(
-                `<form class='rv-claim' method='POST' action='${esc(n.reviewClaimUrl)}'>`
-                + `<input type='hidden' name='_token' value='${esc(CSRF_TOKEN)}'>`
-                + `<button type='submit' class='rv-claim-btn'>claim review</button>`
-                + '</form>'
-            );
-        }
+    // Reviewer kursiv anzeigen, sobald gesetzt — in jedem Status. Ist noch kein
+    // Reviewer gesetzt und der Betrachter nicht selbst Bearbeiter, gibt es im
+    // Status „in Review" stattdessen einen schmalen „claim review"-Button, der
+    // den aktiven Nutzer per Formular-POST als Reviewer einträgt.
+    if (n.reviewedBy) {
+        parts.push(`<div class='rv'>Reviewed by ${esc(n.reviewedBy)}</div>`);
+    } else if (n.cat === 'inreview' && n.reviewClaimUrl) {
+        parts.push(
+            `<form class='rv-claim' method='POST' action='${esc(n.reviewClaimUrl)}'>`
+            + `<input type='hidden' name='_token' value='${esc(CSRF_TOKEN)}'>`
+            + `<button type='submit' class='rv-claim-btn'>claim review</button>`
+            + '</form>'
+        );
     }
 
     // Corner PR badge for done nodes only; muted grey, links to the PR, and is

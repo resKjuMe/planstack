@@ -149,8 +149,8 @@ class ProjectDiagramController extends Controller
                 'depTotal' => $depTotal,
                 'depMet' => $depMet,
                 'reason' => $cat === 'concern' ? $reason : null,
-                // Reviewer name is only surfaced while the task sits in review.
-                'reviewedBy' => $cat === 'inreview' ? $task->reviewed_by : null,
+                // Reviewer name is shown in every status once it is set.
+                'reviewedBy' => $task->reviewed_by,
                 // In review, no reviewer yet, and the viewer is not the task's
                 // own assignee → offer a "claim" button to become the reviewer.
                 'reviewClaimUrl' => ($cat === 'inreview'
