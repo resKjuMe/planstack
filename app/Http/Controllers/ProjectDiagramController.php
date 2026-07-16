@@ -120,6 +120,7 @@ class ProjectDiagramController extends Controller
         $threshold = $avg + sqrt($variance);
 
         $userId = auth()->id();
+        $userName = auth()->user()?->name;
 
         $nodes = [];
         foreach ($tasks as $task) {
@@ -151,6 +152,9 @@ class ProjectDiagramController extends Controller
                 'reason' => $cat === 'concern' ? $reason : null,
                 // Reviewer name is shown in every status once it is set.
                 'reviewedBy' => $task->reviewed_by,
+                // Whether the active viewer is that reviewer — drives the
+                // colour split (own review vs. someone else reviewing).
+                'reviewedByMe' => $task->reviewed_by !== null && $task->reviewed_by === $userName,
                 // In review, no reviewer yet, and the viewer is not the task's
                 // own assignee → offer a "claim" button to become the reviewer.
                 'reviewClaimUrl' => ($cat === 'inreview'

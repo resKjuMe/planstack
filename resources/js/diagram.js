@@ -117,7 +117,12 @@ function subtitle(n) {
 }
 
 function nodeLabel(n, showDesc = false) {
-    const reviewed = n.cat === 'inreview' && n.reviewedBy ? ' is-reviewed' : '';
+    // In-review + reviewer set: own review (is-reviewed) vs. someone else
+    // reviewing (is-reviewed-other) get distinct colours.
+    let reviewed = '';
+    if (n.cat === 'inreview' && n.reviewedBy) {
+        reviewed = n.reviewedByMe ? ' is-reviewed' : ' is-reviewed-other';
+    }
     const cls = `ps-node cat-${n.cat}${reviewed}${n.done ? ' is-done' : ''}${n.bottleneck ? ' has-bn' : ''}`;
     const parts = [`<div class='${cls}'>`];
 
