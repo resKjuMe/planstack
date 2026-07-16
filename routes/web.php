@@ -34,6 +34,9 @@ Route::get('/dashboard', fn () => redirect()->route('projects.index'))
     ->name('dashboard');
 
 Route::middleware('auth')->group(function () {
+    // Nutzer-Changelog der Website (Versionsübersicht in der Hauptnavi)
+    Route::view('/changelog', 'changelog')->name('changelog');
+
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');

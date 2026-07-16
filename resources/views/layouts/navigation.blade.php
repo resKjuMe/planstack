@@ -19,6 +19,9 @@
                     <x-nav-link :href="route('teams.index')" :active="request()->routeIs('teams.*')">
                         {{ __('Teams') }}
                     </x-nav-link>
+                    <x-nav-link :href="route('changelog')" :active="request()->routeIs('changelog')" class="font-mono">
+                        v{{ config('changelog.releases.0.version') }}
+                    </x-nav-link>
                 </div>
             </div>
 
@@ -85,6 +88,9 @@
             </x-responsive-nav-link>
             <x-responsive-nav-link :href="route('teams.index')" :active="request()->routeIs('teams.*')">
                 {{ __('Teams') }}
+            </x-responsive-nav-link>
+            <x-responsive-nav-link :href="route('changelog')" :active="request()->routeIs('changelog')">
+                v{{ config('changelog.releases.0.version') }}
             </x-responsive-nav-link>
         </div>
 
