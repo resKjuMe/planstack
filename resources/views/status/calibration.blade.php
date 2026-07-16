@@ -105,11 +105,12 @@
             <div class="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3">
                 <div class="flex items-start gap-2 text-sm text-amber-800">
                     <svg class="mt-0.5 h-5 w-5 shrink-0 text-amber-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
-                    <span>{{ $kpis['noEstimate'] }} Tasks ohne Dateischätzung verfälschen die Kalibrierung — sie werden aus den Kennzahlen ausgeschlossen.</span>
+                    <span>{{ $kpis['noEstimate'] }} {{ $kpis['noEstimate'] === 1 ? 'Task hat' : 'Tasks haben' }} keine Dateischätzung und {{ $kpis['noEstimate'] === 1 ? 'fließt' : 'fließen' }} daher nicht in die Abweichungs-Kennzahlen ein (Velocity und Gesamtzahl bleiben davon unberührt).</span>
                 </div>
-                <button type="button" @click="tab = 'noEstimate'"
+                <button type="button"
+                        @click="tab = 'noEstimate'; $nextTick(() => document.getElementById('calib-list')?.scrollIntoView({ behavior: 'smooth', block: 'start' }))"
                         class="shrink-0 rounded-md bg-white px-3 py-1.5 text-sm font-semibold text-amber-800 ring-1 ring-amber-300 hover:bg-amber-100">
-                    Anzeigen ↗
+                    Anzeigen ↓
                 </button>
             </div>
         @endif
@@ -181,7 +182,7 @@
         </div>
 
         {{-- Tabs + Sortierung --}}
-        <div class="flex flex-wrap items-center justify-between gap-3">
+        <div id="calib-list" class="flex flex-wrap items-center justify-between gap-3 scroll-mt-6">
             <div class="inline-flex items-center gap-1 rounded-full bg-gray-100 p-1">
                 @foreach (['all' => 'Alle', 'outliers' => 'Nur Ausreißer', 'noEstimate' => 'Ohne Schätzung', 'grouped' => 'Nach SP gruppiert'] as $key => $label)
                     <button type="button" @click="tab = '{{ $key }}'"
