@@ -38,6 +38,15 @@
   .panel.active { display:block; }
   .muted { color:var(--muted); font-size:.9rem; }
   .kbd { background:#eef0f3; border:1px solid var(--line); border-bottom-width:2px; border-radius:5px; padding:1px 6px; }
+  .qtabs { display:flex; gap:6px; margin:12px 0 0; }
+  .qtab { cursor:pointer; padding:7px 14px; border:1px solid var(--line); border-bottom:none; border-radius:8px 8px 0 0; background:#eef0f3; font-weight:600; font-size:.85rem; }
+  .qtab.active { background:var(--card); color:var(--brand); }
+  .qpanel { display:none; border:1px solid var(--line); border-radius:0 10px 10px 10px; padding:14px 16px; background:var(--card); }
+  .qpanel.active { display:block; }
+  .qpanel pre { margin:0; white-space:pre-wrap; }
+  .copybtn { float:right; cursor:pointer; font-size:.8rem; font-weight:600; color:var(--brand);
+             background:#fff; border:1px solid var(--brand); border-radius:6px; padding:4px 10px; margin:0 0 8px 8px; }
+  .copybtn:hover { background:#eef2ff; }
 </style>
 </head>
 <body>
@@ -71,7 +80,40 @@
     <p class="muted" style="margin-top:12px">Userscript-Link öffnen → Tampermonkey zeigt „Installieren". <code>ci-server.cjs</code> speichern (z.&nbsp;B. Windows <code>%USERPROFILE%\planstack\</code>, Mac <code>~/planstack/</code>).</p>
   </div>
 
-  <h2>3 · Lokalen Server einrichten</h2>
+  <h2>3 · Schnell-Einrichtung mit Claude Code <span class="muted" style="font-size:.9rem">(empfohlen)</span></h2>
+  <div class="card">
+    <p class="muted" style="margin-top:0">Hast du <a href="https://claude.com/claude-code" target="_blank" rel="noopener">Claude Code</a>? Kopier den passenden Prompt in ein Claude-Code-Fenster — es installiert Node/gh (falls nötig), lädt den Server, richtet den Autostart ein und startet ihn. Nur <code>gh auth login</code> machst du einmal selbst (interaktiv).</p>
+    <div class="qtabs">
+      <div class="qtab active" data-qtab="qwin">Windows</div>
+      <div class="qtab" data-qtab="qmac">macOS</div>
+    </div>
+
+    <div class="qpanel active" id="qwin">
+      <button type="button" class="copybtn" data-copy="#qwin-prompt">Prompt kopieren</button>
+<pre><code id="qwin-prompt">Richte den Planstack-CI-Status-Server auf diesem Windows-PC ein:
+1. Prüfe, ob Node.js und die GitHub CLI (gh) installiert sind. Fehlt etwas, installiere es per winget:
+   winget install OpenJS.NodeJS.LTS
+   winget install GitHub.cli
+2. Prüfe `gh auth status`. Bin ich nicht eingeloggt, sag mir, dass ich einmal `gh auth login` selbst ausführen muss, und warte darauf.
+3. Lade {{ asset('planstack-ci/ci-server.cjs') }} nach %USERPROFILE%\planstack\ci-server.cjs herunter.
+4. Richte einen Autostart bei jeder Anmeldung ein: eine .vbs im Startup-Ordner (shell:startup), die `node %USERPROFILE%\planstack\ci-server.cjs` versteckt (ohne Fenster) startet. Starte sie anschließend sofort.
+5. Verifiziere, dass http://127.0.0.1:8757/version die Antwort {"version":"{{ $ciVersion }}"} liefert, und melde mir das Ergebnis.</code></pre>
+    </div>
+
+    <div class="qpanel" id="qmac">
+      <button type="button" class="copybtn" data-copy="#qmac-prompt">Prompt kopieren</button>
+<pre><code id="qmac-prompt">Richte den Planstack-CI-Status-Server auf diesem Mac ein:
+1. Prüfe, ob Node.js und die GitHub CLI (gh) installiert sind. Fehlt etwas, installiere es per Homebrew:
+   brew install node gh
+2. Prüfe `gh auth status`. Bin ich nicht eingeloggt, sag mir, dass ich einmal `gh auth login` selbst ausführen muss, und warte darauf.
+3. Lade {{ asset('planstack-ci/ci-server.cjs') }} nach ~/planstack/ci-server.cjs herunter.
+4. Richte einen LaunchAgent ein (~/Library/LaunchAgents/net.planstack.ciserver.plist) mit RunAtLoad und KeepAlive, der `node ~/planstack/ci-server.cjs` bei jedem Login startet, und lade ihn (launchctl load).
+5. Verifiziere, dass http://127.0.0.1:8757/version die Antwort {"version":"{{ $ciVersion }}"} liefert, und melde mir das Ergebnis.</code></pre>
+    </div>
+    <p class="muted" style="margin-top:12px">Danach noch das <b>Userscript</b> aus Schritt 2 in Tampermonkey installieren — fertig.</p>
+  </div>
+
+  <h2>4 · Manuell einrichten <span class="muted" style="font-size:.9rem">(Alternative)</span></h2>
   <div class="tabs">
     <div class="tab active" data-tab="win">Windows</div>
     <div class="tab" data-tab="mac">macOS</div>
@@ -124,7 +166,7 @@ launchctl load ~/Library/LaunchAgents/net.planstack.ciserver.plist</code></pre>
     </ol>
   </div>
 
-  <h2>4 · Fertig</h2>
+  <h2>5 · Fertig</h2>
   <div class="card">
     <p style="margin:0">Lade die Diagramm-Seite neu. An jedem PR-Knoten erscheint jetzt der CI-/Merge-Status; der Hinweis über dem Diagramm verschwindet automatisch. Bei einer neuen Version meldet Tampermonkey das Update automatisch (bzw. der Hinweisbalken zeigt „Aktualisieren").</p>
   </div>
@@ -139,9 +181,30 @@ launchctl load ~/Library/LaunchAgents/net.planstack.ciserver.plist</code></pre>
       document.getElementById(t.dataset.tab).classList.add('active');
     });
   });
+  // Quick-Setup-Tabs (Claude-Code-Prompts) — eigene Gruppe
+  document.querySelectorAll('.qtab').forEach(function (t) {
+    t.addEventListener('click', function () {
+      document.querySelectorAll('.qtab').forEach(function (x) { x.classList.remove('active'); });
+      document.querySelectorAll('.qpanel').forEach(function (x) { x.classList.remove('active'); });
+      t.classList.add('active');
+      document.getElementById(t.dataset.qtab).classList.add('active');
+    });
+  });
+  // Prompt kopieren
+  document.querySelectorAll('.copybtn').forEach(function (b) {
+    b.addEventListener('click', function () {
+      var el = document.querySelector(b.dataset.copy);
+      if (!el) return;
+      navigator.clipboard.writeText(el.textContent.trim()).then(function () {
+        var prev = b.textContent; b.textContent = 'Kopiert ✓';
+        setTimeout(function () { b.textContent = prev; }, 1500);
+      });
+    });
+  });
   // macOS-Standard einblenden, wenn kein Windows
   if (navigator.platform && /Mac/i.test(navigator.platform)) {
     document.querySelector('.tab[data-tab="mac"]').click();
+    var qm = document.querySelector('.qtab[data-qtab="qmac"]'); if (qm) qm.click();
   }
   fetch('http://127.0.0.1:8757/version').then(function (r) { return r.json(); }).then(function (d) {
     document.getElementById('dot').className = 'dot up';
