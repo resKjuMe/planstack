@@ -1,3 +1,4 @@
+@php $ciVersion = config('planstack_ci.version'); @endphp
 <nav x-data="{ open: false }" class="bg-white border-b border-gray-100">
     <!-- Primary Navigation Menu -->
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -26,6 +27,9 @@
                 <x-dropdown align="right" width="48">
                     <x-slot name="trigger">
                         <button class="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-gray-500 bg-white hover:text-gray-700 focus:outline-none transition ease-in-out duration-150">
+                            <span class="js-psci-update me-1 align-middle text-indigo-600" style="display:none" title="Update für die CI-Status-Anzeige verfügbar">
+                                <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 16V8"/><path d="m8.5 11.5 3.5-3.5 3.5 3.5"/></svg>
+                            </span>
                             <div>{{ Auth::user()->name }}</div>
 
                             <div class="ms-1">
@@ -44,6 +48,7 @@
                         {{-- Einrichtungs-/Downloadseite der CI-Status-Anzeige --}}
                         <x-dropdown-link :href="url('/planstack-ci/setup')">
                             {{ __('TamperMonkey Script') }}
+                            <span class="js-psci-update ms-2 rounded-full bg-indigo-600 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white align-middle" style="display:none">new</span>
                         </x-dropdown-link>
 
                         <!-- Authentication -->
@@ -98,6 +103,7 @@
                 {{-- Einrichtungs-/Downloadseite der CI-Status-Anzeige --}}
                 <x-responsive-nav-link :href="url('/planstack-ci/setup')">
                     {{ __('TamperMonkey Script') }}
+                    <span class="js-psci-update ms-2 rounded-full bg-indigo-600 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white align-middle" style="display:none">new</span>
                 </x-responsive-nav-link>
 
                 <!-- Authentication -->
@@ -114,3 +120,27 @@
         </div>
     </div>
 </nav>
+
+{{-- Update-Hinweis (Icon vor Username + „new"-Badge am Menüpunkt): sichtbar, wenn
+     das Userscript läuft (Marker data-planstack-ci) UND eine ältere Version als die
+     aktuelle (config/planstack_ci.version) installiert ist. --}}
+<script>
+(function () {
+    var current = @json($ciVersion);
+    function cmp(a, b) {
+        var pa = String(a || '0').split('.').map(Number), pb = String(b || '0').split('.').map(Number);
+        for (var i = 0; i < 3; i++) { var d = (pa[i] || 0) - (pb[i] || 0); if (d) return d < 0 ? -1 : 1; }
+        return 0;
+    }
+    function refresh() {
+        var installed = document.documentElement.getAttribute('data-planstack-ci');
+        var show = !!installed && cmp(installed, current) < 0;
+        document.querySelectorAll('.js-psci-update').forEach(function (el) {
+            el.style.display = show ? '' : 'none';
+        });
+    }
+    document.addEventListener('planstack-ci-ready', refresh);
+    refresh();
+    [400, 1200, 2500].forEach(function (ms) { setTimeout(refresh, ms); });
+})();
+</script>
