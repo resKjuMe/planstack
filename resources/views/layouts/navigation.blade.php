@@ -41,10 +41,9 @@
                             {{ __('Profile') }}
                         </x-dropdown-link>
 
-                        {{-- CI-Status-Hinweis wieder einblenden (falls versehentlich ausgeblendet) --}}
-                        <x-dropdown-link href="#"
-                                onclick="event.preventDefault(); try { localStorage.removeItem('psci-teaser-dismissed'); } catch (e) {} window.location.reload();">
-                            {{ __('CI-Status-Hinweis einblenden') }}
+                        {{-- Einrichtungs-/Downloadseite der CI-Status-Anzeige --}}
+                        <x-dropdown-link :href="url('/planstack-ci/setup')">
+                            {{ __('TamperMonkey Script') }}
                         </x-dropdown-link>
 
                         <!-- Authentication -->
@@ -96,10 +95,9 @@
                     {{ __('Profile') }}
                 </x-responsive-nav-link>
 
-                {{-- CI-Status-Hinweis wieder einblenden --}}
-                <x-responsive-nav-link href="#"
-                        onclick="event.preventDefault(); try { localStorage.removeItem('psci-teaser-dismissed'); } catch (e) {} window.location.reload();">
-                    {{ __('CI-Status-Hinweis einblenden') }}
+                {{-- Einrichtungs-/Downloadseite der CI-Status-Anzeige --}}
+                <x-responsive-nav-link :href="url('/planstack-ci/setup')">
+                    {{ __('TamperMonkey Script') }}
                 </x-responsive-nav-link>
 
                 <!-- Authentication -->
