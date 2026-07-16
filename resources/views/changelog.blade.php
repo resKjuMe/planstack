@@ -11,11 +11,12 @@
             <p class="text-sm text-gray-500">Alle sichtbaren Änderungen an Planstack — neueste zuerst. Zeile anklicken für Details.</p>
 
             @forelse ($releases as $release)
-                <div x-data="{ open: false }" class="bg-white rounded-lg shadow">
+                <div x-data="{ open: false }" data-release-version="{{ $release['version'] }}" class="bg-white rounded-lg shadow">
                     {{-- Kopfzeile: Version + TL;DR (fett, einzeilig, truncated) + Datum + Chevron --}}
                     <button type="button" @click="open = ! open"
                             class="flex w-full items-center gap-3 px-6 py-4 text-left">
                         <span class="shrink-0 inline-flex items-center rounded-md bg-indigo-600 px-2 py-0.5 text-sm font-mono font-semibold text-white">v{{ $release['version'] }}</span>
+                        <span class="cl-new-badge shrink-0 inline-flex items-center rounded-full bg-indigo-100 px-2 py-0.5 text-xs font-semibold text-indigo-700" style="display:none">Neu</span>
 
                         <span class="min-w-0 flex-1 truncate text-sm">
                             @if (!empty($release['tldr']))
@@ -46,4 +47,30 @@
             @endforelse
         </div>
     </div>
+
+    {{-- Neue Einträge (Version > zuletzt gesehen) hervorheben, danach gesehene
+         Version aktualisieren. Erstbesuch (nichts gespeichert) → keine Hervorhebung. --}}
+    <script>
+    (function () {
+        var latest = @json(config('changelog.releases.0.version'));
+        var key = 'changelog-seen-version';
+        function cmp(a, b) {
+            var pa = String(a || '0').split('.').map(Number), pb = String(b || '0').split('.').map(Number);
+            for (var i = 0; i < 3; i++) { var d = (pa[i] || 0) - (pb[i] || 0); if (d) return d < 0 ? -1 : 1; }
+            return 0;
+        }
+        var seen = null;
+        try { seen = localStorage.getItem(key); } catch (e) {}
+        if (seen) {
+            document.querySelectorAll('[data-release-version]').forEach(function (card) {
+                if (cmp(card.getAttribute('data-release-version'), seen) > 0) {
+                    card.classList.add('ring-2', 'ring-indigo-400');
+                    var b = card.querySelector('.cl-new-badge');
+                    if (b) b.style.display = '';
+                }
+            });
+        }
+        try { localStorage.setItem(key, latest); } catch (e) {}
+    })();
+    </script>
 </x-app-layout>

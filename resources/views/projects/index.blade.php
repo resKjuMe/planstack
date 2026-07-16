@@ -92,7 +92,8 @@
                                  den äußeren Link dann an der Stelle des inneren automatisch, wodurch
                                  alles danach (Fortschritt/Footer) aus dem Link herausfällt. Stattdessen
                                  ein klickbares div, das Klicks auf echte Links durchlässt (siehe @click). --}}
-                            <div @click="if (!$event.target.closest('a')) { window.location = @js(route('projects.diagram', $project)) }"
+                            <div x-data="{ hover: null }"
+                                 @click="if (!$event.target.closest('a')) { window.location = @js(route('projects.diagram', $project)) }"
                                  class="flex h-full cursor-pointer flex-col rounded-lg bg-white p-6 shadow transition hover:shadow-md">
                                 <div class="flex items-center justify-between">
                                     <span class="inline-flex items-center rounded bg-gray-800 px-2 py-0.5 font-mono text-xs font-semibold text-white">
@@ -114,22 +115,46 @@
                                 <div class="mt-auto pt-5">
                                     <div>
                                         <div class="flex items-center justify-between text-sm">
-                                            <span class="text-gray-500">Fortschritt</span>
-                                            <span class="font-semibold text-gray-900">{{ number_format($pct, 1, ',', '') }} %</span>
+                                            <span :class="hover ? hover.text : 'text-gray-500'"
+                                                  x-text="hover ? (hover.label + ' · ' + hover.count + ' / ' + @js($project->tasks_count) + ' Tasks') : 'Fortschritt'">Fortschritt</span>
+                                            <span class="font-semibold" :class="hover ? hover.text : 'text-gray-900'"
+                                                  x-text="hover ? (hover.pct + ' % SP') : @js(number_format($pct, 1, ',', '').' %')">{{ number_format($pct, 1, ',', '') }} %</span>
                                         </div>
-                                        <div class="mt-1.5 h-1.5 rounded-full bg-gray-100">
-                                            <div class="h-1.5 rounded-full {{ $barClass }}" style="width: {{ max(2, min(100, $pct)) }}%"></div>
+                                        <div class="relative mt-1.5">
+                                            {{-- Sichtbarer dünner Balken --}}
+                                            <div class="flex h-1.5 overflow-hidden rounded-full bg-gray-100">
+                                                @foreach ($project->x_status_segments as $seg)
+                                                    <div class="h-full {{ $seg['bar'] }}" style="width: {{ $seg['width'] }}%"></div>
+                                                @endforeach
+                                            </div>
+                                            {{-- Transparente 36px-Hover-Ebene (zentriert, kein Layout-Shift) --}}
+                                            <div class="absolute inset-x-0 top-1/2 flex h-9 -translate-y-1/2">
+                                                @foreach ($project->x_status_segments as $seg)
+                                                    <div class="h-full" style="width: {{ $seg['width'] }}%"
+                                                         @mouseenter="hover = { pct: @js(number_format($seg['width'], 1, ',', '')), count: {{ $seg['count'] }}, text: @js($seg['text']), label: @js($seg['label']) }"
+                                                         @mouseleave="hover = null"
+                                                         title="{{ $seg['label'] }}: {{ $seg['count'] }}"></div>
+                                                @endforeach
+                                            </div>
                                         </div>
                                     </div>
 
-                                    <div class="mt-4 flex items-center justify-between">
-                                        <div class="flex items-center gap-2">
-                                            <span class="inline-flex h-7 w-7 items-center justify-center rounded-full {{ $avatarClass }} text-xs font-semibold text-white">
+                                    <div class="mt-4 flex items-center justify-between gap-2">
+                                        <div class="flex min-w-0 items-center gap-2">
+                                            <span class="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full {{ $avatarClass }} text-xs font-semibold text-white">
                                                 {{ $initials }}
                                             </span>
-                                            <span class="text-sm text-gray-700">{{ $project->owner?->name }}</span>
+                                            {{-- Name + Teams: zusammen max. so hoch wie der Avatar (16px + 12px = 28px) --}}
+                                            <div class="min-w-0">
+                                                <div class="truncate text-sm leading-4 text-gray-700">{{ $project->owner?->name }}</div>
+                                                @if ($project->teams->isNotEmpty())
+                                                    <div class="truncate text-xs leading-none text-gray-400" title="{{ $project->teams->pluck('name')->join(', ') }}">
+                                                        {{ $project->teams->pluck('name')->join(', ') }}
+                                                    </div>
+                                                @endif
+                                            </div>
                                         </div>
-                                        <span class="text-xs text-gray-400">{{ $project->tasks_count }} Tasks · {{ $sp }} SP</span>
+                                        <span class="shrink-0 whitespace-nowrap text-xs text-gray-400">{{ $project->tasks_count }} Tasks · {{ $sp }} SP</span>
                                     </div>
                                 </div>
                             </div>

@@ -69,7 +69,7 @@
             <h2 class="text-sm font-semibold text-gray-600 mb-4">Phasen</h2>
             <div class="space-y-3">
                 @foreach ($rows as $row)
-                    <div x-data="{ open: false }" class="rounded-lg ring-1 ring-gray-100 p-4">
+                    <div x-data="{ open: false, hover: null }" class="rounded-lg ring-1 ring-gray-100 p-4">
                         <div class="flex flex-wrap items-center justify-between gap-2">
                             <div class="flex items-center gap-2">
                                 <span class="font-medium text-gray-800">{{ $row['phase'] }}</span>
@@ -80,7 +80,8 @@
                                 @endforeach
                             </div>
                             <div class="flex items-center gap-2">
-                                <span class="text-sm font-semibold text-gray-500">{{ $row['done'] }} / {{ $row['total'] }} PRs ({{ $row['pct'] }}%)</span>
+                                <span class="text-sm font-semibold" :class="hover ? hover.text : 'text-gray-500'"
+                                      x-text="hover ? (hover.label + ' · ' + hover.count + ' / ' + @js($row['total']) + ' Tasks · ' + hover.pct + ' % SP') : @js($row['done'].' / '.$row['total'].' PRs ('.$row['pct'].'%)')">{{ $row['done'] }} / {{ $row['total'] }} PRs ({{ $row['pct'] }}%)</span>
                                 <button type="button" @click="open = !open" class="text-xs text-indigo-600 hover:underline">
                                     <span x-show="!open">Details anzeigen</span>
                                     <span x-show="open" x-cloak>Details ausblenden</span>
@@ -89,10 +90,22 @@
                         </div>
 
                         {{-- Fortschrittsbalken: ein Segment je Status (SP-anteilig) --}}
-                        <div class="mt-3 h-2.5 rounded-full bg-gray-100 overflow-hidden flex">
-                            @foreach ($row['statuses'] as $s)
-                                <div class="h-full {{ $s['bar'] }}" style="width: {{ $s['width'] }}%" title="{{ $s['count'] }} {{ $s['label'] }}"></div>
-                            @endforeach
+                        <div class="relative mt-3">
+                            {{-- Sichtbarer Balken --}}
+                            <div class="flex h-2.5 overflow-hidden rounded-full bg-gray-100">
+                                @foreach ($row['statuses'] as $s)
+                                    <div class="h-full {{ $s['bar'] }}" style="width: {{ $s['width'] }}%"></div>
+                                @endforeach
+                            </div>
+                            {{-- Transparente 36px-Hover-Ebene (zentriert, kein Layout-Shift) --}}
+                            <div class="absolute inset-x-0 top-1/2 flex h-9 -translate-y-1/2">
+                                @foreach ($row['statuses'] as $s)
+                                    <div class="h-full" style="width: {{ $s['width'] }}%"
+                                         @mouseenter="hover = { pct: @js(number_format($s['width'], 1, ',', '')), count: {{ $s['count'] }}, text: @js($s['text']), label: @js($s['label']) }"
+                                         @mouseleave="hover = null"
+                                         title="{{ $s['count'] }} {{ $s['label'] }}"></div>
+                                @endforeach
+                            </div>
                         </div>
 
                         {{-- Status-Badges (nach echtem Status differenziert) --}}

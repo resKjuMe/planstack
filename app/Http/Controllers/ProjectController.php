@@ -8,6 +8,7 @@ use App\Http\Requests\StoreProjectRequest;
 use App\Http\Requests\UpdateProjectRequest;
 use App\Models\Project;
 use App\Support\SkillTemplate;
+use App\Support\TaskBoardService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Auth;
@@ -15,6 +16,8 @@ use Illuminate\View\View;
 
 class ProjectController extends Controller
 {
+    public function __construct(private readonly TaskBoardService $board) {}
+
     public function index(): View
     {
         $userId = Auth::id();
@@ -41,14 +44,50 @@ class ProjectController extends Controller
                 fn (Builder $q) => $q->whereNotNull('pr_number')
                     ->orWhereIn('status', [TaskStatus::COMPLETED, TaskStatus::MERGED])
             )], 'effort_story_points')
-            ->with('owner')
+            ->with(['owner', 'teams:id,name'])
             ->latest()
             ->get();
+
+        // Pro Projekt die Status-Segmente für den gestapelten Fortschrittsbalken
+        // (gleiche Logik/Farben wie die Phasen-Balken der Summary).
+        foreach ($projects as $project) {
+            $project->x_status_segments = $this->statusSegments($project);
+        }
 
         $openTasks = $projects->sum(fn (Project $p) => $p->tasks_count - $p->closed_tasks_count);
         $totalSp = (int) $projects->sum('total_sp');
 
         return view('projects.index', compact('projects', 'userId', 'openTasks', 'totalSp'));
+    }
+
+    /**
+     * Nach SP gewichtete Balken-Segmente je Anzeige-Status (merged → offen),
+     * identisch zur Summary. Tasks ohne Story Points erscheinen nicht im Balken.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    private function statusSegments(Project $project): array
+    {
+        $tasks = $this->board->decorate($project);
+        $sp = max(1, (int) $tasks->sum('effort_story_points'));
+
+        $segments = [];
+        foreach (TaskStatus::displayOrder() as $status) {
+            $inStatus = $tasks->filter(fn ($t) => $t->x_display_status === $status);
+            $segSp = (int) $inStatus->sum('effort_story_points');
+            if ($inStatus->isEmpty() || $segSp <= 0) {
+                continue;
+            }
+            $segments[] = [
+                'label' => $status->label(),
+                'count' => $inStatus->count(),
+                'bar' => $status->barClasses(),
+                'text' => $status->textClasses(),
+                'width' => round($segSp / $sp * 100, 1),
+            ];
+        }
+
+        return $segments;
     }
 
     public function create(): View

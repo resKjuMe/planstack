@@ -6,6 +6,17 @@
 return [
     'releases' => [
         [
+            'version' => '1.1.0',
+            'date' => '2026-07-17',
+            'tldr' => ['Farbige Fortschrittsbalken', 'Hover-Details', 'Teams je Projekt', 'Changelog-Hinweis'],
+            'changes' => [
+                'Fortschrittsbalken zeigen jetzt farbige Segmente je Status (gemerged, in Review, in Arbeit …) — auf der Projekte-Übersicht und in der Phasen-Summary.',
+                'Beim Überfahren eines Balken-Segments erscheinen Status, Anzahl Tasks und SP-Anteil in der passenden Farbe.',
+                'Projektkacheln zeigen unter der Owner:in die zugeordneten Teams.',
+                'Neue Änderungen werden in der Navigation mit einem Symbol angekündigt und beim Öffnen dieser Seite hervorgehoben.',
+            ],
+        ],
+        [
             'version' => '1.0.0',
             'date' => '2026-07-16',
             // TL;DR: nur Stichwörter (werden fett dargestellt).

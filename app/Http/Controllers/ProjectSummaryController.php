@@ -116,7 +116,7 @@ class ProjectSummaryController extends Controller
 
             // One entry per status present in this phase: badge + bar segment (SP-based).
             $statuses = [];
-            foreach ($this->statusOrder() as $status) {
+            foreach (TaskStatus::displayOrder() as $status) {
                 $inStatus = $pt->filter(fn ($t) => $t->x_display_status === $status);
                 if ($inStatus->isEmpty()) {
                     continue;
@@ -124,8 +124,9 @@ class ProjectSummaryController extends Controller
                 $statuses[] = [
                     'label' => $status->label(),
                     'count' => $inStatus->count(),
-                    'badge' => $this->statusBadgeClasses($status),
-                    'bar' => $this->statusBarClasses($status),
+                    'badge' => $status->badgeClasses(),
+                    'bar' => $status->barClasses(),
+                    'text' => $status->textClasses(),
                     'width' => round((int) $inStatus->sum('effort_story_points') / $sp * 100, 1),
                 ];
             }
@@ -151,48 +152,6 @@ class ProjectSummaryController extends Controller
         }
 
         return $rows;
-    }
-
-    /**
-     * Logical lifecycle order, most complete → most open.
-     *
-     * @return array<int, TaskStatus>
-     */
-    private function statusOrder(): array
-    {
-        return [
-            TaskStatus::MERGED,
-            TaskStatus::COMPLETED,
-            TaskStatus::IN_REVIEW,
-            TaskStatus::IN_PROGRESS,
-            TaskStatus::ANALYZING,
-            TaskStatus::CLAIMED,
-            TaskStatus::PICKABLE,
-            TaskStatus::CONCERNED,
-            TaskStatus::BLOCKED,
-            TaskStatus::UNKNOWN,
-        ];
-    }
-
-    private function statusBadgeClasses(TaskStatus $status): string
-    {
-        return $status->badgeClasses();
-    }
-
-    private function statusBarClasses(TaskStatus $status): string
-    {
-        return match ($status) {
-            TaskStatus::UNKNOWN => 'bg-gray-300',
-            TaskStatus::BLOCKED => 'bg-rose-400',
-            TaskStatus::CONCERNED => 'bg-red-500',
-            TaskStatus::PICKABLE => 'bg-indigo-400',
-            TaskStatus::CLAIMED => 'bg-sky-400',
-            TaskStatus::ANALYZING => 'bg-blue-400',
-            TaskStatus::IN_PROGRESS => 'bg-blue-700',
-            TaskStatus::IN_REVIEW => 'bg-purple-500',
-            TaskStatus::COMPLETED => 'bg-green-500',
-            TaskStatus::MERGED => 'bg-emerald-500',
-        };
     }
 
     private function phaseShort(string $name): string
