@@ -1,4 +1,12 @@
 <x-status-shell :project="$project" :active="$active" :bare="true">
+    <x-page-head title="Changelog" class="mb-4">
+        <ul class="list-disc space-y-1 ps-4">
+            <li><span class="font-medium">Changelog</span>: Änderungsprotokoll aller Tasks dieses Projekts, chronologisch nach Datum und Uhrzeit.</li>
+            <li>Jede Zeile nennt Zeit, geänderten Task und Verursacher; Aufklappen zeigt die geänderten Felder mit Vorher/Nachher.</li>
+            <li>„+N weitere Felder" blendet zusätzliche Änderungen einer Zeile ein.</li>
+        </ul>
+    </x-page-head>
+
     @php $lastDate = null; @endphp
     <div class="space-y-2">
         @forelse ($changes as $entry)

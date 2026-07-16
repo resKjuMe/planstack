@@ -126,11 +126,21 @@ class ProjectController extends Controller
 
         $project->load([
             'owner',
-            'teams.members',
-            'memberships',
             'phases',
             'tasks' => fn ($q) => $q->with(['claimer', 'concern'])->orderBy('name'),
         ]);
+
+        return view('projects.show', compact('project'));
+    }
+
+    /**
+     * Zugriffs-Verwaltung (zugewiesene Teams + Rollen) als eigener Projekt-Tab.
+     */
+    public function access(Project $project): View
+    {
+        $this->authorize('view', $project);
+
+        $project->load(['owner', 'teams.members', 'memberships']);
 
         // Users with access (owner + members of assigned teams) and their role.
         $accessUsers = $project->accessUsers();
@@ -143,7 +153,7 @@ class ProjectController extends Controller
             ->orderBy('name')
             ->get();
 
-        return view('projects.show', compact('project', 'accessUsers', 'roleByUser', 'assignableTeams'));
+        return view('projects.access', compact('project', 'accessUsers', 'roleByUser', 'assignableTeams'));
     }
 
     public function edit(Project $project): View

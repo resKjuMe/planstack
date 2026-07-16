@@ -1,6 +1,15 @@
 <x-status-shell :project="$project" :active="$active" :bare="true">
     <div class="space-y-8">
 
+        <x-page-head title="Summary">
+            <ul class="list-disc space-y-1 ps-4">
+                <li><span class="font-medium">Summary</span>: Überblick über den Projektfortschritt.</li>
+                <li>KPI-Kacheln: Fortschritt (erledigte PRs), Story Points, Dateien, Tokens, Velocity (SP/Woche mit Prognose) und letzter Merge.</li>
+                <li><span class="font-medium">Phasen</span>: farbige Status-Balken (Hover zeigt Anzahl &amp; SP-Anteil); „Details anzeigen" blendet verbleibende/geplante PT, Dateien, Tokens und offene PRs ein.</li>
+                <li><span class="font-medium">Pickbare PRs</span>: aktuell startbare Tasks — der erste ist der „beste Pick" (schaltet die meisten Folge-PRs frei).</li>
+            </ul>
+        </x-page-head>
+
         {{-- 1. KPI-Kacheln --}}
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {{-- Fortschritt --}}

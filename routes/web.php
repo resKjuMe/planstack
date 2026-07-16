@@ -70,6 +70,8 @@ Route::middleware('auth')->group(function () {
         ->name('projects.changelog');
     Route::get('projects/{project}/kalibrierung', ProjectCalibrationController::class)
         ->name('projects.calibration');
+    Route::get('projects/{project}/access', [ProjectController::class, 'access'])
+        ->name('projects.access');
 
     // Legacy URLs (formerly nested under /status/...) redirect permanently.
     Route::permanentRedirect('projects/{project}/status/diagram', '/projects/{project}/diagram');

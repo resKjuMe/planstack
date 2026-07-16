@@ -13,35 +13,46 @@ class ProjectCalibrationController extends Controller
     /**
      * Schätzung vs. tatsächlicher Aufwand für gemergte Tasks. Dateien sind das
      * einzige Feld mit einem echten Plan/Ist-Paar (affected_files vs. die
-     * changed_files-Summe aller PRs einer Task); Story Points werden nur
-     * indirekt über die Dauer-je-SP-Kennzahl und die SP-Gruppierung kalibriert.
+     * changed_files-Summe aller PRs einer Task); Story Points werden über die
+     * Velocity (Claim → Merge) und die Treffsicherheit nach SP kalibriert.
      */
     public function __invoke(Project $project): View
     {
         $this->authorize('view', $project);
 
-        $rows = $project->tasks()
+        $tasks = $project->tasks()
             ->where('status', TaskStatus::MERGED->value)
             ->with('pullRequests')
             ->get()
-            ->filter(fn (Task $task) => $task->pullRequests->isNotEmpty())
-            ->map(fn (Task $task) => $this->calibrate($task))
+            ->filter(fn (Task $task) => $task->pullRequests->isNotEmpty());
+
+        $lastSync = $tasks->flatMap(fn (Task $t) => $t->pullRequests)->pluck('updated_at')->filter()->max();
+
+        $rows = $tasks
+            ->map(fn (Task $task) => $this->calibrate($project, $task))
             ->sortByDesc('mergedAt')
             ->values();
+
+        $withDeviation = $rows->filter(fn (array $r) => $r['deviationPct'] !== null)->values();
+        $spAccuracy = $this->spAccuracy($withDeviation);
 
         return view('status.calibration', [
             'project' => $project,
             'active' => 'calibration',
             'rows' => $rows,
-            'kpis' => $this->kpis($rows),
+            'rowData' => $rows->map(fn (array $r) => $this->rowData($r))->all(),
+            'kpis' => $this->kpis($rows, $withDeviation, $lastSync),
             'groups' => $this->groupByStoryPoints($rows),
+            'scatter' => $this->scatter($withDeviation),
+            'spAccuracy' => $spAccuracy,
+            'tip' => $this->accuracyTip($spAccuracy),
         ]);
     }
 
     /**
      * @return array<string, mixed>
      */
-    private function calibrate(Task $task): array
+    private function calibrate(Project $project, Task $task): array
     {
         $prs = $task->pullRequests;
 
@@ -51,34 +62,91 @@ class ProjectCalibrationController extends Controller
             ? (int) round((($filesActual - $filesEstimated) / $filesEstimated) * 100)
             : null;
 
-        $openedAt = $prs->pluck('opened_at')->filter()->min();
         $mergedAt = $prs->pluck('merged_at')->filter()->max();
-        $durationDays = $openedAt && $mergedAt ? $openedAt->floatDiffInDays($mergedAt) : null;
+        $claimedAt = $task->claimed_at;
+
+        // Zeit je Story Point auf Basis Claim → Merge (wie die Velocity-Kennzahl).
+        $cycleDays = $claimedAt && $mergedAt ? $claimedAt->floatDiffInDays($mergedAt) : null;
+        $sp = $task->effort_story_points;
+        $timePerSpDays = $cycleDays !== null && $sp ? $cycleDays / $sp : null;
 
         return [
             'task' => $task,
             'name' => $task->name,
-            'storyPoints' => $task->effort_story_points,
-            'claimedAt' => $task->claimed_at,
+            'url' => route('projects.tasks.show', [$project, $task]),
+            'storyPoints' => $sp,
+            'claimedAt' => $claimedAt,
             'mergedAt' => $mergedAt,
+            'dateShort' => $mergedAt ? $mergedAt->format('d.m.') : '—',
             'filesEstimated' => $filesEstimated,
             'filesActual' => $filesActual,
             'deviationPct' => $deviationPct,
             'deviationLabel' => $this->deviationLabel($deviationPct),
             'deviationClass' => $this->deviationClass($deviationPct),
-            'durationDays' => $durationDays,
-            'durationLabel' => $this->formatDuration($durationDays),
+            'timePerSpDays' => $timePerSpDays,
+            'timePerSpLabel' => $timePerSpDays !== null ? $this->formatDurationSmart($timePerSpDays) : null,
             'additions' => (int) $prs->sum('additions'),
             'deletions' => (int) $prs->sum('deletions'),
             'commits' => (int) $prs->sum('commits'),
-            'comments' => (int) $prs->sum('comments'),
-            'reviewComments' => (int) $prs->sum('review_comments'),
+            'durationDays' => $cycleDays,
         ];
     }
 
     /**
-     * Grün innerhalb ±25 %, Amber bis ±50 %, Rot darüber — Unter- und
-     * Überschätzung zählen gleichermaßen als Abweichung.
+     * Zeilen-Payload für die (Alpine-)Tabelle: filter-/sortierbar im Frontend.
+     *
+     * @param  array<string, mixed>  $r
+     * @return array<string, mixed>
+     */
+    private function rowData(array $r): array
+    {
+        $hasEstimate = $r['deviationPct'] !== null;
+        $abs = $hasEstimate ? abs($r['deviationPct']) : null;
+
+        return [
+            'name' => $r['name'],
+            'url' => $r['url'],
+            'dateShort' => $r['dateShort'],
+            'meta' => $r['commits'].' Commits · +'.$r['additions'].'/−'.$r['deletions'],
+            'sp' => $r['storyPoints'],
+            'filesEstimated' => $r['filesEstimated'] ?? null,
+            'filesActual' => $r['filesActual'],
+            'hasEstimate' => $hasEstimate,
+            'deviationLabel' => $r['deviationLabel'],
+            'pillClass' => $this->pillClass($r['deviationClass']),
+            'barClass' => $this->barClass($r['deviationClass']),
+            'barWidth' => $abs !== null ? min(100, $abs) : 0,
+            'timePerSp' => $r['timePerSpLabel'] ?? '—',
+            'isOutlier' => $hasEstimate && $abs > 50,
+            'sortDev' => $abs ?? -1,
+            'sortSp' => (int) ($r['storyPoints'] ?? -1),
+            'sortDate' => $r['mergedAt'] ? $r['mergedAt']->timestamp : 0,
+            'sortTime' => $r['timePerSpDays'] ?? -1,
+        ];
+    }
+
+    private function pillClass(string $deviationClass): string
+    {
+        return match ($deviationClass) {
+            'green' => 'bg-green-50 text-green-700',
+            'amber' => 'bg-amber-100 text-amber-800',
+            'red' => 'bg-red-100 text-red-700',
+            default => 'bg-gray-100 text-gray-500',
+        };
+    }
+
+    private function barClass(string $deviationClass): string
+    {
+        return match ($deviationClass) {
+            'green' => 'bg-green-400',
+            'amber' => 'bg-amber-400',
+            'red' => 'bg-red-300',
+            default => 'bg-gray-200',
+        };
+    }
+
+    /**
+     * Grün innerhalb ±25 %, Amber bis ±50 %, Rot darüber.
      */
     private function deviationClass(?int $pct): string
     {
@@ -93,9 +161,6 @@ class ProjectCalibrationController extends Controller
         };
     }
 
-    /**
-     * "+125", "±0", "-40" — sign always shown, "±0" for the exact-hit case.
-     */
     private function deviationLabel(?int $pct): ?string
     {
         return match (true) {
@@ -106,75 +171,169 @@ class ProjectCalibrationController extends Controller
         };
     }
 
-    private function formatDuration(?float $days): ?string
-    {
-        if ($days === null) {
-            return null;
-        }
-
-        $minutes = (int) round($days * 24 * 60);
-        $wholeDays = intdiv($minutes, 1440);
-        $hours = intdiv($minutes % 1440, 60);
-
-        return $wholeDays > 0 ? "{$wholeDays}d {$hours}h" : "{$hours}h";
-    }
-
     /**
      * @param  Collection<int, array<string, mixed>>  $rows
-     * @return array<string, mixed>
+     * @param  Collection<int, array<string, mixed>>  $withDeviation
      */
-    private function kpis(Collection $rows): array
+    private function kpis(Collection $rows, Collection $withDeviation, $lastSync): array
     {
-        $withDeviation = $rows->filter(fn (array $r) => $r['deviationPct'] !== null);
+        $median = $this->median($withDeviation->pluck('deviationPct')->all());
 
-        $avgDeviation = $withDeviation->isNotEmpty()
-            ? (int) round($withDeviation->avg('deviationPct'))
-            : null;
-
-        // Durchsatz auf Kalenderbasis: fertiggestellte SP im Zeitraum zwischen dem
-        // ersten Claim und dem letzten Merge (statt der wenig aussagekräftigen
-        // Ist-Dauer je Task). Beide Kennzahlen (Dauer je SP und SP pro Tag) leiten
-        // sich daraus ab und sind Kehrwerte voneinander.
         $completedSp = (int) $rows->sum(fn (array $r) => (int) $r['storyPoints']);
         $firstClaim = $rows->pluck('claimedAt')->filter()->min();
         $lastMerge = $rows->pluck('mergedAt')->filter()->max();
         $spanDays = $firstClaim && $lastMerge ? $firstClaim->floatDiffInDays($lastMerge) : null;
 
-        $spPerDay = $spanDays !== null && $spanDays > 0 && $completedSp > 0
-            ? $completedSp / $spanDays
-            : null;
-        $daysPerSp = $spanDays !== null && $completedSp > 0
-            ? $spanDays / $completedSp
-            : null;
+        $spPerDay = $spanDays !== null && $spanDays > 0 && $completedSp > 0 ? $completedSp / $spanDays : null;
+        $daysPerSp = $spanDays !== null && $completedSp > 0 ? $spanDays / $completedSp : null;
+
+        $withEstimate = $withDeviation->count();
+        $total = $rows->count();
 
         return [
-            'total' => $rows->count(),
-            'avgDeviation' => $avgDeviation,
-            'avgDeviationLabel' => $this->deviationLabel($avgDeviation),
-            'avgDeviationClass' => $this->deviationClass($avgDeviation),
-            'avgDeviationHint' => match (true) {
-                $avgDeviation !== null => match (true) {
-                    $avgDeviation > 5 => 'wir schätzen zu klein',
-                    $avgDeviation < -5 => 'wir schätzen zu groß',
-                    default => 'im Rahmen',
-                },
-                $rows->isEmpty() => 'keine gemergten Tasks mit PR-Daten',
-                default => 'keine Dateischätzungen bei gemergten Tasks mit PR-Daten',
+            'total' => $total,
+            'lastSync' => $lastSync?->locale('de')->diffForHumans(),
+            'median' => $median,
+            'medianLabel' => $this->deviationLabel($median),
+            'medianClass' => $this->deviationClass($median),
+            'medianHint' => match (true) {
+                $median === null => 'keine Dateischätzungen',
+                $median > 5 => 'ihr schätzt zu klein',
+                $median < -5 => 'ihr schätzt zu groß',
+                default => 'im Rahmen',
             },
-            'daysPerSp' => $daysPerSp,
-            'daysPerSpLabel' => $daysPerSp !== null ? $this->formatDurationSmart($daysPerSp) : null,
             'spPerDay' => $spPerDay,
-            'completedSp' => $completedSp,
-            'spanDays' => $spanDays,
+            'daysPerSpLabel' => $daysPerSp !== null ? $this->formatDurationSmart($daysPerSp) : null,
             'hits' => $withDeviation->filter(fn (array $r) => abs($r['deviationPct']) <= 25)->count(),
-            'hitsTotal' => $withDeviation->count(),
+            'hitsTotal' => $withEstimate,
+            'withEstimate' => $withEstimate,
+            'noEstimate' => $total - $withEstimate,
         ];
     }
 
     /**
-     * Wählt automatisch die passende Einheit (Minuten/Stunden/Tage), da
-     * Dauer-je-SP-Werte je nach Story-Point-Größe stark streuen.
+     * @param  array<int, int>  $values
      */
+    private function median(array $values): ?int
+    {
+        if (empty($values)) {
+            return null;
+        }
+        sort($values);
+        $n = count($values);
+        $mid = intdiv($n, 2);
+
+        return $n % 2 === 1
+            ? (int) $values[$mid]
+            : (int) round(($values[$mid - 1] + $values[$mid]) / 2);
+    }
+
+    /**
+     * Scatter-Punkte (geschätzte vs. tatsächliche Dateien) + passende Achsengröße.
+     *
+     * @param  Collection<int, array<string, mixed>>  $withDeviation
+     * @return array<string, mixed>
+     */
+    private function scatter(Collection $withDeviation): array
+    {
+        $points = $withDeviation->map(fn (array $r) => [
+            'x' => (int) $r['filesEstimated'],
+            'y' => (int) $r['filesActual'],
+            'hit' => abs($r['deviationPct']) <= 25,
+            'name' => $r['name'],
+        ])->values()->all();
+
+        $maxVal = 0;
+        foreach ($points as $p) {
+            $maxVal = max($maxVal, $p['x'], $p['y']);
+        }
+        // auf ein „rundes" Achsenende aufrunden (mind. 10)
+        $axis = max(10, (int) (ceil(($maxVal + 1) / 10) * 10) - ($maxVal % 10 === 0 ? 0 : 0));
+        $axis = max(10, (int) ceil(max($maxVal, 10) / 10) * 10);
+        // etwas Luft, wenn genau auf dem Zehner
+        if ($maxVal === $axis) {
+            $axis += 10;
+        }
+
+        return ['points' => $points, 'axis' => $axis];
+    }
+
+    /**
+     * Treffsicherheit (±25 %) nach zusammenhängenden SP-Bereichen.
+     *
+     * @param  Collection<int, array<string, mixed>>  $withDeviation
+     * @return array<int, array<string, mixed>>
+     */
+    private function spAccuracy(Collection $withDeviation): array
+    {
+        $bySp = [];
+        foreach ($withDeviation as $r) {
+            $sp = (int) $r['storyPoints'];
+            if ($sp <= 0) {
+                continue;
+            }
+            $bySp[$sp][] = $r;
+        }
+        if (empty($bySp)) {
+            return [];
+        }
+
+        $spVals = array_keys($bySp);
+        sort($spVals);
+
+        // zusammenhängende Läufe (1,2,3 → „1–3 SP") bilden
+        $ranges = [];
+        $start = $prev = $spVals[0];
+        foreach (array_slice($spVals, 1) as $v) {
+            if ($v === $prev + 1) {
+                $prev = $v;
+
+                continue;
+            }
+            $ranges[] = [$start, $prev];
+            $start = $prev = $v;
+        }
+        $ranges[] = [$start, $prev];
+
+        $out = [];
+        foreach ($ranges as [$lo, $hi]) {
+            $group = [];
+            for ($s = $lo; $s <= $hi; $s++) {
+                if (isset($bySp[$s])) {
+                    $group = array_merge($group, $bySp[$s]);
+                }
+            }
+            $total = count($group);
+            $hits = count(array_filter($group, fn ($r) => abs($r['deviationPct']) <= 25));
+            $out[] = [
+                'label' => $lo === $hi ? "{$lo} SP" : "{$lo}–{$hi} SP",
+                'lo' => $lo,
+                'hi' => $hi,
+                'hits' => $hits,
+                'total' => $total,
+                'pct' => $total ? (int) round($hits / $total * 100) : 0,
+            ];
+        }
+
+        return $out;
+    }
+
+    /**
+     * Handlungsempfehlung: die größte SP-Gruppe, die nie trifft.
+     *
+     * @param  array<int, array<string, mixed>>  $spAccuracy
+     */
+    private function accuracyTip(array $spAccuracy): ?string
+    {
+        $bad = array_filter($spAccuracy, fn ($g) => $g['total'] >= 1 && $g['pct'] === 0 && $g['lo'] >= 5);
+        if (empty($bad)) {
+            return null;
+        }
+        usort($bad, fn ($a, $b) => $b['lo'] <=> $a['lo']);
+
+        return 'Große Tasks ('.$bad[0]['lo'].'+ SP) treffen nie — kleiner schneiden verbessert die Kalibrierung am stärksten.';
+    }
+
     private function formatDurationSmart(float $days): string
     {
         $minutes = $days * 24 * 60;

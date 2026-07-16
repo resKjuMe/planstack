@@ -54,23 +54,32 @@
          x-init="$watch('doneOpen', v => localStorage.setItem('ps-seq-done-open', v ? '1' : '0'));
                  $watch('blockedOpen', v => sessionStorage.setItem('ps-seq-blocked-open', v ? '1' : '0'))">
 
-        {{-- Kennzahlen-Leiste --}}
-        <div class="grid gap-3 [grid-template-columns:repeat(auto-fit,minmax(140px,1fr))]">
-            <div class="rounded-lg bg-[var(--seq-surface-1)] p-4">
-                <div class="text-xs text-[var(--seq-muted)]">Offene PRs</div>
-                <div class="mt-1 text-[22px] font-medium leading-tight text-[var(--seq-text)]">{{ $counts['all'] }}</div>
+        <x-page-head title="PR-Sequenz" class="mb-4">
+            <ul class="list-disc space-y-1 ps-4">
+                <li><span class="font-medium">PR-Sequenz</span>: empfohlene Bearbeitungs-Reihenfolge der offenen PRs — aktiver PR zuerst, dann Flaschenhälse, dann nach Sequenz.</li>
+                <li>Kennzahlen: offene PRs, Story Points gesamt, blockierte PRs und der kritische Pfad (Kette der Flaschenhälse).</li>
+                <li>Ein <span class="font-medium">Flaschenhals</span> blockiert viele Folge-PRs — solche zuerst zu erledigen bringt am meisten.</li>
+                <li>Die Filter-Pills schränken auf Pickbar/Blockiert/Probleme/Geclaimt ein; viele blockierte PRs sind einklappbar, abgeschlossene stehen im Sammelblock unten.</li>
+            </ul>
+        </x-page-head>
+
+        {{-- Kennzahlen-Kacheln (Card-Stil wie „Kalibrierung") --}}
+        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <div class="rounded-lg bg-white p-4 ring-1 ring-gray-200">
+                <div class="text-xs font-medium text-gray-400">Offene PRs</div>
+                <div class="mt-1 text-[22px] font-semibold leading-tight text-gray-900">{{ $counts['all'] }}</div>
             </div>
-            <div class="rounded-lg bg-[var(--seq-surface-1)] p-4">
-                <div class="text-xs text-[var(--seq-muted)]">Story Points gesamt</div>
-                <div class="mt-1 text-[22px] font-medium leading-tight text-[var(--seq-text)]">{{ $totalSp }}</div>
+            <div class="rounded-lg bg-white p-4 ring-1 ring-gray-200">
+                <div class="text-xs font-medium text-gray-400">Story Points gesamt</div>
+                <div class="mt-1 text-[22px] font-semibold leading-tight text-gray-900">{{ $totalSp }}</div>
             </div>
-            <div class="rounded-lg bg-[var(--seq-surface-1)] p-4">
-                <div class="text-xs text-[var(--seq-muted)]">Blockiert</div>
-                <div class="mt-1 text-[22px] font-medium leading-tight text-[var(--seq-danger)]">{{ $counts['blocked'] }}</div>
+            <div class="rounded-lg bg-white p-4 ring-1 ring-gray-200">
+                <div class="text-xs font-medium text-gray-400">Blockiert</div>
+                <div class="mt-1 text-[22px] font-semibold leading-tight text-red-600">{{ $counts['blocked'] }}</div>
             </div>
-            <div class="rounded-lg bg-[var(--seq-surface-1)] p-4">
-                <div class="text-xs text-[var(--seq-muted)]">Kritischer Pfad</div>
-                <div class="mt-1 break-words font-mono text-[15px] font-medium leading-snug text-[var(--seq-text)]">{{ $criticalPath !== '' ? $criticalPath : '—' }}</div>
+            <div class="rounded-lg bg-white p-4 ring-1 ring-gray-200">
+                <div class="text-xs font-medium text-gray-400">Kritischer Pfad</div>
+                <div class="mt-1 break-words font-mono text-[15px] font-medium leading-snug text-gray-900">{{ $criticalPath !== '' ? $criticalPath : '—' }}</div>
             </div>
         </div>
 
@@ -84,23 +93,21 @@
                 'claimed' => ['label' => 'Geclaimt', 'icon' => 'hand', 'count' => $counts['claimed']],
             ];
         @endphp
-        <div class="mt-4 flex flex-wrap gap-2">
+        <div class="mt-4 inline-flex flex-wrap items-center gap-1 rounded-full bg-gray-100 p-1">
             @foreach ($chips as $key => $chip)
                 <button type="button" @click="filter = '{{ $key }}'"
-                        :class="filter === '{{ $key }}'
-                            ? 'border-transparent bg-[var(--seq-pill-bg)] text-[var(--seq-pill-text)]'
-                            : 'border-[var(--seq-border)] bg-transparent text-[var(--seq-muted)] hover:bg-[var(--seq-surface-1)]'"
-                        class="inline-flex items-center gap-1.5 rounded-full border-[0.5px] px-3 py-1 text-xs font-medium transition-colors">
+                        :class="filter === '{{ $key }}' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'"
+                        class="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-sm font-medium transition-colors">
                     {!! $ic($chip['icon'], 'h-3.5 w-3.5') !!}
                     {{ $chip['label'] }}
                     <span class="inline-flex h-[18px] min-w-[18px] items-center justify-center rounded-full px-1 text-[11px] font-medium"
-                          :class="filter === '{{ $key }}' ? 'bg-[var(--seq-pill-badge)]' : 'bg-[var(--seq-surface-1)]'">{{ $chip['count'] }}</span>
+                          :class="filter === '{{ $key }}' ? 'bg-gray-100 text-gray-500' : 'bg-white text-gray-400'">{{ $chip['count'] }}</span>
                 </button>
             @endforeach
         </div>
 
         {{-- Liste: gemeinsame Karte, Zeilen durch Trennlinien geteilt --}}
-        <div class="mt-4 divide-y-[0.5px] divide-[var(--seq-border)] overflow-hidden rounded-xl border-[0.5px] border-[var(--seq-border)] bg-[var(--seq-surface-0)]">
+        <div class="mt-4 divide-y divide-gray-100 overflow-hidden rounded-lg bg-white ring-1 ring-gray-200">
             @forelse ($main as $task)
                 @include('status.partials.seq-row', ['task' => $task, 'inCollapse' => false])
             @empty

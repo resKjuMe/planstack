@@ -6,6 +6,17 @@
 return [
     'releases' => [
         [
+            'version' => '1.2.0',
+            'date' => '2026-07-17',
+            'tldr' => ['Zugriff-Verwaltung', 'Kalibrierung überarbeitet', 'Hilfe auf jeder Seite', 'Einheitliches Design'],
+            'changes' => [
+                'Neu: Eigener Menüpunkt „Zugriff" (ganz rechts) — hier verwaltest du zugewiesene Teams und Rollen (Mitarbeiter, Architekt, Administrator) übersichtlich an einer Stelle, mit Erklärungen zu jedem Begriff.',
+                'Die Kalibrierung wurde überarbeitet: klarere Kennzahlen-Kacheln, ein Diagramm „geschätzt vs. tatsächlich", Treffsicherheit nach Story Points sowie Filter und Sortierung der Tasks.',
+                'Jede Projekt-Unterseite hat jetzt eine eigene Überschrift und einen „?"-Button mit einer kurzen Erklärung aller Begriffe und Kennzahlen der Seite.',
+                'Einheitlicheres Aussehen über alle Seiten hinweg — z. B. die PR-Sequenz mit Kennzahlen als Kacheln, aufgeräumten Filtern und der Liste als Karte.',
+            ],
+        ],
+        [
             'version' => '1.1.0',
             'date' => '2026-07-17',
             'tldr' => ['Farbige Fortschrittsbalken', 'Hover-Details', 'Teams je Projekt', 'Changelog-Hinweis'],

@@ -2,6 +2,14 @@
     {{-- CI-Status-Teaser über der Diagramm-Card (blendet sich aus, sobald das
          Userscript läuft; sonst Einrichten-/Update-Hinweis). --}}
     <x-slot:beforeCard>
+        <x-page-head title="Diagramm">
+            <ul class="list-disc space-y-1 ps-4">
+                <li><span class="font-medium">Abhängigkeits-Diagramm</span>: Pfeile zeigen von einer Voraussetzung zu den davon abhängigen Tasks.</li>
+                <li>Knotenfarbe &amp; Icon = Status (siehe Legende); dicker Rahmen = braucht Aufmerksamkeit (pickbar, in Arbeit, Problem).</li>
+                <li>Kanten: durchgezogen = offene Abhängigkeit, hell gestrichelt = erfüllt. Das Badge oben rechts markiert Flaschenhälse.</li>
+                <li>Klick auf einen Knoten hebt seine Kette hervor; die Phasen-Chips filtern; „Kurzbeschreibungen" und „Erledigte ausblenden" schalten Details, „Als PNG" exportiert das Bild.</li>
+            </ul>
+        </x-page-head>
         @include('status.partials.ci-teaser')
     </x-slot>
 
