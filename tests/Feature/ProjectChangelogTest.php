@@ -103,12 +103,12 @@ class ProjectChangelogTest extends TestCase
         $concernRow = $rows->first(fn ($row) => str_contains($this->headlineText($row), 'Concern zu'));
         $this->assertNotNull($concernRow);
         $this->assertStringContainsString('T1', $this->headlineText($concernRow));
-        $this->assertStringContainsString('kritisch', $this->headlineText($concernRow));
+        $this->assertStringContainsString('problematisch', $this->headlineText($concernRow));
 
         $taskSection = collect($concernRow['sections'])->first(fn ($s) => $s['label'] === 'Task aktualisiert');
         $this->assertNotNull($taskSection);
         $statusRow = collect($taskSection['visible'])->firstWhere('field', 'Status');
-        $this->assertSame('kritisch', $statusRow['new']);
+        $this->assertSame('problematisch', $statusRow['new']);
     }
 
     /**

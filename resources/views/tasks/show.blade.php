@@ -141,7 +141,7 @@
                     <div class="bg-white rounded-lg shadow p-5 space-y-3 text-sm">
                         <h3 class="font-semibold text-gray-900">Status</h3>
                         <div class="flex items-center justify-between">
-                            <span class="text-gray-400">Auswirkungen</span>
+                            <span class="text-gray-400">Status</span>
                             <x-task-status :status="$task->status" :label="true" />
                         </div>
                         @if ($task->criticality)

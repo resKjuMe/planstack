@@ -23,7 +23,7 @@ enum TaskStatus: string
         return match ($this) {
             self::UNKNOWN => 'ausstehend',
             self::BLOCKED => 'blockiert',
-            self::CONCERNED => 'kritisch',
+            self::CONCERNED => 'problematisch',
             self::PICKABLE => 'pickbar',
             self::CLAIMED => 'beansprucht',
             self::ANALYZING => 'in Analyse',
