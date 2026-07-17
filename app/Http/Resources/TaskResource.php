@@ -39,6 +39,7 @@ class TaskResource extends JsonResource
         'display_status', 'phase_id', 'effort', 'pr_number', 'pr_url',
         'claimed_by_id', 'prerequisites', 'concern', 'stacking',
         'last_reviewed_at', 'last_review_recommendation', 'last_review_summary',
+        'target_actual', 'test_cases',
     ];
 
     /**
@@ -80,6 +81,8 @@ class TaskResource extends JsonResource
             'summary' => $this->summary,
             'description' => $this->description,
             'acceptance_criteria' => $this->description_acceptance_criteria,
+            'target_actual' => $this->description_target_actual,
+            'test_cases' => $this->description_test_cases,
             'status' => $this->status->value,
             'status_label' => $this->status->label(),
             'display_status' => ($this->x_display_status ?? $this->status)->value,

@@ -25,6 +25,8 @@ class Task extends Model
         'summary',
         'description',
         'description_acceptance_criteria',
+        'description_target_actual',
+        'description_test_cases',
         'phase_id',
         'effort_man_days',
         'effort_story_points',

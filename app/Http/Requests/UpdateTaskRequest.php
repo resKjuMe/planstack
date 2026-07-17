@@ -29,6 +29,8 @@ class UpdateTaskRequest extends FormRequest
             'summary' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
             'description_acceptance_criteria' => ['nullable', 'string'],
+            'description_target_actual' => ['nullable', 'string'],
+            'description_test_cases' => ['nullable', 'string'],
             'phase_id' => ['nullable', Rule::exists('phases', 'id')->where('project_id', $projectId)],
             'effort_man_days' => ['nullable', 'numeric', 'min:0'],
             'effort_story_points' => ['nullable', 'integer', 'min:0'],

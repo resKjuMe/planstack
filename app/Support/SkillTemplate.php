@@ -32,6 +32,11 @@ class SkillTemplate
         return resource_path('skill-templates/skill-instructions.md');
     }
 
+    public static function planInstructionsPath(): string
+    {
+        return resource_path('skill-templates/plan-instructions.md');
+    }
+
     private static function partial(string $path): string
     {
         return is_file($path) ? rtrim((string) file_get_contents($path))."\n" : '';
@@ -65,6 +70,27 @@ class SkillTemplate
     public static function skillInstructions(): string
     {
         return self::partial(self::skillInstructionsPath());
+    }
+
+    /**
+     * Server-maintained instructions for the `/planstack plan` sub-command
+     * (creating projects/phases/tasks, and the field-by-field task guide incl.
+     * IST/SOLL and test cases). Its own versioned file — deliberately NOT part of
+     * skill_instructions — fetched fresh from /config on every `plan` call, so it
+     * self-updates without a re-download.
+     */
+    public static function planInstructions(): string
+    {
+        return self::partial(self::planInstructionsPath());
+    }
+
+    /**
+     * Independent revision of the plan instructions (surfaced as `plan_revision`
+     * via /config). Changes whenever plan-instructions.md is edited.
+     */
+    public static function planRevision(): string
+    {
+        return substr(hash('xxh128', self::planInstructions()), 0, 12);
     }
 
     /**

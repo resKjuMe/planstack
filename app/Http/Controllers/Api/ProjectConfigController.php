@@ -87,6 +87,11 @@ class ProjectConfigController extends ApiController
             // (z. B. PR-Titel-Konvention). Nur der planstack-Skill lädt sie nach.
             'skill_instructions' => SkillTemplate::skillInstructions(),
             'skill_revision' => SkillTemplate::sharedRevision(),
+            // Anweisungen für `/planstack plan` (Projekt/Phasen/Tasks anlegen,
+            // Task-Felder-Leitfaden) — eigene, versionierte Datei, bei jedem
+            // plan-Aufruf frisch geladen (self-updating), daher separat.
+            'plan_instructions' => SkillTemplate::planInstructions(),
+            'plan_revision' => SkillTemplate::planRevision(),
             // Projektspezifische Zusatz-Anweisungen (aus dem Claude-Feld).
             'instructions' => $notes,
             'catalog' => [

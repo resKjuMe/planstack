@@ -67,6 +67,10 @@ class ProjectConfigTest extends TestCase
 
         // Effective config uses dotted keys (flat map) — assert the literal key.
         $this->assertSame('pickable', $response->json('effective')['board.scope']);
+
+        // Plan instructions are served with their own revision (self-updating source).
+        $this->assertNotEmpty($response->json('plan_instructions'));
+        $this->assertNotEmpty($response->json('plan_revision'));
     }
 
     public function test_economy_profile_bumps_version_and_returns_terse_next_only(): void

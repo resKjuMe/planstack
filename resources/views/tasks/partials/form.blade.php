@@ -49,6 +49,24 @@
         <x-input-error :messages="$errors->get('description_acceptance_criteria')" class="mt-2" />
     </div>
 
+    <div>
+        <x-input-label for="description_target_actual" value="IST/SOLL-Vergleich" />
+        <textarea id="description_target_actual" name="description_target_actual" rows="4"
+                  class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                  placeholder="IST (Verhalten vor dem Task) … / SOLL (Verhalten nach dem Task) …">{{ old('description_target_actual', $task?->description_target_actual) }}</textarea>
+        <p class="mt-1 text-xs text-gray-400">Für Menschen leicht verständlicher Vorher/Nachher-Vergleich.</p>
+        <x-input-error :messages="$errors->get('description_target_actual')" class="mt-2" />
+    </div>
+
+    <div>
+        <x-input-label for="description_test_cases" value="Testfälle / Testanleitung" />
+        <textarea id="description_test_cases" name="description_test_cases" rows="4"
+                  class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                  placeholder="Schritt-für-Schritt-Anleitung, wie das Verhalten des PRs getestet werden kann …">{{ old('description_test_cases', $task?->description_test_cases) }}</textarea>
+        <p class="mt-1 text-xs text-gray-400">Für Menschen: wie lässt sich das Ergebnis des PRs prüfen?</p>
+        <x-input-error :messages="$errors->get('description_test_cases')" class="mt-2" />
+    </div>
+
     <div class="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
         <div>
             <x-input-label for="phase_id" value="Phase" />

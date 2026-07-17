@@ -70,6 +70,20 @@
                     </div>
                 @endif
 
+                @if ($task->description_target_actual)
+                    <div>
+                        <h3 class="text-sm font-semibold text-gray-500 mb-1">IST/SOLL-Vergleich</h3>
+                        <x-markdown :content="$task->description_target_actual" />
+                    </div>
+                @endif
+
+                @if ($task->description_test_cases)
+                    <div>
+                        <h3 class="text-sm font-semibold text-gray-500 mb-1">Testfälle / Testanleitung</h3>
+                        <x-markdown :content="$task->description_test_cases" />
+                    </div>
+                @endif
+
                 @if ($task->affected_files !== null)
                     <div>
                         <h3 class="text-sm font-semibold text-gray-500 mb-1">Betroffene Dateien (geschätzt)</h3>

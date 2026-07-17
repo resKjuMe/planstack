@@ -72,4 +72,43 @@ class TaskStoreTest extends TestCase
 
         $this->assertSame('gewinnt', Task::firstWhere('name', 'C25')->description_acceptance_criteria);
     }
+
+    public function test_store_persists_target_actual_and_test_cases_via_public_field_names(): void
+    {
+        [, $project] = $this->ownedProject();
+
+        $response = $this->postJson("/api/projects/{$project->alias}/tasks", [
+            'name' => 'C26',
+            'summary' => 'IST/SOLL + Tests',
+            'target_actual' => 'IST: kaputt / SOLL: heil',
+            'test_cases' => '1. Seite öffnen 2. klicken 3. grün',
+        ]);
+
+        $response->assertCreated()
+            ->assertJsonPath('data.target_actual', 'IST: kaputt / SOLL: heil')
+            ->assertJsonPath('data.test_cases', '1. Seite öffnen 2. klicken 3. grün');
+
+        $this->assertDatabaseHas('tasks', [
+            'project_id' => $project->id,
+            'name' => 'C26',
+            'description_target_actual' => 'IST: kaputt / SOLL: heil',
+            'description_test_cases' => '1. Seite öffnen 2. klicken 3. grün',
+        ]);
+    }
+
+    public function test_store_accepts_legacy_column_names_for_new_fields(): void
+    {
+        [, $project] = $this->ownedProject();
+
+        $response = $this->postJson("/api/projects/{$project->alias}/tasks", [
+            'name' => 'C27',
+            'summary' => 'Legacy-Spaltennamen',
+            'description_target_actual' => 'IST/SOLL',
+            'description_test_cases' => 'Testschritte',
+        ]);
+
+        $response->assertCreated()
+            ->assertJsonPath('data.target_actual', 'IST/SOLL')
+            ->assertJsonPath('data.test_cases', 'Testschritte');
+    }
 }

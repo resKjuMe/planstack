@@ -13,6 +13,7 @@ Ein Planstack-Board wird über die **REST-API** abgearbeitet: Board lesen, Task 
 - `/planstack <PROJECT> <TASK>` — gezielt **einen** Task (`<TASK>` = Task-Name, z. B. `C27`) dieses Projekts abarbeiten.
 - `/planstack review [<PROJECT>] [<TASK>]` — in-review Task(s) mit PR reviewen (übernimmt Review, führt den Review-Skill aus, erfasst das Ergebnis; ohne Argumente projektübergreifend; siehe „Review").
 - `/planstack fix [<PROJECT>] <TASK|PR-NUMMER>` — offenen PR reparieren (Task/PR erforderlich): Merge-Konflikte auflösen, Kommentare + Review-Kommentare beantworten/fixen/resolven, rote CI korrigieren (siehe „Fix").
+- `/planstack plan [<PROJECT>]` — Projekte, Phasen und Tasks anlegen (Planung). Die Anleitung dazu ist serverseitig gepflegt und wird bei **jedem** Aufruf frisch geladen (siehe „Plan").
 - `/planstack settings` — lokale Einstellungen (Tests, PHPStan, PHPCS, Babysit-PRs) anzeigen/ändern (nur lokal gespeichert; siehe „Lokale Einstellungen").
 - `/planstack update-config [<PROJECT>]` — neueste allgemeine (+ Projekt-)Konfiguration ziehen und die Versionsnummern anzeigen (siehe „Konfiguration ziehen").
 
@@ -39,6 +40,12 @@ Alle Endpunkte laufen unter `$BASE/projects/$PROJ` (siehe Betriebshandbuch). Feh
 **A — ganzes Board (`/planstack <PROJECT>`):** dem Zyklus des Betriebshandbuchs folgen. Pro Runde `POST $BASE/projects/$PROJ/claim-next` → das wählt den besten pickbaren Task (höchste `unlocks`) und claimt ihn atomar in einem Aufruf; die Antwort ist der geclaimte Task mit Arbeitsdetails (spart `GET /board` + `claim` + `GET /task`). Dann `analyze` → umsetzen bzw. `concern` → PR → `done` → `merge`. Kommt `{"claimed": null}` zurück, ist nichts (mehr) pickbar → fertig bzw. warten.
 
 **B — ein Task (`/planstack <PROJECT> <TASK>`):** Der Task ist direkt per Name ansprechbar (Pfadsegment akzeptiert Name **oder** id) — kein name→id-Lookup nötig: `POST $BASE/projects/$PROJ/tasks/$TASK/claim`, dann `GET .../tasks/$TASK` für die Details (falls `claim.return_details` aus ist), und denselben Zyklus **nur für diesen Task** (analyze → umsetzen/concern → PR → done → merge). Ist der Task nicht pickbar (Gate offen, bereits beansprucht oder schon mit PR), das melden statt es zu erzwingen.
+
+## Plan (`/planstack plan [<PROJECT>]`)
+
+Legt **Projekte, Phasen und Tasks** an (Planungsmodus statt Abarbeitung). Die vollständige, verbindliche Anleitung wird **serverseitig gepflegt** und ist bewusst **nicht** in dieser SKILL.md eingebacken, damit sie sich ohne Neu-Download aktualisiert.
+
+**Self-updating (bei jedem Aufruf):** Zu Beginn von `/planstack plan` **immer zuerst** `GET $BASE/projects/<P>/config` lesen und den Abschnitt **`plan_instructions`** befolgen — er ist eigenständig versioniert (`plan_revision`) und beschreibt Ablauf, Endpunkte und den Feld-für-Feld-Leitfaden für Tasks (inkl. IST/SOLL-Vergleich und Testanleitung). `<P>` ist der übergebene `<PROJECT>` bzw. — wenn ein **neues** Projekt angelegt werden soll und noch kein Alias existiert — ein beliebiges zugängliches Projekt aus `GET $BASE/projects` (nur um `plan_instructions` zu ziehen). Erst danach mit der Planung beginnen.
 
 ## Selbst-Update
 

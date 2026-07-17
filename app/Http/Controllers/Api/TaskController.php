@@ -501,6 +501,12 @@ class TaskController extends ApiController
             // input and map it to the stored column below.
             'acceptance_criteria' => ['nullable', 'string'],
             'description_acceptance_criteria' => ['nullable', 'string'],
+            // Exposed as `target_actual` / `test_cases` (see TaskResource); accept
+            // those names and the legacy column names, mapped to the columns below.
+            'target_actual' => ['nullable', 'string'],
+            'description_target_actual' => ['nullable', 'string'],
+            'test_cases' => ['nullable', 'string'],
+            'description_test_cases' => ['nullable', 'string'],
             'phase_id' => ['nullable', Rule::exists('phases', 'id')->where('project_id', $project->id)],
             'effort_man_days' => ['nullable', 'integer', 'min:0'],
             'effort_story_points' => ['nullable', 'integer', 'min:0'],
@@ -510,11 +516,17 @@ class TaskController extends ApiController
             'status' => ['nullable', Rule::enum(TaskStatus::class)],
         ]);
 
-        // Fold the public field name onto the underlying column (the short name
-        // wins if both are present) so create() actually persists it.
-        if (array_key_exists('acceptance_criteria', $data)) {
-            $data['description_acceptance_criteria'] = $data['acceptance_criteria'];
-            unset($data['acceptance_criteria']);
+        // Fold the public field names onto the underlying columns (the short name
+        // wins if both are present) so create() actually persists them.
+        foreach ([
+            'acceptance_criteria' => 'description_acceptance_criteria',
+            'target_actual' => 'description_target_actual',
+            'test_cases' => 'description_test_cases',
+        ] as $public => $column) {
+            if (array_key_exists($public, $data)) {
+                $data[$column] = $data[$public];
+                unset($data[$public]);
+            }
         }
 
         return $data;
