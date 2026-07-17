@@ -291,7 +291,7 @@ class TaskController extends ApiController
      * signal: it lands on IN_REVIEW when a PR is set, otherwise it stays
      * IN_PROGRESS (nothing to review yet). "in_review" sets that state directly.
      */
-    public function status(Request $request, Project $project, Task $task): JsonResource
+    public function status(Request $request, Project $project, Task $task): JsonResource|JsonResponse
     {
         $this->authorize('update', $task);
 
@@ -395,7 +395,7 @@ class TaskController extends ApiController
     /**
      * POST .../concern — set/update the concern and flip to CONCERNED.
      */
-    public function concern(Request $request, Project $project, Task $task): JsonResource
+    public function concern(Request $request, Project $project, Task $task): JsonResource|JsonResponse
     {
         $this->authorize('update', $task);
 
@@ -427,7 +427,7 @@ class TaskController extends ApiController
     /**
      * DELETE .../concern — resolve the concern; task returns to pickable/unknown.
      */
-    public function resolveConcern(Project $project, Task $task): JsonResource
+    public function resolveConcern(Project $project, Task $task): JsonResource|JsonResponse
     {
         $this->authorize('update', $task);
 
