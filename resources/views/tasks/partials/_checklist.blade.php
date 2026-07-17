@@ -58,7 +58,7 @@
                                 @endif
 
                                 @if ($canUpdate)
-                                    <input type="checkbox" :checked="checked" @click.prevent="toggle()" :disabled="busy"
+                                    <input type="checkbox" x-model="checked" @change="toggle()" :disabled="busy"
                                            class="mt-0.5 h-4 w-4 shrink-0 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
                                     <span class="min-w-0" :class="checked ? 'text-gray-400 line-through' : 'text-gray-800'">{{ $i->text }}</span>
                                 @else

@@ -174,15 +174,14 @@
         document.addEventListener('alpine:init', () => {
             const csrf = document.querySelector('meta[name="csrf-token"]')?.content ?? '';
 
-            // Ein Checklisten-Item: optimistisches Häkchen mit Rollback bei Fehler.
+            // Ein Checklisten-Item: die Checkbox toggelt nativ (x-model), das Häkchen
+            // erscheint sofort; wir persistieren optimistisch und rollen bei Fehler zurück.
             Alpine.data('acItem', (cfg) => ({
                 checked: cfg.checked,
                 url: cfg.url,
                 busy: false,
                 toggle() {
-                    if (this.busy) return;
-                    const next = !this.checked;
-                    this.checked = next;
+                    const next = this.checked; // x-model hat den neuen Wert bereits gesetzt
                     this.$dispatch('item-count', next ? 1 : -1);
                     this.busy = true;
                     fetch(this.url, {
@@ -193,7 +192,7 @@
                         .then((r) => (r.ok ? r.json() : Promise.reject()))
                         .then(() => this.$dispatch('item-saved'))
                         .catch(() => {
-                            this.checked = !next; // Rollback
+                            this.checked = !next; // Rollback (x-model spiegelt es zurück auf die Box)
                             this.$dispatch('item-count', next ? -1 : 1);
                             this.$dispatch('item-error');
                         })
