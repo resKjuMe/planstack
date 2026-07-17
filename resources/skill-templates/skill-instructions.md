@@ -20,6 +20,9 @@ Der Skill kennt lokale Einstellungen, die **ausschließlich auf diesem Rechner**
 | PRs betreuen (Babysit) | `babysit_prs` | Ja→`yes` · Nein→`no` · Bei jeder Aufgabe fragen→`ask` | Bei jeder Aufgabe fragen |
 | Review-Ergebnis speichern | `review_results` | Nur im Task→`task_only` · Im Task und am PR→`task_and_pr` | Nur im Task |
 | Review-Empfehlung setzen | `review_auto_status` | Manuell bestätigen→`manual` · Automatisch→`auto` | Manuell bestätigen |
+| Ausgabe-Umfang | `verbosity` | Standard→`default` · Knapp→`minimal` · Ausführlich→`maximal` | Standard |
+
+Der **Ausgabe-Umfang** (`verbosity`) steuert, wie viel Claude während der Abarbeitung ausgibt: `minimal` = nur das Nötigste (kurze Statusmeldungen, Ergebnisse), `default` = normale Berichterstattung, `maximal` = ausführlich (Schritte, Begründungen, Details).
 
 `settings.json` (Beispiel mit den Defaults; gespeichert werden die Schlüssel/Werte, nicht die Labels):
 
@@ -30,7 +33,8 @@ Der Skill kennt lokale Einstellungen, die **ausschließlich auf diesem Rechner**
   "local_phpcs": "yes",
   "babysit_prs": "ask",
   "review_results": "task_only",
-  "review_auto_status": "manual"
+  "review_auto_status": "manual",
+  "verbosity": "default"
 }
 ```
 
