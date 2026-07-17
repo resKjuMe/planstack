@@ -24,7 +24,13 @@ Der Skill kennt lokale Einstellungen, die **ausschließlich auf diesem Rechner**
 | Review-Strenge | `review_strictness` | Locker→`lenient` · Standard→`default` · Streng→`strict` | Standard |
 | Review-Genauigkeit | `review_thoroughness` | Lässig→`relaxed` · Standard→`default` · Akribisch→`meticulous` | Standard |
 
-Der **Ausgabe-Umfang** (`verbosity`) steuert, wie viel Claude während der Abarbeitung ausgibt: `minimal` = nur das Nötigste (kurze Statusmeldungen, Ergebnisse), `default` = normale Berichterstattung, `maximal` = ausführlich (Schritte, Begründungen, Details).
+Der **Ausgabe-Umfang** (`verbosity`) steuert **verbindlich**, wie viel Fließtext Claude während der gesamten Abarbeitung (beide Modi, alle Kommandos) ausgibt. Er ist **keine Empfehlung**, sondern eine harte Vorgabe und gilt ab dem ersten Satz der Antwort:
+
+- `minimal` — **nur das Nötigste.** Keine Vorreden, keine Ankündigungen („Ich schaue mir jetzt …", „Als Nächstes …"), keine Zwischenerklärungen, keine Begründungen, keine Zusammenfassung des eben Getanen. Pro Task **maximal eine** knappe Statuszeile je abgeschlossenem Schritt (z. B. `C27: PR #123 geöffnet`) und am Ende das Ergebnis. Werkzeug-/Tool-Aufrufe sprechen für sich — sie **nicht** zusätzlich in Prosa beschreiben. Im Zweifel weglassen.
+- `default` — normale Berichterstattung: knappe Orientierung wo sinnvoll, Ergebnisse, keine ausufernden Details.
+- `maximal` — ausführlich: Schritte, Begründungen, Abwägungen und Details offenlegen.
+
+Der Wert gilt für die **normale Arbeitsausgabe**. Explizit angeforderte Inhalte (z. B. der Review-`summary`, `metrics`-Ausgaben, direkte Nutzerfragen) sind davon unberührt und werden vollständig geliefert.
 
 Die **Review-Strenge** (`review_strictness`) steuert, wie streng `/planstack review` urteilt: `lenient` = nur echte Blocker/kritische Punkte bemängeln (im Zweifel `APPROVE`), `default` = normale Prüfung, `strict` = auch kleinere Mängel, Stil und Edge-Cases bemängeln (eher `REQUEST_CHANGES`).
 
