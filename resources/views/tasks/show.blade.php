@@ -78,6 +78,34 @@
                 @endif
             </div>
 
+            {{-- Review-Ergebnis --}}
+            @if ($task->last_reviewed_at || $task->reviewed_by || $task->status === \App\Enums\TaskStatus::IN_REVIEW)
+                @php
+                    $rec = $task->last_review_recommendation;
+                    $recClass = $rec === \App\Enums\ReviewRecommendation::APPROVE
+                        ? 'bg-green-100 text-green-700'
+                        : ($rec === \App\Enums\ReviewRecommendation::REQUEST_CHANGES ? 'bg-amber-100 text-amber-800' : 'bg-gray-100 text-gray-500');
+                @endphp
+                <div class="bg-white rounded-lg shadow p-6 space-y-3 border border-purple-100">
+                    <div class="flex items-center justify-between gap-3">
+                        <h3 class="font-semibold text-gray-900">Review</h3>
+                        <span class="inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold {{ $recClass }}">
+                            {{ $rec?->label() ?? 'ausstehend' }}
+                        </span>
+                    </div>
+                    <dl class="grid gap-4 sm:grid-cols-2 text-sm">
+                        <div><dt class="text-gray-400">Reviewer</dt><dd class="text-gray-800">{{ $task->reviewer?->name ?? '—' }}</dd></div>
+                        <div><dt class="text-gray-400">Zuletzt reviewt</dt><dd class="text-gray-800">{{ $task->last_reviewed_at?->format('d.m.Y H:i') ?? '—' }}</dd></div>
+                    </dl>
+                    @if ($task->last_review_summary)
+                        <div>
+                            <h4 class="text-sm font-semibold text-gray-500 mb-1">Zusammenfassung</h4>
+                            <x-markdown :content="$task->last_review_summary" />
+                        </div>
+                    @endif
+                </div>
+            @endif
+
             {{-- Requirements graph --}}
             <div class="grid gap-6 sm:grid-cols-2">
                 <div class="bg-white rounded-lg shadow p-6">
