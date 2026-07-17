@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Enums\ReviewRecommendation;
 use App\Enums\TaskStatus;
 use App\Http\Middleware\AttachPlanstackConfig;
 use App\Http\Resources\TaskResource;
@@ -170,6 +171,83 @@ class TaskController extends ApiController
         }
 
         return response()->json(['claimed' => null]);
+    }
+
+    /**
+     * POST /api/projects/{project}/review-next — pick the first task that is
+     * IN_REVIEW and has a PR, take over its review (set reviewed_by) for the token
+     * user, and return it decorated (pr_url, summary … for reviewing). Ordered
+     * oldest-first. Concurrency-safe: reviewed_by is set via a conditional UPDATE,
+     * so two reviewers never grab the same task. Returns 200 `{"reviewing": null}`
+     * when nothing is awaiting review.
+     */
+    public function reviewNext(Request $request, Project $project): JsonResource|JsonResponse
+    {
+        $this->authorize('contribute', $project);
+
+        $candidates = $project->tasks()
+            ->where('status', TaskStatus::IN_REVIEW->value)
+            ->whereNotNull('pr_number')
+            ->whereNull('reviewed_by')
+            ->orderBy('id')
+            ->get();
+
+        foreach ($candidates as $candidate) {
+            $claimed = Task::whereKey($candidate->id)
+                ->whereNull('reviewed_by')
+                ->update(['reviewed_by' => $request->user()->id]);
+
+            if ($claimed === 1) {
+                return new TaskResource($this->decorateOne($project, $candidate));
+            }
+        }
+
+        return response()->json(['reviewing' => null]);
+    }
+
+    /**
+     * POST .../review-claim — take over the review of a specific IN_REVIEW task
+     * (set reviewed_by) before running the actual review.
+     */
+    public function reviewClaim(Request $request, Project $project, Task $task): JsonResource|JsonResponse
+    {
+        $this->authorize('update', $task);
+
+        if ($task->status !== TaskStatus::IN_REVIEW) {
+            return $this->conflict('Task ist nicht in Review.');
+        }
+
+        if ($task->reviewed_by !== null && $task->reviewed_by !== $request->user()->id) {
+            return $this->conflict('Review ist bereits übernommen.');
+        }
+
+        $task->update(['reviewed_by' => $request->user()->id]);
+
+        return new TaskResource($this->decorateOne($project, $task));
+    }
+
+    /**
+     * POST .../review — record a completed review result on the task:
+     * last_review_recommendation (APPROVE | REQUEST_CHANGES), last_review_summary
+     * and last_reviewed_at (now). Sets reviewed_by to the token user if unset.
+     */
+    public function review(Request $request, Project $project, Task $task): JsonResource|JsonResponse
+    {
+        $this->authorize('update', $task);
+
+        $data = $request->validate([
+            'recommendation' => ['required', Rule::enum(ReviewRecommendation::class)],
+            'summary' => ['nullable', 'string'],
+        ]);
+
+        $task->update([
+            'reviewed_by' => $task->reviewed_by ?? $request->user()->id,
+            'last_reviewed_at' => now(),
+            'last_review_recommendation' => $data['recommendation'],
+            'last_review_summary' => $data['summary'] ?? null,
+        ]);
+
+        return new TaskResource($this->decorateOne($project, $task));
     }
 
     /**

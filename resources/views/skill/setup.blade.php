@@ -57,6 +57,14 @@
                         <dd class="text-gray-600">Arbeitet gezielt einen einzelnen Task ab (<span class="font-mono">&lt;TASK&gt;</span> = Task-Kürzel, z. B. <span class="font-mono">C27</span>).</dd>
                     </div>
                     <div>
+                        <dt class="font-mono text-gray-800">/planstack review [&lt;PROJEKT&gt;] [&lt;TASK&gt;]</dt>
+                        <dd class="text-gray-600">Reviewt Tasks, die „in Review" sind (mit PR): übernimmt das Review, führt den Review-Skill aus und erfasst das Ergebnis. Ohne Argumente projektübergreifend.</dd>
+                    </div>
+                    <div>
+                        <dt class="font-mono text-gray-800">/planstack fix [&lt;PROJEKT&gt;] [&lt;TASK|PR&gt;]</dt>
+                        <dd class="text-gray-600">Repariert einen offenen PR: löst Merge-Konflikte, beantwortet/fixt Review-Kommentare und korrigiert fehlschlagende CI.</dd>
+                    </div>
+                    <div>
                         <dt class="font-mono text-gray-800">/planstack settings</dt>
                         <dd class="text-gray-600">Lokale Einstellungen anzeigen/ändern (Tests, PHPStan, PHPCS, Babysit-PRs — je „ja/nein/bei jeder Aufgabe fragen"). Wird nur lokal gespeichert.</dd>
                     </div>

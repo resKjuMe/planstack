@@ -32,6 +32,9 @@ class Task extends Model
         'affected_files',
         'pr_number',
         'reviewed_by',
+        'last_reviewed_at',
+        'last_review_recommendation',
+        'last_review_summary',
         'status',
         'claimed_at',
         'merged_at',
@@ -46,6 +49,8 @@ class Task extends Model
             'effort_tokens' => 'integer',
             'affected_files' => 'integer',
             'reviewed_by' => 'integer',
+            'last_reviewed_at' => 'datetime',
+            'last_review_recommendation' => \App\Enums\ReviewRecommendation::class,
             'claimed_at' => 'datetime',
             'merged_at' => 'datetime',
         ];

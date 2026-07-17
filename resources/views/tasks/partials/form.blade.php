@@ -109,6 +109,40 @@
         <x-input-error :messages="$errors->get('reviewed_by')" class="mt-2" />
     </div>
 
+    @if (($task?->status ?? null) === \App\Enums\TaskStatus::IN_REVIEW)
+        <div class="rounded-md border border-purple-100 bg-purple-50/40 p-4 space-y-4">
+            <p class="text-sm font-semibold text-purple-800">Review-Ergebnis</p>
+            <div class="grid gap-5 sm:grid-cols-2">
+                <div>
+                    <x-input-label for="last_review_recommendation" value="Empfehlung" />
+                    <select id="last_review_recommendation" name="last_review_recommendation"
+                            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
+                        <option value="">—</option>
+                        @foreach (\App\Enums\ReviewRecommendation::cases() as $rec)
+                            <option value="{{ $rec->value }}"
+                                @selected(old('last_review_recommendation', $task?->last_review_recommendation?->value) === $rec->value)>
+                                {{ $rec->label() }}
+                            </option>
+                        @endforeach
+                    </select>
+                    <x-input-error :messages="$errors->get('last_review_recommendation')" class="mt-2" />
+                </div>
+                <div>
+                    <x-input-label for="last_reviewed_at" value="Zuletzt reviewt am" />
+                    <x-text-input id="last_reviewed_at" name="last_reviewed_at" type="datetime-local" class="mt-1 block w-full"
+                                  :value="old('last_reviewed_at', $task?->last_reviewed_at?->format('Y-m-d\TH:i'))" />
+                    <x-input-error :messages="$errors->get('last_reviewed_at')" class="mt-2" />
+                </div>
+            </div>
+            <div>
+                <x-input-label for="last_review_summary" value="Review-Zusammenfassung" />
+                <textarea id="last_review_summary" name="last_review_summary" rows="4"
+                          class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">{{ old('last_review_summary', $task?->last_review_summary) }}</textarea>
+                <x-input-error :messages="$errors->get('last_review_summary')" class="mt-2" />
+            </div>
+        </div>
+    @endif
+
     @if ($candidates->isNotEmpty())
         <div>
             <x-input-label value="Voraussetzungen (Requirements)" />

@@ -37,6 +37,9 @@ Route::middleware('auth:sanctum')->group(function () {
     // GET /board → POST /claim → GET /task-Kette samt 409-Retry.
     Route::post('projects/{project}/claim-next', [TaskController::class, 'claimNext']);
 
+    // Review: nächsten in-review Task mit PR zum Review übernehmen (Auto-Pick).
+    Route::post('projects/{project}/review-next', [TaskController::class, 'reviewNext']);
+
     // Board-Protokoll-Konfiguration (token-sparende Schalter)
     Route::get('projects/{project}/config', [ProjectConfigController::class, 'show']);
     Route::match(['put', 'patch'], 'projects/{project}/config', [ProjectConfigController::class, 'update']);
@@ -61,6 +64,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::scopeBindings()->group(function () {
         Route::post('projects/{project}/tasks/{task}/claim', [TaskController::class, 'claim']);
         Route::post('projects/{project}/tasks/{task}/release', [TaskController::class, 'release']);
+        // Review eines bestimmten Tasks übernehmen · Ergebnis erfassen
+        Route::post('projects/{project}/tasks/{task}/review-claim', [TaskController::class, 'reviewClaim']);
+        Route::post('projects/{project}/tasks/{task}/review', [TaskController::class, 'review']);
         Route::post('projects/{project}/tasks/{task}/status', [TaskController::class, 'status']);
         Route::post('projects/{project}/tasks/{task}/pr', [TaskController::class, 'pr']);
         Route::post('projects/{project}/tasks/{task}/merge', [TaskController::class, 'merge']);

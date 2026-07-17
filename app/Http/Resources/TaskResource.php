@@ -31,6 +31,7 @@ class TaskResource extends JsonResource
     private const STANDARD_EXTRA = [
         'display_status', 'phase_id', 'effort', 'pr_number', 'pr_url',
         'claimed_by_id', 'prerequisites', 'concern', 'stacking',
+        'last_reviewed_at', 'last_review_recommendation', 'last_review_summary',
     ];
 
     /**
@@ -88,6 +89,9 @@ class TaskResource extends JsonResource
             'claimed_by' => $this->whenLoaded('claimer', fn () => $this->claimer?->name),
             'claimed_at' => $this->claimed_at,
             'merged_at' => $this->merged_at,
+            'last_reviewed_at' => $this->last_reviewed_at,
+            'last_review_recommendation' => $this->last_review_recommendation?->value,
+            'last_review_summary' => $this->last_review_summary,
 
             // Computed board fields — present once the task is decorated.
             'gate' => $this->x_gate ?? null,

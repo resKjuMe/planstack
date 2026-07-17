@@ -7,6 +7,8 @@ Endpunkte unter `$BASE/projects/$PROJ`, Aufruf mit `curl -s "${AUTH[@]}"`:
 | Methode / Pfad | Zweck |
 |---|---|
 | `POST /claim-next` | besten pickbaren Task atomar beanspruchen; Antwort = geclaimter Task (nach `task.fields`), `{"claimed":null}` wenn nichts pickbar |
+| `POST /review-next` | nächsten in-review Task mit PR zum Review übernehmen (setzt `reviewed_by`); `{"reviewing":null}` wenn nichts ansteht |
+| `POST /tasks/{id}/review-claim` · `/review {recommendation,summary}` | Review übernehmen · Ergebnis erfassen (`APPROVE`/`REQUEST_CHANGES`) |
 | `GET /board` | pickable nach `unlocks`; Antwort trägt die Versions-Header |
 | `GET /tasks` · `/tasks/{id}` | Details (`summary`, `acceptance_criteria`, `prerequisites`) |
 | `POST /tasks/{id}/claim` · `/release` | beanspruchen (`409`→anderen) · freigeben |

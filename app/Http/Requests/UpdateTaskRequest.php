@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Enums\ReviewRecommendation;
 use App\Enums\TaskStatus;
 use App\Models\Task;
 use Illuminate\Foundation\Http\FormRequest;
@@ -35,6 +36,9 @@ class UpdateTaskRequest extends FormRequest
             'affected_files' => ['nullable', 'integer', 'min:0'],
             'pr_number' => ['nullable', 'integer', 'min:1'],
             'reviewed_by' => ['nullable', 'integer', Rule::exists('users', 'id')],
+            'last_reviewed_at' => ['nullable', 'date'],
+            'last_review_recommendation' => ['nullable', Rule::enum(ReviewRecommendation::class)],
+            'last_review_summary' => ['nullable', 'string'],
             'status' => ['required', Rule::enum(TaskStatus::class)],
             'prerequisites' => ['nullable', 'array'],
             'prerequisites.*' => [
