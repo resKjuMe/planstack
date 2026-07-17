@@ -32,7 +32,7 @@ Alle Endpunkte laufen unter `$BASE/projects/$PROJ` (siehe Betriebshandbuch). Feh
 
 ## Zwei Modi
 
-**A — ganzes Board (`/planstack <PROJECT>`):** dem Zyklus des Betriebshandbuchs folgen: `GET /board` → besten Pick (höchste `unlocks`) → `claim` → `analyze` → umsetzen bzw. `concern` → PR → `done` → `merge`; Board gemäß `reread.policy` neu lesen.
+**A — ganzes Board (`/planstack <PROJECT>`):** dem Zyklus des Betriebshandbuchs folgen. Pro Runde `POST $BASE/projects/$PROJ/claim-next` → das wählt den besten pickbaren Task (höchste `unlocks`) und claimt ihn atomar in einem Aufruf; die Antwort ist der geclaimte Task mit Arbeitsdetails (spart `GET /board` + `claim` + `GET /task`). Dann `analyze` → umsetzen bzw. `concern` → PR → `done` → `merge`. Kommt `{"claimed": null}` zurück, ist nichts (mehr) pickbar → fertig bzw. warten.
 
 **B — ein Task (`/planstack <PROJECT> <TASK>`):** Der Task wird per **numerischer id** adressiert, `<TASK>` ist aber ein Name — daher zuerst auflösen: `GET $BASE/projects/$PROJ/tasks` lesen, den Eintrag mit `name == <TASK>` suchen, dessen `id` verwenden. Dann denselben Zyklus **nur für diesen Task** (claim → analyze → umsetzen/concern → PR → done → merge). Ist der Task nicht pickbar (Gate offen, bereits beansprucht oder schon mit PR), das melden statt es zu erzwingen.
 

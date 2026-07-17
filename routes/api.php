@@ -32,6 +32,11 @@ Route::middleware('auth:sanctum')->group(function () {
     // Board-Read (pickable/Aggregate/Gates) — Einstieg für Board-Clients
     Route::get('projects/{project}/board', [ProjectController::class, 'board']);
 
+    // Bündelt Board-Pick + Claim: wählt den besten pickbaren Task (meiste
+    // `unlocks`) und beansprucht ihn atomar in einem Roundtrip. Spart die
+    // GET /board → POST /claim → GET /task-Kette samt 409-Retry.
+    Route::post('projects/{project}/claim-next', [TaskController::class, 'claimNext']);
+
     // Board-Protokoll-Konfiguration (token-sparende Schalter)
     Route::get('projects/{project}/config', [ProjectConfigController::class, 'show']);
     Route::match(['put', 'patch'], 'projects/{project}/config', [ProjectConfigController::class, 'update']);

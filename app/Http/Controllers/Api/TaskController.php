@@ -128,6 +128,51 @@ class TaskController extends ApiController
     }
 
     /**
+     * POST /api/projects/{project}/claim-next — pick the best pickable task
+     * (most `unlocks`) and claim it atomically for the token user, in one call.
+     *
+     * Bundles the board-pick + claim (+ the follow-up task read): the response is
+     * the claimed task itself, decorated and shaped by `task.fields`, so the
+     * worker has enough to start (summary, acceptance_criteria, gate/stacking …)
+     * without a second request. Replaces the GET /board → POST /claim → GET /task
+     * round-trips and the 409-retry loop.
+     *
+     * Concurrency-safe for parallel workers: the claim is a conditional UPDATE
+     * (WHERE claimed_by_id IS NULL), so exactly one worker wins a given task; the
+     * others fall through to the next candidate. Returns 200 `{"claimed": null}`
+     * when nothing is pickable.
+     */
+    public function claimNext(Request $request, Project $project): JsonResource|JsonResponse
+    {
+        $this->authorize('contribute', $project);
+
+        $candidates = $this->board->board($project)
+            ->filter(fn ($t) => $t->x_pickable)
+            ->sortByDesc('x_unlocks')
+            ->values();
+
+        foreach ($candidates as $candidate) {
+            // Atomarer Claim: nur greifen, wenn der Task noch frei ist. Bei
+            // paralleler Konkurrenz trifft genau ein Worker (affected rows == 1),
+            // alle anderen probieren den nächsten Kandidaten.
+            $claimed = Task::whereKey($candidate->id)
+                ->whereNull('claimed_by_id')
+                ->whereNull('pr_number')
+                ->update([
+                    'claimed_by_id' => $request->user()->id,
+                    'claimed_at' => now(),
+                    'status' => TaskStatus::CLAIMED->value,
+                ]);
+
+            if ($claimed === 1) {
+                return new TaskResource($this->decorateOne($project, $candidate));
+            }
+        }
+
+        return response()->json(['claimed' => null]);
+    }
+
+    /**
      * POST .../release — release a task the token user holds.
      */
     public function release(Request $request, Project $project, Task $task): JsonResource|JsonResponse

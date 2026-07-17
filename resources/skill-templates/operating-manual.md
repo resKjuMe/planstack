@@ -1,11 +1,12 @@
 ## Betriebshandbuch (serverseitig gepflegt, gilt für alle Projekte)
 
-**Zyklus:** Board → bester Pick → `claim` → `analyze` → (`concern`) | (`in_progress` → PR → `done` → `merge`). Board neu lesen gemäß `reread.policy`.
+**Zyklus:** `claim-next` (bester Pick **und** Claim in einem, spart Roundtrips/Tokens) → `analyze` → (`concern`) | (`in_progress` → PR → `done` → `merge`). Board neu lesen gemäß `reread.policy`. Alternativ manuell: `GET /board` → bester Pick → `POST /claim`.
 
 Endpunkte unter `$BASE/projects/$PROJ`, Aufruf mit `curl -s "${AUTH[@]}"`:
 
 | Methode / Pfad | Zweck |
 |---|---|
+| `POST /claim-next` | besten pickbaren Task atomar beanspruchen; Antwort = geclaimter Task (nach `task.fields`), `{"claimed":null}` wenn nichts pickbar |
 | `GET /board` | pickable nach `unlocks`; Antwort trägt die Versions-Header |
 | `GET /tasks` · `/tasks/{id}` | Details (`summary`, `acceptance_criteria`, `prerequisites`) |
 | `POST /tasks/{id}/claim` · `/release` | beanspruchen (`409`→anderen) · freigeben |
