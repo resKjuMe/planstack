@@ -12,7 +12,7 @@ Ein Planstack-Board wird über die **REST-API** abgearbeitet: Board lesen, Task 
 - `/planstack <PROJECT>` — das Board von `<PROJECT>` abarbeiten (besten Pick wählen, Zyklus s. u.).
 - `/planstack <PROJECT> <TASK>` — gezielt **einen** Task (`<TASK>` = Task-Name, z. B. `C27`) dieses Projekts abarbeiten.
 - `/planstack review [<PROJECT>] [<TASK>]` — in-review Task(s) mit PR reviewen (übernimmt Review, führt den Review-Skill aus, erfasst das Ergebnis; ohne Argumente projektübergreifend; siehe „Review").
-- `/planstack fix [<PROJECT>] [<TASK|PR-NUMMER>]` — offenen PR reparieren: Merge-Konflikte auflösen, Review-Kommentare beantworten/fixen/resolven, rote CI korrigieren (siehe „Fix").
+- `/planstack fix [<PROJECT>] <TASK|PR-NUMMER>` — offenen PR reparieren (Task/PR erforderlich): Merge-Konflikte auflösen, Kommentare + Review-Kommentare beantworten/fixen/resolven, rote CI korrigieren (siehe „Fix").
 - `/planstack settings` — lokale Einstellungen (Tests, PHPStan, PHPCS, Babysit-PRs) anzeigen/ändern (nur lokal gespeichert; siehe „Lokale Einstellungen").
 - `/planstack update-config [<PROJECT>]` — neueste allgemeine (+ Projekt-)Konfiguration ziehen und die Versionsnummern anzeigen (siehe „Konfiguration ziehen").
 

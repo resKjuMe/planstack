@@ -74,15 +74,14 @@ Reviewt Tasks, die **in Review** sind (Status `IN_REVIEW`, mit PR). Ablauf:
 4. **Ergebnis erfassen:** `POST $BASE/projects/$PROJ/tasks/$TASK/review` mit `{"recommendation":"APPROVE|REQUEST_CHANGES","summary":"…"}` — füllt `last_reviewed_at`, `last_review_recommendation`, `last_review_summary`.
 5. **Ablage gemäß `review_results`:** bei `task_only` nur den Task (Schritt 4). Bei `task_and_pr` zusätzlich am PR hinterlegen: `gh pr review <pr> --approve` bzw. `--request-changes` mit der Zusammenfassung als Kommentar.
 
-## Fix (`/planstack fix [<PROJECT>] [<TASK|PR-NUMMER>]`)
+## Fix (`/planstack fix [<PROJECT>] <TASK|PR-NUMMER>`)
 
-Bringt einen offenen PR wieder in mergefähigen Zustand — alles über `gh`/`git` am PR (nichts serverseitig).
+Bringt einen offenen PR wieder in mergefähigen Zustand — alles über `gh`/`git` am PR (nichts serverseitig). `<TASK|PR-NUMMER>` ist **erforderlich** (kein Auto-Pick).
 
-1. **PR bestimmen:**
-   - Argument ist **numerisch** → direkt diese PR-Nummer.
+1. **PR bestimmen** (Argument ist Pflicht):
+   - Argument ist **numerisch** → diese PR-Nummer (im Repo des Projekts).
    - Argument ist ein **Task-Name** → `GET $BASE/projects/$PROJ/tasks/$TASK` → dessen `pr_number`.
-   - nur `<PROJECT>`: automatisch — Tasks mit PR (z. B. `IN_REVIEW`/`IN_PROGRESS` mit `pr_number`) durchgehen und den ersten PR nehmen, der Konflikte, offene Kommentare oder rote CI hat.
-   - **weder Argument noch `<PROJECT>`**: projektübergreifend über `GET $BASE/projects`.
+   - **Ohne `<PROJECT>`**: das Ziel projektübergreifend auflösen — `GET $BASE/projects` durchgehen und das Projekt finden, dessen Task den Namen trägt bzw. dessen Repo die PR-Nummer enthält.
 2. **Merge-Konflikte zum Ziel-Branch:** Hat der PR Konflikte mit seinem Target-/Base-Branch, den Head-Branch auschecken, den Target-Branch ziehen und einmergen (`git fetch` + `git merge origin/<base>`), Konflikte auflösen, committen und pushen.
 3. **Kommentare UND Review-Kommentare** — beide Arten abarbeiten:
    - **PR-/Issue-Kommentare** (Konversation, `gh pr view --comments` bzw. `gh api repos/{owner}/{repo}/issues/{pr}/comments`): jeden fachlich beantworten und, wo nötig, den Code fixen.

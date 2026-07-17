@@ -61,7 +61,7 @@
                         <dd class="text-gray-600">Reviewt Tasks, die „in Review" sind (mit PR): übernimmt das Review, führt den Review-Skill aus und erfasst das Ergebnis. Ohne Argumente projektübergreifend.</dd>
                     </div>
                     <div>
-                        <dt class="font-mono text-gray-800">/planstack fix [&lt;PROJEKT&gt;] [&lt;TASK|PR&gt;]</dt>
+                        <dt class="font-mono text-gray-800">/planstack fix [&lt;PROJEKT&gt;] &lt;TASK|PR&gt;</dt>
                         <dd class="text-gray-600">Repariert einen offenen PR: löst Merge-Konflikte, beantwortet/fixt Review-Kommentare und korrigiert fehlschlagende CI.</dd>
                     </div>
                     <div>
