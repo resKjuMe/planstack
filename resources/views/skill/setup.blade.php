@@ -35,7 +35,7 @@
             {{-- Installation --}}
             <div class="bg-white rounded-lg shadow p-6">
                 <h3 class="font-semibold text-gray-800">Installation</h3>
-                <ol class="mt-3 space-y-2 text-sm text-gray-600 list-decimal ps-5">
+                <ol class="mt-3 space-y-2 text-sm text-gray-600 ps-5" style="list-style-type: decimal;">
                     <li>ZIP herunterladen und entpacken.</li>
                     <li>Den Ordner <span class="font-mono">planstack/</span> nach
                         <span class="font-mono">~/.claude/skills/</span> verschieben
