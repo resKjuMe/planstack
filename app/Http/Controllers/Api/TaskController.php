@@ -77,7 +77,9 @@ class TaskController extends ApiController
     {
         $this->authorize('update', $task);
 
-        $data = $this->validateTask($request, $project);
+        // Partielles Update: PUT/PATCH ist kein Voll-Update — nur die
+        // mitgeschickten Felder werden validiert und aktualisiert.
+        $data = $this->validateTask($request, $project, partial: true);
 
         if (($data['status'] ?? null) === TaskStatus::MERGED->value && $task->merged_at === null) {
             $data['merged_at'] = now();
@@ -490,11 +492,15 @@ class TaskController extends ApiController
      *
      * @return array<string, mixed>
      */
-    private function validateTask(Request $request, Project $project): array
+    private function validateTask(Request $request, Project $project, bool $partial = false): array
     {
+        // Bei einem partiellen Update (PUT/PATCH) sind auch name/summary optional —
+        // nur mitgeschickte Felder werden angewandt. Bei store() bleiben sie Pflicht.
+        $req = $partial ? 'sometimes' : 'required';
+
         $data = $request->validate([
-            'name' => ['required', 'string', 'max:50'],
-            'summary' => ['required', 'string', 'max:255'],
+            'name' => [$req, 'string', 'max:50'],
+            'summary' => [$req, 'string', 'max:255'],
             'description' => ['nullable', 'string'],
             // The public API exposes this as `acceptance_criteria` (see
             // TaskResource); accept that name (and the legacy column name) on
