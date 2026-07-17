@@ -48,7 +48,14 @@ class TaskResource extends JsonResource
     public function toArray(Request $request): array
     {
         $full = $this->fullArray($request);
-        $fields = AttachPlanstackConfig::value($request, 'task.fields');
+
+        // Request-Override: ?fields=minimal|standard|full erzwingt den Feldumfang
+        // unabhängig vom Projekt-Knopf `task.fields` — so lassen sich die vollen
+        // Details eines Tasks gezielt abrufen, egal wie sparsam das Projekt steht.
+        $override = $request->query('fields');
+        $fields = in_array($override, ['minimal', 'standard', 'full'], true)
+            ? $override
+            : AttachPlanstackConfig::value($request, 'task.fields');
 
         $result = match ($fields) {
             'minimal' => array_intersect_key($full, array_flip(self::MINIMAL)),
