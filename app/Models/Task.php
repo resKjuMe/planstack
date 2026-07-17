@@ -51,6 +51,24 @@ class Task extends Model
         ];
     }
 
+    /**
+     * Route-model binding by id *or* name: a numeric segment resolves by primary
+     * key, anything else by the task's `name` (e.g. "C27"). Scoped bindings keep
+     * this constrained to the parent project, so names only need to be unique per
+     * project. Lets clients address a task by its short handle without a separate
+     * name→id lookup (e.g. POST /projects/{project}/tasks/C27/claim).
+     */
+    public function resolveRouteBindingQuery($query, $value, $field = null)
+    {
+        if ($field !== null && $field !== $this->getKeyName()) {
+            return $query->where($field, $value);
+        }
+
+        return is_numeric($value)
+            ? $query->where($this->getKeyName(), $value)
+            : $query->where('name', $value);
+    }
+
     public function project(): BelongsTo
     {
         return $this->belongsTo(Project::class);

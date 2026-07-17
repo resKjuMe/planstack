@@ -6,6 +6,15 @@
 return [
     'releases' => [
         [
+            'version' => '1.5.1',
+            'date' => '2026-07-17',
+            'tldr' => ['Weniger Anfragen beim Abarbeiten', 'Task per Kürzel ansprechbar'],
+            'changes' => [
+                'Der Skill übernimmt den nächsten passenden Task jetzt in einem einzigen Schritt (Auswählen und Beanspruchen zusammengefasst) — das spart Anfragen und Tokens beim Abarbeiten eines Boards und vermeidet Doppel-Beanspruchungen bei mehreren Workern.',
+                'Ein einzelner Task lässt sich direkt über sein Kürzel ansprechen (z. B. bei „/planstack <PROJEKT> <TASK>") — ohne vorherige Suche nach der internen ID.',
+            ],
+        ],
+        [
             'version' => '1.5.0',
             'date' => '2026-07-17',
             'tldr' => ['Planstack-Skill in der Hauptnavi', 'Ein Skill für alle Projekte', 'PR-Titel mit Task-Kürzel'],
