@@ -30,7 +30,7 @@ class TaskResource extends JsonResource
     /** Extra keys added for `task.fields=standard`. */
     private const STANDARD_EXTRA = [
         'display_status', 'phase_id', 'effort', 'pr_number', 'pr_url',
-        'claimed_by_id', 'prerequisites', 'concern',
+        'claimed_by_id', 'prerequisites', 'concern', 'stacking',
     ];
 
     /**
