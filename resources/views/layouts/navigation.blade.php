@@ -57,6 +57,12 @@
                             <span class="js-psci-update ms-2 rounded-full bg-indigo-600 px-1.5 py-0.5 text-[10px] font-semibold text-white align-middle" style="display:none">v{{ $ciVersion }}</span>
                         </x-dropdown-link>
 
+                        {{-- Download des allgemeinen Planstack-Skills für Claude Code
+                             (SKILL.md + vorausgefüllte config.json, projektübergreifend) --}}
+                        <x-dropdown-link :href="route('skill.download')" class="whitespace-nowrap">
+                            {{ __('Planstack-Skill') }}
+                        </x-dropdown-link>
+
                         <!-- Authentication -->
                         <form method="POST" action="{{ route('logout') }}">
                             @csrf
@@ -113,6 +119,11 @@
                 <x-responsive-nav-link :href="url('/planstack-ci/setup')">
                     {{ __('TamperMonkey Script') }}
                     <span class="js-psci-update ms-2 rounded-full bg-indigo-600 px-1.5 py-0.5 text-[10px] font-semibold text-white align-middle" style="display:none">v{{ $ciVersion }}</span>
+                </x-responsive-nav-link>
+
+                {{-- Download des allgemeinen Planstack-Skills für Claude Code --}}
+                <x-responsive-nav-link :href="route('skill.download')">
+                    {{ __('Planstack-Skill') }}
                 </x-responsive-nav-link>
 
                 <!-- Authentication -->

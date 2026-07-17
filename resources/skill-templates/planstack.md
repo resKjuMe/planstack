@@ -1,21 +1,45 @@
 ---
-name: {{alias}}
-description: Planstack-Board „{{alias}}" über die REST-API abarbeiten — picken, umsetzen, PR, mergen. Konfiguration, Betriebshandbuch und Statusregeln stehen unten. Einziger Zustandsspeicher ist die API.
+name: planstack
+description: Planstack-Boards über die REST-API abarbeiten — projektübergreifend. Aufruf „/planstack <PROJECT>" (ganzes Board) oder „/planstack <PROJECT> <TASK>" (ein Task). Das Projekt kommt aus dem Argument, der Zugang aus config.json. Einziger Zustandsspeicher ist die API.
 ---
 
-# {{name}} — Planstack (Remote)
+# Planstack (Remote, projektübergreifend)
 
-Unten folgen **Konfiguration**, **Betriebshandbuch** und **Statusregeln** (Snapshot vom Download).
+Ein Planstack-Board wird über die **REST-API** abgearbeitet: Board lesen, Task picken, claimen, analysieren, umsetzen oder Concern melden, PR setzen, mergen. Der Board-Zustand (pickable, Gate, Stacking, Unlocks, PR, Status) wird **serverseitig live berechnet** — es gibt keine lokalen Zustandsdateien.
+
+## Aufruf
+
+- `/planstack <PROJECT>` — das Board von `<PROJECT>` abarbeiten (besten Pick wählen, Zyklus s. u.).
+- `/planstack <PROJECT> <TASK>` — gezielt **einen** Task (`<TASK>` = Task-Name, z. B. `C27`) dieses Projekts abarbeiten.
+
+`<PROJECT>` ist der Projekt-Alias (z. B. `L2L`, `LOG`). Dasselbe installierte Skill bedient **alle** Projekte, auf die dein Token Zugriff hat.
 
 ## Zugang
+
+`config.json` liegt neben dieser SKILL.md; Claude Code stellt deren Verzeichnis in `CLAUDE_SKILL_DIR` bereit. Sie enthält nur `base_url` + `token` (user-gebunden, gilt projektübergreifend) und `skill_revision` — **kein** Projekt: das kommt aus dem Aufruf.
 
 ```bash
 CFG="${CLAUDE_SKILL_DIR:-.}/config.json"
 j(){ python3 -c "import json;print(json.load(open('$CFG')).get('$1',''))"; }
-BASE=$(j base_url); PROJ=$(j project); TOKEN=$(j token); CFGVER=$(j config_version); SKILLREV=$(j skill_revision)
+BASE=$(j base_url); TOKEN=$(j token); SKILLREV=$(j skill_revision)
 AUTH=(-H "Authorization: Bearer $TOKEN" -H "Accept: application/json" -H "Content-Type: application/json")
+
+# Aufruf: /planstack <PROJECT> [<TASK>]  →  PROJ = erstes Argument, TASK = optionales zweites.
+read -r PROJ TASK <<<"$ARGUMENTS"
 ```
+
+Alle Endpunkte laufen unter `$BASE/projects/$PROJ` (siehe Betriebshandbuch). Fehler: `401` Token · `403` kein Zugriff aufs Projekt · `404` unbekannter Alias.
+
+## Zwei Modi
+
+**A — ganzes Board (`/planstack <PROJECT>`):** dem Zyklus des Betriebshandbuchs folgen: `GET /board` → besten Pick (höchste `unlocks`) → `claim` → `analyze` → umsetzen bzw. `concern` → PR → `done` → `merge`; Board gemäß `reread.policy` neu lesen.
+
+**B — ein Task (`/planstack <PROJECT> <TASK>`):** Der Task wird per **numerischer id** adressiert, `<TASK>` ist aber ein Name — daher zuerst auflösen: `GET $BASE/projects/$PROJ/tasks` lesen, den Eintrag mit `name == <TASK>` suchen, dessen `id` verwenden. Dann denselben Zyklus **nur für diesen Task** (claim → analyze → umsetzen/concern → PR → done → merge). Ist der Task nicht pickbar (Gate offen, bereits beansprucht oder schon mit PR), das melden statt es zu erzwingen.
+
+## PR-Konvention
+
+Beim Erstellen eines Pull Requests **immer** den Task-Namen als Titel-Prefix setzen: `<TASK>: <Kurzbeschreibung>` (z. B. `C27: PseudoPropertyBinding-Fallback`). `<TASK>` ist der Kurzname des Tasks (Feld `name`), nicht die numerische id. Gilt für beide Modi.
 
 ## Selbst-Update
 
-Jede Board-Antwort trägt `X-Planstack-Config-Version` und `X-Planstack-Skill-Revision`. Weicht eine von `$CFGVER`/`$SKILLREV` ab: `GET $BASE/projects/$PROJ/config` lesen und `operating_manual`, `status_rules` sowie die Konfiguration von dort übernehmen (Vorrang vor diesem Snapshot).
+Jede Board-Antwort trägt `X-Planstack-Config-Version` und `X-Planstack-Skill-Revision`. Weicht `X-Planstack-Skill-Revision` von `$SKILLREV` ab: `GET $BASE/projects/$PROJ/config` lesen und `operating_manual` + `status_rules` von dort befolgen (Vorrang vor dem Snapshot unten). Die **projektspezifische** Board-Konfiguration (Verhaltens-Hinweise wie `execution.mode`, `run.mode`, `parallelism.max_workers` …) liefert das Board bei Bedarf als `client_hints`-Block mit — separat je `<PROJECT>`, nichts davon ist fest im Skill hinterlegt.

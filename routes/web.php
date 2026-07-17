@@ -11,8 +11,8 @@ use App\Http\Controllers\ProjectDiagramController;
 use App\Http\Controllers\ProjectMemberController;
 use App\Http\Controllers\ProjectPrSequenceController;
 use App\Http\Controllers\ProjectPrSyncController;
-use App\Http\Controllers\ProjectSkillController;
 use App\Http\Controllers\ProjectSummaryController;
+use App\Http\Controllers\SkillDownloadController;
 use App\Http\Controllers\ProjectTeamController;
 use App\Http\Controllers\TaskConcernController;
 use App\Http\Controllers\TaskController;
@@ -37,6 +37,12 @@ Route::get('/dashboard', fn () => redirect()->route('projects.index'))
 Route::middleware('auth')->group(function () {
     // Nutzer-Changelog der Website (Versionsübersicht in der Hauptnavi)
     Route::view('/changelog', 'changelog')->name('changelog');
+
+    // Download des allgemeinen Planstack-Claude-Code-Skills (SKILL.md +
+    // vorausgefüllte config.json) als ZIP. Projektübergreifend: das Projekt wird
+    // dem Skill dynamisch als Argument übergeben (/planstack <PROJECT>), daher
+    // steht in der Hauptnavi statt in den Projekt-Details.
+    Route::get('/skill', SkillDownloadController::class)->name('skill.download');
 
     // FAQ / Nachschlagewerk (Hauptnavi „FAQ")
     Route::prefix('faq')->name('faq.')->group(function () {
@@ -89,10 +95,6 @@ Route::middleware('auth')->group(function () {
     // Pull PR merge status from GitHub and tag merged tasks
     Route::post('projects/{project}/sync-prs', ProjectPrSyncController::class)
         ->name('projects.sync-prs');
-
-    // Download the Planstack Claude-Code skill (SKILL.md + prefilled config) as ZIP
-    Route::get('projects/{project}/skill', ProjectSkillController::class)
-        ->name('projects.skill');
 
     // "Claude"-Unterseite der Projektbearbeitung: Board-Protokoll-Konfiguration
     // (token-sparende Schalter), Web-Pendant zur API /config.

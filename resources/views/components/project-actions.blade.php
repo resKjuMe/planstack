@@ -1,15 +1,6 @@
 @props(['project'])
 
 <div class="flex items-center gap-2">
-    <a href="{{ route('projects.skill', $project) }}"
-       class="inline-flex items-center gap-1.5 rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-700 ring-1 ring-gray-300 hover:bg-gray-50"
-       title="Planstack-Skill für Claude Code (SKILL.md + vorausgefüllte config.json) herunterladen">
-        <svg class="h-4 w-4 text-gray-500" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-            <path d="M10.75 2.75a.75.75 0 0 0-1.5 0v8.614L6.295 8.235a.75.75 0 1 0-1.09 1.03l4.25 4.5a.75.75 0 0 0 1.09 0l4.25-4.5a.75.75 0 0 0-1.09-1.03l-2.955 3.129V2.75Z" />
-            <path d="M3.5 12.75a.75.75 0 0 0-1.5 0v2.5A2.75 2.75 0 0 0 4.75 18h10.5A2.75 2.75 0 0 0 18 15.25v-2.5a.75.75 0 0 0-1.5 0v2.5c0 .69-.56 1.25-1.25 1.25H4.75c-.69 0-1.25-.56-1.25-1.25v-2.5Z" />
-        </svg>
-        Skill
-    </a>
     @can('update', $project)
         <form method="POST" action="{{ route('projects.sync-prs', $project) }}"
               onsubmit="return confirm('Merge-Status aller offenen PRs von GitHub abrufen und gemergte Tasks taggen?');">

@@ -6,6 +6,17 @@
 return [
     'releases' => [
         [
+            'version' => '1.5.0',
+            'date' => '2026-07-17',
+            'tldr' => ['Planstack-Skill in der Hauptnavi', 'Ein Skill für alle Projekte', 'PR-Titel mit Task-Kürzel'],
+            'changes' => [
+                'Neu: Der Planstack-Skill für Claude Code wird jetzt zentral über die Hauptnavigation heruntergeladen („Planstack-Skill") — nicht mehr pro Projekt.',
+                'Ein einziger Skill bedient alle Projekte: Das Projekt wird beim Aufruf angegeben — „/planstack <PROJEKT>" arbeitet das ganze Board ab, „/planstack <PROJEKT> <TASK>" gezielt einen einzelnen Task.',
+                'Die mitgelieferte Konfiguration enthält kein festes Projekt mehr (es ist dynamisch); der eingebettete Zugang gilt für alle Projekte, auf die du Zugriff hast.',
+                'Pull Requests bekommen jetzt einheitlich das Task-Kürzel als Titel-Prefix (z. B. „C27: …").',
+            ],
+        ],
+        [
             'version' => '1.4.0',
             'date' => '2026-07-17',
             'tldr' => ['Detaillierte Claude-Einstellungen', 'Umgang mit Concerns', 'Zugriff beim Bearbeiten', 'Selbst-aktualisierender Skill'],
