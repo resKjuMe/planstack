@@ -85,6 +85,7 @@
             <x-input-label for="affected_files" value="Betroffene Dateien (geschätzt)" />
             <x-text-input id="affected_files" name="affected_files" type="number" min="0" class="mt-1 block w-full sm:w-40"
                           :value="old('affected_files', $task?->affected_files)" />
+            <p class="mt-1 text-xs text-gray-400">Immer angeben (Schätzung genügt) — verbindliche Konvention, aber keine Pflichtvalidierung.</p>
             <x-input-error :messages="$errors->get('affected_files')" class="mt-2" />
         </div>
         <div>
