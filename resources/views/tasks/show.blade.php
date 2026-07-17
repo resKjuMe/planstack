@@ -99,7 +99,7 @@
                     </dl>
                     @if ($task->last_review_summary)
                         <div>
-                            <h4 class="text-sm font-semibold text-gray-500 mb-1">Zusammenfassung</h4>
+                            <h4 class="text-sm font-semibold text-gray-500 mb-1">Analyse</h4>
                             <x-markdown :content="$task->last_review_summary" />
                         </div>
                     @endif
