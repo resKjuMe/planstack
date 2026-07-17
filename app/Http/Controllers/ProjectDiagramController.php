@@ -152,6 +152,8 @@ class ProjectDiagramController extends Controller
                 // Reviewer name (resolved from the user FK) is shown in every
                 // status once a reviewer is set.
                 'reviewedBy' => $task->reviewer?->name,
+                // Completed review result → corner badge (check / changes).
+                'reviewRecommendation' => $task->last_review_recommendation?->value,
                 // Whether the active viewer is that reviewer — drives the
                 // colour split (own review vs. someone else reviewing).
                 'reviewedByMe' => $task->reviewed_by !== null && $task->reviewed_by === $userId,

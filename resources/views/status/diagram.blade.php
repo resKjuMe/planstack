@@ -244,6 +244,18 @@
         .ps-node .ps-bn .ps-ico,
         .ps-diagram-legend .ps-bn .ps-ico { width: 12px; height: 12px; margin: 0; }
 
+        /* Review-Badge: runder Eck-Badge oben rechts (gleicher Stil wie Flaschenhals). */
+        .ps-node .ps-rv {
+            display: inline-flex; align-items: center; justify-content: center;
+            position: absolute; top: -9px; right: -9px;
+            width: 20px; height: 20px; border-radius: 9999px;
+        }
+        .ps-node .ps-rv .ps-ico { width: 12px; height: 12px; margin: 0; }
+        .ps-node .ps-rv-approve { background: #dcfce7; border: 1px solid #16a34a; color: #16a34a; }
+        .ps-node .ps-rv-changes { background: #fef3c7; border: 1px solid #d97706; color: #b45309; }
+        /* Weicht einem anderen Eck-Badge oben rechts aus. */
+        .ps-node .ps-rv--shift { right: 15px; }
+
         /* Legende: Mini-Knoten im echten Knotenstil (Farbregeln oben teilen sich
            Node und Legende über die gemeinsamen cat-*-Selektoren). */
         .ps-diagram-legend .lg-item { display: inline-flex; align-items: center; gap: 5px; }

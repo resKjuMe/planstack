@@ -52,6 +52,9 @@ const STATUS_ICONS = {
 };
 const BOTTLENECK_ICON = '<path d="M6.5 7h11"/><path d="M6.5 17h11"/><path d="M6 20v-2a6 6 0 1 1 12 0v2a1 1 0 0 1 -1 1h-10a1 1 0 0 1 -1 -1z"/><path d="M6 4v2a6 6 0 1 0 12 0v-2a1 1 0 0 0 -1 -1h-10a1 1 0 0 0 -1 1z"/>';
 const FILE_ICON = '<path d="M14 3v4a1 1 0 0 0 1 1h4"/><path d="M17 21h-10a2 2 0 0 1 -2 -2v-14a2 2 0 0 1 2 -2h7l5 5v11a2 2 0 0 1 -2 2z"/>';
+// Review-Eck-Badge: Häkchen (approve) bzw. Warndreieck (changes requested).
+const REVIEW_APPROVE_ICON = '<path d="M5 12l5 5l10 -10"/>';
+const REVIEW_CHANGES_ICON = '<path d="M12 9v4"/><path d="M12 17h.01"/><path d="M10.24 3.957l-8.422 14.06a1.989 1.989 0 0 0 1.7 2.983h16.845a1.989 1.989 0 0 0 1.7 -2.983l-8.423 -14.06a1.989 1.989 0 0 0 -3.4 0z"/>';
 
 function svgIcon(paths) {
     return `<svg class='ps-ico' xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round' aria-hidden='true'>${paths}</svg>`;
@@ -185,6 +188,19 @@ function nodeLabel(n, showDesc = false) {
     if (n.bottleneck) {
         const cnt = n.directDependents ?? n.dependents ?? 0;
         parts.push(`<span class='ps-bn' title='Flaschenhals · blockiert ${cnt} PR${cnt === 1 ? '' : 's'}'>${svgIcon(BOTTLENECK_ICON)}</span>`);
+    }
+
+    // Review-Ergebnis: runder Eck-Badge oben rechts, gleicher Stil wie der
+    // Flaschenhals — grünes Häkchen (approve) bzw. Warndreieck (changes). Sitzt
+    // ein anderer Eck-Badge oben rechts (Flaschenhals oder PR-Badge auf done),
+    // rückt er nach links (--shift).
+    if (n.reviewRecommendation) {
+        const approve = n.reviewRecommendation === 'APPROVE';
+        const shift = (n.bottleneck || (n.done && n.pr)) ? ' ps-rv--shift' : '';
+        const cls = approve ? 'ps-rv ps-rv-approve' : 'ps-rv ps-rv-changes';
+        const label = approve ? 'Review: genehmigt' : 'Review: Änderungen erforderlich';
+        const icon = approve ? REVIEW_APPROVE_ICON : REVIEW_CHANGES_ICON;
+        parts.push(`<span class='${cls}${shift}' title='${label}'>${svgIcon(icon)}</span>`);
     }
 
     parts.push('</div>');
