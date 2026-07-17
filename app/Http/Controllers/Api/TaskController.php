@@ -202,7 +202,7 @@ class TaskController extends ApiController
                 ->update(['reviewed_by' => $request->user()->id]);
 
             if ($claimed === 1) {
-                return new TaskResource($this->decorateOne($project, $candidate));
+                return $this->reviewResource($project, $candidate);
             }
         }
 
@@ -231,7 +231,7 @@ class TaskController extends ApiController
 
         $task->update(['reviewed_by' => $request->user()->id]);
 
-        return new TaskResource($this->decorateOne($project, $task));
+        return $this->reviewResource($project, $task);
     }
 
     /**
@@ -259,7 +259,7 @@ class TaskController extends ApiController
             'last_review_summary' => $data['summary'] ?? null,
         ]);
 
-        return new TaskResource($this->decorateOne($project, $task));
+        return $this->reviewResource($project, $task);
     }
 
     /**
@@ -598,5 +598,18 @@ class TaskController extends ApiController
         $decorated->load('phase', 'claimer', 'concern', 'reviewer');
 
         return $decorated;
+    }
+
+    /**
+     * Review response: the decorated task with the PR always included
+     * (pr_number/pr_url), regardless of the project's task.fields config — the
+     * review flow must be able to address the PR even under `minimal`.
+     */
+    private function reviewResource(Project $project, Task $task): TaskResource
+    {
+        $resource = new TaskResource($this->decorateOne($project, $task));
+        $resource->alwaysIncludePr = true;
+
+        return $resource;
     }
 }

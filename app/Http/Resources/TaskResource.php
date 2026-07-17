@@ -27,6 +27,13 @@ class TaskResource extends JsonResource
         'pickable', 'unlocks', 'gate', 'unmet',
     ];
 
+    /**
+     * When true, `pr_number`/`pr_url` are always included, even under
+     * `task.fields=minimal`. Set for review responses, which must carry the PR
+     * regardless of the project's token-saving field config.
+     */
+    public bool $alwaysIncludePr = false;
+
     /** Extra keys added for `task.fields=standard`. */
     private const STANDARD_EXTRA = [
         'display_status', 'phase_id', 'effort', 'pr_number', 'pr_url',
@@ -42,7 +49,7 @@ class TaskResource extends JsonResource
         $full = $this->fullArray($request);
         $fields = AttachPlanstackConfig::value($request, 'task.fields');
 
-        return match ($fields) {
+        $result = match ($fields) {
             'minimal' => array_intersect_key($full, array_flip(self::MINIMAL)),
             'standard' => array_intersect_key(
                 $full,
@@ -50,6 +57,14 @@ class TaskResource extends JsonResource
             ),
             default => $full,
         };
+
+        // Review-Antworten tragen die PR immer mit — unabhängig von task.fields.
+        if ($this->alwaysIncludePr) {
+            $result['pr_number'] = $full['pr_number'];
+            $result['pr_url'] = $full['pr_url'];
+        }
+
+        return $result;
     }
 
     /**

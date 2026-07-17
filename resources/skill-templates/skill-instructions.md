@@ -73,7 +73,7 @@ Reviewt Tasks, die **in Review** sind (Status `IN_REVIEW`, mit PR). **Eigene Tas
    - nur `<PROJECT>`: automatisch den ersten in-review Task mit PR → `POST $BASE/projects/$PROJ/review-next`.
    - **weder `<TASK>` noch `<PROJECT>`**: **projektübergreifend** — `GET $BASE/projects` auflisten und `review-next` pro Projekt aufrufen, bis eines einen Task liefert.
    Antwort `{"reviewing": null}` bzw. leer ⇒ nichts zu reviewen (nächstes Projekt / fertig).
-2. **Review ausführen:** den **Review-Skill** (`/review`) für den PR des Tasks laufen lassen (`pr_url`/`pr_number` aus der Antwort). Ergebnis = Empfehlung (`APPROVE` oder `REQUEST_CHANGES`) + Zusammenfassung.
+2. **Review ausführen:** den **Review-Skill** (`/review`) für den PR des Tasks laufen lassen. Die Antwort aus Schritt 1 trägt **immer** `pr_number` (und `pr_url`, sofern Repo konfiguriert) — unabhängig von den Board-/`task.fields`-Einstellungen. Ergebnis = Empfehlung (`APPROVE` oder `REQUEST_CHANGES`) + Zusammenfassung.
 3. **Empfehlung festlegen** gemäß Einstellung `review_auto_status`: bei `manual` die Empfehlung vom Nutzer bestätigen lassen, bei `auto` die aus dem Review abgeleitete Empfehlung direkt verwenden.
 4. **Ergebnis erfassen:** `POST $BASE/projects/$PROJ/tasks/$TASK/review` mit `{"recommendation":"APPROVE|REQUEST_CHANGES","summary":"…"}` — füllt `last_reviewed_at`, `last_review_recommendation`, `last_review_summary`.
 5. **Ablage gemäß `review_results`:** bei `task_only` nur den Task (Schritt 4). Bei `task_and_pr` zusätzlich am PR hinterlegen: `gh pr review <pr> --approve` bzw. `--request-changes` mit der Zusammenfassung als Kommentar.
