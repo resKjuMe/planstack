@@ -84,7 +84,10 @@ Bringt einen offenen PR wieder in mergefähigen Zustand — alles über `gh`/`gi
    - nur `<PROJECT>`: automatisch — Tasks mit PR (z. B. `IN_REVIEW`/`IN_PROGRESS` mit `pr_number`) durchgehen und den ersten PR nehmen, der Konflikte, offene Kommentare oder rote CI hat.
    - **weder Argument noch `<PROJECT>`**: projektübergreifend über `GET $BASE/projects`.
 2. **Merge-Konflikte zum Ziel-Branch:** Hat der PR Konflikte mit seinem Target-/Base-Branch, den Head-Branch auschecken, den Target-Branch ziehen und einmergen (`git fetch` + `git merge origin/<base>`), Konflikte auflösen, committen und pushen.
-3. **Offene Review-Kommentare:** unaufgelöste Threads holen (`gh pr view` / `gh api`), jeden fachlich beantworten, den Code entsprechend fixen und den Thread auflösen (resolve).
+3. **Kommentare UND Review-Kommentare** — beide Arten abarbeiten:
+   - **PR-/Issue-Kommentare** (Konversation, `gh pr view --comments` bzw. `gh api repos/{owner}/{repo}/issues/{pr}/comments`): jeden fachlich beantworten und, wo nötig, den Code fixen.
+   - **Review-Kommentare** (inline an Codezeilen / Review-Threads, `gh api repos/{owner}/{repo}/pulls/{pr}/comments`): jeden beantworten, den Code entsprechend fixen und den Thread **auflösen** (resolve, z. B. GraphQL `resolveReviewThread`).
+   Grundsatz: alles Offene beantworten + fixen; Review-Threads zusätzlich resolven.
 4. **Fehlschlagende CI:** `gh pr checks` prüfen; rote Checks lokal reproduzieren, korrigieren, committen und pushen, bis die CI grün ist.
 
 Danach ggf. via `/planstack review` erneut prüfen.

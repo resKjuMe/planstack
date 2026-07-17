@@ -11,7 +11,7 @@ return [
             'tldr' => ['PR-Review per Skill', 'PR reparieren', 'Review-Ergebnis am Task', 'Neue Skill-Einstellungen'],
             'changes' => [
                 'Neu: „/planstack review" — übernimmt Tasks, die „in Review" sind (mit PR), führt den Review-Skill aus und erfasst das Ergebnis. Ohne Task-Angabe wird automatisch ein Task des Projekts gewählt, ohne Projekt wird projektübergreifend gereviewt.',
-                'Neu: „/planstack fix" — bringt einen offenen PR wieder in Ordnung: löst Merge-Konflikte mit dem Ziel-Branch, beantwortet und behebt offene Review-Kommentare und korrigiert fehlschlagende CI.',
+                'Neu: „/planstack fix" — bringt einen offenen PR wieder in Ordnung: löst Merge-Konflikte mit dem Ziel-Branch, beantwortet und behebt sowohl normale Kommentare als auch Review-Kommentare (Review-Threads werden zusätzlich aufgelöst) und korrigiert fehlschlagende CI.',
                 'Tasks haben jetzt ein Review-Ergebnis: „zuletzt reviewt am", „Empfehlung" (genehmigt / Änderungen erforderlich) und eine „Review-Zusammenfassung". Diese Felder werden beim Abschluss eines Reviews befüllt und sind im Task-Formular bearbeitbar, solange der Task „in Review" ist.',
                 'Neue Skill-Einstellungen unter „/planstack settings": „Review-Ergebnis" (nur im Task / im Task und am PR) und „Review-Status" (Empfehlung manuell bestätigen oder automatisch setzen).',
             ],
