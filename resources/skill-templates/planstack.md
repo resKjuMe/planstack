@@ -40,6 +40,8 @@ Alle Endpunkte laufen unter `$BASE/projects/$PROJ` (siehe Betriebshandbuch). Feh
 
 ## Selbst-Update
 
+**Sync-at-start:** Zu Beginn **jedes** `/planstack`-Aufrufs die Aktualität prüfen, **bevor** die eigentliche Arbeit beginnt. Modi mit Projekt-Call (Board/Task): Die erste Antwort (z. B. `claim-next`/`board`/Task) trägt `X-Planstack-Skill-Revision` — weicht sie von `$SKILLREV` ab, sofort `/config` nachziehen und die neuen Inhalte übernehmen, dann erst arbeiten. `settings` ist rein lokal (kein Sync nötig); `update-config` ist der explizite Sync.
+
 Jede Board-Antwort trägt `X-Planstack-Config-Version` und `X-Planstack-Skill-Revision`. Weicht `X-Planstack-Skill-Revision` von `$SKILLREV` ab: `GET $BASE/projects/$PROJ/config` lesen und `operating_manual` + `status_rules` + `skill_instructions` von dort befolgen (Vorrang vor den Snapshots unten) — `skill_instructions` sind die verbindlichen, projektübergreifenden Anweisungen dieses Skills (z. B. die PR-Titel-Konvention).
 
 **Selbstheilung (neue Kommandos):** Wird ein Sub-Kommando aufgerufen, das in dieser SKILL.md **nicht** beschrieben ist (z. B. ein später ergänztes), zuerst `GET $BASE/projects/$P/config` lesen (mit einem zugänglichen Projekt `$P` aus `GET $BASE/projects`) und `skill_instructions` befolgen — dort steht die **aktuelle Kommandoliste**. So stehen neue Features auch ohne Neu-Download bereit, sobald diese Selbstheilungs-Regel einmal installiert ist. Die **projektspezifische** Board-Konfiguration (Verhaltens-Hinweise wie `execution.mode`, `run.mode`, `parallelism.max_workers` …) liefert das Board bei Bedarf als `client_hints`-Block mit — separat je `<PROJECT>`, nichts davon ist fest im Skill hinterlegt.

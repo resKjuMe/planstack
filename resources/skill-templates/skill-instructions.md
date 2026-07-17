@@ -40,14 +40,16 @@ Reihenfolge vor dem PR (jeweils nur, wenn die Einstellung es zulässt): `local_p
 
 **Aufruf `/planstack update-config [<PROJECT>]`** (erstes Argument `update-config`): zieht die neuesten Konfigurationen aktiv nach (statt erst bei Drift) und gibt die Versionsnummern aus.
 
-- **Allgemein (Skill):** `GET $BASE/projects/$P/config` (mit einem zugänglichen Projekt `$P` — ohne Argument das erste aus `GET $BASE/projects`) und `operating_manual` + `status_rules` + `skill_instructions` von dort befolgen. Anschließend das gelieferte `skill_revision` in `config.json` schreiben (Baseline aktualisieren).
-- **Projekt** (nur mit `<PROJECT>`): dieselbe `/config`-Antwort für `<PROJECT>` auswerten und dessen Projekt-Konfiguration (`effective`/`client_hints`, `instructions`) sowie `config_version` übernehmen.
+- **Ohne `<PROJECT>`:** **alle** zugänglichen Projekte aktualisieren — `GET $BASE/projects` auflisten und für **jedes** `GET $BASE/projects/<alias>/config` lesen. Dabei die allgemeinen Inhalte (`operating_manual` + `status_rules` + `skill_instructions`) einmal übernehmen und je Projekt dessen Konfiguration (`effective`/`client_hints`, `instructions`, `config_version`). Anschließend das gelieferte `skill_revision` in `config.json` schreiben (Baseline aktualisieren).
+- **Mit `<PROJECT>`:** nur die allgemeine Config **und** die Config dieses einen Projekts.
 
-**Ausgabe** (immer die Versionsnummern zeigen), z. B.:
+**Ausgabe** — immer die Versionsnummern zeigen, z. B.:
 
 ```
 Allgemein (Skill):  skill_revision <alt> → <neu>
-Projekt <PROJECT>:  config_version <n>
+Projekt L2L:  config_version 3
+Projekt LOG:  config_version 1
+Projekt B2R:  config_version 2
 ```
 
-Ohne `<PROJECT>` nur die Skill-Zeile ausgeben.
+(Mit `<PROJECT>` nur die allgemeine Zeile + diese eine Projekt-Zeile.)
