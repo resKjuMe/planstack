@@ -45,7 +45,10 @@ class TaskController extends Controller
     {
         $this->authorize('view', $task);
 
-        $task->load(['creator', 'claimer', 'phase', 'concern.creator', 'prerequisites', 'dependents']);
+        $task->load([
+            'creator', 'claimer', 'phase', 'reviewer', 'concern.creator',
+            'prerequisites', 'dependents', 'checklistItems.checker',
+        ]);
 
         return view('tasks.show', compact('project', 'task'));
     }

@@ -132,6 +132,15 @@ class Task extends Model
         return $this->hasOne(TaskConcern::class, 'task_id');
     }
 
+    /**
+     * Abhakbare Checklisten-Items (Akzeptanzkriterien und Testschritte), geordnet
+     * nach Position. Nach `kind` ('acceptance' | 'test') im View gefiltert.
+     */
+    public function checklistItems(): HasMany
+    {
+        return $this->hasMany(TaskChecklistItem::class)->orderBy('position');
+    }
+
     public function pullRequests(): HasMany
     {
         return $this->hasMany(TaskPullRequest::class);

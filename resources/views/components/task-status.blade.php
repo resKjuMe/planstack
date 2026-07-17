@@ -1,4 +1,4 @@
-@props(['status'])
+@props(['status', 'label' => false])
 @php
     $map = [
         'UNKNOWN' => 'bg-gray-100 text-gray-600',
@@ -12,8 +12,11 @@
         'COMPLETED' => 'bg-green-100 text-green-700',
         'MERGED' => 'bg-emerald-100 text-emerald-800',
     ];
-    $value = $status instanceof \App\Enums\TaskStatus ? $status->value : (string) $status;
+    $enum = $status instanceof \App\Enums\TaskStatus ? $status : \App\Enums\TaskStatus::tryFrom((string) $status);
+    $value = $enum?->value ?? (string) $status;
+    // Optional deutsches Label statt des rohen Enum-Werts (konsistente UI-Sprache).
+    $display = $label && $enum ? $enum->label() : $value;
 @endphp
 <span {{ $attributes->merge(['class' => 'inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium '.($map[$value] ?? 'bg-gray-100 text-gray-700')]) }}>
-    {{ $value }}
+    {{ $display }}
 </span>

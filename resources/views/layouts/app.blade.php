@@ -17,6 +17,10 @@
 
         <!-- Scripts -->
         @vite(['resources/css/app.css', 'resources/js/app.js'])
+
+        {{-- Alpine: Elemente mit x-cloak bis zur Initialisierung verbergen
+             (die Detailseite nutzt x-app-layout, nicht die status-shell). --}}
+        <style>[x-cloak]{display:none !important;}</style>
     </head>
     <body class="font-sans antialiased">
         <div class="min-h-screen bg-gray-100">

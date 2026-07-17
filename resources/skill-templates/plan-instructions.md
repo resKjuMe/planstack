@@ -51,3 +51,39 @@ Beim Anlegen/Bearbeiten eines Tasks gelten die **öffentlichen** Feldnamen (die 
 - `target_actual` und `test_cases` sind für **Menschen** gedacht (Reviewer, PO, QA) — verständlich, nicht als reine Entwicklernotiz.
 - Tasks sinnvoll schneiden: eigenständig umsetzbar, testbar, mit klaren Gates statt einem Riesen-Task.
 - Beim Anlegen mehrerer abhängiger Tasks zuerst die Vorgänger anlegen, dann die abhängigen mit `gate` auf deren Namen.
+
+### Formatvorgaben für die Freitextfelder (verbindlich)
+
+Die Task-Detailseite parst diese Felder und rendert sie strukturiert (abhakbare Listen, Gegenüberstellung, Timeline). Halte dich an das Format, damit feste Bestandteile enthalten sind und alles sauber dargestellt wird. Ohne die Struktur fällt die Anzeige auf reinen Fließtext zurück.
+
+**`description`** — Prosa (Markdown). Optionale Verlaufs-Zeilen jeweils am **Zeilenanfang**, sie wandern automatisch in die Verlaufs-Timeline (mit Datum, wenn angegeben):
+```
+Umgesetzt: <was wurde umgesetzt> (TT.MM.JJJJ)
+Scope-Entscheidung: <Entscheidung und Begründung>
+```
+
+**`acceptance_criteria`** — **ein Kriterium pro Zeile**, als Liste (`- …` oder `1. …`). Optional gegliedert durch Abschnitts-Überschriften auf **eigener Zeile**:
+```
+Scope:
+- <Rahmen/Nicht-Ziele> (read-only Kontext)
+Done when:
+- <messbare Fertig-Bedingung> (abhakbar)
+- <weitere Fertig-Bedingung>
+Contract:
+- <API-/Verhaltens-Zusage> (read-only Kontext)
+```
+Nur Punkte unter **Done when** sind abhakbar; **Scope**/**Contract** sind Kontext. Ohne Überschriften sind alle Zeilen abhakbare Kriterien.
+
+**`target_actual`** — genau zwei mit Label eingeleitete Blöcke; wird als Gegenüberstellung (zwei Karten) gerendert:
+```
+IST: <Verhalten VOR dem Task>
+SOLL: <Verhalten NACH dem Task>
+```
+
+**`test_cases`** — **nummerierte Schritte** (`1.`, `2.`, …). Ein erwartetes Ergebnis mit Präfix `Erwartung:` (wird als Prüfschritt markiert), nicht-abhakbare Anmerkungen mit Präfix `Hinweis:` (erscheinen als Fußnote):
+```
+1. <Vorbedingung/Schritt>
+2. <Schritt>
+Erwartung: <erwartetes, prüfbares Ergebnis>
+Hinweis: <Randbedingung, z. B. nur in Chrome>
+```

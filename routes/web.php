@@ -14,6 +14,7 @@ use App\Http\Controllers\ProjectPrSyncController;
 use App\Http\Controllers\ProjectSummaryController;
 use App\Http\Controllers\SkillDownloadController;
 use App\Http\Controllers\ProjectTeamController;
+use App\Http\Controllers\TaskChecklistController;
 use App\Http\Controllers\TaskConcernController;
 use App\Http\Controllers\TaskController;
 use App\Http\Controllers\TeamController;
@@ -140,6 +141,14 @@ Route::middleware('auth')->group(function () {
     Route::delete('projects/{project}/tasks/{task}/concern', [TaskConcernController::class, 'destroy'])
         ->scopeBindings()
         ->name('projects.tasks.concern.destroy');
+
+    // Task-Checkliste (Akzeptanzkriterien + Testschritte, abhakbar)
+    Route::patch('projects/{project}/tasks/{task}/checklist/{checklistItem}', [TaskChecklistController::class, 'toggle'])
+        ->scopeBindings()
+        ->name('projects.tasks.checklist.toggle');
+    Route::post('projects/{project}/tasks/{task}/checklist/convert', [TaskChecklistController::class, 'convert'])
+        ->scopeBindings()
+        ->name('projects.tasks.checklist.convert');
 });
 
 require __DIR__.'/auth.php';
