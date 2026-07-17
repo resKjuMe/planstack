@@ -8,7 +8,7 @@ Verbindliche, projektübergreifende Anweisungen für den allgemeinen `planstack`
 
 Der Skill kennt lokale Einstellungen, die **ausschließlich auf diesem Rechner** in `${CLAUDE_SKILL_DIR}/settings.json` (neben `config.json`) gespeichert werden — sie werden **nie** an den Server übertragen. Fehlt die Datei oder ein einzelner Schlüssel, gilt der jeweilige Default.
 
-**Aufruf `/planstack settings`** (erstes Argument ist `settings`, kein Projekt-Alias): die aktuellen Werte anzeigen und den Nutzer die gewünschten wählen lassen, danach nach `settings.json` schreiben.
+**Aufruf `/planstack settings`** (erstes Argument ist `settings`, kein Projekt-Alias): alle Einstellungen **auf einmal als Tabelle** anzeigen (Spalten: Einstellung · aktueller Wert · mögliche Werte) — **nicht** nacheinander abfragen. Der Nutzer nennt dann die gewünschten Änderungen (z. B. „local_tests=ask, babysit_prs=yes"); danach die Werte gesammelt nach `settings.json` schreiben und die aktualisierte Tabelle zeigen.
 
 Die ersten vier Einstellungen sind jeweils **`yes`** (ja), **`no`** (nein) oder **`ask`** (bei jeder Aufgabe fragen); die zwei Review-Einstellungen haben eigene Werte (siehe Spalte „Werte"):
 
