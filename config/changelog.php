@@ -8,12 +8,15 @@ return [
         [
             'version' => '1.7.0',
             'date' => '2026-07-17',
-            'tldr' => ['PR-Review per Skill', 'PR reparieren', 'Review-Ergebnis am Task', 'Neue Skill-Einstellungen'],
+            'tldr' => ['PR-Review per Skill', 'PR reparieren', 'Review-Ergebnis am Task & im Diagramm', 'Mehr Skill-Einstellungen'],
             'changes' => [
-                'Neu: „/planstack review" — übernimmt Tasks, die „in Review" sind (mit PR), führt den Review-Skill aus und erfasst das Ergebnis. Ohne Task-Angabe wird automatisch ein Task des Projekts gewählt, ohne Projekt wird projektübergreifend gereviewt.',
-                'Neu: „/planstack fix" — bringt einen offenen PR wieder in Ordnung: löst Merge-Konflikte mit dem Ziel-Branch, beantwortet und behebt sowohl normale Kommentare als auch Review-Kommentare (Review-Threads werden zusätzlich aufgelöst) und korrigiert fehlschlagende CI.',
-                'Tasks haben jetzt ein Review-Ergebnis: „zuletzt reviewt am", „Empfehlung" (genehmigt / Änderungen erforderlich) und eine „Review-Zusammenfassung". Diese Felder werden beim Abschluss eines Reviews befüllt und sind im Task-Formular bearbeitbar, solange der Task „in Review" ist.',
-                'Neue Skill-Einstellungen unter „/planstack settings": „Review-Ergebnis" (nur im Task / im Task und am PR) und „Review-Status" (Empfehlung manuell bestätigen oder automatisch setzen).',
+                'Neu: „/planstack review" — übernimmt Tasks, die „in Review" sind (mit PR), führt den Review-Skill aus und erfasst das Ergebnis. Ohne Task-Angabe wird automatisch ein Task des Projekts gewählt, ohne Projekt wird projektübergreifend gereviewt. Eigene Tasks (selbst umgesetzt) können nicht reviewt werden.',
+                'Neu: „/planstack fix <Task/PR>" — bringt einen offenen PR wieder in Ordnung: löst Merge-Konflikte mit dem Ziel-Branch, beantwortet und behebt sowohl normale Kommentare als auch Review-Kommentare (Review-Threads werden zusätzlich aufgelöst) und korrigiert fehlschlagende CI. Der Task bzw. die PR-Nummer ist dabei anzugeben.',
+                'Tasks haben jetzt ein Review-Ergebnis: „zuletzt reviewt am", „Empfehlung" (genehmigt / Änderungen erforderlich) und eine ausführliche „Review-Analyse" (mit vorangestelltem TLDR und einem Kopf, der Strenge, Gründlichkeit sowie das verwendete Modell/den Aufwand dokumentiert). Die Felder werden beim Abschluss eines Reviews befüllt und sind im Task-Formular bearbeitbar, solange der Task „in Review" ist.',
+                'Das Review-Ergebnis wird jetzt auch angezeigt: in der Task-Detailansicht sowie als Eck-Symbol im Diagramm (grünes Häkchen = genehmigt, Warndreieck = Änderungen erforderlich).',
+                'Erweiterte Skill-Einstellungen unter „/planstack settings", jetzt als editierbare Tabelle mit verständlichen deutschen Bezeichnern: Review-Ergebnis (nur im Task / im Task und am PR), Review-Status (manuell bestätigen / automatisch), Review-Strenge (locker / standard / streng), Review-Genauigkeit (lässig / standard / akribisch) und Ausgabe-Umfang (knapp / standard / ausführlich).',
+                'Beim Anlegen eines Tasks sollte die geschätzte Dateianzahl immer angegeben werden (Hinweis/Konvention, keine Pflichtvalidierung).',
+                'Fehlerbehebung: Der Statuswechsel eines Tasks über die API meldete fälschlich einen Serverfehler (500), obwohl der Wechsel ausgeführt wurde — behoben (betraf ebenso das Melden und Auflösen von Concerns).',
             ],
         ],
         [
