@@ -35,6 +35,17 @@
         <x-input-error :messages="$errors->get('summary')" class="mt-2" />
     </div>
 
+    <div class="sm:w-60">
+        <x-input-label for="criticality" value="Kritikalität" />
+        <select id="criticality" name="criticality" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
+            <option value="">—</option>
+            @foreach (\App\Enums\Criticality::cases() as $crit)
+                <option value="{{ $crit->value }}" @selected(old('criticality', $task?->criticality?->value) === $crit->value)>{{ $crit->label() }}</option>
+            @endforeach
+        </select>
+        <x-input-error :messages="$errors->get('criticality')" class="mt-2" />
+    </div>
+
     <div>
         <x-input-label for="description" value="Beschreibung" />
         <textarea id="description" name="description" rows="5"

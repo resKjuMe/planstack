@@ -33,7 +33,7 @@ Beim Anlegen/Bearbeiten eines Tasks gelten die **öffentlichen** Feldnamen (die 
 | Feld (API) | Pflicht | Bedeutung / wie füllen |
 |---|---|---|
 | `name` | ja | Kurzes, projekt-eindeutiges Kürzel (z. B. `C27`, `G5`), max 50 Zeichen. Dient als Handle in Gates, PR-Titeln, Aufrufen. |
-| `summary` | ja | Einzeiler, was der Task liefert, max 255 Zeichen. Prägnant, ergebnisorientiert. |
+| `summary` | ja | **Titel des Tasks** — ein Einzeiler (max 255 Zeichen), **auf Deutsch und leicht verständlich** formuliert, sodass auch Nicht-Techniker sofort erkennen, worum es geht. Prägnant und ergebnisorientiert, kein Fachjargon/Code-Kauderwelsch. |
 | `description` | nein | Ausführliche fachliche Beschreibung / Kontext (Markdown). Das *Was* und *Warum*. |
 | `acceptance_criteria` | nein | Abnahmekriterien — woran ist „fertig" messbar? Als Checkliste/Stichpunkte. |
 | `target_actual` | nein | **IST/SOLL-Vergleich, für Menschen leicht verständlich:** IST = Verhalten **vor** dem Task, SOLL = Verhalten **nach** dem Task. Konkret und alltagsnah formulieren (kein Fachjargon nötig), damit auch Nicht-Techniker den Nutzen erkennen. |
@@ -44,10 +44,12 @@ Beim Anlegen/Bearbeiten eines Tasks gelten die **öffentlichen** Feldnamen (die 
 | `effort_tokens` | nein | Geschätzte Token-Kosten der Umsetzung (Integer ≥ 0). |
 | `affected_files` | **immer angeben** | Geschätzte Anzahl betroffener Dateien (Integer ≥ 0). Verbindliche Konvention, serverseitig **nicht** validiert — trotzdem stets mitgeben. |
 | `gate` | nein | Abhängigkeiten (Voraussetzungen): Liste von Task-**Namen** oder -ids desselben Projekts. Der Task wird erst pickbar, wenn diese erledigt sind. Kein Selbstbezug. |
+| `criticality` | nein | Wie kritisch die Änderung ist (Risiko/Blast-Radius). Einer von: `low` (unkritisch, isoliert/risikoarm), `medium` (mittel, überschaubarer Radius), `high` (hoch, breite Wirkung / heikler Bereich), `critical` (kritisch, Kernfunktion / hohes Risiko). |
 | `status` | nein | Anfangsstatus; beim Planen i. d. R. weglassen (Default `UNKNOWN`) — den Lebenszyklus steuert die Abarbeitung, nicht die Planung. |
 
 **Hinweise:**
 
+- Der **Titel** (`summary`) ist immer **deutsch und leicht verständlich** zu halten — es ist der Text, den Menschen zuerst sehen.
 - `target_actual` und `test_cases` sind für **Menschen** gedacht (Reviewer, PO, QA) — verständlich, nicht als reine Entwicklernotiz.
 - Tasks sinnvoll schneiden: eigenständig umsetzbar, testbar, mit klaren Gates statt einem Riesen-Task.
 - Beim Anlegen mehrerer abhängiger Tasks zuerst die Vorgänger anlegen, dann die abhängigen mit `gate` auf deren Namen.

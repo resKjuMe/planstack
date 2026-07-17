@@ -14,6 +14,7 @@ return [
                 'Neu: Abhakbare Checklisten für Akzeptanzkriterien und Testschritte — mit Fortschrittsanzeige (x/n) und sofortigem Speichern beim Anhaken. Bestehende Freitext-Kriterien lassen sich per Klick in eine Checkliste umwandeln.',
                 'Neu: „/planstack plan" — legt Projekte, Phasen und Tasks an. Für die Textfelder gibt es jetzt klare Formatvorgaben, damit Inhalte einheitlich und ansprechend dargestellt werden.',
                 'Neue Task-Felder: „IST/SOLL-Vergleich" (Verhalten vorher/nachher, als Gegenüberstellung dargestellt) und „Testanleitung" (nummerierte, abhakbare Prüfschritte).',
+                'Neues Task-Feld „Kritikalität" (unkritisch / mittel / hoch / kritisch) — als farbiges Badge in der Detailansicht, im Formular wählbar und über die API setzbar.',
                 'Der „Ausgabe-Umfang" (knapp / standard / ausführlich) wird jetzt konsequent angewendet — „knapp" hält Claude während der Abarbeitung spürbar wortkarger.',
                 'Pull-Request-Titel tragen jetzt Projekt- und Task-Kürzel (z. B. „L2L-G5: …").',
                 '„Freigeben" ist bei einem offenen Concern gesperrt (mit Hinweis), damit ein problematischer Task nicht versehentlich freigegeben wird.',

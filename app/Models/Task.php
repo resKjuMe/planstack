@@ -27,6 +27,7 @@ class Task extends Model
         'description_acceptance_criteria',
         'description_target_actual',
         'description_test_cases',
+        'criticality',
         'phase_id',
         'effort_man_days',
         'effort_story_points',
@@ -46,6 +47,7 @@ class Task extends Model
     {
         return [
             'status' => TaskStatus::class,
+            'criticality' => \App\Enums\Criticality::class,
             'effort_man_days' => 'decimal:1',
             'effort_story_points' => 'integer',
             'effort_tokens' => 'integer',

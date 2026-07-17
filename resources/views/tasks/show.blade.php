@@ -42,6 +42,12 @@
                         {{ $rec->label() }}
                     </span>
                 @endif
+                @if ($task->criticality)
+                    <span title="Kritikalität" class="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold {{ $task->criticality->badgeClasses() }}">
+                        <svg viewBox="0 0 24 24" class="h-3.5 w-3.5" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 9v4"/><path d="M12 17h.01"/><path d="M10.3 3.9L1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg>
+                        {{ $task->criticality->label() }}
+                    </span>
+                @endif
             </div>
             <div class="flex items-center gap-2">
                 @can('claim', $task)
@@ -135,9 +141,15 @@
                     <div class="bg-white rounded-lg shadow p-5 space-y-3 text-sm">
                         <h3 class="font-semibold text-gray-900">Status</h3>
                         <div class="flex items-center justify-between">
-                            <span class="text-gray-400">Workflow</span>
+                            <span class="text-gray-400">Auswirkungen</span>
                             <x-task-status :status="$task->status" :label="true" />
                         </div>
+                        @if ($task->criticality)
+                            <div class="flex items-center justify-between">
+                                <span class="text-gray-400">Kritikalität</span>
+                                <span class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold {{ $task->criticality->badgeClasses() }}">{{ $task->criticality->label() }}</span>
+                            </div>
+                        @endif
                         @if ($hasReview)
                             <div class="flex items-center justify-between">
                                 <span class="text-gray-400">Review</span>

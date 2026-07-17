@@ -513,6 +513,7 @@ class TaskController extends ApiController
             'description_target_actual' => ['nullable', 'string'],
             'test_cases' => ['nullable', 'string'],
             'description_test_cases' => ['nullable', 'string'],
+            'criticality' => ['nullable', Rule::enum(\App\Enums\Criticality::class)],
             'phase_id' => ['nullable', Rule::exists('phases', 'id')->where('project_id', $project->id)],
             'effort_man_days' => ['nullable', 'integer', 'min:0'],
             'effort_story_points' => ['nullable', 'integer', 'min:0'],
