@@ -8,20 +8,20 @@ Verbindliche, projektübergreifende Anweisungen für den allgemeinen `planstack`
 
 Der Skill kennt lokale Einstellungen, die **ausschließlich auf diesem Rechner** in `${CLAUDE_SKILL_DIR}/settings.json` (neben `config.json`) gespeichert werden — sie werden **nie** an den Server übertragen. Fehlt die Datei oder ein einzelner Schlüssel, gilt der jeweilige Default.
 
-**Aufruf `/planstack settings`** (erstes Argument ist `settings`, kein Projekt-Alias): alle Einstellungen **auf einmal als Tabelle** anzeigen (Spalten: Einstellung · aktueller Wert · mögliche Werte) — **nicht** nacheinander abfragen. Der Nutzer nennt dann die gewünschten Änderungen (z. B. „local_tests=ask, babysit_prs=yes"); danach die Werte gesammelt nach `settings.json` schreiben und die aktualisierte Tabelle zeigen.
+**Aufruf `/planstack settings`** (erstes Argument ist `settings`, kein Projekt-Alias): die Einstellungen als **editierbare, interaktive Auswahl** präsentieren — wie `claude /settings`, **nicht** nacheinander abfragen. Nutze ein interaktives Auswahl-Formular (mehrere Fragen auf einmal, je eine pro Einstellung) mit **deutschen Labels** und deutschen Werten; der **aktuelle Wert** ist jeweils vorausgewählt. Nach der Auswahl alle Werte gesammelt nach `settings.json` schreiben und die aktualisierte Übersicht (deutsche Labels) zeigen.
 
-Die ersten vier Einstellungen sind jeweils **`yes`** (ja), **`no`** (nein) oder **`ask`** (bei jeder Aufgabe fragen); die zwei Review-Einstellungen haben eigene Werte (siehe Spalte „Werte"):
+**Anzeige immer deutsch**, in `settings.json` aber die stabilen Schlüssel/Werte speichern (Mapping unten):
 
-| Schlüssel | Bedeutung | Werte | Default |
+| Einstellung (Label) | Schlüssel | Werte (Anzeige → gespeichert) | Default |
 |---|---|---|---|
-| `local_tests` | Lokale Testausführung nach der Umsetzung | yes/no/ask | `yes` |
-| `local_phpstan` | Lokale PHPStan-Verifikation | yes/no/ask | `yes` |
-| `local_phpcs` | Lokale PHPCS-Formatierung | yes/no/ask | `yes` |
-| `babysit_prs` | PRs nach dem Öffnen betreuen (CI/Review beobachten, nachbessern) | yes/no/ask | `ask` |
-| `review_results` | Wohin ein Review-Ergebnis geschrieben wird | `task_only` (nur im Task) · `task_and_pr` (Task **und** PR) | `task_only` |
-| `review_auto_status` | Review-Empfehlung (APPROVE/REQUEST_CHANGES) setzen | `manual` (erst bestätigen lassen) · `auto` (automatisch aus dem Review) | `manual` |
+| Lokale Tests ausführen | `local_tests` | Ja→`yes` · Nein→`no` · Bei jeder Aufgabe fragen→`ask` | Ja |
+| PHPStan-Prüfung (lokal) | `local_phpstan` | Ja→`yes` · Nein→`no` · Bei jeder Aufgabe fragen→`ask` | Ja |
+| PHPCS-Formatierung (lokal) | `local_phpcs` | Ja→`yes` · Nein→`no` · Bei jeder Aufgabe fragen→`ask` | Ja |
+| PRs betreuen (Babysit) | `babysit_prs` | Ja→`yes` · Nein→`no` · Bei jeder Aufgabe fragen→`ask` | Bei jeder Aufgabe fragen |
+| Review-Ergebnis speichern | `review_results` | Nur im Task→`task_only` · Im Task und am PR→`task_and_pr` | Nur im Task |
+| Review-Empfehlung setzen | `review_auto_status` | Manuell bestätigen→`manual` · Automatisch→`auto` | Manuell bestätigen |
 
-`settings.json` (Beispiel mit den Defaults):
+`settings.json` (Beispiel mit den Defaults; gespeichert werden die Schlüssel/Werte, nicht die Labels):
 
 ```json
 {
