@@ -5,6 +5,7 @@ use App\Http\Controllers\ApiTokenController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ProjectCalibrationController;
 use App\Http\Controllers\ProjectChangelogController;
+use App\Http\Controllers\ProjectClaudeController;
 use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\ProjectDiagramController;
 use App\Http\Controllers\ProjectMemberController;
@@ -36,6 +37,12 @@ Route::get('/dashboard', fn () => redirect()->route('projects.index'))
 Route::middleware('auth')->group(function () {
     // Nutzer-Changelog der Website (Versionsübersicht in der Hauptnavi)
     Route::view('/changelog', 'changelog')->name('changelog');
+
+    // FAQ / Nachschlagewerk (Hauptnavi „FAQ")
+    Route::prefix('faq')->name('faq.')->group(function () {
+        Route::view('/', 'faq.index')->name('index');
+        Route::view('/status-logic', 'faq.status-logic')->name('status-logic');
+    });
 
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
@@ -86,6 +93,13 @@ Route::middleware('auth')->group(function () {
     // Download the Planstack Claude-Code skill (SKILL.md + prefilled config) as ZIP
     Route::get('projects/{project}/skill', ProjectSkillController::class)
         ->name('projects.skill');
+
+    // "Claude"-Unterseite der Projektbearbeitung: Board-Protokoll-Konfiguration
+    // (token-sparende Schalter), Web-Pendant zur API /config.
+    Route::get('projects/{project}/claude', [ProjectClaudeController::class, 'edit'])
+        ->name('projects.claude.edit');
+    Route::match(['put', 'patch'], 'projects/{project}/claude', [ProjectClaudeController::class, 'update'])
+        ->name('projects.claude.update');
 
     // Project ← team assignment (grants access)
     Route::post('projects/{project}/teams', [ProjectTeamController::class, 'store'])

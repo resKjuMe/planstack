@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Enums\TaskStatus;
+use App\Http\Middleware\AttachPlanstackConfig;
 use App\Http\Resources\TaskResource;
 use App\Models\Project;
 use App\Models\Task;
@@ -112,11 +113,9 @@ class TaskController extends ApiController
         $this->authorize('claim', $task);
 
         if ($task->claimed_by_id !== null) {
-            return response()->json([
-                'message' => $task->claimed_by_id === $request->user()->id
-                    ? 'Du hast diesen Task bereits beansprucht.'
-                    : 'Task ist bereits beansprucht.',
-            ], 409);
+            return $this->conflict($task->claimed_by_id === $request->user()->id
+                ? 'Du hast diesen Task bereits beansprucht.'
+                : 'Task ist bereits beansprucht.');
         }
 
         $task->update([
@@ -125,7 +124,7 @@ class TaskController extends ApiController
             'status' => TaskStatus::CLAIMED->value,
         ]);
 
-        return new TaskResource($this->decorateOne($project, $task));
+        return $this->ack($project, $task);
     }
 
     /**
@@ -136,7 +135,7 @@ class TaskController extends ApiController
         $this->authorize('claim', $task);
 
         if ($task->claimed_by_id === null) {
-            return response()->json(['message' => 'Task ist nicht beansprucht.'], 409);
+            return $this->conflict('Task ist nicht beansprucht.');
         }
 
         $task->update([
@@ -145,7 +144,7 @@ class TaskController extends ApiController
             'status' => TaskStatus::PICKABLE->value,
         ]);
 
-        return new TaskResource($this->decorateOne($project, $task));
+        return $this->ack($project, $task);
     }
 
     /**
@@ -172,13 +171,13 @@ class TaskController extends ApiController
             'in_progress' => TaskStatus::IN_PROGRESS,
         }]);
 
-        return new TaskResource($this->decorateOne($project, $task));
+        return $this->ack($project, $task);
     }
 
     /**
      * POST .../pr — set the PR number (digits only).
      */
-    public function pr(Request $request, Project $project, Task $task): JsonResource
+    public function pr(Request $request, Project $project, Task $task): JsonResource|JsonResponse
     {
         $this->authorize('update', $task);
 
@@ -188,23 +187,61 @@ class TaskController extends ApiController
 
         $task->update(['pr_number' => $data['pr_number']]);
 
-        return new TaskResource($this->decorateOne($project, $task));
+        return $this->ack($project, $task);
     }
 
     /**
      * POST .../merge — mark MERGED; merged_at only on the first transition.
      */
-    public function merge(Project $project, Task $task): JsonResource
+    public function merge(Project $project, Task $task): JsonResource|JsonResponse
     {
         $this->authorize('update', $task);
 
+        $this->markMerged($task);
+
+        return $this->ack($project, $task);
+    }
+
+    /**
+     * POST .../complete — the bundled "work finished" action (actions.bundling):
+     * optionally set the PR number, move to done (⇒ IN_REVIEW when a PR exists,
+     * otherwise IN_PROGRESS), and optionally merge — all in one round-trip.
+     */
+    public function complete(Request $request, Project $project, Task $task): JsonResource|JsonResponse
+    {
+        $this->authorize('update', $task);
+
+        $data = $request->validate([
+            'pr_number' => ['sometimes', 'integer', 'min:1'],
+            'merge' => ['sometimes', 'boolean'],
+        ]);
+
+        if (array_key_exists('pr_number', $data)) {
+            $task->pr_number = $data['pr_number'];
+            $task->save();
+        }
+
+        if ($data['merge'] ?? false) {
+            $this->markMerged($task);
+        } else {
+            $task->update([
+                'status' => $task->pr_number !== null ? TaskStatus::IN_REVIEW->value : TaskStatus::IN_PROGRESS->value,
+            ]);
+        }
+
+        return $this->ack($project, $task);
+    }
+
+    /**
+     * Mark a task MERGED, stamping merged_at only on the first transition.
+     */
+    private function markMerged(Task $task): void
+    {
         $update = ['status' => TaskStatus::MERGED->value];
         if ($task->merged_at === null) {
             $update['merged_at'] = now();
         }
         $task->update($update);
-
-        return new TaskResource($this->decorateOne($project, $task));
     }
 
     /**
@@ -249,7 +286,7 @@ class TaskController extends ApiController
 
         $task->update(['status' => TaskStatus::CONCERNED->value]);
 
-        return new TaskResource($this->decorateOne($project, $task->fresh()));
+        return $this->ack($project, $task->fresh());
     }
 
     /**
@@ -265,7 +302,7 @@ class TaskController extends ApiController
             $task->update(['status' => $task->claimed_by_id ? TaskStatus::CLAIMED->value : TaskStatus::PICKABLE->value]);
         }
 
-        return new TaskResource($this->decorateOne($project, $task->fresh()));
+        return $this->ack($project, $task->fresh());
     }
 
     /**
@@ -381,6 +418,39 @@ class TaskController extends ApiController
         }
 
         return array_values(array_unique($ids));
+    }
+
+    /**
+     * The response for a write action. Honors `claim.return_details`: when off,
+     * a minimal ack (id/name/status) instead of the full decorated task — the
+     * client re-reads the board anyway. When on, the full TaskResource (itself
+     * trimmed by `task.fields`).
+     */
+    private function ack(Project $project, Task $task): JsonResource|JsonResponse
+    {
+        $decorated = $this->decorateOne($project, $task);
+
+        if (! AttachPlanstackConfig::value(request(), 'claim.return_details')) {
+            return response()->json([
+                'id' => $decorated->id,
+                'name' => $decorated->name,
+                'status' => $decorated->status->value,
+                'display_status' => ($decorated->x_display_status ?? $decorated->status)->value,
+            ]);
+        }
+
+        return new TaskResource($decorated);
+    }
+
+    /**
+     * A conflict/error response, suppressing the message body when
+     * `response.errors=minimal` (status code carries the meaning).
+     */
+    private function conflict(string $message, int $status = 409): JsonResponse
+    {
+        $minimal = AttachPlanstackConfig::value(request(), 'response.errors') === 'minimal';
+
+        return response()->json($minimal ? new \stdClass : ['message' => $message], $status);
     }
 
     /**

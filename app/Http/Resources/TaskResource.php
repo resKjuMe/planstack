@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources;
 
+use App\Http\Middleware\AttachPlanstackConfig;
 use App\Models\Task;
 use App\Support\TaskBoardService;
 use Illuminate\Http\Request;
@@ -13,13 +14,49 @@ use Illuminate\Http\Resources\Json\JsonResource;
  * Consistent JSON for a Task, including the computed board fields
  * (gate, stacking, pickable, unlocks, pr_url) that are present when the
  * task has been decorated by {@see TaskBoardService}.
+ *
+ * The field set is trimmed by the per-project `task.fields` config
+ * (minimal | standard | full) — a server-enforced token knob the client
+ * never has to ask about.
  */
 class TaskResource extends JsonResource
 {
+    /** Keys kept for `task.fields=minimal` — just enough to pick & work a task. */
+    private const MINIMAL = [
+        'id', 'name', 'summary', 'acceptance_criteria', 'status',
+        'pickable', 'unlocks', 'gate', 'unmet',
+    ];
+
+    /** Extra keys added for `task.fields=standard`. */
+    private const STANDARD_EXTRA = [
+        'display_status', 'phase_id', 'effort', 'pr_number', 'pr_url',
+        'claimed_by_id', 'prerequisites', 'concern',
+    ];
+
     /**
      * @return array<string, mixed>
      */
     public function toArray(Request $request): array
+    {
+        $full = $this->fullArray($request);
+        $fields = AttachPlanstackConfig::value($request, 'task.fields');
+
+        return match ($fields) {
+            'minimal' => array_intersect_key($full, array_flip(self::MINIMAL)),
+            'standard' => array_intersect_key(
+                $full,
+                array_flip([...self::MINIMAL, ...self::STANDARD_EXTRA]),
+            ),
+            default => $full,
+        };
+    }
+
+    /**
+     * The full, un-trimmed representation.
+     *
+     * @return array<string, mixed>
+     */
+    private function fullArray(Request $request): array
     {
         return [
             'id' => $this->id,

@@ -7,7 +7,6 @@ use App\Enums\TaskStatus;
 use App\Http\Requests\StoreProjectRequest;
 use App\Http\Requests\UpdateProjectRequest;
 use App\Models\Project;
-use App\Support\SkillTemplate;
 use App\Support\TaskBoardService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
@@ -94,18 +93,16 @@ class ProjectController extends Controller
     {
         $this->authorize('create', Project::class);
 
-        return view('projects.create', ['skillDefault' => SkillTemplate::default()]);
+        return view('projects.create');
     }
 
     public function store(StoreProjectRequest $request): RedirectResponse
     {
         $data = $request->validated();
 
-        // Seed the skill text with the default template (placeholders intact) when
-        // the form left it empty, so every project ships a working skill.
-        if (blank($data['skill_description'] ?? null)) {
-            $data['skill_description'] = SkillTemplate::default();
-        }
+        // skill_description bleibt leer, sofern nichts Projektspezifisches angegeben
+        // wird — der generische Skill (Bootstrap + serverseitiges Betriebshandbuch)
+        // greift automatisch. Projektnotizen werden auf der „Claude"-Unterseite gepflegt.
 
         $project = Project::create([
             ...$data,

@@ -41,15 +41,6 @@
                         <x-input-error :messages="$errors->get('github_repo')" class="mt-2" />
                     </div>
 
-                    <div>
-                        <x-input-label for="skill_description" value="Skillbeschreibung (Markdown)" />
-                        <textarea id="skill_description" name="skill_description" rows="12" spellcheck="false"
-                                  class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 font-mono text-sm"
-                                  placeholder="# Skill&#10;&#10;Beschreibung des Skills für dieses Projekt …">{{ old('skill_description', $skillDefault ?? '') }}</textarea>
-                        <p class="mt-1 text-xs text-gray-400">Markdown. Vorbelegt mit der Standard-Skillvorlage; <span class="font-mono">@{{alias}}</span> und <span class="font-mono">@{{name}}</span> werden beim Download durch Kürzel und Name ersetzt.</p>
-                        <x-input-error :messages="$errors->get('skill_description')" class="mt-2" />
-                    </div>
-
                     <div class="flex items-center justify-end gap-3">
                         <a href="{{ route('projects.index') }}" class="text-sm text-gray-500 hover:text-gray-700">Abbrechen</a>
                         <x-primary-button>Anlegen</x-primary-button>

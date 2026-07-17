@@ -2,11 +2,13 @@
 
 <x-app-layout>
     <x-slot name="header">
-        <x-project-header-bar :project="$project" />
+        <h2 class="font-semibold text-xl text-gray-800 leading-tight">
+            Projekt bearbeiten – <span class="font-mono">{{ $project->alias }}</span>
+        </h2>
     </x-slot>
 
     <x-slot name="subheader">
-        <x-project-tabs :project="$project" active="access" />
+        <x-project-edit-tabs :project="$project" active="access" />
     </x-slot>
 
     <div class="py-8">

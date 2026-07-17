@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\McpController;
 use App\Http\Controllers\Api\PhaseController;
+use App\Http\Controllers\Api\ProjectConfigController;
 use App\Http\Controllers\Api\ProjectController;
 use App\Http\Controllers\Api\TaskController;
 use Illuminate\Http\Request;
@@ -31,6 +32,10 @@ Route::middleware('auth:sanctum')->group(function () {
     // Board-Read (pickable/Aggregate/Gates) — Einstieg für Board-Clients
     Route::get('projects/{project}/board', [ProjectController::class, 'board']);
 
+    // Board-Protokoll-Konfiguration (token-sparende Schalter)
+    Route::get('projects/{project}/config', [ProjectConfigController::class, 'show']);
+    Route::match(['put', 'patch'], 'projects/{project}/config', [ProjectConfigController::class, 'update']);
+
     // MCP-Server (Streamable-HTTP, JSON-RPC 2.0) — pro Projekt, gleiche Token-Auth
     Route::match(['get', 'post'], 'projects/{project}/mcp', McpController::class)->name('projects.mcp');
 
@@ -54,6 +59,9 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('projects/{project}/tasks/{task}/status', [TaskController::class, 'status']);
         Route::post('projects/{project}/tasks/{task}/pr', [TaskController::class, 'pr']);
         Route::post('projects/{project}/tasks/{task}/merge', [TaskController::class, 'merge']);
+        // Gebündelte Aktion: PR setzen (optional) + fertig melden (+ optional mergen)
+        // in einem Roundtrip — spart Tokens (actions.bundling).
+        Route::post('projects/{project}/tasks/{task}/complete', [TaskController::class, 'complete']);
         Route::post('projects/{project}/tasks/{task}/gate', [TaskController::class, 'gate']);
         Route::post('projects/{project}/tasks/{task}/concern', [TaskController::class, 'concern']);
         Route::delete('projects/{project}/tasks/{task}/concern', [TaskController::class, 'resolveConcern']);

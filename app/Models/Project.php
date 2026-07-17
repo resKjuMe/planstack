@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\ProjectRole;
+use App\Support\ProjectConfig;
 use iamfarhad\LaravelAuditLog\Traits\Auditable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -23,7 +24,41 @@ class Project extends Model
         'description',
         'github_repo',
         'skill_description',
+        'config',
+        'config_version',
     ];
+
+    /**
+     * @return array<string, string>
+     */
+    protected function casts(): array
+    {
+        return [
+            'config' => 'array',
+        ];
+    }
+
+    /**
+     * The effective board-protocol config (DEFAULTS ← profile ← overrides).
+     * Absent config ⇒ historical behaviour.
+     *
+     * @return array<string, string|bool|int>
+     */
+    public function effectiveConfig(): array
+    {
+        return ProjectConfig::effective($this->config);
+    }
+
+    /**
+     * The behaviour hints a client should adopt — the delta vs the defaults.
+     * Empty when the client's baked-in defaults already match.
+     *
+     * @return array<string, string|bool|int>
+     */
+    public function clientHints(): array
+    {
+        return ProjectConfig::clientHints($this->effectiveConfig());
+    }
 
     /**
      * The effective "owner/repo" for PR linking and PR-status sync: the value

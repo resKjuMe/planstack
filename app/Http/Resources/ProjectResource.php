@@ -34,6 +34,7 @@ class ProjectResource extends JsonResource
                 fn () => $this->roleFor($request->user())?->value,
             ),
             'tasks_count' => $this->whenCounted('tasks'),
+            'config_version' => $this->config_version,
             'phases' => PhaseResource::collection($this->whenLoaded('phases')),
             'tasks' => TaskResource::collection($this->whenLoaded('tasks')),
         ];

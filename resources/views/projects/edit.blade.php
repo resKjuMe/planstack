@@ -5,8 +5,12 @@
         </h2>
     </x-slot>
 
+    <x-slot name="subheader">
+        <x-project-edit-tabs :project="$project" active="general" />
+    </x-slot>
+
     <div class="py-8">
-        <div class="max-w-2xl mx-auto sm:px-6 lg:px-8 space-y-6">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
             <x-flash />
 
             <div class="bg-white rounded-lg shadow p-6">
@@ -42,15 +46,6 @@
                                       placeholder="owner/repo" />
                         <p class="mt-1 text-xs text-gray-400">Format <span class="font-mono">owner/repo</span> – für PR-Verlinkung und den „PRs abgleichen"-Button. Leer lassen, um den Standard aus der Konfiguration zu nutzen.</p>
                         <x-input-error :messages="$errors->get('github_repo')" class="mt-2" />
-                    </div>
-
-                    <div>
-                        <x-input-label for="skill_description" value="Skillbeschreibung (Markdown)" />
-                        <textarea id="skill_description" name="skill_description" rows="12" spellcheck="false"
-                                  class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 font-mono text-sm"
-                                  placeholder="# Skill&#10;&#10;Beschreibung des Skills für dieses Projekt …">{{ old('skill_description', $project->skill_description) }}</textarea>
-                        <p class="mt-1 text-xs text-gray-400">Markdown. <span class="font-mono">@{{alias}}</span> und <span class="font-mono">@{{name}}</span> werden beim Skill-Download durch Kürzel und Name ersetzt.</p>
-                        <x-input-error :messages="$errors->get('skill_description')" class="mt-2" />
                     </div>
 
                     <div class="flex items-center justify-end gap-3">

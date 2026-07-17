@@ -13,7 +13,10 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        //
+        // Runs after SubstituteBindings so {project} is a resolved model. Resolves
+        // the per-project board config and stamps X-Planstack-Config-Version on
+        // every API response (drift detection without an extra round-trip).
+        $middleware->appendToGroup('api', \App\Http\Middleware\AttachPlanstackConfig::class);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(
