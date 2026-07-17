@@ -160,6 +160,25 @@ class ProjectSkillController extends Controller
             'ausgewogen' => 'Concern nur bei echten Blockern/Unklarheiten',
             'mutig' => 'eigenständig vernünftig annehmen, nur harte Blocker melden',
         ],
+        'run.mode' => [
+            'manual' => 'im manuellen Modus laufen (jede Aktion bestätigen)',
+            'accept_edits' => 'Datei-Edits automatisch akzeptieren',
+            'plan' => 'im Plan-Modus laufen (erst planen, dann umsetzen)',
+            'auto' => 'autonom durcharbeiten (alle Aktionen automatisch)',
+        ],
+        'run.model' => [
+            'opus' => 'mit Modell Opus laufen',
+            'sonnet' => 'mit Modell Sonnet laufen',
+            'haiku' => 'mit Modell Haiku laufen',
+            'fable' => 'mit Modell Fable laufen',
+        ],
+        'run.effort' => [
+            'low' => 'Reasoning-Aufwand niedrig',
+            'medium' => 'Reasoning-Aufwand mittel',
+            'high' => 'Reasoning-Aufwand hoch',
+            'xhigh' => 'Reasoning-Aufwand sehr hoch',
+            'max' => 'Reasoning-Aufwand maximal',
+        ],
     ];
 
     /**
@@ -175,6 +194,10 @@ class ProjectSkillController extends Controller
         $behaviour = [];
         foreach ($hintKeys as $key) {
             $value = $eff[$key] ?? null;
+            // Client-/Standardwert → kein Hinweis nötig (spart Tokens).
+            if ($value === (ProjectConfig::DEFAULTS[$key] ?? null)) {
+                continue;
+            }
             if ($key === 'parallelism.max_workers') {
                 $behaviour[] = "- `{$key}` = {$value} → bis zu {$value} Worker parallel";
 
@@ -183,6 +206,9 @@ class ProjectSkillController extends Controller
             $val = is_bool($value) ? ($value ? 'true' : 'false') : (string) $value;
             $text = self::HINT_GLOSS[$key][$val] ?? '';
             $behaviour[] = "- `{$key}` = {$val}".($text !== '' ? " → {$text}" : '');
+        }
+        if ($behaviour === []) {
+            $behaviour[] = '- (alle Verhaltens-Einstellungen auf Client-/Standardwerten)';
         }
 
         $enforced = [];
@@ -194,7 +220,7 @@ class ProjectSkillController extends Controller
         }
 
         return "## Board-Konfiguration (Stand: v{$project->config_version})\n\n"
-            ."Diese Hinweise steuern **dein Verhalten**:\n\n"
+            ."Diese Hinweise steuern **dein Verhalten** (nur Abweichungen vom Standard):\n\n"
             .implode("\n", $behaviour)."\n\n"
             ."Server-erzwungen (wirkt automatisch, nur zur Info): "
             .implode(', ', $enforced).'.';

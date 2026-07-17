@@ -48,6 +48,11 @@ class ProjectConfig
         'context.between_tasks' => 'continue',     // stop | continue
         'parallelism.max_workers' => 1,
         'concerns.attitude' => 'ausgewogen',       // kritisch | ausgewogen | mutig
+        // Claude-Ausführung — Default 'client' = Einstellung der lokalen Umgebung
+        // übernehmen (kein Override, kein Hinweis).
+        'run.mode' => 'client',                    // client | manual | accept_edits | plan | auto
+        'run.model' => 'client',                   // client | opus | sonnet | haiku | fable
+        'run.effort' => 'client',                  // client | low | medium | high | xhigh | max
     ];
 
     /**
@@ -67,6 +72,9 @@ class ProjectConfig
         'execution.mode' => ['headless', 'subagent', 'single_session'],
         'context.between_tasks' => ['stop', 'continue'],
         'concerns.attitude' => ['kritisch', 'ausgewogen', 'mutig'],
+        'run.mode' => ['client', 'manual', 'accept_edits', 'plan', 'auto'],
+        'run.model' => ['client', 'opus', 'sonnet', 'haiku', 'fable'],
+        'run.effort' => ['client', 'low', 'medium', 'high', 'xhigh', 'max'],
     ];
 
     /** @var array<int, string> boolean-valued keys */
@@ -90,6 +98,9 @@ class ProjectConfig
         'instructions.delivery',
         'conventions.delivery',
         'concerns.attitude',
+        'run.mode',
+        'run.model',
+        'run.effort',
     ];
 
     /**
