@@ -36,10 +36,6 @@ Alle Endpunkte laufen unter `$BASE/projects/$PROJ` (siehe Betriebshandbuch). Feh
 
 **B — ein Task (`/planstack <PROJECT> <TASK>`):** Der Task wird per **numerischer id** adressiert, `<TASK>` ist aber ein Name — daher zuerst auflösen: `GET $BASE/projects/$PROJ/tasks` lesen, den Eintrag mit `name == <TASK>` suchen, dessen `id` verwenden. Dann denselben Zyklus **nur für diesen Task** (claim → analyze → umsetzen/concern → PR → done → merge). Ist der Task nicht pickbar (Gate offen, bereits beansprucht oder schon mit PR), das melden statt es zu erzwingen.
 
-## PR-Konvention
-
-Beim Erstellen eines Pull Requests **immer** den Task-Namen als Titel-Prefix setzen: `<TASK>: <Kurzbeschreibung>` (z. B. `C27: PseudoPropertyBinding-Fallback`). `<TASK>` ist der Kurzname des Tasks (Feld `name`), nicht die numerische id. Gilt für beide Modi.
-
 ## Selbst-Update
 
-Jede Board-Antwort trägt `X-Planstack-Config-Version` und `X-Planstack-Skill-Revision`. Weicht `X-Planstack-Skill-Revision` von `$SKILLREV` ab: `GET $BASE/projects/$PROJ/config` lesen und `operating_manual` + `status_rules` von dort befolgen (Vorrang vor dem Snapshot unten). Die **projektspezifische** Board-Konfiguration (Verhaltens-Hinweise wie `execution.mode`, `run.mode`, `parallelism.max_workers` …) liefert das Board bei Bedarf als `client_hints`-Block mit — separat je `<PROJECT>`, nichts davon ist fest im Skill hinterlegt.
+Jede Board-Antwort trägt `X-Planstack-Config-Version` und `X-Planstack-Skill-Revision`. Weicht `X-Planstack-Skill-Revision` von `$SKILLREV` ab: `GET $BASE/projects/$PROJ/config` lesen und `operating_manual` + `status_rules` + `skill_instructions` von dort befolgen (Vorrang vor den Snapshots unten) — `skill_instructions` sind die verbindlichen, projektübergreifenden Anweisungen dieses Skills (z. B. die PR-Titel-Konvention). Die **projektspezifische** Board-Konfiguration (Verhaltens-Hinweise wie `execution.mode`, `run.mode`, `parallelism.max_workers` …) liefert das Board bei Bedarf als `client_hints`-Block mit — separat je `<PROJECT>`, nichts davon ist fest im Skill hinterlegt.

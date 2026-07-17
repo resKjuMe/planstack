@@ -27,6 +27,11 @@ class SkillTemplate
         return resource_path('skill-templates/operating-manual.md');
     }
 
+    public static function skillInstructionsPath(): string
+    {
+        return resource_path('skill-templates/skill-instructions.md');
+    }
+
     private static function partial(string $path): string
     {
         return is_file($path) ? rtrim((string) file_get_contents($path))."\n" : '';
@@ -52,13 +57,30 @@ class SkillTemplate
     }
 
     /**
-     * A short content revision covering all shared skill content (operating
-     * manual + status rules). Changes whenever either partial is edited, so
-     * clients detect drift via the X-Planstack-Skill-Revision header and re-fetch.
+     * Server-maintained, project-independent instructions for the general
+     * `planstack` skill (e.g. the PR-title convention). Served via /config as
+     * `skill_instructions`; only the planstack skill re-adopts it on drift, so
+     * per-project skills (L2LR/LOG) are unaffected by these directives.
+     */
+    public static function skillInstructions(): string
+    {
+        return self::partial(self::skillInstructionsPath());
+    }
+
+    /**
+     * A short content revision covering all server-maintained skill content
+     * (operating manual + status rules + planstack skill instructions). Changes
+     * whenever any of them is edited, so clients detect drift via the
+     * X-Planstack-Skill-Revision header and re-fetch the parts their SKILL.md
+     * tells them to re-adopt.
      */
     public static function sharedRevision(): string
     {
-        return substr(hash('xxh128', self::operatingManual().'::'.self::statusRules()), 0, 12);
+        return substr(
+            hash('xxh128', self::operatingManual().'::'.self::statusRules().'::'.self::skillInstructions()),
+            0,
+            12,
+        );
     }
 
     /**

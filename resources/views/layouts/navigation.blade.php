@@ -19,6 +19,13 @@
                     <x-nav-link :href="route('teams.index')" :active="request()->routeIs('teams.*')">
                         {{ __('Teams') }}
                     </x-nav-link>
+                    <x-nav-link :href="route('skill.setup')" :active="request()->routeIs('skill.*')">
+                        <svg class="me-1 inline h-4 w-4 text-gray-400" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                            <path d="M10.75 2.75a.75.75 0 0 0-1.5 0v8.614L6.295 8.235a.75.75 0 1 0-1.09 1.03l4.25 4.5a.75.75 0 0 0 1.09 0l4.25-4.5a.75.75 0 0 0-1.09-1.03l-2.955 3.129V2.75Z" />
+                            <path d="M3.5 12.75a.75.75 0 0 0-1.5 0v2.5A2.75 2.75 0 0 0 4.75 18h10.5A2.75 2.75 0 0 0 18 15.25v-2.5a.75.75 0 0 0-1.5 0v2.5c0 .69-.56 1.25-1.25 1.25H4.75c-.69 0-1.25-.56-1.25-1.25v-2.5Z" />
+                        </svg>
+                        {{ __('Planstack-Skill') }}
+                    </x-nav-link>
                     <x-nav-link :href="route('changelog')" :active="request()->routeIs('changelog')" class="font-mono">
                         <svg class="js-changelog-new me-1 inline h-4 w-4 text-indigo-500" style="display:none" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" title="Neue Änderungen">
                             <path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/><path d="M20 3v4"/><path d="M22 5h-4"/><path d="M4 17v2"/><path d="M5 18H3"/>
@@ -57,12 +64,6 @@
                             <span class="js-psci-update ms-2 rounded-full bg-indigo-600 px-1.5 py-0.5 text-[10px] font-semibold text-white align-middle" style="display:none">v{{ $ciVersion }}</span>
                         </x-dropdown-link>
 
-                        {{-- Download des allgemeinen Planstack-Skills für Claude Code
-                             (SKILL.md + vorausgefüllte config.json, projektübergreifend) --}}
-                        <x-dropdown-link :href="route('skill.download')" class="whitespace-nowrap">
-                            {{ __('Planstack-Skill') }}
-                        </x-dropdown-link>
-
                         <!-- Authentication -->
                         <form method="POST" action="{{ route('logout') }}">
                             @csrf
@@ -97,6 +98,9 @@
             </x-responsive-nav-link>
             <x-responsive-nav-link :href="route('teams.index')" :active="request()->routeIs('teams.*')">
                 {{ __('Teams') }}
+            </x-responsive-nav-link>
+            <x-responsive-nav-link :href="route('skill.setup')" :active="request()->routeIs('skill.*')">
+                {{ __('Planstack-Skill') }}
             </x-responsive-nav-link>
             <x-responsive-nav-link :href="route('changelog')" :active="request()->routeIs('changelog')">
                 v{{ config('changelog.releases.0.version') }}

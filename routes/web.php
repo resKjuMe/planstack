@@ -38,11 +38,12 @@ Route::middleware('auth')->group(function () {
     // Nutzer-Changelog der Website (Versionsübersicht in der Hauptnavi)
     Route::view('/changelog', 'changelog')->name('changelog');
 
-    // Download des allgemeinen Planstack-Claude-Code-Skills (SKILL.md +
-    // vorausgefüllte config.json) als ZIP. Projektübergreifend: das Projekt wird
-    // dem Skill dynamisch als Argument übergeben (/planstack <PROJECT>), daher
-    // steht in der Hauptnavi statt in den Projekt-Details.
-    Route::get('/skill', SkillDownloadController::class)->name('skill.download');
+    // Allgemeiner Planstack-Claude-Code-Skill (projektübergreifend): eigener
+    // Hauptnavi-Punkt mit vorgeschalteter Erklärungsseite (/skill) und dem
+    // eigentlichen ZIP-Download (/skill/download). Das Projekt wird dem Skill
+    // dynamisch als Argument übergeben (/planstack <PROJECT>).
+    Route::view('/skill', 'skill.setup')->name('skill.setup');
+    Route::get('/skill/download', SkillDownloadController::class)->name('skill.download');
 
     // FAQ / Nachschlagewerk (Hauptnavi „FAQ")
     Route::prefix('faq')->name('faq.')->group(function () {

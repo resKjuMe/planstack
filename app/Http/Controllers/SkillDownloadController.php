@@ -82,6 +82,7 @@ class SkillDownloadController extends Controller
             rtrim(SkillTemplate::default()),
             rtrim(SkillTemplate::operatingManual()),
             rtrim(SkillTemplate::statusRules()),
+            rtrim(SkillTemplate::skillInstructions()),
         ];
 
         return implode("\n\n", array_filter($parts))."\n";

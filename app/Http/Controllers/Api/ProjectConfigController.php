@@ -83,6 +83,9 @@ class ProjectConfigController extends ApiController
             // nach, statt neu heruntergeladen zu werden.
             'operating_manual' => SkillTemplate::operatingManual(),
             'status_rules' => SkillTemplate::statusRules(),
+            // Projektübergreifende Anweisungen des allgemeinen planstack-Skills
+            // (z. B. PR-Titel-Konvention). Nur der planstack-Skill lädt sie nach.
+            'skill_instructions' => SkillTemplate::skillInstructions(),
             'skill_revision' => SkillTemplate::sharedRevision(),
             // Projektspezifische Zusatz-Anweisungen (aus dem Claude-Feld).
             'instructions' => $notes,
