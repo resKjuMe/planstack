@@ -4,11 +4,18 @@
     <span class="inline-flex items-center gap-1 rounded-full bg-gray-100 px-2.5 py-1">
         <span class="text-gray-400">Ersteller</span>
         <span class="font-medium text-gray-700">{{ $task->creator?->name ?? '—' }}</span>
-        @if ($task->claimer)
-            <span class="text-gray-400">→</span>
-            <span class="font-medium text-gray-700">{{ $task->claimer->name }}</span>
-        @endif
     </span>
+
+    @if ($task->claimer)
+        @if ($task->claimed_by_id === $task->created_by_id)
+            <span class="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-1 font-medium text-gray-700">selbst beansprucht</span>
+        @else
+            <span class="inline-flex items-center gap-1 rounded-full bg-gray-100 px-2.5 py-1">
+                <span class="text-gray-400">Beansprucht</span>
+                <span class="font-medium text-gray-700">{{ $task->claimer->name }}</span>
+            </span>
+        @endif
+    @endif
 
     @if ($task->phase)
         <span class="inline-flex items-center gap-1 rounded-full bg-gray-100 px-2.5 py-1">
