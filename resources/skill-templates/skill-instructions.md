@@ -83,7 +83,10 @@ Reviewt Tasks, die **in Review** sind (Status `IN_REVIEW`, mit PR). **Eigene Tas
    Antwort `{"reviewing": null}` bzw. leer ⇒ nichts zu reviewen (nächstes Projekt / fertig).
 2. **Review ausführen:** den **Review-Skill** (`/review`) für den PR des Tasks laufen lassen — mit Strenge gemäß `review_strictness` und Prüftiefe gemäß `review_thoroughness`. Die Antwort aus Schritt 1 trägt **immer** `pr_number` (und `pr_url`, sofern Repo konfiguriert) — unabhängig von den Board-/`task.fields`-Einstellungen. Ergebnis = Empfehlung (`APPROVE` oder `REQUEST_CHANGES`) + die ausführliche Review-Analyse.
 3. **Empfehlung festlegen** gemäß Einstellung `review_auto_status`: bei `manual` die Empfehlung vom Nutzer bestätigen lassen, bei `auto` die aus dem Review abgeleitete Empfehlung direkt verwenden.
-4. **Ergebnis erfassen:** `POST $BASE/projects/$PROJ/tasks/$TASK/review` mit `{"recommendation":"APPROVE|REQUEST_CHANGES","summary":"…"}` — füllt `last_reviewed_at`, `last_review_recommendation`, `last_review_summary`. Das Feld `summary` ist **keine Kurzbeschreibung**, sondern die **ausführliche Review-Analyse** (Befunde je Datei/Aspekt, Begründungen, Risiken, Vorschläge). **Vorab eine TLDR-Version**: mit einer Zeile `TLDR: <Kernaussage in 1–3 Sätzen>` beginnen, danach die vollständige Analyse.
+4. **Ergebnis erfassen:** `POST $BASE/projects/$PROJ/tasks/$TASK/review` mit `{"recommendation":"APPROVE|REQUEST_CHANGES","summary":"…"}` — füllt `last_reviewed_at`, `last_review_recommendation`, `last_review_summary`. Das Feld `summary` ist **keine Kurzbeschreibung**, sondern die **ausführliche Review-Analyse**. Aufbau (in dieser Reihenfolge):
+   1. **Review-Konfiguration** (vorab, damit das Review für andere nachvollziehbar ist) — eine Zeile: `Review-Konfiguration: Strenge=<review_strictness>, Gründlichkeit=<review_thoroughness>, Modell=<tatsächlich genutztes Claude-Modell>, Effort=<Reasoning-Aufwand>`.
+   2. **TLDR** — eine Zeile: `TLDR: <Kernaussage in 1–3 Sätzen>`.
+   3. **Ausführliche Analyse** — Befunde je Datei/Aspekt, Begründungen, Risiken, Vorschläge.
 5. **Ablage gemäß `review_results`:** bei `task_only` nur den Task (Schritt 4). Bei `task_and_pr` zusätzlich am PR hinterlegen: `gh pr review <pr> --approve` bzw. `--request-changes` mit der Zusammenfassung als Kommentar.
 
 ## Fix (`/planstack fix [<PROJECT>] <TASK|PR-NUMMER>`)
