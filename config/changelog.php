@@ -6,6 +6,16 @@
 return [
     'releases' => [
         [
+            'version' => '1.6.0',
+            'date' => '2026-07-17',
+            'tldr' => ['Skill-Einstellungen', 'Konfiguration ziehen', 'Neue Kommandos ohne Neu-Download'],
+            'changes' => [
+                'Neu: „/planstack settings" — lokale Einstellungen für Tests, PHPStan, PHPCS und das Betreuen von PRs, je wählbar als „ja", „nein" oder „bei jeder Aufgabe fragen". Diese Einstellungen werden ausschließlich lokal gespeichert und nie an den Server übertragen.',
+                'Neu: „/planstack update-config" — zieht die neueste allgemeine und (optional) Projekt-Konfiguration und zeigt die jeweiligen Versionsnummern an.',
+                'Der Skill holt sich neu hinzugekommene Kommandos künftig selbst (Selbstheilung): Ist ein aufgerufenes Kommando noch unbekannt, lädt er die aktuelle Kommandoliste vom Server — neue Features stehen so ohne erneuten Download bereit (einmalige Aktualisierung des Skills vorausgesetzt).',
+            ],
+        ],
+        [
             'version' => '1.5.1',
             'date' => '2026-07-17',
             'tldr' => ['Weniger Anfragen beim Abarbeiten', 'Task per Kürzel ansprechbar'],

@@ -56,6 +56,14 @@
                         <dt class="font-mono text-gray-800">/planstack &lt;PROJEKT&gt; &lt;TASK&gt;</dt>
                         <dd class="text-gray-600">Arbeitet gezielt einen einzelnen Task ab (<span class="font-mono">&lt;TASK&gt;</span> = Task-Kürzel, z. B. <span class="font-mono">C27</span>).</dd>
                     </div>
+                    <div>
+                        <dt class="font-mono text-gray-800">/planstack settings</dt>
+                        <dd class="text-gray-600">Lokale Einstellungen anzeigen/ändern (Tests, PHPStan, PHPCS, Babysit-PRs — je „ja/nein/bei jeder Aufgabe fragen"). Wird nur lokal gespeichert.</dd>
+                    </div>
+                    <div>
+                        <dt class="font-mono text-gray-800">/planstack update-config [&lt;PROJEKT&gt;]</dt>
+                        <dd class="text-gray-600">Zieht die neueste allgemeine (und optional Projekt-)Konfiguration und zeigt die Versionsnummern an.</dd>
+                    </div>
                 </dl>
                 <p class="mt-3 text-xs text-gray-400">
                     <span class="font-mono">&lt;PROJEKT&gt;</span> ist der Projekt-Alias (z. B. <span class="font-mono">L2L</span>, <span class="font-mono">LOG</span>).
