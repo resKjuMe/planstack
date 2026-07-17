@@ -2,7 +2,7 @@
 
 Verbindliche, projektübergreifende Anweisungen für den allgemeinen `planstack`-Skill. Serverseitig gepflegt: bei Drift (`X-Planstack-Skill-Revision`) über `GET /config` → `skill_instructions` nachladen.
 
-- **PR-Titel:** Beim Erstellen eines Pull Requests **immer** den Task-Namen als Titel-Prefix setzen: `<TASK>: <Kurzbeschreibung>` (z. B. `C27: PseudoPropertyBinding-Fallback`). `<TASK>` ist der Kurzname des Tasks (Feld `name`), nicht die numerische id. Gilt für beide Modi.
+- **PR-Titel:** Beim Erstellen eines Pull Requests **immer** Projekt- **und** Task-Kürzel als Titel-Prefix setzen, in dieser Reihenfolge: `<PROJECT>-<TASK>: <Kurzbeschreibung>` (z. B. `L2L-G5: PseudoPropertyBinding-Fallback`). `<PROJECT>` ist der Projekt-Alias aus dem Aufruf (z. B. `L2L`), `<TASK>` der Kurzname des Tasks (Feld `name`), nicht die numerische id. Gilt für beide Modi.
 
 ## Lokale Einstellungen (`/planstack settings`)
 
