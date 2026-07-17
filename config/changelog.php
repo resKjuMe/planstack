@@ -6,6 +6,21 @@
 return [
     'releases' => [
         [
+            'version' => '1.8.0',
+            'date' => '2026-07-17',
+            'tldr' => ['Neue Task-Detailseite', 'Abhakbare Checklisten', '„/planstack plan"', 'IST/SOLL & Testanleitung'],
+            'changes' => [
+                'Überarbeitete Task-Detailseite: aufgeräumter Kopf mit Status- und Review-Kennzeichnung nebeneinander, zweispaltiges Layout mit mitlaufender Seitenleiste, ein offener Concern erscheint als auffälliger Warnhinweis direkt oben, dazu ein Verlauf (Timeline) und eine übersichtliche Review-Zusammenfassung mit Kurzfazit.',
+                'Neu: Abhakbare Checklisten für Akzeptanzkriterien und Testschritte — mit Fortschrittsanzeige (x/n) und sofortigem Speichern beim Anhaken. Bestehende Freitext-Kriterien lassen sich per Klick in eine Checkliste umwandeln.',
+                'Neu: „/planstack plan" — legt Projekte, Phasen und Tasks an. Für die Textfelder gibt es jetzt klare Formatvorgaben, damit Inhalte einheitlich und ansprechend dargestellt werden.',
+                'Neue Task-Felder: „IST/SOLL-Vergleich" (Verhalten vorher/nachher, als Gegenüberstellung dargestellt) und „Testanleitung" (nummerierte, abhakbare Prüfschritte).',
+                'Der „Ausgabe-Umfang" (knapp / standard / ausführlich) wird jetzt konsequent angewendet — „knapp" hält Claude während der Abarbeitung spürbar wortkarger.',
+                'Pull-Request-Titel tragen jetzt Projekt- und Task-Kürzel (z. B. „L2L-G5: …").',
+                '„Freigeben" ist bei einem offenen Concern gesperrt (mit Hinweis), damit ein problematischer Task nicht versehentlich freigegeben wird.',
+                'Der Task-Update-Endpunkt der API ist jetzt ein Teil-Update: Es werden nur die tatsächlich mitgeschickten Felder geändert.',
+            ],
+        ],
+        [
             'version' => '1.7.0',
             'date' => '2026-07-17',
             'tldr' => ['PR-Review per Skill', 'PR reparieren', 'Review-Ergebnis am Task & im Diagramm', 'Mehr Skill-Einstellungen'],
