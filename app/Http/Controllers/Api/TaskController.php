@@ -185,10 +185,14 @@ class TaskController extends ApiController
     {
         $this->authorize('contribute', $project);
 
+        $uid = $request->user()->id;
+
         $candidates = $project->tasks()
             ->where('status', TaskStatus::IN_REVIEW->value)
             ->whereNotNull('pr_number')
             ->whereNull('reviewed_by')
+            // Eigene Tasks (selbst beansprucht/umgesetzt) nicht zum Review picken.
+            ->where(fn ($q) => $q->whereNull('claimed_by_id')->orWhere('claimed_by_id', '!=', $uid))
             ->orderBy('id')
             ->get();
 
@@ -217,6 +221,10 @@ class TaskController extends ApiController
             return $this->conflict('Task ist nicht in Review.');
         }
 
+        if ($task->claimed_by_id === $request->user()->id) {
+            return $this->conflict('Du kannst deinen eigenen Task nicht reviewen.');
+        }
+
         if ($task->reviewed_by !== null && $task->reviewed_by !== $request->user()->id) {
             return $this->conflict('Review ist bereits übernommen.');
         }
@@ -234,6 +242,10 @@ class TaskController extends ApiController
     public function review(Request $request, Project $project, Task $task): JsonResource|JsonResponse
     {
         $this->authorize('update', $task);
+
+        if ($task->claimed_by_id === $request->user()->id) {
+            return $this->conflict('Du kannst deinen eigenen Task nicht reviewen.');
+        }
 
         $data = $request->validate([
             'recommendation' => ['required', Rule::enum(ReviewRecommendation::class)],

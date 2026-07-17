@@ -66,7 +66,7 @@ Projekt B2R:  config_version 2
 
 ## Review (`/planstack review [<PROJECT>] [<TASK>]`)
 
-Reviewt Tasks, die **in Review** sind (Status `IN_REVIEW`, mit PR). Ablauf:
+Reviewt Tasks, die **in Review** sind (Status `IN_REVIEW`, mit PR). **Eigene Tasks (selbst beansprucht/umgesetzt) sind nicht reviewbar** — `review-next` überspringt sie, ein gezielter Aufruf darauf wird abgelehnt. Ablauf:
 
 1. **Task wählen & Review übernehmen** (setzt `reviewed_by`):
    - `<PROJECT> <TASK>`: gezielt dieser Task → `POST $BASE/projects/$PROJ/tasks/$TASK/review-claim`.
