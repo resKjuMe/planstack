@@ -21,8 +21,11 @@ Der Skill kennt lokale Einstellungen, die **ausschließlich auf diesem Rechner**
 | Review-Ergebnis speichern | `review_results` | Nur im Task→`task_only` · Im Task und am PR→`task_and_pr` | Nur im Task |
 | Review-Empfehlung setzen | `review_auto_status` | Manuell bestätigen→`manual` · Automatisch→`auto` | Manuell bestätigen |
 | Ausgabe-Umfang | `verbosity` | Standard→`default` · Knapp→`minimal` · Ausführlich→`maximal` | Standard |
+| Review-Strenge | `review_strictness` | Locker→`lenient` · Standard→`default` · Streng→`strict` | Standard |
 
 Der **Ausgabe-Umfang** (`verbosity`) steuert, wie viel Claude während der Abarbeitung ausgibt: `minimal` = nur das Nötigste (kurze Statusmeldungen, Ergebnisse), `default` = normale Berichterstattung, `maximal` = ausführlich (Schritte, Begründungen, Details).
+
+Die **Review-Strenge** (`review_strictness`) steuert, wie streng `/planstack review` urteilt: `lenient` = nur echte Blocker/kritische Punkte bemängeln (im Zweifel `APPROVE`), `default` = normale Prüfung, `strict` = auch kleinere Mängel, Stil und Edge-Cases bemängeln (eher `REQUEST_CHANGES`).
 
 `settings.json` (Beispiel mit den Defaults; gespeichert werden die Schlüssel/Werte, nicht die Labels):
 
@@ -34,7 +37,8 @@ Der **Ausgabe-Umfang** (`verbosity`) steuert, wie viel Claude während der Abarb
   "babysit_prs": "ask",
   "review_results": "task_only",
   "review_auto_status": "manual",
-  "verbosity": "default"
+  "verbosity": "default",
+  "review_strictness": "default"
 }
 ```
 
@@ -73,7 +77,7 @@ Reviewt Tasks, die **in Review** sind (Status `IN_REVIEW`, mit PR). **Eigene Tas
    - nur `<PROJECT>`: automatisch den ersten in-review Task mit PR → `POST $BASE/projects/$PROJ/review-next`.
    - **weder `<TASK>` noch `<PROJECT>`**: **projektübergreifend** — `GET $BASE/projects` auflisten und `review-next` pro Projekt aufrufen, bis eines einen Task liefert.
    Antwort `{"reviewing": null}` bzw. leer ⇒ nichts zu reviewen (nächstes Projekt / fertig).
-2. **Review ausführen:** den **Review-Skill** (`/review`) für den PR des Tasks laufen lassen. Die Antwort aus Schritt 1 trägt **immer** `pr_number` (und `pr_url`, sofern Repo konfiguriert) — unabhängig von den Board-/`task.fields`-Einstellungen. Ergebnis = Empfehlung (`APPROVE` oder `REQUEST_CHANGES`) + Zusammenfassung.
+2. **Review ausführen:** den **Review-Skill** (`/review`) für den PR des Tasks laufen lassen — mit der Strenge gemäß Einstellung `review_strictness` (`lenient`/`default`/`strict`). Die Antwort aus Schritt 1 trägt **immer** `pr_number` (und `pr_url`, sofern Repo konfiguriert) — unabhängig von den Board-/`task.fields`-Einstellungen. Ergebnis = Empfehlung (`APPROVE` oder `REQUEST_CHANGES`) + Zusammenfassung.
 3. **Empfehlung festlegen** gemäß Einstellung `review_auto_status`: bei `manual` die Empfehlung vom Nutzer bestätigen lassen, bei `auto` die aus dem Review abgeleitete Empfehlung direkt verwenden.
 4. **Ergebnis erfassen:** `POST $BASE/projects/$PROJ/tasks/$TASK/review` mit `{"recommendation":"APPROVE|REQUEST_CHANGES","summary":"…"}` — füllt `last_reviewed_at`, `last_review_recommendation`, `last_review_summary`.
 5. **Ablage gemäß `review_results`:** bei `task_only` nur den Task (Schritt 4). Bei `task_and_pr` zusätzlich am PR hinterlegen: `gh pr review <pr> --approve` bzw. `--request-changes` mit der Zusammenfassung als Kommentar.
