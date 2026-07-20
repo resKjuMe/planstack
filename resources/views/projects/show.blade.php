@@ -20,10 +20,6 @@
                 </ul>
             </x-page-head>
 
-            @if ($project->description)
-                <p class="text-sm text-gray-600 dark:text-gray-400 max-w-3xl">{{ $project->description }}</p>
-            @endif
-
             {{-- Kanban-Board (React). Der komplette Zustand kommt server-gerendert
                  aus BoardPresenter::payload(); die App hydriert daraus und spricht
                  für Statuswechsel den board-move-Endpunkt an. --}}

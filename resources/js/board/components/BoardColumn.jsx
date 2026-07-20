@@ -26,7 +26,10 @@ export default function BoardColumn({
     return (
         <div
             className={[
-                'flex w-72 shrink-0 flex-col rounded-lg p-2 transition',
+                // flex-1 + min-w-0: expanded columns share the remaining width
+                // equally (collapsed bars keep their fixed narrow width), so the
+                // board always fills 100% without horizontal scrolling.
+                'flex flex-1 min-w-0 flex-col rounded-lg p-2 transition',
                 overLimit ? 'bg-rose-50/70 dark:bg-rose-900/20' : 'bg-gray-50/70 dark:bg-gray-800/40',
                 isDragActive && !isDropAllowed ? 'opacity-40' : '',
                 isOver && isDropAllowed ? 'ring-2 ring-indigo-400 dark:ring-indigo-500' : '',
