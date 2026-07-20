@@ -108,7 +108,7 @@
                                     </select>
                                 </form>
 
-                                <div class="flex items-center justify-end gap-2">
+                                <div class="flex items-center justify-start gap-2">
                                     <button type="submit" form="edit-status-{{ $status->id }}"
                                             class="rounded-md bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-indigo-700">
                                         {{ __('board_admin.save') }}
