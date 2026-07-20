@@ -34,9 +34,17 @@
                     <div x-cloak x-show="open" class="border-t border-gray-100 px-6 py-4">
                         <ul class="space-y-2">
                             @foreach ($release['changes'] as $change)
+                                @php
+                                    // „Neu:"-Präfix wird als Badge dargestellt statt als Text.
+                                    $isNew = \Illuminate\Support\Str::startsWith($change, 'Neu:');
+                                    $text = $isNew ? ltrim(\Illuminate\Support\Str::after($change, 'Neu:')) : $change;
+                                @endphp
                                 <li class="flex gap-2 text-sm text-gray-700">
                                     <svg class="mt-0.5 h-4 w-4 shrink-0 text-indigo-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>
-                                    <span>{{ $change }}</span>
+                                    <span>
+                                        @if ($isNew)
+                                            <span class="me-1.5 inline-flex items-center rounded-full bg-blue-100 px-2 py-0.5 text-xs font-semibold text-blue-700 align-[1px]">Neu</span>
+                                        @endif{{ $text }}</span>
                                 </li>
                             @endforeach
                         </ul>
