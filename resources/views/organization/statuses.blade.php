@@ -120,10 +120,13 @@
                                             @csrf
                                             @method('DELETE')
                                             <button type="submit" title="{{ __('board_admin.delete') }}"
-                                                    class="text-rose-500 hover:text-rose-700 dark:text-rose-400 dark:hover:text-rose-300">
+                                                    class="block text-rose-500 hover:text-rose-700 dark:text-rose-400 dark:hover:text-rose-300">
                                                 <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>
                                             </button>
                                         </form>
+                                    @else
+                                        {{-- Platzhalter, damit die Aktionsspalte bei nicht loeschbaren Status gleich breit bleibt --}}
+                                        <span class="block h-4 w-4" aria-hidden></span>
                                     @endif
                                 </div>
                             </div>
