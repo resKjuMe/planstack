@@ -41,6 +41,7 @@ class Task extends Model
         'last_review_recommendation',
         'last_review_summary',
         'status',
+        'status_id',
         'claimed_at',
         'merged_at',
     ];
@@ -60,6 +61,50 @@ class Task extends Model
             'claimed_at' => 'datetime',
             'merged_at' => 'datetime',
         ];
+    }
+
+    /**
+     * Dual-write during the status migration (Phase 2): the ENUM `status` stays
+     * the authority, but every save mirrors it into `status_id` (FK to the
+     * organization's configurable status). UNKNOWN maps to the PICKABLE status
+     * (no UNKNOWN in the seeded set). Reads still use `status`; Phase 4 flips the
+     * authority. Removed once the ENUM is dropped (Phase 7).
+     */
+    protected static function booted(): void
+    {
+        static::saving(function (Task $task) {
+            if ($task->status === null) {
+                return;
+            }
+            // Only resolve when the enum changed or the mirror is still empty.
+            if (! $task->isDirty('status') && $task->status_id !== null) {
+                return;
+            }
+
+            $organizationId = Project::whereKey($task->project_id)->value('organization_id');
+            if ($organizationId === null) {
+                return; // legacy/unassigned project — leave mirror untouched
+            }
+
+            $key = $task->status === TaskStatus::UNKNOWN ? 'PICKABLE' : $task->status->value;
+            $statusId = OrgStatus::query()
+                ->where('organization_id', $organizationId)
+                ->where('key', $key)
+                ->value('id');
+
+            if ($statusId !== null) {
+                $task->status_id = $statusId;
+            }
+        });
+    }
+
+    /**
+     * The organization's configurable status this task currently sits in (mirror
+     * of the ENUM `status` during the migration).
+     */
+    public function orgStatus(): BelongsTo
+    {
+        return $this->belongsTo(OrgStatus::class, 'status_id');
     }
 
     /**
