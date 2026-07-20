@@ -19,7 +19,9 @@ use Laravel\Sanctum\HasApiTokens;
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable
 {
-    use Auditable;
+    use Auditable, \App\Concerns\OrganizationAuditMetadata {
+        \App\Concerns\OrganizationAuditMetadata::getAuditMetadata insteadof Auditable;
+    }
 
     /** @use HasFactory<UserFactory> */
     use HasApiTokens, HasFactory, Notifiable;

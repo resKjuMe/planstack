@@ -8,7 +8,9 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class TaskConcern extends Model
 {
-    use Auditable;
+    use Auditable, \App\Concerns\OrganizationAuditMetadata {
+        \App\Concerns\OrganizationAuditMetadata::getAuditMetadata insteadof Auditable;
+    }
     protected $fillable = [
         'task_id',
         'created_by_id',

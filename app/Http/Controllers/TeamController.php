@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreTeamRequest;
 use App\Models\Team;
+use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -14,13 +15,16 @@ class TeamController extends Controller
     public function index(): View
     {
         $userId = Auth::id();
-        $orgId = Auth::user()->organization_id;
+        $user = Auth::user();
+        $orgId = $user->organization_id;
+        // Der Organisationsgründer sieht alle Teams seiner Organisation.
+        $isOrgOwner = $user->organization?->isOwner($user) === true;
 
         $teams = Team::query()
             ->where('organization_id', $orgId)
-            ->where(fn ($q) => $q
+            ->when(! $isOrgOwner, fn ($q) => $q->where(fn ($inner) => $inner
                 ->where('created_by_id', $userId)
-                ->orWhereHas('members', fn ($m) => $m->where('users.id', $userId)))
+                ->orWhereHas('members', fn ($m) => $m->where('users.id', $userId))))
             ->withCount('members')
             ->with('owner')
             ->latest()
@@ -57,7 +61,15 @@ class TeamController extends Controller
 
         $team->load(['owner', 'members']);
 
-        return view('teams.show', compact('team'));
+        // User der Organisation, die noch nicht Mitglied dieses Teams sind —
+        // Auswahlliste zum Hinzufügen (ersetzt die frühere E-Mail-Eingabe).
+        $assignableUsers = User::query()
+            ->where('organization_id', $team->organization_id)
+            ->whereNotIn('id', $team->members->pluck('id'))
+            ->orderBy('name')
+            ->get();
+
+        return view('teams.show', compact('team', 'assignableUsers'));
     }
 
     public function update(Request $request, Team $team): RedirectResponse

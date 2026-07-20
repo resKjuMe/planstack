@@ -69,14 +69,26 @@
                 @can('manageMembers', $team)
                     <form method="POST" action="{{ route('teams.members.store', $team) }}" class="mt-5 border-t pt-5">
                         @csrf
-                        <x-input-label for="email" value="User per E-Mail hinzufügen" />
-                        <div class="mt-1 flex flex-wrap items-center gap-3">
-                            <div class="flex-1 min-w-64">
-                                <x-text-input id="email" name="email" type="email" class="block w-full" :value="old('email')" required />
+                        <x-input-label for="user_id" value="Mitglied hinzufügen" />
+                        @if ($assignableUsers->isNotEmpty())
+                            <div class="mt-1 flex flex-wrap items-center gap-3">
+                                <div class="flex-1 min-w-64">
+                                    <select id="user_id" name="user_id" required
+                                            class="block w-full rounded-md border-gray-300 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                                        @foreach ($assignableUsers as $orgUser)
+                                            <option value="{{ $orgUser->id }}" @selected((int) old('user_id') === $orgUser->id)>
+                                                {{ $orgUser->name }} ({{ $orgUser->email }})
+                                            </option>
+                                        @endforeach
+                                    </select>
+                                </div>
+                                <x-primary-button>Hinzufügen</x-primary-button>
                             </div>
-                            <x-primary-button>Hinzufügen</x-primary-button>
-                        </div>
-                        <p class="mt-1 text-xs text-gray-400">Nur der Ersteller kann Mitglieder ausschließlich per E-Mail hinzufügen.</p>
+                            <p class="mt-1 text-xs text-gray-400">Auswahl aus den Mitgliedern deiner Organisation, die noch nicht im Team sind.</p>
+                        @else
+                            <p class="mt-1 text-sm text-gray-400">Alle Mitglieder deiner Organisation sind bereits in diesem Team.</p>
+                        @endif
+                        <x-input-error :messages="$errors->get('user_id')" class="mt-2" />
                     </form>
                 @endcan
             </div>

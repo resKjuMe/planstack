@@ -17,10 +17,9 @@ class StoreTeamMemberRequest extends FormRequest
      */
     public function rules(): array
     {
-        // Adding to a team happens strictly by e-mail; the address must belong
-        // to a registered user (open registration).
+        // Mitglieder werden aus der Liste der Organisations-User gewählt.
         return [
-            'email' => ['required', 'email', 'exists:users,email'],
+            'user_id' => ['required', 'integer', 'exists:users,id'],
         ];
     }
 }

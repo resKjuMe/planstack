@@ -9,7 +9,7 @@ class TeamPolicy
 {
     public function view(User $user, Team $team): bool
     {
-        return $team->hasMember($user);
+        return $this->ownsOrganization($user, $team) || $team->hasMember($user);
     }
 
     public function create(User $user): bool
@@ -18,23 +18,34 @@ class TeamPolicy
     }
 
     /**
-     * Only the creator may rename the team.
+     * The team creator or the organization owner may rename the team.
      */
     public function update(User $user, Team $team): bool
     {
-        return $team->isOwner($user);
+        return $this->ownsOrganization($user, $team) || $team->isOwner($user);
     }
 
     public function delete(User $user, Team $team): bool
     {
-        return $team->isOwner($user);
+        return $this->ownsOrganization($user, $team) || $team->isOwner($user);
     }
 
     /**
-     * Only the creator may add/remove team members.
+     * The team creator or the organization owner may add/remove team members.
      */
     public function manageMembers(User $user, Team $team): bool
     {
-        return $team->isOwner($user);
+        return $this->ownsOrganization($user, $team) || $team->isOwner($user);
+    }
+
+    /**
+     * Der Gründer der Organisation hat volle Rechte auf alle Teams seiner
+     * Organisation – auch ohne selbst Mitglied zu sein.
+     */
+    private function ownsOrganization(User $user, Team $team): bool
+    {
+        return $user->organization_id !== null
+            && $team->organization_id === $user->organization_id
+            && $user->organization?->isOwner($user) === true;
     }
 }

@@ -14,7 +14,9 @@ use Illuminate\Support\Str;
  */
 class OrganizationInvitation extends Model
 {
-    use Auditable;
+    use Auditable, \App\Concerns\OrganizationAuditMetadata {
+        \App\Concerns\OrganizationAuditMetadata::getAuditMetadata insteadof Auditable;
+    }
 
     protected $fillable = [
         'organization_id',

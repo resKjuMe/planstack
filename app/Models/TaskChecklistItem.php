@@ -9,7 +9,9 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class TaskChecklistItem extends Model
 {
-    use Auditable;
+    use Auditable, \App\Concerns\OrganizationAuditMetadata {
+        \App\Concerns\OrganizationAuditMetadata::getAuditMetadata insteadof Auditable;
+    }
     /** @use HasFactory<\Database\Factories\TaskChecklistItemFactory> */
     use HasFactory;
 

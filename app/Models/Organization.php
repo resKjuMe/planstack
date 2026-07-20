@@ -10,7 +10,9 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Organization extends Model
 {
-    use Auditable;
+    use Auditable, \App\Concerns\OrganizationAuditMetadata {
+        \App\Concerns\OrganizationAuditMetadata::getAuditMetadata insteadof Auditable;
+    }
     use HasFactory;
 
     protected $fillable = [

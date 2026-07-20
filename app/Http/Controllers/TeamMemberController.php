@@ -11,16 +11,16 @@ class TeamMemberController extends Controller
 {
     public function store(StoreTeamMemberRequest $request, Team $team): RedirectResponse
     {
-        $user = User::where('email', $request->validated('email'))->firstOrFail();
+        $user = User::findOrFail($request->validated('user_id'));
 
         // Teams sind organisationsgebunden: nur Mitglieder derselben Organisation
         // dürfen hinzugefügt werden.
         if ($user->organization_id !== $team->organization_id) {
-            return back()->withErrors(['email' => 'Dieser User gehört nicht zu deiner Organisation.']);
+            return back()->withErrors(['user_id' => 'Dieser User gehört nicht zu deiner Organisation.']);
         }
 
         if ($team->members()->where('users.id', $user->id)->exists()) {
-            return back()->withErrors(['email' => 'Dieser User ist bereits im Team.']);
+            return back()->withErrors(['user_id' => 'Dieser User ist bereits im Team.']);
         }
 
         $team->members()->attach($user->id);

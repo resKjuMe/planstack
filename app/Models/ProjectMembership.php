@@ -9,7 +9,9 @@ use Illuminate\Database\Eloquent\Relations\Pivot;
 
 class ProjectMembership extends Pivot
 {
-    use Auditable;
+    use Auditable, \App\Concerns\OrganizationAuditMetadata {
+        \App\Concerns\OrganizationAuditMetadata::getAuditMetadata insteadof Auditable;
+    }
     protected $table = 'users_to_projects';
 
     /**

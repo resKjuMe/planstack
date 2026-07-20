@@ -13,7 +13,9 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Task extends Model
 {
-    use Auditable;
+    use Auditable, \App\Concerns\OrganizationAuditMetadata {
+        \App\Concerns\OrganizationAuditMetadata::getAuditMetadata insteadof Auditable;
+    }
     /** @use HasFactory<\Database\Factories\TaskFactory> */
     use HasFactory;
 
