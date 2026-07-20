@@ -29,11 +29,6 @@ Route::get('/', fn () => redirect()->route(auth()->check() ? 'projects.index' : 
 // Öffentliche API-Dokumentation (kein Login erforderlich)
 Route::get('/api-docs', ApiDocsController::class)->name('api.docs');
 
-// Öffentliche Einrichtungs-/Anleitungsseite für die CI-Status-Anzeige
-// (Userscript + lokaler ci-server) — kein Login erforderlich. Pfad bewusst mit
-// /setup, da /planstack-ci als echtes public/-Verzeichnis (Downloads) belegt ist.
-Route::view('/planstack-ci/setup', 'planstack-ci.setup')->name('planstack-ci.setup');
-
 Route::get('/dashboard', fn () => redirect()->route('projects.index'))
     ->middleware(['auth', 'verified'])
     ->name('dashboard');
@@ -69,6 +64,10 @@ Route::middleware('auth')->group(function () {
     // dynamisch als Argument übergeben (/planstack <PROJECT>).
     Route::view('/skill', 'skill.setup')->name('skill.setup');
     Route::get('/skill/download', SkillDownloadController::class)->name('skill.download');
+
+    // Einrichtungs-/Anleitungsseite für die CI-Status-Anzeige (Userscript +
+    // lokaler ci-server) — reguläre App-Seite mit Menü.
+    Route::view('/planstack-ci/setup', 'planstack-ci.setup')->name('planstack-ci.setup');
 
     // FAQ / Nachschlagewerk (Hauptnavi „FAQ")
     Route::prefix('faq')->name('faq.')->group(function () {
