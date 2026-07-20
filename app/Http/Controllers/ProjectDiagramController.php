@@ -49,7 +49,10 @@ class ProjectDiagramController extends Controller
         foreach ($project->phases as $phase) {
             $pt = $tasks->where('phase_id', $phase->id);
             $sp = max(1, (int) $pt->sum('effort_story_points'));
-            $done = (int) $pt->filter(fn ($t) => $this->board->isDelivered($t))->sum('effort_story_points');
+            // Fortschritt zählt nur erledigte/gemergte Tasks (COMPLETED/MERGED) —
+            // deckungsgleich mit Projektübersicht und Summary; ein offener PR gilt
+            // nicht als Fortschritt (Gate-/Kanten-Logik nutzt weiter isDelivered()).
+            $done = (int) $pt->filter(fn ($t) => $this->board->isDone($t->status))->sum('effort_story_points');
 
             $out[] = [
                 'id' => $phase->id,

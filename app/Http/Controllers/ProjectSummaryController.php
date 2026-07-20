@@ -37,9 +37,13 @@ class ProjectSummaryController extends Controller
      */
     private function kpis(Collection $tasks): array
     {
+        // Fortschritt zählt bewusst nur erledigte/gemergte Tasks (COMPLETED/MERGED)
+        // — ein bloß offener PR gilt nicht als Fortschritt (deckungsgleich mit der
+        // Projektübersicht). Für Gate-/Blocker-Logik gilt weiterhin isDelivered()
+        // (ein offener PR schaltet Nachfolger frei), siehe phaseBlockers().
         $total = $tasks->count();
-        $done = $tasks->filter(fn ($t) => $this->board->isDelivered($t));
-        $remaining = $tasks->filter(fn ($t) => ! $this->board->isDelivered($t));
+        $done = $tasks->filter(fn ($t) => $this->board->isDone($t->status));
+        $remaining = $tasks->filter(fn ($t) => ! $this->board->isDone($t->status));
 
         $totalSp = (int) $tasks->sum('effort_story_points');
         $doneSp = (int) $done->sum('effort_story_points');
@@ -109,7 +113,8 @@ class ProjectSummaryController extends Controller
         foreach ($project->phases as $phase) {
             $pt = $tasks->where('phase_id', $phase->id);
             $sp = max(1, (int) $pt->sum('effort_story_points'));
-            $remaining = $pt->filter(fn ($t) => ! $this->board->isDelivered($t));
+            // Fortschritt/„verbleibend" nur nach erledigt/gemergt (nicht offener PR).
+            $remaining = $pt->filter(fn ($t) => ! $this->board->isDone($t->status));
 
             // Phases that hold unfinished prerequisites of this phase's tasks.
             $blockers = $this->phaseBlockers($phase, $pt, $byId);

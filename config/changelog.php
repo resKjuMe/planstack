@@ -12,7 +12,7 @@ return [
             'changes' => [
                 'Neu: Vollständige Phasen-Verwaltung je Projekt (Tab „Phasen" in der Projektbearbeitung) — Phasen anlegen, umbenennen, per Pfeilen umsortieren und löschen. Beim Löschen bleiben die enthaltenen Tasks erhalten und verlieren nur die Phasenzuordnung.',
                 'Neu: Projekte lassen sich archivieren (Schalter auf der Bearbeiten-Seite). Archivierte Projekte verschwinden aus der Projektliste und sind nur noch über die neue Filter-Pill „Archiviert" sichtbar; die Kennzahlen oben zählen nur aktive Projekte.',
-                'Der Fortschritt in der Projektübersicht zählt jetzt nur noch erledigte bzw. gemergte Tasks — ein bloß offener Pull Request gilt nicht mehr als Fortschritt.',
+                'Der Fortschritt zählt jetzt einheitlich nur noch erledigte bzw. gemergte Tasks — in der Projektübersicht, in der Summary (KPI-Kacheln und Phasen-Balken) und im Phasenfilter des Diagramms. Ein bloß offener Pull Request gilt nicht mehr als Fortschritt.',
             ],
         ],
         [
