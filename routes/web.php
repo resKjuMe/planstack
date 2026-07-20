@@ -9,6 +9,7 @@ use App\Http\Controllers\ProjectClaudeController;
 use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\ProjectDiagramController;
 use App\Http\Controllers\ProjectMemberController;
+use App\Http\Controllers\ProjectPhaseController;
 use App\Http\Controllers\ProjectPrSequenceController;
 use App\Http\Controllers\ProjectPrSyncController;
 use App\Http\Controllers\ProjectSummaryController;
@@ -104,6 +105,20 @@ Route::middleware('auth')->group(function () {
         ->name('projects.claude.edit');
     Route::match(['put', 'patch'], 'projects/{project}/claude', [ProjectClaudeController::class, 'update'])
         ->name('projects.claude.update');
+
+    // Phasen-Verwaltung (Web-Pendant zur API /phases): anlegen, umbenennen,
+    // umsortieren, löschen. Tasks einer gelöschten Phase werden gelöst (phase_id
+    // → null), nicht mitgelöscht.
+    Route::get('projects/{project}/phases', [ProjectPhaseController::class, 'index'])
+        ->name('projects.phases.index');
+    Route::post('projects/{project}/phases', [ProjectPhaseController::class, 'store'])
+        ->name('projects.phases.store');
+    Route::match(['put', 'patch'], 'projects/{project}/phases/{phase}', [ProjectPhaseController::class, 'update'])
+        ->scopeBindings()->name('projects.phases.update');
+    Route::post('projects/{project}/phases/{phase}/move', [ProjectPhaseController::class, 'move'])
+        ->scopeBindings()->name('projects.phases.move');
+    Route::delete('projects/{project}/phases/{phase}', [ProjectPhaseController::class, 'destroy'])
+        ->scopeBindings()->name('projects.phases.destroy');
 
     // Project ← team assignment (grants access)
     Route::post('projects/{project}/teams', [ProjectTeamController::class, 'store'])

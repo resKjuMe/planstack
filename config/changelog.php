@@ -6,6 +6,16 @@
 return [
     'releases' => [
         [
+            'version' => '1.9.0',
+            'date' => '2026-07-20',
+            'tldr' => ['Phasen-Verwaltung', 'Projekte archivieren', 'Fortschritt zählt nur Erledigtes'],
+            'changes' => [
+                'Neu: Vollständige Phasen-Verwaltung je Projekt (Tab „Phasen" in der Projektbearbeitung) — Phasen anlegen, umbenennen, per Pfeilen umsortieren und löschen. Beim Löschen bleiben die enthaltenen Tasks erhalten und verlieren nur die Phasenzuordnung.',
+                'Neu: Projekte lassen sich archivieren (Schalter auf der Bearbeiten-Seite). Archivierte Projekte verschwinden aus der Projektliste und sind nur noch über die neue Filter-Pill „Archiviert" sichtbar; die Kennzahlen oben zählen nur aktive Projekte.',
+                'Der Fortschritt in der Projektübersicht zählt jetzt nur noch erledigte bzw. gemergte Tasks — ein bloß offener Pull Request gilt nicht mehr als Fortschritt.',
+            ],
+        ],
+        [
             'version' => '1.8.0',
             'date' => '2026-07-17',
             'tldr' => ['Neue Task-Detailseite', 'Abhakbare Checklisten', '„/planstack plan"', 'IST/SOLL & Testanleitung'],

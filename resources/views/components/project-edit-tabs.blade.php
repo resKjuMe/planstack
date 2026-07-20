@@ -3,6 +3,7 @@
 @php
     $tabs = [
         'general' => ['label' => 'Allgemein', 'route' => 'projects.edit'],
+        'phases' => ['label' => 'Phasen', 'route' => 'projects.phases.index'],
         'claude' => ['label' => 'Claude', 'route' => 'projects.claude.edit'],
         'access' => ['label' => 'Zugriff', 'route' => 'projects.access'],
     ];
