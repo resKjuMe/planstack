@@ -3,7 +3,7 @@
 <x-app-layout>
     <x-slot name="header">
         <h2 class="font-semibold text-xl text-gray-800 leading-tight">
-            Projekt bearbeiten – <span class="font-mono">{{ $project->alias }}</span>
+            {{ __('projects.edit_project') }} – <span class="font-mono">{{ $project->alias }}</span>
         </h2>
     </x-slot>
 
@@ -15,25 +15,25 @@
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
             <x-flash />
 
-            <x-page-head title="Zugriff">
+            <x-page-head :title="__('common.access')">
                 <div class="space-y-3">
                     <div>
-                        <div class="mb-1 font-semibold text-gray-700">Zugewiesene Teams</div>
+                        <div class="mb-1 font-semibold text-gray-700">{{ __('projects.assigned_teams') }}</div>
                         <ul class="list-disc space-y-1 ps-4">
-                            <li>Der Zugriff aufs Projekt läuft über Teams: Alle Mitglieder eines zugewiesenen Teams können das Projekt sehen und darin arbeiten.</li>
-                            <li><span class="font-medium">Zuweisen</span> fügt eines deiner Teams hinzu — dessen Mitglieder erhalten Zugriff.</li>
-                            <li><span class="font-medium">Entfernen</span> nimmt die Zuweisung zurück — die Mitglieder verlieren den Zugriff (außer über ein anderes Team oder als Projektgründer).</li>
-                            <li>Ohne zugewiesenes Team hat nur der Projektgründer Zugriff. Neue Teams legst du unter „Teams" an.</li>
+                            <li>{{ __('projects.access_to_the_project_is_managed_via') }}</li>
+                            <li><span class="font-medium">{{ __('projects.assign') }}</span> {{ __('projects.adds_one_of_your_teams_its_members_gain') }}</li>
+                            <li><span class="font-medium">{{ __('common.remove') }}</span> {{ __('projects.revokes_the_assignment_the_members_lose') }}</li>
+                            <li>{{ __('projects.without_an_assigned_team_only_the') }}</li>
                         </ul>
                     </div>
                     <div>
-                        <div class="mb-1 font-semibold text-gray-700">Rollen</div>
+                        <div class="mb-1 font-semibold text-gray-700">{{ __('projects.roles') }}</div>
                         <ul class="list-disc space-y-1 ps-4">
-                            <li>Die Rolle legt fest, was jemand im Projekt darf; der Zugriff selbst kommt über die Teams.</li>
-                            <li><span class="font-medium">Mitarbeiter</span>: Standardrolle — Tasks ansehen, beanspruchen und bearbeiten.</li>
-                            <li><span class="font-medium">Architekt</span>: für die technische Planung — Tasks schneiden, Phasen und Abhängigkeiten festlegen und den Aufwand (Story Points) schätzen. Technisch dieselben Rechte wie ein Mitarbeiter, keine Zugriffs-/Rollenverwaltung.</li>
-                            <li><span class="font-medium">Administrator</span>: darf zusätzlich Projekt, Team-Zuweisungen und Rollen verwalten. Der Projektgründer ist immer Administrator.</li>
-                            <li>Ohne expliziten Eintrag gilt „Mitarbeiter". <span class="font-medium">Speichern</span> ändert die Rolle, <span class="font-medium">Reset</span> setzt auf Mitarbeiter zurück.</li>
+                            <li>{{ __('projects.the_role_determines_what_someone_may_do') }}</li>
+                            <li><span class="font-medium">{{ __('projects.contributor') }}</span>: {{ __('projects.default_role_view_claim_and_work_on') }}</li>
+                            <li><span class="font-medium">{{ __('projects.architect') }}</span>: {{ __('projects.for_technical_planning_slicing_tasks') }}</li>
+                            <li><span class="font-medium">{{ __('projects.administrator') }}</span>: {{ __('projects.may_additionally_manage_the_project') }}</li>
+                            <li>{{ __('projects.without_an_explicit_entry_contributor') }} <span class="font-medium">{{ __('common.save') }}</span> {{ __('projects.changes_the_role') }} <span class="font-medium">{{ __('projects.reset') }}</span> {{ __('projects.resets_to_contributor') }}</li>
                         </ul>
                     </div>
                 </div>
@@ -42,26 +42,26 @@
             <div class="grid gap-6 lg:grid-cols-2">
                 {{-- Assigned teams (grant access) --}}
                 <div class="bg-white rounded-lg shadow p-6">
-                    <h3 class="mb-4 font-semibold text-gray-900">Zugewiesene Teams</h3>
+                    <h3 class="mb-4 font-semibold text-gray-900">{{ __('projects.assigned_teams') }}</h3>
 
                     <div class="divide-y divide-gray-100">
                         @forelse ($project->teams as $team)
                             <div class="flex items-center justify-between py-2">
                                 <div>
                                     <span class="font-medium text-gray-800">{{ $team->name }}</span>
-                                    <span class="ms-2 text-xs text-gray-400">{{ $team->members->count() }} Mitglieder</span>
+                                    <span class="ms-2 text-xs text-gray-400">{{ __('common.count_members', ['count' => $team->members->count()]) }}</span>
                                 </div>
                                 @can('manageMembers', $project)
                                     <form method="POST" action="{{ route('projects.teams.destroy', [$project, $team]) }}"
-                                          onsubmit="return confirm('Team-Zuweisung entfernen?');">
+                                          onsubmit="return confirm('{{ __('projects.remove_team_assignment') }}');">
                                         @csrf
                                         @method('DELETE')
-                                        <button class="text-xs text-red-500 hover:underline">Entfernen</button>
+                                        <button class="text-xs text-red-500 hover:underline">{{ __('common.remove') }}</button>
                                     </form>
                                 @endcan
                             </div>
                         @empty
-                            <p class="text-sm text-gray-400">Noch kein Team zugewiesen – ohne Team hat niemand außer dem Projektgründer Zugriff.</p>
+                            <p class="text-sm text-gray-400">{{ __('projects.no_team_assigned_yet_without_a_team_no') }}</p>
                         @endforelse
                     </div>
 
@@ -69,32 +69,32 @@
                         @if ($assignableTeams->isNotEmpty())
                             <form method="POST" action="{{ route('projects.teams.store', $project) }}" class="mt-5 border-t pt-5">
                                 @csrf
-                                <x-input-label for="team_id" value="Team zuweisen" />
+                                <x-input-label for="team_id" :value="__('projects.assign_team')" />
                                 <div class="mt-1 flex items-center gap-3">
                                     <select id="team_id" name="team_id" class="block flex-1 rounded-md border-gray-300 text-sm">
                                         @foreach ($assignableTeams as $team)
                                             <option value="{{ $team->id }}">{{ $team->name }}</option>
                                         @endforeach
                                     </select>
-                                    <x-primary-button>Zuweisen</x-primary-button>
+                                    <x-primary-button>{{ __('projects.assign') }}</x-primary-button>
                                 </div>
                                 <x-input-error :messages="$errors->get('team_id')" class="mt-2" />
                             </form>
                         @else
-                            <p class="mt-4 text-xs text-gray-400 border-t pt-4">Keine weiteren eigenen Teams zum Zuweisen. Neue Teams unter „Teams“ anlegen.</p>
+                            <p class="mt-4 text-xs text-gray-400 border-t pt-4">{{ __('projects.no_further_own_teams_to_assign_create') }}</p>
                         @endif
                     @endcan
                 </div>
 
                 {{-- Role distribution (per user) --}}
                 <div class="bg-white rounded-lg shadow p-6">
-                    <h3 class="mb-4 font-semibold text-gray-900">Rollen</h3>
+                    <h3 class="mb-4 font-semibold text-gray-900">{{ __('projects.roles') }}</h3>
 
                     <table class="w-full text-sm">
                         <thead>
                             <tr class="text-left text-gray-400 border-b">
-                                <th class="py-2">User</th>
-                                <th class="py-2">Rolle</th>
+                                <th class="py-2">{{ __('projects.user') }}</th>
+                                <th class="py-2">{{ __('projects.role') }}</th>
                                 <th class="py-2"></th>
                             </tr>
                         </thead>
@@ -110,7 +110,7 @@
                                     <td class="py-2 font-medium text-gray-800">
                                         {{ $user->name }}
                                         @if ($isOwner)
-                                            <span class="ms-1 text-xs text-amber-600">(Projektgründer)</span>
+                                            <span class="ms-1 text-xs text-amber-600">{{ __('projects.project_owner') }}</span>
                                         @endif
                                         <div class="text-xs text-gray-400">{{ $user->email }}</div>
                                     </td>
@@ -125,7 +125,7 @@
                                                             <option value="{{ $r->value }}" @selected($role === $r)>{{ $r->label() }}</option>
                                                         @endforeach
                                                     </select>
-                                                    <button class="text-xs text-indigo-600 hover:underline">Speichern</button>
+                                                    <button class="text-xs text-indigo-600 hover:underline">{{ __('common.save') }}</button>
                                                 </form>
                                             @else
                                                 <span class="text-xs text-gray-500">{{ $role->label() }}</span>
@@ -138,10 +138,10 @@
                                         @can('manageMembers', $project)
                                             @if (! $isOwner && $roleByUser->has($user->id))
                                                 <form method="POST" action="{{ route('projects.members.destroy', [$project, $user]) }}"
-                                                      title="Auf WORKER zurücksetzen">
+                                                      :title="__('projects.reset_to_worker')">
                                                     @csrf
                                                     @method('DELETE')
-                                                    <button class="text-xs text-gray-400 hover:underline">Reset</button>
+                                                    <button class="text-xs text-gray-400 hover:underline">{{ __('projects.reset') }}</button>
                                                 </form>
                                             @endif
                                         @endcan
@@ -150,7 +150,7 @@
                             @endforeach
                         </tbody>
                     </table>
-                    <p class="mt-3 text-xs text-gray-400">Zugriff kommt über die zugewiesenen Teams. Ohne expliziten Eintrag gilt die Rolle Mitarbeiter.</p>
+                    <p class="mt-3 text-xs text-gray-400">{{ __('projects.access_comes_via_the_assigned_teams') }}</p>
                 </div>
             </div>
         </div>

@@ -16,18 +16,18 @@ class ProjectMemberController extends Controller
     public function update(UpdateMemberRequest $request, Project $project, User $user): RedirectResponse
     {
         if ($project->isOwner($user)) {
-            return back()->withErrors(['role' => 'Die Rolle des Owners kann nicht geändert werden.']);
+            return back()->withErrors(['role' => __('flash.owner_role_immutable')]);
         }
 
         if (! $project->hasMember($user)) {
-            return back()->withErrors(['role' => 'Dieser User hat keinen Team-Zugriff auf das Projekt.']);
+            return back()->withErrors(['role' => __('flash.user_no_team_access')]);
         }
 
         $project->members()->syncWithoutDetaching([
             $user->id => ['role' => $request->validated('role')],
         ]);
 
-        return back()->with('status', 'Rolle aktualisiert.');
+        return back()->with('status', __('flash.role_updated'));
     }
 
     /**
@@ -38,11 +38,11 @@ class ProjectMemberController extends Controller
         $this->authorize('manageMembers', $project);
 
         if ($project->isOwner($user)) {
-            return back()->withErrors(['role' => 'Die Owner-Rolle kann nicht zurückgesetzt werden.']);
+            return back()->withErrors(['role' => __('flash.owner_role_cannot_reset')]);
         }
 
         $project->members()->detach($user->id);
 
-        return back()->with('status', 'Rolle auf WORKER zurückgesetzt.');
+        return back()->with('status', __('flash.role_reset_to_worker'));
     }
 }

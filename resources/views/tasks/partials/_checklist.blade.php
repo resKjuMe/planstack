@@ -11,7 +11,7 @@
     $done = $checkable->where('checked', true)->count();
     $total = $checkable->count();
     $canUpdate = auth()->user()?->can('update', $task);
-    $sectionLabels = ['scope' => 'Scope', 'done_when' => 'Done when', 'contract' => 'Contract'];
+    $sectionLabels = ['scope' => __('tasks.scope'), 'done_when' => __('tasks.done_when'), 'contract' => __('tasks.contract')];
     $hasContent = $items->isNotEmpty() || filled($source);
 @endphp
 
@@ -28,8 +28,8 @@
             <div class="mb-4 flex items-center justify-between gap-3">
                 <h3 class="font-semibold text-gray-900">{{ $title }}</h3>
                 <div class="flex items-center gap-2 text-xs">
-                    <span x-cloak x-show="saved" class="text-green-600">Gespeichert ✓</span>
-                    <span x-cloak x-show="err" class="text-red-600">Fehler – nicht gespeichert</span>
+                    <span x-cloak x-show="saved" class="text-green-600">{{ __('tasks.saved') }}</span>
+                    <span x-cloak x-show="err" class="text-red-600">{{ __('tasks.error_not_saved') }}</span>
                     <span class="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-1 font-medium text-gray-600">
                         <span x-text="done + '/' + total"></span>@if ($unit)&nbsp;{{ $unit }}@endif
                     </span>
@@ -50,7 +50,7 @@
                             <label @class(['flex items-start gap-2.5 text-sm', 'cursor-pointer' => $canUpdate])
                                    @if ($canUpdate) x-data="acItem({ url: '{{ route('projects.tasks.checklist.toggle', [$project, $task, $i->id]) }}', checked: {{ $i->checked ? 'true' : 'false' }} })" @endif>
                                 @if ($kind === 'test' && $i->role === 'expectation')
-                                    <span class="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-amber-100 text-amber-700" title="Prüfschritt">
+                                    <span class="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-amber-100 text-amber-700" title="{{ __('tasks.verification_step') }}">
                                         <svg viewBox="0 0 24 24" class="h-3.5 w-3.5" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M2 12s3.5-7 10-7s10 7 10 7s-3.5 7-10 7s-10-7-10-7z"/><circle cx="12" cy="12" r="2.5"/></svg>
                                     </span>
                                 @elseif ($kind === 'test')
@@ -81,7 +81,7 @@
                 <div class="mt-4 space-y-1 border-t border-gray-100 pt-3">
                     @foreach ($hints as $h)
                         <p class="flex items-start gap-2 text-xs text-gray-500">
-                            <span class="font-semibold text-gray-400">Hinweis:</span>
+                            <span class="font-semibold text-gray-400">{{ __('tasks.note') }}</span>
                             <span>{{ $h->text }}</span>
                         </p>
                     @endforeach
@@ -97,7 +97,7 @@
                 <form method="POST" action="{{ route('projects.tasks.checklist.convert', [$project, $task]) }}">
                     @csrf
                     <input type="hidden" name="kind" value="{{ $kind }}">
-                    <button class="rounded-md bg-white px-2.5 py-1 text-xs font-semibold text-indigo-600 ring-1 ring-indigo-200 hover:bg-indigo-50">In Checkliste umwandeln</button>
+                    <button class="rounded-md bg-white px-2.5 py-1 text-xs font-semibold text-indigo-600 ring-1 ring-indigo-200 hover:bg-indigo-50">{{ __('tasks.convert_to_checklist') }}</button>
                 </form>
             @endif
         </div>

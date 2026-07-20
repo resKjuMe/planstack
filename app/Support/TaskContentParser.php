@@ -141,11 +141,14 @@ class TaskContentParser
             return ['clean' => '', 'events' => []];
         }
 
+        // Match tokens stay the (German) markers actually written in task
+        // descriptions; the display label is looked up per locale. 'match' is
+        // used by the timeline to strip the prefix, 'key' for the shown title.
         $labels = [
-            'Umgesetzt' => 'Umgesetzt',
-            'Scope-Entscheidung' => 'Scope-Entscheidung',
-            'Concern gelöst' => 'Concern gelöst',
-            'Bestätigt' => 'Bestätigt',
+            'umgesetzt' => ['match' => 'Umgesetzt', 'key' => 'implemented'],
+            'scope-entscheidung' => ['match' => 'Scope-Entscheidung', 'key' => 'scope_decision'],
+            'concern gelöst' => ['match' => 'Concern gelöst', 'key' => 'concern_resolved'],
+            'bestätigt' => ['match' => 'Bestätigt', 'key' => 'confirmed'],
         ];
         $pattern = '/^\s*\**\s*(Umgesetzt|Scope-Entscheidung|Concern gelöst|Bestätigt)\b[^\n]*/iu';
 
@@ -155,7 +158,9 @@ class TaskContentParser
 
         foreach ($lines as $line) {
             if (preg_match($pattern, $line, $m)) {
-                $label = $labels[ucfirst(strtolower($m[1]))] ?? trim($m[1]);
+                $def = $labels[mb_strtolower(trim($m[1]))] ?? null;
+                $matchToken = $def['match'] ?? trim($m[1]);
+                $label = $def ? __('timeline.'.$def['key']) : trim($m[1]);
                 // Datum best-effort: dd.mm.yyyy oder yyyy-mm-dd im Absatz.
                 $date = null;
                 if (preg_match('/(\d{1,2})\.(\d{1,2})\.(\d{4})/', $line, $d)) {
@@ -166,6 +171,7 @@ class TaskContentParser
 
                 $events[] = [
                     'label' => $label,
+                    'match' => $matchToken,
                     'text' => trim($line),
                     'date' => $date,
                 ];

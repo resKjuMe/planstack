@@ -1,10 +1,10 @@
 <x-app-layout>
     <x-slot name="header">
         <div class="flex items-center justify-between">
-            <h2 class="font-semibold text-xl text-gray-800 leading-tight">Projekte</h2>
+            <h2 class="font-semibold text-xl text-gray-800 leading-tight">{{ __('common.projects') }}</h2>
             <a href="{{ route('projects.create') }}"
                class="inline-flex items-center whitespace-nowrap rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500">
-                + Neues Projekt
+                + {{ __('projects.new_project') }}
             </a>
         </div>
     </x-slot>
@@ -15,27 +15,27 @@
 
             <div class="flex flex-wrap items-center justify-between gap-4">
                 <p class="text-sm text-gray-500">
-                    {{ $activeCount }} {{ $activeCount === 1 ? 'Projekt' : 'Projekte' }}
-                    · {{ number_format($openTasks, 0, ',', '.') }} offene Tasks
-                    · {{ number_format($totalSp, 0, ',', '.') }} Story Points
+                    {{ $activeCount }} {{ $activeCount === 1 ? __('projects.project') : __('common.projects') }}
+                    · {{ __('projects.count_open_tasks', ['count' => number_format($openTasks, 0, ',', '.')]) }}
+                    · {{ __('projects.count_story_points', ['count' => number_format($totalSp, 0, ',', '.')]) }}
                 </p>
                 <div class="relative">
                     <svg class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
                         <path fill-rule="evenodd" d="M9 3.5a5.5 5.5 0 100 11 5.5 5.5 0 000-11zM2 9a7 7 0 1112.452 4.391l3.328 3.329a.75.75 0 11-1.06 1.06l-3.329-3.328A7 7 0 012 9z" clip-rule="evenodd" />
                     </svg>
-                    <input type="search" x-model="q" placeholder="Projekte durchsuchen …"
+                    <input type="search" x-model="q" :placeholder="__('projects.search_projects')"
                            class="w-64 rounded-md border-0 bg-white py-2 pl-9 pr-3 text-sm text-gray-700 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-500">
                 </div>
             </div>
 
             <div class="mt-4 flex flex-wrap gap-2">
                 @foreach ([
-                    'all' => 'Alle',
-                    'mine' => 'Meine Projekte',
-                    'in_arbeit' => 'In Arbeit',
-                    'fast_fertig' => 'Fast fertig',
-                    'completed' => 'Abgeschlossen',
-                    'archived' => 'Archiviert',
+                    'all' => __('common.all'),
+                    'mine' => __('projects.my_projects'),
+                    'in_arbeit' => __('projects.in_progress'),
+                    'fast_fertig' => __('projects.almost_done'),
+                    'completed' => __('projects.completed'),
+                    'archived' => __('projects.archived'),
                 ] as $key => $label)
                     <button type="button" @click="filter = '{{ $key }}'"
                             class="rounded-full px-4 py-1.5 text-sm font-medium transition"
@@ -47,7 +47,7 @@
 
             @if ($projects->isEmpty())
                 <div class="mt-6 bg-white rounded-lg shadow p-8 text-center text-gray-500">
-                    Noch keine Projekte. Lege dein erstes Projekt an.
+                    {{ __('projects.no_projects_yet_create_your_first') }}
                 </div>
             @else
                 <div class="mt-6 grid items-stretch gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -62,10 +62,10 @@
                                 ? 'completed'
                                 : ($pct <= 0 ? 'nicht_gestartet' : ($pct >= 80 ? 'fast_fertig' : 'in_arbeit'));
                             $categoryLabel = [
-                                'nicht_gestartet' => 'Nicht gestartet',
-                                'in_arbeit' => 'In Arbeit',
-                                'fast_fertig' => 'Fast fertig',
-                                'completed' => 'Abgeschlossen',
+                                'nicht_gestartet' => __('projects.not_started'),
+                                'in_arbeit' => __('projects.in_progress'),
+                                'fast_fertig' => __('projects.almost_done'),
+                                'completed' => __('projects.completed'),
                             ][$category];
                             $badgeClass = [
                                 'nicht_gestartet' => 'bg-gray-100 text-gray-600',
@@ -132,7 +132,7 @@
                                     <div>
                                         <div class="flex items-center justify-between text-sm">
                                             <span :class="hover ? hover.text : 'text-gray-500'"
-                                                  x-text="hover ? (hover.label + ' · ' + hover.count + ' / ' + @js($project->tasks_count) + ' Tasks') : 'Fortschritt'">Fortschritt</span>
+                                                  x-text="hover ? (hover.label + ' · ' + hover.count + ' / ' + @js($project->tasks_count) + ' ' + @js(__('common.tasks'))) : @js(__('common.progress'))">{{ __('common.progress') }}</span>
                                             <span class="font-semibold" :class="hover ? hover.text : 'text-gray-900'"
                                                   x-text="hover ? (hover.pct + ' % SP') : @js(number_format($pct, 1, ',', '').' %')">{{ number_format($pct, 1, ',', '') }} %</span>
                                         </div>
@@ -170,7 +170,7 @@
                                                 @endif
                                             </div>
                                         </div>
-                                        <span class="shrink-0 whitespace-nowrap text-xs text-gray-400">{{ $project->tasks_count }} Tasks · {{ $sp }} SP</span>
+                                        <span class="shrink-0 whitespace-nowrap text-xs text-gray-400">{{ __('projects.count_tasks', ['count' => $project->tasks_count]) }} · {{ $sp }} SP</span>
                                     </div>
                                 </div>
                             </div>

@@ -192,15 +192,15 @@ class ProjectCalibrationController extends Controller
 
         return [
             'total' => $total,
-            'lastSync' => $lastSync?->locale('de')->diffForHumans(),
+            'lastSync' => $lastSync?->locale(app()->getLocale())->diffForHumans(),
             'median' => $median,
             'medianLabel' => $this->deviationLabel($median),
             'medianClass' => $this->deviationClass($median),
             'medianHint' => match (true) {
-                $median === null => 'keine Dateischätzungen',
-                $median > 5 => 'ihr schätzt zu klein',
-                $median < -5 => 'ihr schätzt zu groß',
-                default => 'im Rahmen',
+                $median === null => __('calibration.median_hint_no_estimates'),
+                $median > 5 => __('calibration.median_hint_too_small'),
+                $median < -5 => __('calibration.median_hint_too_large'),
+                default => __('calibration.median_hint_ok'),
             },
             'spPerDay' => $spPerDay,
             'daysPerSpLabel' => $daysPerSp !== null ? $this->formatDurationSmart($daysPerSp) : null,
@@ -331,23 +331,24 @@ class ProjectCalibrationController extends Controller
         }
         usort($bad, fn ($a, $b) => $b['lo'] <=> $a['lo']);
 
-        return 'Große Tasks ('.$bad[0]['lo'].'+ SP) treffen nie — kleiner schneiden verbessert die Kalibrierung am stärksten.';
+        return __('calibration.accuracy_tip', ['lo' => $bad[0]['lo']]);
     }
 
     private function formatDurationSmart(float $days): string
     {
         $minutes = $days * 24 * 60;
+        $sep = app()->getLocale() === 'de' ? ',' : '.';
 
         if ($minutes < 60) {
-            return number_format(max(0, $minutes), 0, ',', '').' Min';
+            return number_format(max(0, $minutes), 0, $sep, '').' '.__('calibration.unit_min');
         }
 
         $hours = $minutes / 60;
         if ($hours < 24) {
-            return number_format($hours, 1, ',', '').' Std';
+            return number_format($hours, 1, $sep, '').' '.__('calibration.unit_hours');
         }
 
-        return number_format($days, 1, ',', '').' Tage';
+        return number_format($days, 1, $sep, '').' '.__('calibration.unit_days');
     }
 
     /**

@@ -16,16 +16,16 @@ class TeamMemberController extends Controller
         // Teams sind organisationsgebunden: nur Mitglieder derselben Organisation
         // dürfen hinzugefügt werden.
         if ($user->organization_id !== $team->organization_id) {
-            return back()->withErrors(['user_id' => 'Dieser User gehört nicht zu deiner Organisation.']);
+            return back()->withErrors(['user_id' => __('flash.user_not_in_organization')]);
         }
 
         if ($team->members()->where('users.id', $user->id)->exists()) {
-            return back()->withErrors(['user_id' => 'Dieser User ist bereits im Team.']);
+            return back()->withErrors(['user_id' => __('flash.user_already_in_team')]);
         }
 
         $team->members()->attach($user->id);
 
-        return back()->with('status', "{$user->name} wurde zum Team hinzugefügt.");
+        return back()->with('status', __('flash.user_added_to_team', ['name' => $user->name]));
     }
 
     public function destroy(Team $team, User $user): RedirectResponse
@@ -33,11 +33,11 @@ class TeamMemberController extends Controller
         $this->authorize('manageMembers', $team);
 
         if ($team->isOwner($user)) {
-            return back()->withErrors(['member' => 'Der Creator kann nicht entfernt werden.']);
+            return back()->withErrors(['member' => __('flash.creator_cannot_be_removed')]);
         }
 
         $team->members()->detach($user->id);
 
-        return back()->with('status', 'Mitglied entfernt.');
+        return back()->with('status', __('flash.member_removed'));
     }
 }

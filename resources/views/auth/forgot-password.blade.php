@@ -1,6 +1,6 @@
 <x-guest-layout>
     <div class="mb-4 text-sm text-gray-600">
-        Passwort vergessen? Kein Problem. Teile uns deine E-Mail-Adresse mit, und wir senden dir einen Link, mit dem du ein neues Passwort vergeben kannst.
+        {{ __('auth.forgot_your_password_no_problem_just') }}
     </div>
 
     <!-- Session Status -->
@@ -11,14 +11,14 @@
 
         <!-- Email Address -->
         <div>
-            <x-input-label for="email" value="E-Mail" />
+            <x-input-label for="email" :value="__('common.email')" />
             <x-text-input id="email" class="block mt-1 w-full" type="email" name="email" :value="old('email')" required autofocus />
             <x-input-error :messages="$errors->get('email')" class="mt-2" />
         </div>
 
         <div class="flex items-center justify-end mt-4">
             <x-primary-button>
-                Link zum Zurücksetzen senden
+                {{ __('auth.email_password_reset_link') }}
             </x-primary-button>
         </div>
     </form>

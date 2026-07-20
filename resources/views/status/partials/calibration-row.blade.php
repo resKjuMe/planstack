@@ -21,20 +21,20 @@
             @if ($row['storyPoints'])
                 · {{ $row['storyPoints'] }} SP
             @endif
-            · gemerged {{ $row['mergedAt']?->format('d.m.') }}
+            · {{ __('status.merged_date', ['date' => $row['mergedAt']?->format('d.m.')]) }}
         </div>
         <div class="mt-0.5 text-sm font-medium text-gray-900">
-            Dateien: {{ $row['filesEstimated'] ?? '–' }} geschätzt → {{ $row['filesActual'] }} geändert
+            {{ __('status.files_estimated_estimated_actual_changed', ['estimated' => $row['filesEstimated'] ?? '–', 'actual' => $row['filesActual']]) }}
             @if ($row['deviationLabel'])
                 <span class="{{ $textClass }}">{{ $row['deviationLabel'] }}</span>
             @endif
         </div>
         <div class="mt-0.5 text-xs text-gray-400">
-            {{ $row['durationLabel'] ?? '—' }} bis Merge
-            · +{{ $row['additions'] }}/&minus;{{ $row['deletions'] }} Zeilen
-            · {{ $row['commits'] }} Commits
-            · {{ $row['comments'] }} Kommentare
-            · {{ $row['reviewComments'] }} Review-Comments
+            {{ $row['durationLabel'] ?? '—' }} {{ __('status.to_merge') }}
+            · +{{ $row['additions'] }}/&minus;{{ $row['deletions'] }} {{ __('status.lines') }}
+            · {{ $row['commits'] }} {{ __('status.commits') }}
+            · {{ $row['comments'] }} {{ __('status.comments') }}
+            · {{ $row['reviewComments'] }} {{ __('status.review_comments') }}
         </div>
     </div>
 </div>

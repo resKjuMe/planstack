@@ -13,8 +13,8 @@ enum ReviewRecommendation: string
     public function label(): string
     {
         return match ($this) {
-            self::APPROVE => 'genehmigt',
-            self::REQUEST_CHANGES => 'Änderungen erforderlich',
+            self::APPROVE => __('enums.review_approve'),
+            self::REQUEST_CHANGES => __('enums.review_request_changes'),
         };
     }
 }

@@ -27,7 +27,7 @@ class GitHubPrSync
     {
         $repo = $project->githubRepo();
         if (! $repo) {
-            throw new RuntimeException("Für „{$project->alias}“ ist kein GitHub-Repository konfiguriert.");
+            throw new RuntimeException(__('flash.github_repo_not_configured', ['alias' => $project->alias]));
         }
 
         $tasks = $project->tasks()
@@ -89,9 +89,7 @@ class GitHubPrSync
                     // Connectivity/TLS failures hit every request the same way, so
                     // bail out with one clear message instead of hammering the rest.
                     throw new RuntimeException(
-                        'GitHub nicht erreichbar: '.$e->getMessage().
-                        ' — bei „SSL certificate problem" curl.cainfo in der php.ini setzen'.
-                        ' oder (nur lokal) GITHUB_VERIFY_SSL=false.',
+                        __('flash.github_unreachable', ['error' => $e->getMessage()]),
                         previous: $e,
                     );
                 }

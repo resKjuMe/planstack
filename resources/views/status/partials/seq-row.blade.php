@@ -13,7 +13,7 @@
     };
     $isActive = $isActiveFn($task);
     // "Bereit" statt des internen PICKABLE-Wortlauts.
-    $statusLabel = $ds === TaskStatus::PICKABLE ? 'bereit' : $ds->label();
+    $statusLabel = $ds === TaskStatus::PICKABLE ? __('status.ready') : $ds->label();
 
     // Rail + Badge je Status (Farbschema: beansprucht=hellblau, Analyse=blau,
     // Arbeit=dunkelblau, Review=lila, Problem/blockiert=rot, pickbar=grün);
@@ -60,7 +60,7 @@
            class="font-mono text-sm font-medium text-[var(--seq-accent)] hover:underline">{{ $task->name }}</a>
 
         <a href="{{ $claudeTaskHref }}" onclick="event.stopPropagation()"
-           title="Mit Claude abarbeiten (/L2LR {{ $task->name }})"
+           title="{{ __('status.work_through_with_claude_l2lr_name', ['name' => $task->name]) }}"
            class="inline-flex items-center justify-center rounded-full p-1 text-[#D97757] hover:bg-[var(--seq-amber-tint)]">
             <svg viewBox="0 0 24 24" class="h-3.5 w-3.5" fill="currentColor" aria-hidden="true"><path d="{{ $claudeLogoPath }}" /></svg>
         </a>
@@ -74,19 +74,19 @@
                 @endif
                 ·
             @endif
-            {{ Str::before($task->phase?->name ?? '—', ' · ') }} · Pos. {{ $task->x_seq }}
+            {{ Str::before($task->phase?->name ?? '—', ' · ') }} · {{ __('status.pos') }} {{ $task->x_seq }}
         </span>
 
         @if ($bottleneck)
             <span class="inline-flex items-center gap-1 rounded-full bg-[var(--seq-red-tint)] px-2 py-0.5 text-[11px] font-medium text-[var(--seq-red-text)]"
-                  title="{{ $task->x_dependents }} PRs hängen direkt von diesem ab">
-                {!! $ic('flame', 'h-3 w-3') !!} Flaschenhals · blockiert {{ $task->x_dependents }} PR{{ (int) $task->x_dependents === 1 ? '' : 's' }}
+                  title="{{ __('status.count_prs_depend_directly_on_this_one', ['count' => $task->x_dependents]) }}">
+                {!! $ic('flame', 'h-3 w-3') !!} {{ __('status.bottleneck') }} · {{ trans_choice('status.blocks_prs', (int) $task->x_dependents, ['count' => $task->x_dependents]) }}
             </span>
         @endif
 
         @if ($big)
             <span class="inline-flex items-center gap-1 rounded-full bg-[var(--seq-amber-tint)] px-2 py-0.5 text-[11px] font-medium text-[var(--seq-amber-text)]">
-                {!! $ic('expand', 'h-3 w-3') !!} {{ $sp >= 10 && $sp === $maxSp ? 'größter PR' : 'großer PR' }}: {{ $sp >= 10 ? $sp.' SP' : $files.' Dateien' }}
+                {!! $ic('expand', 'h-3 w-3') !!} {{ $sp >= 10 && $sp === $maxSp ? __('status.largest_pr') : __('status.large_pr') }}: {{ $sp >= 10 ? $sp.' SP' : $files.' '.__('status.files') }}
             </span>
         @endif
     </div>
@@ -97,7 +97,7 @@
     {{-- Beanspruchung: von wem, seit wann (falls erfasst) --}}
     @if ($ds === TaskStatus::CLAIMED && $task->claimer)
         <p class="mt-1 text-xs text-[var(--seq-sky-text)]">
-            beansprucht von <span class="font-medium">{{ $task->claimer->name }}</span>@if ($task->claimed_at) · seit {{ $task->claimed_at->locale('de')->diffForHumans() }}@endif
+            {{ __('status.claimed_by') }} <span class="font-medium">{{ $task->claimer->name }}</span>@if ($task->claimed_at) · {{ __('status.since') }} {{ $task->claimed_at->locale('de')->diffForHumans() }}@endif
         </p>
     @endif
 
@@ -110,7 +110,7 @@
     {{-- Fußzeile: Abhängigkeits-Chips links, Metriken rechtsbündig --}}
     <div class="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1.5">
         @if ($task->x_dep_open >= 1)
-            <span class="text-xs text-[var(--seq-faint)]">wartet auf</span>
+            <span class="text-xs text-[var(--seq-faint)]">{{ __('status.waiting_on') }}</span>
             @foreach ($task->x_dep_items as $dep)
                 @if ($dep['met'])
                     <span class="inline-flex items-center gap-1 rounded-md border-[0.5px] border-transparent bg-[var(--seq-green-tint)] px-1.5 py-0.5 font-mono text-xs text-[var(--seq-green-text)]">{!! $ic('check', 'h-3 w-3') !!}{{ $dep['name'] }}</span>
@@ -121,8 +121,8 @@
         @endif
         <span class="ml-auto inline-flex items-center gap-3 whitespace-nowrap text-xs text-[var(--seq-muted)]">
             <span class="inline-flex items-center gap-1">{!! $ic('chart', 'h-3.5 w-3.5') !!}{{ $task->effort_story_points }} SP</span>
-            <span class="inline-flex items-center gap-1">{!! $ic('coin', 'h-3.5 w-3.5') !!}{{ $task->x_tokens }} Tokens</span>
-            <span class="inline-flex items-center gap-1">{!! $ic('file', 'h-3.5 w-3.5') !!}{{ $task->affected_files ?? '—' }} Dateien</span>
+            <span class="inline-flex items-center gap-1">{!! $ic('coin', 'h-3.5 w-3.5') !!}{{ $task->x_tokens }} {{ __('status.tokens') }}</span>
+            <span class="inline-flex items-center gap-1">{!! $ic('file', 'h-3.5 w-3.5') !!}{{ $task->affected_files ?? '—' }} {{ __('status.files') }}</span>
         </span>
     </div>
 </div>

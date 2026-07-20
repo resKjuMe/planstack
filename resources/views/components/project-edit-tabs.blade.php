@@ -2,10 +2,10 @@
 
 @php
     $tabs = [
-        'general' => ['label' => 'Allgemein', 'route' => 'projects.edit'],
-        'phases' => ['label' => 'Phasen', 'route' => 'projects.phases.index'],
+        'general' => ['label' => __('common.general'), 'route' => 'projects.edit'],
+        'phases' => ['label' => __('common.phases'), 'route' => 'projects.phases.index'],
         'claude' => ['label' => 'Claude', 'route' => 'projects.claude.edit'],
-        'access' => ['label' => 'Zugriff', 'route' => 'projects.access'],
+        'access' => ['label' => __('common.access'), 'route' => 'projects.access'],
     ];
 @endphp
 

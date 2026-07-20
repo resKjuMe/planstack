@@ -122,7 +122,7 @@ class ProjectController extends Controller
 
         return redirect()
             ->route('projects.show', $project)
-            ->with('status', "Projekt \"{$project->alias}\" wurde angelegt.");
+            ->with('status', __('flash.project_created', ['alias' => $project->alias]));
     }
 
     public function show(Project $project): View
@@ -187,7 +187,7 @@ class ProjectController extends Controller
 
         return redirect()
             ->route('projects.show', $project)
-            ->with('status', 'Projekt aktualisiert.');
+            ->with('status', __('flash.project_updated'));
     }
 
     public function destroy(Project $project): RedirectResponse
@@ -198,6 +198,6 @@ class ProjectController extends Controller
 
         return redirect()
             ->route('projects.index')
-            ->with('status', 'Projekt gelöscht.');
+            ->with('status', __('flash.project_deleted'));
     }
 }

@@ -52,7 +52,7 @@ class TeamController extends Controller
 
         return redirect()
             ->route('teams.show', $team)
-            ->with('status', "Team \"{$team->name}\" wurde angelegt.");
+            ->with('status', __('flash.team_created', ['name' => $team->name]));
     }
 
     public function show(Team $team): View
@@ -84,7 +84,7 @@ class TeamController extends Controller
 
         return redirect()
             ->route('teams.show', $team)
-            ->with('status', "Team umbenannt in \"{$team->name}\".");
+            ->with('status', __('flash.team_renamed', ['name' => $team->name]));
     }
 
     public function destroy(Team $team): RedirectResponse
@@ -95,6 +95,6 @@ class TeamController extends Controller
 
         return redirect()
             ->route('teams.index')
-            ->with('status', 'Team gelöscht.');
+            ->with('status', __('flash.team_deleted'));
     }
 }

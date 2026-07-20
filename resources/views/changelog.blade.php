@@ -1,14 +1,14 @@
 @php $releases = config('changelog.releases', []); @endphp
 <x-app-layout>
     <x-slot name="header">
-        <h2 class="font-semibold text-xl text-gray-800 leading-tight">Was ist neu?</h2>
+        <h2 class="font-semibold text-xl text-gray-800 leading-tight">{{ __('changelog.what_s_new') }}</h2>
     </x-slot>
 
     <style>[x-cloak]{display:none !important;}</style>
 
     <div class="py-8">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-3">
-            <p class="text-sm text-gray-500">Alle sichtbaren Änderungen an Planstack — neueste zuerst. Zeile anklicken für Details.</p>
+            <p class="text-sm text-gray-500">{{ __('changelog.all_visible_changes_to_planstack_newest') }}</p>
 
             @forelse ($releases as $release)
                 <div x-data="{ open: false }" data-release-version="{{ $release['version'] }}" class="bg-white rounded-lg shadow">
@@ -16,7 +16,7 @@
                     <button type="button" @click="open = ! open"
                             class="flex w-full items-center gap-3 px-6 py-4 text-left">
                         <span class="shrink-0 inline-flex items-center rounded-md bg-indigo-600 px-2 py-0.5 text-sm font-mono font-semibold text-white">v{{ $release['version'] }}</span>
-                        <span class="cl-new-badge shrink-0 inline-flex items-center rounded-full bg-indigo-100 px-2 py-0.5 text-xs font-semibold text-indigo-700" style="display:none">Neu</span>
+                        <span class="cl-new-badge shrink-0 inline-flex items-center rounded-full bg-indigo-100 px-2 py-0.5 text-xs font-semibold text-indigo-700" style="display:none">{{ __('changelog.new') }}</span>
 
                         <span class="min-w-0 flex-1 truncate text-sm">
                             @if (!empty($release['tldr']))
@@ -43,7 +43,7 @@
                                     <svg class="mt-0.5 h-4 w-4 shrink-0 text-indigo-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>
                                     <span>
                                         @if ($isNew)
-                                            <span class="me-1.5 inline-flex items-center rounded-full bg-blue-100 px-2 py-0.5 text-xs font-semibold text-blue-700 align-[1px]">Neu</span>
+                                            <span class="me-1.5 inline-flex items-center rounded-full bg-blue-100 px-2 py-0.5 text-xs font-semibold text-blue-700 align-[1px]">{{ __('changelog.new') }}</span>
                                         @endif{{ $text }}</span>
                                 </li>
                             @endforeach
@@ -51,7 +51,7 @@
                     </div>
                 </div>
             @empty
-                <div class="bg-white rounded-lg shadow p-6 text-sm text-gray-500">Noch keine Einträge.</div>
+                <div class="bg-white rounded-lg shadow p-6 text-sm text-gray-500">{{ __('changelog.no_entries_yet') }}</div>
             @endforelse
         </div>
     </div>

@@ -18,16 +18,16 @@
          class="flex items-start gap-3 rounded-lg border border-orange-300 bg-orange-100 px-4 py-3">
         <svg class="mt-0.5 h-5 w-5 shrink-0 text-orange-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></svg>
         <div class="flex-1 text-sm">
-            <p class="font-semibold text-orange-900">CI-Status direkt im Diagramm</p>
-            <p class="mt-0.5 text-orange-800">Sieh je PR den CI-/Merge-Status (✓ / ✗ / x/x Steps, „ready to merge") direkt an den Knoten. Einmalig einrichten — ohne GitHub-Token.</p>
+            <p class="font-semibold text-orange-900">{{ __('status.ci_status_right_in_the_diagram') }}</p>
+            <p class="mt-0.5 text-orange-800">{{ __('status.see_each_pr_s_ci_merge_status_x_x_steps') }}</p>
         </div>
         <a href="{{ url('/planstack-ci/setup') }}"
            class="shrink-0 self-center rounded-md bg-orange-600 px-3 py-2 text-sm font-semibold text-white hover:bg-orange-500">
-            Einrichten
+            {{ __('status.set_up') }}
         </a>
-        <button type="button" data-dismiss title="Für diese Version ausblenden"
+        <button type="button" data-dismiss title="{{ __('status.hide_for_this_version') }}"
                 class="shrink-0 self-center rounded-md border border-orange-600 px-3 py-2 text-sm font-semibold text-orange-600 hover:bg-orange-600 hover:text-white">
-            Ausblenden
+            {{ __('status.hide') }}
         </button>
     </div>
 
@@ -36,16 +36,16 @@
          class="flex items-start gap-3 rounded-lg border border-indigo-200 bg-indigo-50 px-4 py-3">
         <svg class="mt-0.5 h-5 w-5 shrink-0 text-indigo-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><path d="m8 11 4 4 4-4"/><path d="M4 21h16"/></svg>
         <div class="flex-1 text-sm">
-            <p class="font-semibold text-indigo-900">Update für die CI-Status-Anzeige verfügbar</p>
-            <p class="mt-0.5 text-indigo-800">Installiert: <span data-installed class="font-mono"></span> · Aktuell: <span class="font-mono">{{ $ciVersion }}</span></p>
+            <p class="font-semibold text-indigo-900">{{ __('common.update_available_for_the_ci_status') }}</p>
+            <p class="mt-0.5 text-indigo-800">{{ __('status.installed') }} <span data-installed class="font-mono"></span> · {{ __('status.current') }} <span class="font-mono">{{ $ciVersion }}</span></p>
         </div>
         <a href="{{ url('/planstack-ci/setup') }}"
            class="shrink-0 self-center rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white hover:bg-indigo-500">
-            Aktualisieren
+            {{ __('status.refresh') }}
         </a>
-        <button type="button" data-dismiss title="Für diese Version ausblenden"
+        <button type="button" data-dismiss title="{{ __('status.hide_for_this_version') }}"
                 class="shrink-0 self-center rounded-md border border-indigo-600 px-3 py-2 text-sm font-semibold text-indigo-600 hover:bg-indigo-600 hover:text-white">
-            Ausblenden
+            {{ __('status.hide') }}
         </button>
     </div>
 

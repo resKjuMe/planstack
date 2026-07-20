@@ -1,7 +1,7 @@
 <x-app-layout>
     <x-slot name="header">
         <h2 class="font-semibold text-xl text-gray-800 leading-tight">
-            Neuer Task – <span class="font-mono">{{ $project->alias }}</span>
+            {{ __('tasks.new_task') }} – <span class="font-mono">{{ $project->alias }}</span>
         </h2>
     </x-slot>
 
@@ -15,8 +15,8 @@
                     @include('tasks.partials.form')
 
                     <div class="mt-6 flex items-center justify-end gap-3">
-                        <a href="{{ route('projects.show', $project) }}" class="text-sm text-gray-500 hover:text-gray-700">Abbrechen</a>
-                        <x-primary-button>Task anlegen</x-primary-button>
+                        <a href="{{ route('projects.show', $project) }}" class="text-sm text-gray-500 hover:text-gray-700">{{ __('common.cancel') }}</a>
+                        <x-primary-button>{{ __('tasks.create_task') }}</x-primary-button>
                     </div>
                 </form>
             </div>

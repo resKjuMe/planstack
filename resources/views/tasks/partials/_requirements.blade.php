@@ -8,7 +8,7 @@
 @endphp
 
 <div class="bg-white rounded-lg shadow p-5">
-    <h3 class="mb-3 text-sm font-semibold text-gray-900">Voraussetzungen</h3>
+    <h3 class="mb-3 text-sm font-semibold text-gray-900">{{ __('tasks.prerequisites') }}</h3>
     @forelse ($task->prerequisites as $pre)
         @php $preDone = in_array($pre->status, $doneStatuses, true); @endphp
         <a href="{{ route('projects.tasks.show', [$project, $pre]) }}" class="group flex items-start gap-2 py-1">
@@ -23,12 +23,12 @@
             </span>
         </a>
     @empty
-        <p class="text-xs text-gray-400">Keine.</p>
+        <p class="text-xs text-gray-400">{{ __('tasks.none') }}</p>
     @endforelse
 </div>
 
 <div class="bg-white rounded-lg shadow p-5">
-    <h3 class="mb-3 text-sm font-semibold text-gray-900">Blockiert</h3>
+    <h3 class="mb-3 text-sm font-semibold text-gray-900">{{ __('common.blocks') }}</h3>
     @forelse ($task->dependents as $dep)
         <a href="{{ route('projects.tasks.show', [$project, $dep]) }}" class="group flex items-start gap-2 py-1">
             <span class="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-gray-300"></span>
@@ -38,6 +38,6 @@
             </span>
         </a>
     @empty
-        <p class="text-xs text-gray-400">Keine.</p>
+        <p class="text-xs text-gray-400">{{ __('tasks.none') }}</p>
     @endforelse
 </div>

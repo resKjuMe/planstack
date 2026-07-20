@@ -31,7 +31,7 @@ class TaskChecklistController extends Controller
         $item = $checklistItem;
 
         if (! $item->isCheckable()) {
-            abort(422, 'Dieses Item kann nicht abgehakt werden.');
+            abort(422, __('flash.item_not_checkable'));
         }
 
         $data = $request->validate([
@@ -67,7 +67,7 @@ class TaskChecklistController extends Controller
         $kind = $data['kind'];
 
         if ($task->checklistItems()->where('kind', $kind)->exists()) {
-            return back()->with('status', 'Checkliste besteht bereits.');
+            return back()->with('status', __('flash.checklist_exists'));
         }
 
         $source = $kind === 'acceptance'
@@ -77,7 +77,7 @@ class TaskChecklistController extends Controller
         $items = TaskContentParser::checklist((string) $source, $kind);
 
         if ($items === []) {
-            return back()->with('error', 'Kein Text zum Umwandeln gefunden.');
+            return back()->with('error', __('flash.no_text_to_convert'));
         }
 
         foreach ($items as $i => $parsed) {
@@ -89,9 +89,11 @@ class TaskChecklistController extends Controller
             ]);
         }
 
-        $label = $kind === 'acceptance' ? 'Akzeptanzkriterien' : 'Testanleitung';
+        $label = $kind === 'acceptance'
+            ? __('flash.checklist_label_acceptance')
+            : __('flash.checklist_label_test');
 
-        return back()->with('status', "{$label} in Checkliste umgewandelt.");
+        return back()->with('status', __('flash.checklist_converted', ['label' => $label]));
     }
 
     /**

@@ -2,12 +2,12 @@
     {{-- CI-Status-Teaser über der Diagramm-Card (blendet sich aus, sobald das
          Userscript läuft; sonst Einrichten-/Update-Hinweis). --}}
     <x-slot:beforeCard>
-        <x-page-head title="Diagramm">
+        <x-page-head :title="__('common.diagram')">
             <ul class="list-disc space-y-1 ps-4">
-                <li><span class="font-medium">Abhängigkeits-Diagramm</span>: Pfeile zeigen von einer Voraussetzung zu den davon abhängigen Tasks.</li>
-                <li>Knotenfarbe &amp; Icon = Status (siehe Legende); dicker Rahmen = braucht Aufmerksamkeit (pickbar, in Arbeit, Problem).</li>
-                <li>Kanten: durchgezogen = offene Abhängigkeit, hell gestrichelt = erfüllt. Das Badge oben rechts markiert Flaschenhälse.</li>
-                <li>Klick auf einen Knoten hebt seine Kette hervor; die Phasen-Chips filtern; „Kurzbeschreibungen" und „Erledigte ausblenden" schalten Details, „Als PNG" exportiert das Bild.</li>
+                <li><span class="font-medium">{{ __('status.dependency_diagram') }}</span>: {{ __('status.arrows_point_from_a_prerequisite_to_the') }}</li>
+                <li>{{ __('status.node_color_icon_status_see_legend_thick') }}</li>
+                <li>{{ __('status.edges_solid_open_dependency_light') }}</li>
+                <li>{{ __('status.clicking_a_node_highlights_its_chain') }}</li>
             </ul>
         </x-page-head>
         @include('status.partials.ci-teaser')
@@ -19,7 +19,7 @@
         @foreach ($phases as $ph)
             <button type="button" data-diagram-phase="{{ $ph['id'] }}"
                     class="flex items-center gap-2 rounded-md bg-gray-50 ring-1 ring-gray-100 px-2.5 py-1"
-                    title="{{ $ph['name'] }} — {{ $ph['pct'] }}% · zum Filtern klicken">
+                    title="{{ $ph['name'] }} — {{ $ph['pct'] }}% · {{ __('status.click_to_filter') }}">
                 <span class="text-xs font-medium text-gray-600">{{ $ph['short'] }}</span>
                 <span class="h-1.5 w-14 overflow-hidden rounded-full bg-gray-200">
                     <span class="block h-full rounded-full {{ $ph['pct'] >= 100 ? 'bg-green-600' : 'bg-indigo-500' }}" style="width: {{ $ph['pct'] }}%"></span>
@@ -45,9 +45,9 @@
         ];
         $bottleneckIcon = '<path d="M6.5 7h11"/><path d="M6.5 17h11"/><path d="M6 20v-2a6 6 0 1 1 12 0v2a1 1 0 0 1 -1 1h-10a1 1 0 0 1 -1 -1z"/><path d="M6 4v2a6 6 0 1 0 12 0v-2a1 1 0 0 0 -1 -1h-10a1 1 0 0 0 -1 1z"/>';
         $legendItems = [
-            ['pickable', 'pickbar'], ['claimed', 'beansprucht'], ['analyzing', 'in Analyse'],
-            ['inprogress', 'in Arbeit'], ['inreview', 'in Review'], ['blocked', 'blockiert'],
-            ['concern', 'Problem'], ['done', 'erledigt'],
+            ['pickable', __('common.pickable')], ['claimed', __('status.claimed_2')], ['analyzing', __('status.in_analysis')],
+            ['inprogress', __('status.in_progress')], ['inreview', __('status.in_review')], ['blocked', __('common.blocked')],
+            ['concern', __('status.concern')], ['done', __('status.done')],
         ];
         $lgSvg = fn ($paths) => '<svg class="ps-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'.$paths.'</svg>';
     @endphp
@@ -59,34 +59,34 @@
             <span class="mx-1 h-4 w-px bg-gray-200"></span>
             <span class="lg-item">
                 <svg width="26" height="8" aria-hidden="true"><line x1="1" y1="4" x2="25" y2="4" stroke="#64748B" stroke-width="1.5"/></svg>
-                offene Abhängigkeit
+                {{ __('status.open_dependency') }}
             </span>
             <span class="lg-item">
                 <svg width="26" height="8" aria-hidden="true"><line x1="1" y1="4" x2="25" y2="4" stroke="#CBD5E1" stroke-width="1" stroke-dasharray="4 4"/></svg>
-                erfüllt
+                {{ __('status.satisfied') }}
             </span>
-            <span class="lg-item"><span class="ps-bn">{!! $lgSvg($bottleneckIcon) !!}</span>Flaschenhals</span>
+            <span class="lg-item"><span class="ps-bn">{!! $lgSvg($bottleneckIcon) !!}</span>{{ __('status.bottleneck') }}</span>
         </div>
 
         <div class="flex items-center gap-3">
             <button type="button" data-diagram-reset hidden
-                    class="text-xs text-indigo-600 hover:underline">Auswahl aufheben</button>
+                    class="text-xs text-indigo-600 hover:underline">{{ __('status.clear_selection') }}</button>
             <label data-diagram-desc-wrap
                    class="inline-flex cursor-pointer items-center gap-1.5 text-xs text-gray-600">
                 <input type="checkbox" data-diagram-desc
                        class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
-                Kurzbeschreibungen
+                {{ __('status.short_descriptions') }}
             </label>
             <label data-diagram-hidedone-wrap hidden
                    class="inline-flex cursor-pointer items-center gap-1.5 text-xs text-gray-600">
                 <input type="checkbox" data-diagram-hidedone
                        class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
-                Erledigte ausblenden
+                {{ __('status.hide_done') }}
             </label>
             <button type="button" data-diagram-png
                     class="inline-flex items-center gap-1 rounded-md border border-gray-200 px-2 py-1 text-xs text-gray-600 hover:bg-gray-50 disabled:opacity-50">
                 <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2 -2v-2"/><path d="M7 11l5 5l5 -5"/><path d="M12 4v12"/></svg>
-                Als PNG
+                {{ __('status.as_png') }}
             </button>
         </div>
     </div>
@@ -97,7 +97,7 @@
          data-diagram-name="{{ $project->alias }}"
          data-graph='@json($graph, JSON_HEX_APOS | JSON_HEX_QUOT)'>
         <div class="ps-graph min-h-[280px]"></div>
-        <p class="ps-diagram-empty hidden py-10 text-center text-sm text-gray-400">Keine offenen PRs.</p>
+        <p class="ps-diagram-empty hidden py-10 text-center text-sm text-gray-400">{{ __('status.no_open_prs') }}</p>
     </div>
 
     <style>

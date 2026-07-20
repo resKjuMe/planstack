@@ -43,7 +43,7 @@
                     </span>
                 @endif
                 @if ($task->criticality)
-                    <span title="Kritikalität" class="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold {{ $task->criticality->badgeClasses() }}">
+                    <span title="{{ __('tasks.criticality') }}" class="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold {{ $task->criticality->badgeClasses() }}">
                         <svg viewBox="0 0 24 24" class="h-3.5 w-3.5" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 9v4"/><path d="M12 17h.01"/><path d="M10.3 3.9L1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg>
                         {{ $task->criticality->label() }}
                     </span>
@@ -55,24 +55,24 @@
                         {{-- Freigeben bei offenem Concern gesperrt (Tooltip, da native title auf disabled-Buttons unzuverlässig). --}}
                         <span class="relative inline-block" x-data="{ tip: false }" @mouseenter="tip = true" @mouseleave="tip = false">
                             <button type="button" disabled
-                                    class="cursor-not-allowed rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-400 opacity-60 ring-1 ring-gray-300">Freigeben</button>
+                                    class="cursor-not-allowed rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-400 opacity-60 ring-1 ring-gray-300">{{ __('common.release') }}</button>
                             <span x-show="tip" x-cloak
                                   class="absolute right-0 top-full z-10 mt-1 w-56 rounded-md bg-gray-900 px-2.5 py-1.5 text-xs text-white shadow-lg">
-                                Bei offenem Concern nicht freigebbar – erst den Concern lösen.
+                                {{ __('tasks.cannot_be_released_while_a_concern_is') }}
                             </span>
                         </span>
                     @else
                         <form method="POST" action="{{ route('projects.tasks.claim', [$project, $task]) }}">
                             @csrf
                             <button class="rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-700 ring-1 ring-gray-300 hover:bg-gray-50">
-                                {{ $claimed ? 'Freigeben' : 'Beanspruchen' }}
+                                {{ $claimed ? __('common.release') : __('common.claim') }}
                             </button>
                         </form>
                     @endif
                 @endcan
                 @can('update', $task)
                     <a href="{{ route('projects.tasks.edit', [$project, $task]) }}"
-                       class="rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white hover:bg-indigo-500">Bearbeiten</a>
+                       class="rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white hover:bg-indigo-500">{{ __('common.edit') }}</a>
                 @endcan
             </div>
         </div>
@@ -104,11 +104,11 @@
                 <div class="space-y-6 lg:col-span-8">
                     @if (filled($descClean))
                         <section class="bg-white rounded-lg shadow p-6" @if ($descLong) x-data="disclosure({ id: 'beschreibung' })" id="beschreibung" @endif>
-                            <h3 class="mb-2 font-semibold text-gray-900">Beschreibung</h3>
+                            <h3 class="mb-2 font-semibold text-gray-900">{{ __('common.description') }}</h3>
                             @if ($descLong)
                                 <div :class="open ? '' : 'line-clamp-[8]'"><x-markdown :content="$descClean" /></div>
                                 <button type="button" @click="toggle()" class="mt-2 text-sm font-medium text-indigo-600 hover:underline"
-                                        x-text="open ? 'Weniger anzeigen' : 'Mehr anzeigen'"></button>
+                                        x-text="open ? '{{ __('tasks.show_less') }}' : '{{ __('tasks.show_more') }}'"></button>
                             @else
                                 <x-markdown :content="$descClean" />
                             @endif
@@ -121,12 +121,12 @@
 
                     @include('tasks.partials._checklist', [
                         'task' => $task, 'project' => $project, 'kind' => 'acceptance',
-                        'title' => 'Akzeptanzkriterien', 'source' => $task->description_acceptance_criteria,
+                        'title' => __('common.acceptance_criteria'), 'source' => $task->description_acceptance_criteria,
                     ])
 
                     @include('tasks.partials._checklist', [
                         'task' => $task, 'project' => $project, 'kind' => 'test',
-                        'title' => 'Testanleitung', 'source' => $task->description_test_cases, 'unit' => 'geprüft',
+                        'title' => __('tasks.test_instructions'), 'source' => $task->description_test_cases, 'unit' => __('tasks.checked'),
                     ])
 
                     @if ($hasReview)
@@ -139,27 +139,27 @@
                 {{-- Sticky-Sidebar --}}
                 <div class="space-y-4 self-start lg:col-span-4 lg:sticky lg:top-6">
                     <div class="bg-white rounded-lg shadow p-5 space-y-3 text-sm">
-                        <h3 class="font-semibold text-gray-900">Übersicht</h3>
+                        <h3 class="font-semibold text-gray-900">{{ __('common.overview') }}</h3>
                         <div class="flex items-center justify-between">
-                            <span class="text-gray-400">Status</span>
+                            <span class="text-gray-400">{{ __('common.status') }}</span>
                             <x-task-status :status="$task->status" :label="true" />
                         </div>
                         @if ($task->criticality)
                             <div class="flex items-center justify-between">
-                                <span class="text-gray-400">Kritikalität</span>
+                                <span class="text-gray-400">{{ __('tasks.criticality') }}</span>
                                 <span class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold {{ $task->criticality->badgeClasses() }}">{{ $task->criticality->label() }}</span>
                             </div>
                         @endif
                         @if ($hasReview)
                             <div class="flex items-center justify-between">
-                                <span class="text-gray-400">Review</span>
+                                <span class="text-gray-400">{{ __('tasks.review') }}</span>
                                 <span class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold {{ $isApprove ? 'bg-green-100 text-green-700' : ($isChanges ? 'bg-amber-100 text-amber-800' : 'bg-gray-100 text-gray-500') }}">
-                                    {{ $rec?->label() ?? 'ausstehend' }}
+                                    {{ $rec?->label() ?? __('tasks.pending') }}
                                 </span>
                             </div>
                         @endif
                         @if ($task->effort_story_points !== null)
-                            <div class="flex items-center justify-between"><span class="text-gray-400">Aufwand</span><span class="text-gray-700">{{ $task->effort_story_points }} SP</span></div>
+                            <div class="flex items-center justify-between"><span class="text-gray-400">{{ __('tasks.effort') }}</span><span class="text-gray-700">{{ __('tasks.points_sp', ['points' => $task->effort_story_points]) }}</span></div>
                         @endif
                     </div>
 
@@ -168,9 +168,9 @@
                     {{-- Leerer Concern: kleine Zeile statt Karte --}}
                     @unless ($concernOpen)
                         <div class="flex items-center justify-between rounded-lg bg-white px-5 py-3 text-xs text-gray-500 shadow">
-                            <span>Kein Concern</span>
+                            <span>{{ __('tasks.no_concern') }}</span>
                             @can('update', $task)
-                                <a href="{{ route('projects.tasks.concern.edit', [$project, $task]) }}" class="font-medium text-indigo-600 hover:underline">Anlegen</a>
+                                <a href="{{ route('projects.tasks.concern.edit', [$project, $task]) }}" class="font-medium text-indigo-600 hover:underline">{{ __('common.create') }}</a>
                             @endcan
                         </div>
                     @endunless
@@ -268,19 +268,19 @@
 
                 launch() {
                     const lines = [
-                        'Am Planstack-Ticket ' + this.alias + '/' + this.taskName + ' wurde ein Concern gemeldet. Der Owner hat die offenen Entscheidungen nun getroffen.',
+                        @js(__('tasks.concern_decisions_intro')).replace(':ticket', this.alias + '/' + this.taskName),
                         '',
                         'Concern: ' + this.summary,
                         'Ticket: ' + this.ticketUrl,
                         '',
-                        'Getroffene Entscheidungen:',
+                        @js(__('tasks.decisions_made')),
                     ];
                     this.decisions.forEach((d, i) => {
                         lines.push((i + 1) + '. ' + d.question);
-                        lines.push('   → ' + (this.value(i) || '(keine Angabe)'));
+                        lines.push('   → ' + (this.value(i) || @js(__('tasks.not_specified'))));
                     });
                     lines.push('');
-                    lines.push('Bitte setze diese Entscheidungen um: löse den Concern auf, passe Plan/Umsetzung entsprechend an und arbeite das Ticket weiter ab.');
+                    lines.push(@js(__('tasks.implement_these_decisions')));
 
                     const prompt = lines.join('\n');
                     if (navigator.clipboard) {

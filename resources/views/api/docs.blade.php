@@ -1,10 +1,9 @@
-@verbatim
 <!DOCTYPE html>
 <html lang="de">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Planstack — API-Dokumentation</title>
+    <title>{{ __('api.planstack_api_documentation') }}</title>
     <link rel="icon" href="/favicon.ico" sizes="48x48">
     <link rel="icon" href="/favicon.svg" type="image/svg+xml">
     <link rel="apple-touch-icon" href="/apple-touch-icon-180.png">
@@ -95,7 +94,7 @@
         ul.clean li { margin: 4px 0; }
         .topbar { display: flex; justify-content: space-between; align-items: baseline; }
         .topbar a { font-size: 14px; }
-        @media (max-width: 820px) {
+        @@media (max-width: 820px) {
             aside { display: none; }
             main { padding: 28px 18px 80px; }
         }
@@ -105,25 +104,25 @@
 <div class="layout">
     <aside>
         <p class="brand">Plan<span>stack</span></p>
-        <p class="tagline">REST-API-Referenz</p>
+        <p class="tagline">{{ __('api.rest_api_reference') }}</p>
         <nav>
-            <a href="#einfuehrung">Einführung</a>
-            <a href="#auth">Authentifizierung</a>
-            <a href="#konventionen">Konventionen</a>
-            <a href="#fehler">Fehlercodes</a>
-            <a href="#mcp">MCP-Server</a>
+            <a href="#einfuehrung">{{ __('api.introduction') }}</a>
+            <a href="#auth">{{ __('api.authentication') }}</a>
+            <a href="#konventionen">{{ __('api.conventions') }}</a>
+            <a href="#fehler">{{ __('api.error_codes') }}</a>
+            <a href="#mcp">{{ __('api.mcp_server') }}</a>
 
-            <div class="group">Allgemein</div>
+            <div class="group">{{ __('common.general') }}</div>
             <a class="sub" href="#user">GET /user</a>
 
-            <div class="group">Projekte</div>
+            <div class="group">{{ __('common.projects') }}</div>
             <a class="sub" href="#projects-index">GET /projects</a>
             <a class="sub" href="#projects-store">POST /projects</a>
             <a class="sub" href="#projects-show">GET /projects/{p}</a>
             <a class="sub" href="#projects-update">PATCH /projects/{p}</a>
             <a class="sub" href="#board">GET .../board</a>
 
-            <div class="group">Phasen</div>
+            <div class="group">{{ __('common.phases') }}</div>
             <a class="sub" href="#phases-index">GET .../phases</a>
             <a class="sub" href="#phases-store">POST .../phases</a>
             <a class="sub" href="#phases-update">PUT/PATCH .../phases/{id}</a>
@@ -136,7 +135,7 @@
             <a class="sub" href="#tasks-update">PUT .../tasks/{id}</a>
             <a class="sub" href="#tasks-destroy">DELETE .../tasks/{id}</a>
 
-            <div class="group">Task-Aktionen</div>
+            <div class="group">{{ __('api.task_actions') }}</div>
             <a class="sub" href="#task-claim">POST .../claim</a>
             <a class="sub" href="#task-release">POST .../release</a>
             <a class="sub" href="#task-status">POST .../status</a>
@@ -147,7 +146,7 @@
             <a class="sub" href="#task-resolve">DELETE .../concern</a>
             <a class="sub" href="#task-split">POST .../split</a>
 
-            <div class="group">Schemata</div>
+            <div class="group">{{ __('api.schemas') }}</div>
             <a class="sub" href="#schema-project">Project</a>
             <a class="sub" href="#schema-phase">Phase</a>
             <a class="sub" href="#schema-task">Task</a>
@@ -157,85 +156,75 @@
     <main>
         <div class="topbar">
             <span class="mono" style="color:var(--faint);font-size:13px">Planstack API v1</span>
-            <a href="/">← Zur Anwendung</a>
+            <a href="/">{{ __('api.back_to_the_application') }}</a>
         </div>
 
         <section id="einfuehrung">
-            <h1>Planstack REST-API</h1>
-            <p class="lead">Programmatischer Zugriff auf Projekte, Phasen, Tasks und das
-            live berechnete Board. Dieselbe API steuert auch den herunterladbaren Skill fern.</p>
+            <h1>{{ __('api.planstack_rest_api') }}</h1>
+            <p class="lead">{{ __('api.programmatic_access_to_projects_phases') }}</p>
             <div class="card">
-                <p style="margin-top:0"><b>Basis-URL</b></p>
+                <p style="margin-top:0"><b>{{ __('api.base_url') }}</b></p>
                 <pre>https://planstack.eskju.net/api</pre>
-                <p>Alle Endpunkte sind unter dem Präfix <code>/api</code> gebunden. Alle
-                Requests und Antworten sind <code>application/json</code>.</p>
+                <p>{{ __('api.all_endpoints_live_under_the_prefix') }} <code>/api</code> {{ __('api.bound_all_requests_and_responses_are') }} <code>application/json</code>.</p>
             </div>
         </section>
 
         <section id="auth">
-            <h2>Authentifizierung</h2>
-            <p>Die API nutzt <b>Personal-Access-Tokens</b> (Laravel Sanctum). Jeder Request
-            trägt einen Bearer-Token im <code>Authorization</code>-Header. Ohne gültiges
-            Token antwortet die API mit <code>401</code>.</p>
+            <h2>{{ __('api.authentication') }}</h2>
+            <p>{{ __('api.the_api_uses') }} <b>Personal-Access-Tokens</b> {{ __('api.laravel_sanctum_every_request_carries_a') }} <code>Authorization</code>{{ __('api.header_without_a_valid_token_the_api') }} <code>401</code>.</p>
             <pre>Authorization: Bearer &lt;dein-token&gt;
 Accept: application/json
 Content-Type: application/json</pre>
-            <p>Ein Token erzeugst du in der Anwendung unter <b>Profil → API-Token</b>. Der
-            heruntergeladene Projekt-Skill bringt bereits einen vorbefüllten Token mit.</p>
-            <h3>Smoke-Test</h3>
-            <pre><span class="c"># Prüft Token + Erreichbarkeit</span>
+            <p>{{ __('api.you_create_a_token_in_the_application') }} <b>{{ __('common.profile_api_tokens') }}</b>{{ __('api.the_downloaded_project_skill_already') }}</p>
+            <h3>{{ __('api.smoke_test') }}</h3>
+            <pre><span class="c"># {{ __('api.checks_token_reachability') }}</span>
 curl -s https://planstack.eskju.net/api/user \
   -H "Authorization: Bearer $TOKEN" \
   -H "Accept: application/json"</pre>
         </section>
 
         <section id="konventionen">
-            <h2>Konventionen</h2>
+            <h2>{{ __('api.conventions') }}</h2>
             <ul class="clean">
-                <li><b>Projekt-Bindung</b> erfolgt über den <code>alias</code> (z. B. <code>DEMO</code>),
-                    nicht über die numerische id.</li>
-                <li><b>Task- und Phasen-Bindung</b> erfolgt über die <code>id</code> und ist an das
-                    Projekt gescoped — fremde ids liefern <code>404</code>.</li>
-                <li><b>Zugriff</b> setzt Team-/Owner-Berechtigung am Projekt voraus; Schreib­aktionen
-                    zusätzlich die passende Rolle.</li>
-                <li><b>Board-Felder</b> (pickable, gate, unlocks, stacking, Farbe, pr_url) werden
-                    <b>serverseitig</b> berechnet und mitgeliefert — nicht lokal nachbilden.</li>
-                <li><b>Validierungsfehler</b> liefern <code>422</code> mit einem <code>errors</code>-Objekt.</li>
+                <li><b>{{ __('api.project_binding') }}</b> {{ __('api.is_done_via_the') }} <code>alias</code> ({{ __('api.e_g') }} <code>DEMO</code>){{ __('api.not_via_the_numeric_id') }}</li>
+                <li><b>{{ __('api.task_and_phase_binding') }}</b> {{ __('api.is_done_via_the_2') }} <code>id</code> {{ __('api.and_is_scoped_to_the_project_foreign') }} <code>404</code>.</li>
+                <li><b>{{ __('common.access') }}</b> {{ __('api.requires_team_owner_permission_on_the') }}</li>
+                <li><b>{{ __('api.board_fields') }}</b> {{ __('api.pickable_gate_unlocks_stacking_color_pr') }} <b>{{ __('api.server_side') }}</b> {{ __('api.computed_and_delivered_by_the_server_do') }}</li>
+                <li><b>{{ __('api.validation_error') }}</b> {{ __('api.return') }} <code>422</code> {{ __('api.with_a') }} <code>errors</code>{{ __('api.object') }}</li>
             </ul>
         </section>
 
         <section id="fehler">
-            <h2>Fehlercodes</h2>
+            <h2>{{ __('api.error_codes') }}</h2>
             <table>
-                <thead><tr><th>Code</th><th>Bedeutung</th><th>Typische Ursache / Reaktion</th></tr></thead>
+                <thead><tr><th>Code</th><th>{{ __('common.meaning') }}</th><th>{{ __('api.typical_cause_response') }}</th></tr></thead>
                 <tbody>
-                    <tr><td><code>200</code> / <code>201</code> / <code>204</code></td><td>Erfolg</td><td>201 bei Anlage, 204 ohne Body (Löschen).</td></tr>
-                    <tr><td><code>401</code></td><td>Nicht authentifiziert</td><td>Kein/ungültiges Token — Header prüfen.</td></tr>
-                    <tr><td><code>403</code></td><td>Kein Zugriff</td><td>Fehlende Team-/Owner-Berechtigung bzw. Rolle.</td></tr>
-                    <tr><td><code>404</code></td><td>Nicht gefunden</td><td>Alias/id falsch oder nicht im Projekt.</td></tr>
-                    <tr><td><code>409</code></td><td>Konflikt</td><td>Task bereits beansprucht / nicht beansprucht.</td></tr>
-                    <tr><td><code>422</code></td><td>Validierung</td><td><code>errors</code> lesen, Eingabe korrigieren.</td></tr>
+                    <tr><td><code>200</code> / <code>201</code> / <code>204</code></td><td>{{ __('api.success') }}</td><td>{{ __('api.201_on_creation_204_with_no_body') }}</td></tr>
+                    <tr><td><code>401</code></td><td>{{ __('api.not_authenticated') }}</td><td>{{ __('api.missing_invalid_token_check_the_header') }}</td></tr>
+                    <tr><td><code>403</code></td><td>{{ __('api.no_access') }}</td><td>{{ __('api.missing_team_owner_permission_or_role') }}</td></tr>
+                    <tr><td><code>404</code></td><td>{{ __('api.not_found') }}</td><td>{{ __('api.alias_id_is_wrong_or_not_in_the_project') }}</td></tr>
+                    <tr><td><code>409</code></td><td>{{ __('api.conflict') }}</td><td>{{ __('api.task_is_already_claimed_not_claimed') }}</td></tr>
+                    <tr><td><code>422</code></td><td>{{ __('api.validation') }}</td><td><code>errors</code> {{ __('api.read_it_and_correct_the_input') }}</td></tr>
                 </tbody>
             </table>
         </section>
 
         <section id="mcp">
-            <h2>MCP-Server</h2>
-            <p>Zusätzlich zur REST-API stellt Planstack pro Projekt einen <b>MCP-Server</b>
-            (Model Context Protocol) bereit. Damit lassen sich die Board-/Task-/Phasen-Operationen
-            direkt als <b>Tools</b> in Claude Code (oder anderen MCP-Clients) nutzen — ohne curl.</p>
+            <h2>{{ __('api.mcp_server') }}</h2>
+            <p>{{ __('api.in_addition_to_the_rest_api_planstack') }} <b>MCP-Server</b>
+            {{ __('api.model_context_protocol_this_lets_you') }} <b>Tools</b> {{ __('api.use_them_in_claude_code_or_other_mcp') }}</p>
             <div class="card">
-                <p style="margin-top:0"><b>Endpoint</b> (ein Server je Projekt)</p>
+                <p style="margin-top:0"><b>Endpoint</b> {{ __('api.one_server_per_project') }}</p>
                 <pre>https://planstack.eskju.net/api/projects/<b>{alias}</b>/mcp</pre>
                 <ul class="clean">
-                    <li><b>Transport:</b> Streamable HTTP (JSON-RPC 2.0, statuslos)</li>
-                    <li><b>Auth:</b> derselbe Bearer-Token wie die REST-API; der Aufrufer braucht Projektzugriff</li>
-                    <li><b>Methoden:</b> <code>initialize</code>, <code>ping</code>, <code>tools/list</code>, <code>tools/call</code></li>
+                    <li><b>Transport:</b> {{ __('api.streamable_http_json_rpc_2_0_stateless') }}</li>
+                    <li><b>Auth:</b> {{ __('api.the_same_bearer_token_as_the_rest_api') }}</li>
+                    <li><b>{{ __('api.methods') }}</b> <code>initialize</code>, <code>ping</code>, <code>tools/list</code>, <code>tools/call</code></li>
                 </ul>
             </div>
 
-            <h3>Einrichtung in Claude Code</h3>
-            <p>Entweder eine <code>.mcp.json</code> im Projektwurzelverzeichnis anlegen …</p>
+            <h3>{{ __('api.setup_in_claude_code') }}</h3>
+            <p>{{ __('api.either_a') }} <code>.mcp.json</code> {{ __('api.create_it_in_the_project_root_directory') }}</p>
             <pre>{
   "mcpServers": {
     "planstack-{alias}": {
@@ -245,38 +234,36 @@ curl -s https://planstack.eskju.net/api/user \
     }
   }
 }</pre>
-            <p>… oder per CLI registrieren:</p>
+            <p>{{ __('api.or_register_via_cli') }}</p>
             <pre>claude mcp add --transport http planstack-{alias} \
   "https://planstack.eskju.net/api/projects/{alias}/mcp" \
   --header "Authorization: Bearer &lt;dein-token&gt;"</pre>
-            <p style="font-size:13.5px;color:var(--muted)">Der herunterladbare Projekt-Skill bringt eine
-            vorbefüllte <code>.mcp.json</code> (inkl. Token) sowie eine <code>MCP.md</code> bereits mit.</p>
+            <p style="font-size:13.5px;color:var(--muted)">{{ __('api.the_downloadable_project_skill_ships') }} <code>.mcp.json</code> {{ __('api.including_a_token_as_well_as_a') }} <code>MCP.md</code> {{ __('api.already') }}</p>
 
-            <h3>Verfügbare Tools</h3>
+            <h3>{{ __('api.available_tools') }}</h3>
             <table>
-                <thead><tr><th>Tool</th><th>Zweck</th></tr></thead>
+                <thead><tr><th>Tool</th><th>{{ __('api.purpose') }}</th></tr></thead>
                 <tbody>
-                    <tr><td><code>get_board</code></td><td>Board-Read-Modell (totals, phases, pickable)</td></tr>
-                    <tr><td><code>list_tasks</code></td><td>Alle Tasks inkl. berechneter Board-Felder</td></tr>
-                    <tr><td><code>get_task</code></td><td>Ein Task mit Details (Name oder id)</td></tr>
-                    <tr><td><code>claim_task</code> · <code>release_task</code></td><td>Beanspruchen / freigeben</td></tr>
+                    <tr><td><code>get_board</code></td><td>{{ __('api.board_read_model_totals_phases_pickable') }}</td></tr>
+                    <tr><td><code>list_tasks</code></td><td>{{ __('api.all_tasks_including_computed_board') }}</td></tr>
+                    <tr><td><code>get_task</code></td><td>{{ __('api.a_single_task_with_details_name_or_id') }}</td></tr>
+                    <tr><td><code>claim_task</code> · <code>release_task</code></td><td>{{ __('api.claim_release') }}</td></tr>
                     <tr><td><code>set_task_status</code></td><td>analyze / in_progress / in_review / done</td></tr>
-                    <tr><td><code>set_task_pr</code> · <code>merge_task</code></td><td>PR-Nummer setzen / mergen</td></tr>
-                    <tr><td><code>set_task_gate</code></td><td>Voraussetzungen (Gate) ersetzen</td></tr>
-                    <tr><td><code>report_concern</code> · <code>resolve_concern</code></td><td>Concern melden / auflösen</td></tr>
-                    <tr><td><code>create_task</code> · <code>update_task</code> · <code>split_task</code></td><td>Task anlegen / ändern / splitten</td></tr>
-                    <tr><td><code>list_phases</code> · <code>create_phase</code></td><td>Phasen lesen / anlegen</td></tr>
+                    <tr><td><code>set_task_pr</code> · <code>merge_task</code></td><td>{{ __('api.set_pr_number_merge') }}</td></tr>
+                    <tr><td><code>set_task_gate</code></td><td>{{ __('api.replace_prerequisites_gate') }}</td></tr>
+                    <tr><td><code>report_concern</code> · <code>resolve_concern</code></td><td>{{ __('api.report_resolve_concern') }}</td></tr>
+                    <tr><td><code>create_task</code> · <code>update_task</code> · <code>split_task</code></td><td>{{ __('api.create_update_split_task') }}</td></tr>
+                    <tr><td><code>list_phases</code> · <code>create_phase</code></td><td>{{ __('api.read_create_phases') }}</td></tr>
                 </tbody>
             </table>
-            <p style="font-size:13.5px;color:var(--muted)">Die Tools spiegeln die untenstehenden REST-Operationen
-            (gleiche Validierung, gleiche Board-Berechnung).</p>
+            <p style="font-size:13.5px;color:var(--muted)">{{ __('api.the_tools_mirror_the_rest_operations') }}</p>
         </section>
 
         <h2 id="general-h">Allgemein</h2>
 
         <section id="user" class="endpoint">
             <div class="route"><span class="method m-get">GET</span><span class="path">/api/user</span></div>
-            <p class="desc">Gibt den zum Token gehörenden Benutzer zurück. Smoke-Test für die Token-Auth.</p>
+            <p class="desc">{{ __('api.returns_token_user') }}</p>
             <span class="perm">Auth: <b>Token</b></span>
         </section>
 
@@ -284,21 +271,19 @@ curl -s https://planstack.eskju.net/api/user \
 
         <section id="projects-index" class="endpoint">
             <div class="route"><span class="method m-get">GET</span><span class="path">/api/projects</span></div>
-            <p class="desc">Alle Projekte, auf die der Token-Benutzer Zugriff hat (Owner oder über ein Team).
-            Antwort: Liste von <a href="#schema-project">Project</a> (mit <code>tasks_count</code>, <code>owner</code>).</p>
+            <p class="desc">{{ __('api.all_projects_the_token_user_has_access') }} <a href="#schema-project">Project</a> ({{ __('api.with') }} <code>tasks_count</code>, <code>owner</code>).</p>
             <span class="perm">Auth: <b>Token</b></span>
         </section>
 
         <section id="projects-store" class="endpoint">
             <div class="route"><span class="method m-post">POST</span><span class="path">/api/projects</span></div>
-            <p class="desc">Legt ein Projekt an; der Token-Benutzer wird Owner (ADMIN).
-            Antwort <span class="status-pill s2">201</span> <a href="#schema-project">Project</a>.</p>
+            <p class="desc">{{ __('api.creates_a_project_the_token_user') }} <span class="status-pill s2">201</span> <a href="#schema-project">Project</a>.</p>
             <table>
-                <thead><tr><th>Feld</th><th>Typ</th><th>Regeln</th></tr></thead>
+                <thead><tr><th>{{ __('common.field') }}</th><th>{{ __('api.type') }}</th><th>{{ __('api.rules') }}</th></tr></thead>
                 <tbody>
-                    <tr><td><code>alias</code></td><td>string</td><td><span class="req">erforderlich</span> · max 20 · alpha_dash · eindeutig</td></tr>
-                    <tr><td><code>name</code></td><td>string</td><td><span class="req">erforderlich</span> · max 100</td></tr>
-                    <tr><td><code>description</code></td><td>string</td><td><span class="opt">optional</span></td></tr>
+                    <tr><td><code>alias</code></td><td>string</td><td><span class="req">{{ __('api.required') }}</span> · max 20 · alpha_dash · {{ __('api.unique') }}</td></tr>
+                    <tr><td><code>name</code></td><td>string</td><td><span class="req">{{ __('api.required') }}</span> · max 100</td></tr>
+                    <tr><td><code>description</code></td><td>string</td><td><span class="opt">{{ __('api.optional') }}</span></td></tr>
                 </tbody>
             </table>
             <pre>curl -s -X POST https://planstack.eskju.net/api/projects \
@@ -309,30 +294,26 @@ curl -s https://planstack.eskju.net/api/user \
 
         <section id="projects-show" class="endpoint">
             <div class="route"><span class="method m-get">GET</span><span class="path">/api/projects/<b>{alias}</b></span></div>
-            <p class="desc">Vollständiges Board: Projekt inkl. <code>phases</code> und dekorierter
-            <code>tasks</code> (mit allen berechneten Feldern). Antwort: <a href="#schema-project">Project</a>.</p>
-            <span class="perm">Auth: <b>Token</b> · Recht: <b>view</b></span>
+            <p class="desc">{{ __('api.complete_board_project_including') }} <code>phases</code> {{ __('api.and_decorated') }} <code>tasks</code> {{ __('api.with_all_computed_fields_response') }} <a href="#schema-project">Project</a>.</p>
+            <span class="perm">Auth: <b>Token</b> · {{ __('api.permission') }} <b>view</b></span>
         </section>
 
         <section id="projects-update" class="endpoint">
             <div class="route"><span class="method m-patch">PATCH</span><span class="path">/api/projects/<b>{alias}</b></span></div>
-            <p class="desc">Aktualisiert <code>name</code> und/oder <code>description</code>. Das
-            <code>alias</code> ist nicht änderbar. Antwort: <a href="#schema-project">Project</a>.</p>
+            <p class="desc">{{ __('api.updates') }} <code>name</code> {{ __('api.and_or') }} <code>description</code>{{ __('api.the') }} <code>alias</code> {{ __('api.cannot_be_changed_response') }} <a href="#schema-project">Project</a>.</p>
             <table>
-                <thead><tr><th>Feld</th><th>Typ</th><th>Regeln</th></tr></thead>
+                <thead><tr><th>{{ __('common.field') }}</th><th>{{ __('api.type') }}</th><th>{{ __('api.rules') }}</th></tr></thead>
                 <tbody>
-                    <tr><td><code>name</code></td><td>string</td><td><span class="opt">optional</span> · max 100</td></tr>
-                    <tr><td><code>description</code></td><td>string</td><td><span class="opt">optional</span></td></tr>
+                    <tr><td><code>name</code></td><td>string</td><td><span class="opt">{{ __('api.optional') }}</span> · max 100</td></tr>
+                    <tr><td><code>description</code></td><td>string</td><td><span class="opt">{{ __('api.optional') }}</span></td></tr>
                 </tbody>
             </table>
         </section>
 
         <section id="board" class="endpoint">
             <div class="route"><span class="method m-get">GET</span><span class="path">/api/projects/<b>{alias}</b>/board</span></div>
-            <p class="desc">Das Read-Modell, aus dem der Skill pickt: <code>totals</code> (Fortschritt/SP/pickable),
-            <code>phases</code> (Aggregate je Phase) und <code>pickable</code> — die pickbaren Tasks,
-            absteigend nach <code>unlocks</code> sortiert. Der erste Eintrag ist der „beste Pick".</p>
-            <span class="perm">Auth: <b>Token</b> · Recht: <b>view</b></span>
+            <p class="desc">{{ __('api.the_read_model_the_skill_picks_from') }} <code>totals</code> {{ __('api.progress_sp_pickable') }} <code>phases</code> {{ __('api.aggregates_per_phase_and') }} <code>pickable</code> {{ __('api.the_pickable_tasks_in_descending_order') }} <code>unlocks</code> {{ __('api.sorted_the_first_entry_is_the_best_pick') }}</p>
+            <span class="perm">Auth: <b>Token</b> · {{ __('api.permission') }} <b>view</b></span>
             <pre>{
   "project": { "id": 1, "alias": "DEMO", "name": "…" },
   "totals":  { "tasks": 42, "done": 18, "story_points": 130,
@@ -343,71 +324,69 @@ curl -s https://planstack.eskju.net/api/user \
 }</pre>
         </section>
 
-        <h2 id="phases-h">Phasen</h2>
+        <h2 id="phases-h">{{ __('common.phases') }}</h2>
 
         <section id="phases-index" class="endpoint">
             <div class="route"><span class="method m-get">GET</span><span class="path">/api/projects/<b>{alias}</b>/phases</span></div>
-            <p class="desc">Phasen des Projekts, nach <code>position</code> sortiert. Antwort: Liste von <a href="#schema-phase">Phase</a>.</p>
-            <span class="perm">Auth: <b>Token</b> · Recht: <b>view</b></span>
+            <p class="desc">{{ __('api.the_project_s_phases_sorted_by') }} <code>position</code> {{ __('api.sorted_response_list_of') }} <a href="#schema-phase">Phase</a>.</p>
+            <span class="perm">Auth: <b>Token</b> · {{ __('api.permission') }} <b>view</b></span>
         </section>
 
         <section id="phases-store" class="endpoint">
             <div class="route"><span class="method m-post">POST</span><span class="path">/api/projects/<b>{alias}</b>/phases</span></div>
-            <p class="desc">Legt eine Phase an. Ohne <code>position</code> wird sie hinten angehängt.
-            Antwort <span class="status-pill s2">201</span> <a href="#schema-phase">Phase</a>.</p>
+            <p class="desc">{{ __('api.creates_a_phase_without') }} <code>position</code> {{ __('api.it_is_appended_at_the_end_response') }} <span class="status-pill s2">201</span> <a href="#schema-phase">Phase</a>.</p>
             <table>
-                <thead><tr><th>Feld</th><th>Typ</th><th>Regeln</th></tr></thead>
+                <thead><tr><th>{{ __('common.field') }}</th><th>{{ __('api.type') }}</th><th>{{ __('api.rules') }}</th></tr></thead>
                 <tbody>
-                    <tr><td><code>name</code></td><td>string</td><td><span class="req">erforderlich</span> · max 100</td></tr>
-                    <tr><td><code>position</code></td><td>integer</td><td><span class="opt">optional</span> · ≥ 0</td></tr>
+                    <tr><td><code>name</code></td><td>string</td><td><span class="req">{{ __('api.required') }}</span> · max 100</td></tr>
+                    <tr><td><code>position</code></td><td>integer</td><td><span class="opt">{{ __('api.optional') }}</span> · ≥ 0</td></tr>
                 </tbody>
             </table>
         </section>
 
         <section id="phases-update" class="endpoint">
             <div class="route"><span class="method m-put">PUT</span><span class="method m-patch">PATCH</span><span class="path">/api/projects/<b>{alias}</b>/phases/<b>{id}</b></span></div>
-            <p class="desc">Benennt eine Phase um bzw. verschiebt sie. Antwort: <a href="#schema-phase">Phase</a>.</p>
+            <p class="desc">{{ __('api.renames_or_moves_a_phase_response') }} <a href="#schema-phase">Phase</a>.</p>
             <table>
-                <thead><tr><th>Feld</th><th>Typ</th><th>Regeln</th></tr></thead>
+                <thead><tr><th>{{ __('common.field') }}</th><th>{{ __('api.type') }}</th><th>{{ __('api.rules') }}</th></tr></thead>
                 <tbody>
-                    <tr><td><code>name</code></td><td>string</td><td><span class="opt">optional</span> · max 100</td></tr>
-                    <tr><td><code>position</code></td><td>integer</td><td><span class="opt">optional</span> · ≥ 0</td></tr>
+                    <tr><td><code>name</code></td><td>string</td><td><span class="opt">{{ __('api.optional') }}</span> · max 100</td></tr>
+                    <tr><td><code>position</code></td><td>integer</td><td><span class="opt">{{ __('api.optional') }}</span> · ≥ 0</td></tr>
                 </tbody>
             </table>
         </section>
 
         <section id="phases-destroy" class="endpoint">
             <div class="route"><span class="method m-delete">DELETE</span><span class="path">/api/projects/<b>{alias}</b>/phases/<b>{id}</b></span></div>
-            <p class="desc">Entfernt eine Phase. Tasks der Phase werden gelöst (<code>phase_id → null</code>),
-            nicht mitgelöscht. Antwort <span class="status-pill s2">204</span>.</p>
+            <p class="desc">{{ __('api.removes_a_phase_tasks_in_the_phase_are') }}<code>phase_id → null</code>{{ __('api.not_deleted_along_with_it_response') }} <span class="status-pill s2">204</span>.</p>
         </section>
 
         <h2 id="tasks-h">Tasks</h2>
 
         <section id="tasks-index" class="endpoint">
             <div class="route"><span class="method m-get">GET</span><span class="path">/api/projects/<b>{alias}</b>/tasks</span></div>
-            <p class="desc">Alle Tasks des Projekts inkl. berechneter Board-Felder. Antwort: Liste von <a href="#schema-task">Task</a>.</p>
-            <span class="perm">Auth: <b>Token</b> · Recht: <b>view</b></span>
+            <p class="desc">{{ __('api.all_tasks_in_the_project_including') }} <a href="#schema-task">Task</a>.</p>
+            <span class="perm">Auth: <b>Token</b> · {{ __('api.permission') }} <b>view</b></span>
         </section>
 
         <section id="tasks-store" class="endpoint">
             <div class="route"><span class="method m-post">POST</span><span class="path">/api/projects/<b>{alias}</b>/tasks</span></div>
-            <p class="desc">Legt einen Task mit optionalem Gate an. Antwort <span class="status-pill s2">201</span> <a href="#schema-task">Task</a>.</p>
-            <span class="perm">Recht: <b>contribute</b></span>
+            <p class="desc">{{ __('api.creates_a_task_with_an_optional_gate') }} <span class="status-pill s2">201</span> <a href="#schema-task">Task</a>.</p>
+            <span class="perm">{{ __('api.permission') }} <b>contribute</b></span>
             <table>
-                <thead><tr><th>Feld</th><th>Typ</th><th>Regeln</th></tr></thead>
+                <thead><tr><th>{{ __('common.field') }}</th><th>{{ __('api.type') }}</th><th>{{ __('api.rules') }}</th></tr></thead>
                 <tbody>
-                    <tr><td><code>name</code></td><td>string</td><td><span class="req">erforderlich</span> · max 50</td></tr>
-                    <tr><td><code>summary</code></td><td>string</td><td><span class="req">erforderlich</span> · max 255</td></tr>
-                    <tr><td><code>description</code></td><td>string</td><td><span class="opt">optional</span></td></tr>
-                    <tr><td><code>acceptance_criteria</code></td><td>string</td><td><span class="opt">optional</span> · Akzeptanzkriterien</td></tr>
-                    <tr><td><code>phase_id</code></td><td>integer</td><td><span class="opt">optional</span> · muss zum Projekt gehören</td></tr>
-                    <tr><td><code>effort_man_days</code></td><td>integer</td><td><span class="opt">optional</span> · ≥ 0</td></tr>
-                    <tr><td><code>effort_story_points</code></td><td>integer</td><td><span class="opt">optional</span> · ≥ 0</td></tr>
-                    <tr><td><code>effort_tokens</code></td><td>integer</td><td><span class="opt">optional</span> · ≥ 0</td></tr>
-                    <tr><td><code>affected_files</code></td><td>integer</td><td><span class="opt">optional</span> · ≥ 0</td></tr>
-                    <tr><td><code>status</code></td><td>string</td><td><span class="opt">optional</span> · TaskStatus-Wert</td></tr>
-                    <tr><td><code>gate</code></td><td>array</td><td><span class="opt">optional</span> · Task-Namen und/oder ids</td></tr>
+                    <tr><td><code>name</code></td><td>string</td><td><span class="req">{{ __('api.required') }}</span> · max 50</td></tr>
+                    <tr><td><code>summary</code></td><td>string</td><td><span class="req">{{ __('api.required') }}</span> · max 255</td></tr>
+                    <tr><td><code>description</code></td><td>string</td><td><span class="opt">{{ __('api.optional') }}</span></td></tr>
+                    <tr><td><code>acceptance_criteria</code></td><td>string</td><td><span class="opt">{{ __('api.optional') }}</span> · {{ __('common.acceptance_criteria') }}</td></tr>
+                    <tr><td><code>phase_id</code></td><td>integer</td><td><span class="opt">{{ __('api.optional') }}</span> · {{ __('api.must_belong_to_the_project') }}</td></tr>
+                    <tr><td><code>effort_man_days</code></td><td>integer</td><td><span class="opt">{{ __('api.optional') }}</span> · ≥ 0</td></tr>
+                    <tr><td><code>effort_story_points</code></td><td>integer</td><td><span class="opt">{{ __('api.optional') }}</span> · ≥ 0</td></tr>
+                    <tr><td><code>effort_tokens</code></td><td>integer</td><td><span class="opt">{{ __('api.optional') }}</span> · ≥ 0</td></tr>
+                    <tr><td><code>affected_files</code></td><td>integer</td><td><span class="opt">{{ __('api.optional') }}</span> · ≥ 0</td></tr>
+                    <tr><td><code>status</code></td><td>string</td><td><span class="opt">{{ __('api.optional') }}</span> · {{ __('api.taskstatus_value') }}</td></tr>
+                    <tr><td><code>gate</code></td><td>array</td><td><span class="opt">{{ __('api.optional') }}</span> · {{ __('api.task_names_and_or_ids') }}</td></tr>
                 </tbody>
             </table>
             <pre>curl -s -X POST https://planstack.eskju.net/api/projects/DEMO/tasks \
@@ -418,29 +397,27 @@ curl -s https://planstack.eskju.net/api/user \
 
         <section id="tasks-show" class="endpoint">
             <div class="route"><span class="method m-get">GET</span><span class="path">/api/projects/<b>{alias}</b>/tasks/<b>{id}</b></span></div>
-            <p class="desc">Ein Task, dekoriert (inkl. <code>prerequisites</code>, <code>concern</code>, Board-Felder).
-            Antwort: <a href="#schema-task">Task</a>.</p>
+            <p class="desc">{{ __('api.a_single_task_decorated_including') }} <code>prerequisites</code>, <code>concern</code>{{ __('api.board_fields_response') }} <a href="#schema-task">Task</a>.</p>
         </section>
 
         <section id="tasks-update" class="endpoint">
             <div class="route"><span class="method m-put">PUT</span><span class="method m-patch">PATCH</span><span class="path">/api/projects/<b>{alias}</b>/tasks/<b>{id}</b></span></div>
-            <p class="desc">Aktualisiert die beschreibbaren Felder eines Tasks (gleicher Feldsatz wie beim Anlegen).
-            Antwort: <a href="#schema-task">Task</a>.</p>
-            <span class="perm">Recht: <b>update</b></span>
+            <p class="desc">{{ __('api.updates_the_writable_fields_of_a_task') }} <a href="#schema-task">Task</a>.</p>
+            <span class="perm">{{ __('api.permission') }} <b>update</b></span>
             <table>
-                <thead><tr><th>Feld</th><th>Typ</th><th>Regeln</th></tr></thead>
+                <thead><tr><th>{{ __('common.field') }}</th><th>{{ __('api.type') }}</th><th>{{ __('api.rules') }}</th></tr></thead>
                 <tbody>
-                    <tr><td><code>name</code></td><td>string</td><td><span class="req">erforderlich</span> · max 50</td></tr>
-                    <tr><td><code>summary</code></td><td>string</td><td><span class="req">erforderlich</span> · max 255</td></tr>
-                    <tr><td><code>description</code></td><td>string</td><td><span class="opt">optional</span></td></tr>
-                    <tr><td><code>acceptance_criteria</code></td><td>string</td><td><span class="opt">optional</span> · Akzeptanzkriterien</td></tr>
-                    <tr><td><code>phase_id</code></td><td>integer</td><td><span class="opt">optional</span> · muss zum Projekt gehören</td></tr>
-                    <tr><td><code>effort_man_days</code></td><td>integer</td><td><span class="opt">optional</span> · ≥ 0</td></tr>
-                    <tr><td><code>effort_story_points</code></td><td>integer</td><td><span class="opt">optional</span> · ≥ 0</td></tr>
-                    <tr><td><code>effort_tokens</code></td><td>integer</td><td><span class="opt">optional</span> · ≥ 0</td></tr>
-                    <tr><td><code>affected_files</code></td><td>integer</td><td><span class="opt">optional</span> · ≥ 0</td></tr>
-                    <tr><td><code>status</code></td><td>string</td><td><span class="opt">optional</span> · TaskStatus-Wert (MERGED setzt <code>merged_at</code>)</td></tr>
-                    <tr><td><code>gate</code></td><td>array</td><td><span class="opt">optional</span> · ersetzt die Voraussetzungen; weglassen lässt sie unverändert</td></tr>
+                    <tr><td><code>name</code></td><td>string</td><td><span class="req">{{ __('api.required') }}</span> · max 50</td></tr>
+                    <tr><td><code>summary</code></td><td>string</td><td><span class="req">{{ __('api.required') }}</span> · max 255</td></tr>
+                    <tr><td><code>description</code></td><td>string</td><td><span class="opt">{{ __('api.optional') }}</span></td></tr>
+                    <tr><td><code>acceptance_criteria</code></td><td>string</td><td><span class="opt">{{ __('api.optional') }}</span> · {{ __('common.acceptance_criteria') }}</td></tr>
+                    <tr><td><code>phase_id</code></td><td>integer</td><td><span class="opt">{{ __('api.optional') }}</span> · {{ __('api.must_belong_to_the_project') }}</td></tr>
+                    <tr><td><code>effort_man_days</code></td><td>integer</td><td><span class="opt">{{ __('api.optional') }}</span> · ≥ 0</td></tr>
+                    <tr><td><code>effort_story_points</code></td><td>integer</td><td><span class="opt">{{ __('api.optional') }}</span> · ≥ 0</td></tr>
+                    <tr><td><code>effort_tokens</code></td><td>integer</td><td><span class="opt">{{ __('api.optional') }}</span> · ≥ 0</td></tr>
+                    <tr><td><code>affected_files</code></td><td>integer</td><td><span class="opt">{{ __('api.optional') }}</span> · ≥ 0</td></tr>
+                    <tr><td><code>status</code></td><td>string</td><td><span class="opt">{{ __('api.optional') }}</span> · {{ __('api.taskstatus_value_merged_sets') }} <code>merged_at</code>)</td></tr>
+                    <tr><td><code>gate</code></td><td>array</td><td><span class="opt">{{ __('api.optional') }}</span> · {{ __('api.replaces_the_prerequisites_omitting_it') }}</td></tr>
                 </tbody>
             </table>
             <pre>curl -s -X PUT https://planstack.eskju.net/api/projects/DEMO/tasks/123 \
@@ -451,107 +428,98 @@ curl -s https://planstack.eskju.net/api/user \
 
         <section id="tasks-destroy" class="endpoint">
             <div class="route"><span class="method m-delete">DELETE</span><span class="path">/api/projects/<b>{alias}</b>/tasks/<b>{id}</b></span></div>
-            <p class="desc">Löscht einen Task. Antwort <span class="status-pill s2">204</span>.</p>
-            <span class="perm">Recht: <b>delete</b></span>
+            <p class="desc">{{ __('api.deletes_a_task_response') }} <span class="status-pill s2">204</span>.</p>
+            <span class="perm">{{ __('api.permission') }} <b>delete</b></span>
         </section>
 
-        <h2 id="actions-h">Task-Aktionen</h2>
-        <p>Alle Aktionen sind an das Projekt gescoped und antworten (sofern nicht anders angegeben)
-        mit dem aktualisierten <a href="#schema-task">Task</a>.</p>
+        <h2 id="actions-h">{{ __('api.task_actions') }}</h2>
+        <p>{{ __('api.all_actions_are_scoped_to_the_project') }} <a href="#schema-task">Task</a>.</p>
 
         <section id="task-claim" class="endpoint">
             <div class="route"><span class="method m-post">POST</span><span class="path">/api/projects/<b>{alias}</b>/tasks/<b>{id}</b>/claim</span></div>
-            <p class="desc">Beansprucht einen freien Task für den Token-Benutzer (atomar → <code>CLAIMED</code>).
-            <span class="status-pill s4">409</span> wenn bereits beansprucht → anderen Task wählen.</p>
+            <p class="desc">{{ __('api.claims_a_free_task_for_the_token_user') }} <code>CLAIMED</code>{{ __('common.text') }} <span class="status-pill s4">409</span> {{ __('api.if_already_claimed_choose_a_different') }}</p>
         </section>
 
         <section id="task-release" class="endpoint">
             <div class="route"><span class="method m-post">POST</span><span class="path">/api/projects/<b>{alias}</b>/tasks/<b>{id}</b>/release</span></div>
-            <p class="desc">Gibt einen beanspruchten Task wieder frei (→ <code>PICKABLE</code>).
-            <span class="status-pill s4">409</span> wenn nicht beansprucht.</p>
+            <p class="desc">{{ __('api.releases_a_claimed_task_again') }} <code>PICKABLE</code>{{ __('common.text') }} <span class="status-pill s4">409</span> {{ __('api.if_not_claimed') }}</p>
         </section>
 
         <section id="task-status" class="endpoint">
             <div class="route"><span class="method m-post">POST</span><span class="path">/api/projects/<b>{alias}</b>/tasks/<b>{id}</b>/status</span></div>
-            <p class="desc">Setzt den Bearbeitungsstatus.</p>
+            <p class="desc">{{ __('api.sets_the_processing_status') }}</p>
             <table>
-                <thead><tr><th>Feld</th><th>Typ</th><th>Werte</th></tr></thead>
+                <thead><tr><th>{{ __('common.field') }}</th><th>{{ __('api.type') }}</th><th>{{ __('api.values') }}</th></tr></thead>
                 <tbody>
-                    <tr><td><code>status</code></td><td>string</td><td><span class="req">erforderlich</span> · <code>analyze</code> · <code>in_progress</code> · <code>in_review</code> · <code>done</code></td></tr>
+                    <tr><td><code>status</code></td><td>string</td><td><span class="req">{{ __('api.required') }}</span> · <code>analyze</code> · <code>in_progress</code> · <code>in_review</code> · <code>done</code></td></tr>
                 </tbody>
             </table>
             <p style="font-size:13.5px;color:var(--muted)"><code>analyze</code> → ANALYZING,
             <code>in_progress</code> → IN_PROGRESS, <code>in_review</code> → IN_REVIEW.
-            <code>done</code> meldet die Arbeit als fertig: mit gesetztem PR → IN_REVIEW, sonst IN_PROGRESS
-            (ein offener PR macht einen Task nicht „erledigt"; COMPLETED entsteht nur per Split,
-            MERGED nur per <code>/merge</code>).</p>
+            <code>done</code> {{ __('api.reports_the_work_as_done_with_a_pr_set') }} <code>/merge</code>).</p>
         </section>
 
         <section id="task-pr" class="endpoint">
             <div class="route"><span class="method m-post">POST</span><span class="path">/api/projects/<b>{alias}</b>/tasks/<b>{id}</b>/pr</span></div>
-            <p class="desc">Trägt die PR-Nummer ein. <code>pr_url</code> entsteht automatisch, wenn am Projekt
-            ein GitHub-Repo hinterlegt ist. Ein (offener) PR erfüllt das Gate abhängiger Tasks.</p>
+            <p class="desc">{{ __('api.records_the_pr_number') }} <code>pr_url</code> {{ __('api.is_created_automatically_when_a_github') }}</p>
             <table>
-                <thead><tr><th>Feld</th><th>Typ</th><th>Regeln</th></tr></thead>
+                <thead><tr><th>{{ __('common.field') }}</th><th>{{ __('api.type') }}</th><th>{{ __('api.rules') }}</th></tr></thead>
                 <tbody>
-                    <tr><td><code>pr_number</code></td><td>integer</td><td><span class="req">erforderlich</span> · ≥ 1</td></tr>
+                    <tr><td><code>pr_number</code></td><td>integer</td><td><span class="req">{{ __('api.required') }}</span> · ≥ 1</td></tr>
                 </tbody>
             </table>
         </section>
 
         <section id="task-merge" class="endpoint">
             <div class="route"><span class="method m-post">POST</span><span class="path">/api/projects/<b>{alias}</b>/tasks/<b>{id}</b>/merge</span></div>
-            <p class="desc">Markiert den Task als <code>MERGED</code> (idempotent; <code>merged_at</code> nur beim
-            ersten Übergang). Erst der Merge nimmt den Task vom Board.</p>
+            <p class="desc">{{ __('api.marks_the_task_as') }} <code>MERGED</code> {{ __('api.idempotent') }} <code>merged_at</code> {{ __('api.only_on_the_first_transition_only_the') }}</p>
         </section>
 
         <section id="task-gate" class="endpoint">
             <div class="route"><span class="method m-post">POST</span><span class="path">/api/projects/<b>{alias}</b>/tasks/<b>{id}</b>/gate</span></div>
-            <p class="desc">Ersetzt die Voraussetzungen (Gate) des Tasks. Referenzen als Task-Namen und/oder ids,
-            projekt-gescoped, kein Self-Gate. Unbekannte Referenzen → <span class="status-pill s4">422</span>.</p>
+            <p class="desc">{{ __('api.replaces_the_task_s_prerequisites_gate') }} <span class="status-pill s4">422</span>.</p>
             <table>
-                <thead><tr><th>Feld</th><th>Typ</th><th>Regeln</th></tr></thead>
+                <thead><tr><th>{{ __('common.field') }}</th><th>{{ __('api.type') }}</th><th>{{ __('api.rules') }}</th></tr></thead>
                 <tbody>
-                    <tr><td><code>gate</code></td><td>array</td><td><span class="req">erforderlich</span> · z. B. <code>["C21","C25"]</code></td></tr>
+                    <tr><td><code>gate</code></td><td>array</td><td><span class="req">{{ __('api.required') }}</span> · {{ __('api.e_g') }} <code>["C21","C25"]</code></td></tr>
                 </tbody>
             </table>
         </section>
 
         <section id="task-concern" class="endpoint">
             <div class="route"><span class="method m-post">POST</span><span class="path">/api/projects/<b>{alias}</b>/tasks/<b>{id}</b>/concern</span></div>
-            <p class="desc">Legt/aktualisiert einen Concern und setzt den Task auf <code>CONCERNED</code>.</p>
+            <p class="desc">{{ __('api.creates_updates_a_concern_and_sets_the') }} <code>CONCERNED</code>.</p>
             <table>
-                <thead><tr><th>Feld</th><th>Typ</th><th>Regeln</th></tr></thead>
+                <thead><tr><th>{{ __('common.field') }}</th><th>{{ __('api.type') }}</th><th>{{ __('api.rules') }}</th></tr></thead>
                 <tbody>
-                    <tr><td><code>summary</code></td><td>string</td><td><span class="req">erforderlich</span> · max 255</td></tr>
-                    <tr><td><code>context</code></td><td>string</td><td><span class="opt">optional</span></td></tr>
-                    <tr><td><code>blocker</code></td><td>string</td><td><span class="opt">optional</span></td></tr>
-                    <tr><td><code>misconception</code></td><td>string</td><td><span class="opt">optional</span></td></tr>
-                    <tr><td><code>decisions</code></td><td>string</td><td><span class="opt">optional</span></td></tr>
+                    <tr><td><code>summary</code></td><td>string</td><td><span class="req">{{ __('api.required') }}</span> · max 255</td></tr>
+                    <tr><td><code>context</code></td><td>string</td><td><span class="opt">{{ __('api.optional') }}</span></td></tr>
+                    <tr><td><code>blocker</code></td><td>string</td><td><span class="opt">{{ __('api.optional') }}</span></td></tr>
+                    <tr><td><code>misconception</code></td><td>string</td><td><span class="opt">{{ __('api.optional') }}</span></td></tr>
+                    <tr><td><code>decisions</code></td><td>string</td><td><span class="opt">{{ __('api.optional') }}</span></td></tr>
                 </tbody>
             </table>
         </section>
 
         <section id="task-resolve" class="endpoint">
             <div class="route"><span class="method m-delete">DELETE</span><span class="path">/api/projects/<b>{alias}</b>/tasks/<b>{id}</b>/concern</span></div>
-            <p class="desc">Löst den Concern auf; der Task kehrt nach <code>CLAIMED</code> bzw. <code>PICKABLE</code> zurück.</p>
+            <p class="desc">{{ __('api.resolves_the_concern_the_task_returns_to') }} <code>CLAIMED</code> {{ __('common.or') }} <code>PICKABLE</code> {{ __('api.text') }}</p>
         </section>
 
         <section id="task-split" class="endpoint">
             <div class="route"><span class="method m-post">POST</span><span class="path">/api/projects/<b>{alias}</b>/tasks/<b>{id}</b>/split</span></div>
-            <p class="desc">Setzt den Parent auf <code>COMPLETED</code> und legt N Kinder in derselben Phase an
-            (eigene Gates/Aufwände, atomar). Antwort <span class="status-pill s2">201</span> mit der Kinder-Liste.</p>
+            <p class="desc">{{ __('api.sets_the_parent_to') }} <code>COMPLETED</code> {{ __('api.and_creates_n_children_in_the_same') }} <span class="status-pill s2">201</span> {{ __('api.with_the_list_of_children') }}</p>
             <table>
-                <thead><tr><th>Feld</th><th>Typ</th><th>Regeln</th></tr></thead>
+                <thead><tr><th>{{ __('common.field') }}</th><th>{{ __('api.type') }}</th><th>{{ __('api.rules') }}</th></tr></thead>
                 <tbody>
-                    <tr><td><code>children</code></td><td>array</td><td><span class="req">erforderlich</span> · min 1</td></tr>
-                    <tr><td><code>children[].name</code></td><td>string</td><td><span class="req">erforderlich</span> · max 50</td></tr>
-                    <tr><td><code>children[].summary</code></td><td>string</td><td><span class="req">erforderlich</span> · max 255</td></tr>
-                    <tr><td><code>children[].effort_story_points</code></td><td>integer</td><td><span class="opt">optional</span> · ≥ 0</td></tr>
-                    <tr><td><code>children[].effort_man_days</code></td><td>integer</td><td><span class="opt">optional</span> · ≥ 0</td></tr>
-                    <tr><td><code>children[].effort_tokens</code></td><td>integer</td><td><span class="opt">optional</span> · ≥ 0</td></tr>
-                    <tr><td><code>children[].affected_files</code></td><td>integer</td><td><span class="opt">optional</span> · ≥ 0</td></tr>
-                    <tr><td><code>children[].gate</code></td><td>array</td><td><span class="opt">optional</span></td></tr>
+                    <tr><td><code>children</code></td><td>array</td><td><span class="req">{{ __('api.required') }}</span> · min 1</td></tr>
+                    <tr><td><code>children[].name</code></td><td>string</td><td><span class="req">{{ __('api.required') }}</span> · max 50</td></tr>
+                    <tr><td><code>children[].summary</code></td><td>string</td><td><span class="req">{{ __('api.required') }}</span> · max 255</td></tr>
+                    <tr><td><code>children[].effort_story_points</code></td><td>integer</td><td><span class="opt">{{ __('api.optional') }}</span> · ≥ 0</td></tr>
+                    <tr><td><code>children[].effort_man_days</code></td><td>integer</td><td><span class="opt">{{ __('api.optional') }}</span> · ≥ 0</td></tr>
+                    <tr><td><code>children[].effort_tokens</code></td><td>integer</td><td><span class="opt">{{ __('api.optional') }}</span> · ≥ 0</td></tr>
+                    <tr><td><code>children[].affected_files</code></td><td>integer</td><td><span class="opt">{{ __('api.optional') }}</span> · ≥ 0</td></tr>
+                    <tr><td><code>children[].gate</code></td><td>array</td><td><span class="opt">{{ __('api.optional') }}</span></td></tr>
                 </tbody>
             </table>
             <pre>curl -s -X POST https://planstack.eskju.net/api/projects/DEMO/tasks/123/split \
@@ -563,7 +531,7 @@ curl -s https://planstack.eskju.net/api/user \
       ]}'</pre>
         </section>
 
-        <h2 id="schemata-h">Antwort-Schemata</h2>
+        <h2 id="schemata-h">{{ __('api.response_schemas') }}</h2>
 
         <section id="schema-project">
             <h3>Project</h3>
@@ -592,8 +560,7 @@ curl -s https://planstack.eskju.net/api/user \
 
         <section id="schema-task">
             <h3>Task</h3>
-            <p>Die mit <span class="c">// berechnet</span> markierten Felder liefert der Server, sobald der
-            Task dekoriert ist (Board-Endpunkte, Einzel-Task, Aktionen).</p>
+            <p>{{ __('api.the_fields_marked_with') }} <span class="c">// berechnet</span> {{ __('api.are_supplied_by_the_server_once_the') }}</p>
             <pre>{
   "id": 123,
   "name": "C27",
@@ -629,11 +596,9 @@ curl -s https://planstack.eskju.net/api/user \
         </section>
 
         <p style="margin-top:48px;color:var(--faint);font-size:13px">
-            Diese Referenz spiegelt <code>routes/api.php</code> und die API-Resources wider.
-            Bei Abweichungen gilt das Verhalten der laufenden Instanz.
+            {{ __('api.this_reference_mirrors') }} <code>routes/api.php</code> {{ __('api.and_the_api_resources_in_case_of') }}
         </p>
     </main>
 </div>
 </body>
 </html>
-@endverbatim

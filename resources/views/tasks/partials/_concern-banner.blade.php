@@ -13,15 +13,15 @@
             <div class="flex flex-wrap items-start justify-between gap-2">
                 <div class="min-w-0">
                     <p class="font-semibold text-orange-900">{{ $c->summary }}</p>
-                    <p class="text-xs text-orange-700/80">Concern von {{ $c->creator?->name }}</p>
+                    <p class="text-xs text-orange-700/80">{{ __('tasks.concern_by_name', ['name' => $c->creator?->name]) }}</p>
                 </div>
                 @can('update', $task)
                     <div class="flex items-center gap-3 text-sm">
-                        <a href="{{ route('projects.tasks.concern.edit', [$project, $task]) }}" class="font-medium text-orange-800 hover:underline">Bearbeiten</a>
+                        <a href="{{ route('projects.tasks.concern.edit', [$project, $task]) }}" class="font-medium text-orange-800 hover:underline">{{ __('common.edit') }}</a>
                         <form method="POST" action="{{ route('projects.tasks.concern.destroy', [$project, $task]) }}"
-                              onsubmit="return confirm('Concern entfernen?');">
+                              onsubmit="return confirm('{{ __('tasks.remove_concern') }}');">
                             @csrf @method('DELETE')
-                            <button class="font-medium text-red-600 hover:underline">Entfernen</button>
+                            <button class="font-medium text-red-600 hover:underline">{{ __('common.remove') }}</button>
                         </form>
                     </div>
                 @endcan
@@ -29,16 +29,16 @@
 
             @php
                 $details = array_filter([
-                    'Kontext' => $c->description_context,
-                    'Blocker' => $c->description_blocker,
-                    'Fehleinschätzung' => $c->description_misconception,
+                    'tasks.context' => $c->description_context,
+                    'tasks.blocker' => $c->description_blocker,
+                    'tasks.misconception' => $c->description_misconception,
                 ]);
             @endphp
             @if ($details)
                 <div class="mt-3 grid gap-3 sm:grid-cols-2 text-sm">
                     @foreach ($details as $label => $value)
-                        <div @class(['sm:col-span-2' => $label === 'Blocker'])>
-                            <dt class="text-xs font-semibold uppercase tracking-wide text-orange-700/70">{{ $label }}</dt>
+                        <div @class(['sm:col-span-2' => $label === 'tasks.blocker'])>
+                            <dt class="text-xs font-semibold uppercase tracking-wide text-orange-700/70">{{ __($label) }}</dt>
                             <dd class="text-orange-900/90"><x-markdown :content="$value" /></dd>
                         </div>
                     @endforeach
@@ -58,7 +58,7 @@
                         continue;
                     }
                     if (count($parts) && preg_match('/^(.*?)\(a\)\s*(.+)$/su', $question, $m)) {
-                        $question = trim($m[1], " \t\n\r\0\x0B:-") ?: 'Entscheidung';
+                        $question = trim($m[1], " \t\n\r\0\x0B:-") ?: __('tasks.decision');
                         array_unshift($parts, trim($m[2]));
                     }
                     $options = array_map(
@@ -72,12 +72,12 @@
             @if (count($decisions))
                 <div class="mt-4">
                     <div class="mb-2 flex items-center justify-between gap-2">
-                        <h4 class="text-xs font-semibold uppercase tracking-wide text-orange-700/70">Offene Entscheidungen</h4>
+                        <h4 class="text-xs font-semibold uppercase tracking-wide text-orange-700/70">{{ __('common.open_decisions') }}</h4>
                         <button type="button" x-data
                                 @click="$dispatch('open-modal', 'claude-decisions')"
                                 class="inline-flex items-center gap-2 rounded-md bg-[#D97757] px-3 py-1.5 text-sm font-semibold text-white shadow-sm hover:bg-[#c96544] focus:outline-none focus:ring-2 focus:ring-[#D97757] focus:ring-offset-1">
                             <svg viewBox="0 0 24 24" class="h-4 w-4" fill="currentColor" aria-hidden="true"><path d="{{ $claudeLogoPath }}" /></svg>
-                            Entscheidung mit Claude finden
+                            {{ __('tasks.find_a_decision_with_claude') }}
                         </button>
                     </div>
                     <ul class="space-y-2">
@@ -115,7 +115,7 @@
                                 <svg viewBox="0 0 24 24" class="h-5 w-5" fill="#D97757" aria-hidden="true"><path d="{{ $claudeLogoPath }}" /></svg>
                             </span>
                             <div class="min-w-0">
-                                <h3 class="font-semibold text-gray-900">Entscheidung mit Claude finden</h3>
+                                <h3 class="font-semibold text-gray-900">{{ __('tasks.find_a_decision_with_claude') }}</h3>
                                 <p class="truncate text-xs text-gray-500" x-text="summary"></p>
                             </div>
                         </div>
@@ -123,8 +123,8 @@
                         <template x-if="!done">
                             <div>
                                 <div class="mb-1 flex items-center justify-between text-xs text-gray-400">
-                                    <span x-text="'Entscheidung ' + (step + 1) + ' von ' + total"></span>
-                                    <span x-text="answered + ' beantwortet'"></span>
+                                    <span x-text="'{{ __('tasks.decision') }} ' + (step + 1) + ' {{ __('tasks.of') }} ' + total"></span>
+                                    <span x-text="answered + ' {{ __('tasks.answered') }}'"></span>
                                 </div>
                                 <div class="mb-5 h-1.5 w-full overflow-hidden rounded-full bg-gray-100">
                                     <div class="h-full rounded-full bg-[#D97757] transition-all" :style="'width:' + ((step + 1) / total * 100) + '%'"></div>
@@ -144,42 +144,42 @@
                                 </div>
 
                                 <div class="mt-3">
-                                    <label class="mb-1 block text-xs text-gray-400" x-text="current.options.length ? 'Oder eigene Antwort' : 'Antwort'"></label>
+                                    <label class="mb-1 block text-xs text-gray-400" x-text="current.options.length ? '{{ __('tasks.or_your_own_answer') }}' : '{{ __('tasks.answer') }}'"></label>
                                     <input type="text" x-model="custom[step]" @input="answers[step] = undefined"
-                                           placeholder="Eigene Entscheidung eingeben …"
+                                           placeholder="{{ __('tasks.enter_your_own_decision') }}"
                                            class="block w-full rounded-md border-gray-300 text-sm shadow-sm focus:border-[#D97757] focus:ring-[#D97757]">
                                 </div>
 
                                 <div class="mt-6 flex items-center justify-between">
-                                    <button type="button" @click="prev()" x-show="step > 0" class="text-sm text-gray-500 hover:text-gray-700">Zurück</button>
+                                    <button type="button" @click="prev()" x-show="step > 0" class="text-sm text-gray-500 hover:text-gray-700">{{ __('tasks.back') }}</button>
                                     <span x-show="step === 0"></span>
                                     <button type="button" @click="next()" :disabled="!canProceed"
                                             class="rounded-md bg-gray-900 px-4 py-2 text-sm font-semibold text-white hover:bg-gray-700 disabled:cursor-not-allowed disabled:opacity-40"
-                                            x-text="step + 1 === total ? 'Zur Übersicht' : 'Weiter'"></button>
+                                            x-text="step + 1 === total ? '{{ __('tasks.to_summary') }}' : '{{ __('tasks.next') }}'"></button>
                                 </div>
                             </div>
                         </template>
 
                         <template x-if="done">
                             <div>
-                                <p class="mb-3 text-sm text-gray-500">Getroffene Entscheidungen — prüfe und starte Claude, um sie umzusetzen:</p>
+                                <p class="mb-3 text-sm text-gray-500">{{ __('tasks.decisions_made_review_them_and_launch') }}</p>
                                 <ol class="mb-5 space-y-3">
                                     <template x-for="(d, i) in decisions" :key="i">
                                         <li class="text-sm">
                                             <p class="font-medium text-gray-800" x-text="(i + 1) + '. ' + d.question"></p>
                                             <div class="ms-4 flex items-center justify-between gap-3">
-                                                <span class="text-[#a8492e]" x-text="'→ ' + (value(i) || '(keine Angabe)')"></span>
-                                                <button type="button" class="shrink-0 text-xs text-indigo-600 hover:underline" @click="step = i">Ändern</button>
+                                                <span class="text-[#a8492e]" x-text="'→ ' + (value(i) || '{{ __('tasks.not_specified') }}')"></span>
+                                                <button type="button" class="shrink-0 text-xs text-indigo-600 hover:underline" @click="step = i">{{ __('tasks.change') }}</button>
                                             </div>
                                         </li>
                                     </template>
                                 </ol>
                                 <div class="flex items-center justify-between">
-                                    <button type="button" @click="step = total - 1" class="text-sm text-gray-500 hover:text-gray-700">Zurück</button>
+                                    <button type="button" @click="step = total - 1" class="text-sm text-gray-500 hover:text-gray-700">{{ __('tasks.back') }}</button>
                                     <button type="button" @click="launch()"
                                             class="inline-flex items-center gap-2 rounded-md bg-[#D97757] px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-[#c96544]">
                                         <svg viewBox="0 0 24 24" class="h-4 w-4" fill="currentColor" aria-hidden="true"><path d="{{ $claudeLogoPath }}" /></svg>
-                                        Mit Claude umsetzen
+                                        {{ __('tasks.implement_with_claude') }}
                                     </button>
                                 </div>
                             </div>

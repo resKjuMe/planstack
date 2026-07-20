@@ -38,7 +38,7 @@ class TaskController extends Controller
 
         return redirect()
             ->route('projects.tasks.show', [$project, $task])
-            ->with('status', "Task \"{$task->name}\" wurde angelegt.");
+            ->with('status', __('flash.task_created', ['name' => $task->name]));
     }
 
     public function show(Project $project, Task $task): View
@@ -80,7 +80,7 @@ class TaskController extends Controller
 
         return redirect()
             ->route('projects.tasks.show', [$project, $task])
-            ->with('status', 'Task aktualisiert.');
+            ->with('status', __('flash.task_updated'));
     }
 
     public function destroy(Project $project, Task $task): RedirectResponse
@@ -91,7 +91,7 @@ class TaskController extends Controller
 
         return redirect()
             ->route('projects.show', $project)
-            ->with('status', 'Task gelöscht.');
+            ->with('status', __('flash.task_deleted'));
     }
 
     /**
@@ -107,14 +107,14 @@ class TaskController extends Controller
                 'claimed_at' => now(),
                 'status' => TaskStatus::CLAIMED->value,
             ]);
-            $message = "Task \"{$task->name}\" beansprucht.";
+            $message = __('flash.task_claimed', ['name' => $task->name]);
         } else {
             $task->update([
                 'claimed_by_id' => null,
                 'claimed_at' => null,
                 'status' => TaskStatus::PICKABLE->value,
             ]);
-            $message = "Task \"{$task->name}\" freigegeben.";
+            $message = __('flash.task_released', ['name' => $task->name]);
         }
 
         return back()->with('status', $message);
@@ -134,11 +134,11 @@ class TaskController extends Controller
         if ($task->status !== TaskStatus::IN_REVIEW
             || $task->reviewed_by !== null
             || $task->claimed_by_id === $user->id) {
-            return back()->with('status', 'Review kann für diesen Task nicht übernommen werden.');
+            return back()->with('status', __('flash.review_cannot_claim'));
         }
 
         $task->update(['reviewed_by' => $user->id]);
 
-        return back()->with('status', "Du reviewst jetzt Task \"{$task->name}\".");
+        return back()->with('status', __('flash.review_claimed', ['name' => $task->name]));
     }
 }

@@ -1,7 +1,7 @@
 <x-app-layout>
     <x-slot name="header">
         <h2 class="font-semibold text-xl text-gray-800 leading-tight">
-            Team – {{ $team->name }}
+            {{ __('teams.team') }} – {{ $team->name }}
         </h2>
     </x-slot>
 
@@ -11,17 +11,17 @@
 
             @can('update', $team)
                 <div class="bg-white rounded-lg shadow p-6">
-                    <h3 class="font-semibold text-gray-900 mb-4">Team umbenennen</h3>
+                    <h3 class="font-semibold text-gray-900 mb-4">{{ __('teams.rename_team') }}</h3>
                     <form method="POST" action="{{ route('teams.update', $team) }}">
                         @csrf
                         @method('PATCH')
-                        <x-input-label for="name" value="Teamname" />
+                        <x-input-label for="name" :value="__('teams.team_name_2')" />
                         <div class="mt-1 flex flex-wrap items-center gap-3">
                             <div class="flex-1 min-w-64">
                                 <x-text-input id="name" name="name" type="text" class="block w-full"
                                               :value="old('name', $team->name)" required maxlength="100" />
                             </div>
-                            <x-primary-button>Speichern</x-primary-button>
+                            <x-primary-button>{{ __('common.save') }}</x-primary-button>
                         </div>
                         <x-input-error :messages="$errors->get('name')" class="mt-1" />
                     </form>
@@ -29,13 +29,13 @@
             @endcan
 
             <div class="bg-white rounded-lg shadow p-6">
-                <h3 class="font-semibold text-gray-900 mb-4">Mitglieder</h3>
+                <h3 class="font-semibold text-gray-900 mb-4">{{ __('common.members') }}</h3>
 
                 <table class="w-full text-sm">
                     <thead>
                         <tr class="text-left text-gray-400 border-b">
-                            <th class="py-2">Name</th>
-                            <th class="py-2">E-Mail</th>
+                            <th class="py-2">{{ __('common.name') }}</th>
+                            <th class="py-2">{{ __('common.email') }}</th>
                             <th class="py-2"></th>
                         </tr>
                     </thead>
@@ -45,7 +45,7 @@
                                 <td class="py-2 font-medium text-gray-800">
                                     {{ $member->name }}
                                     @if ($team->isOwner($member))
-                                        <span class="ms-1 text-xs text-amber-600">(Creator)</span>
+                                        <span class="ms-1 text-xs text-amber-600">{{ __('teams.creator') }}</span>
                                     @endif
                                 </td>
                                 <td class="py-2 text-gray-500">{{ $member->email }}</td>
@@ -53,10 +53,10 @@
                                     @can('manageMembers', $team)
                                         @if (! $team->isOwner($member))
                                             <form method="POST" action="{{ route('teams.members.destroy', [$team, $member]) }}"
-                                                  onsubmit="return confirm('Mitglied entfernen?');">
+                                                  onsubmit="return confirm('{{ __('teams.remove_member') }}');">
                                                 @csrf
                                                 @method('DELETE')
-                                                <button class="text-xs text-red-500 hover:underline">Entfernen</button>
+                                                <button class="text-xs text-red-500 hover:underline">{{ __('common.remove') }}</button>
                                             </form>
                                         @endif
                                     @endcan
@@ -69,7 +69,7 @@
                 @can('manageMembers', $team)
                     <form method="POST" action="{{ route('teams.members.store', $team) }}" class="mt-5 border-t pt-5">
                         @csrf
-                        <x-input-label for="user_id" value="Mitglied hinzufügen" />
+                        <x-input-label for="user_id" :value="__('teams.add_member')" />
                         @if ($assignableUsers->isNotEmpty())
                             <div class="mt-1 flex flex-wrap items-center gap-3">
                                 <div class="flex-1 min-w-64">
@@ -82,11 +82,11 @@
                                         @endforeach
                                     </select>
                                 </div>
-                                <x-primary-button>Hinzufügen</x-primary-button>
+                                <x-primary-button>{{ __('teams.add') }}</x-primary-button>
                             </div>
-                            <p class="mt-1 text-xs text-gray-400">Auswahl aus den Mitgliedern deiner Organisation, die noch nicht im Team sind.</p>
+                            <p class="mt-1 text-xs text-gray-400">{{ __('teams.choose_from_the_members_of_your') }}</p>
                         @else
-                            <p class="mt-1 text-sm text-gray-400">Alle Mitglieder deiner Organisation sind bereits in diesem Team.</p>
+                            <p class="mt-1 text-sm text-gray-400">{{ __('teams.all_members_of_your_organization_are') }}</p>
                         @endif
                         <x-input-error :messages="$errors->get('user_id')" class="mt-2" />
                     </form>
@@ -95,12 +95,12 @@
 
             @can('delete', $team)
                 <div class="bg-white rounded-lg shadow p-6 border border-red-100">
-                    <h3 class="font-semibold text-red-700">Team löschen</h3>
+                    <h3 class="font-semibold text-red-700">{{ __('teams.delete_team') }}</h3>
                     <form method="POST" action="{{ route('teams.destroy', $team) }}" class="mt-4"
-                          onsubmit="return confirm('Team wirklich löschen?');">
+                          onsubmit="return confirm('{{ __('teams.really_delete_this_team') }}');">
                         @csrf
                         @method('DELETE')
-                        <x-danger-button>Löschen</x-danger-button>
+                        <x-danger-button>{{ __('common.delete') }}</x-danger-button>
                     </form>
                 </div>
             @endcan

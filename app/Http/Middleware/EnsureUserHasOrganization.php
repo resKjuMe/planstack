@@ -17,7 +17,7 @@ class EnsureUserHasOrganization
     {
         if ($request->user() && $request->user()->organization_id === null) {
             return redirect()->route('organization.index')
-                ->with('status', 'Bitte gründe zuerst eine Organisation oder tritt einer bei, um Planstack zu nutzen.');
+                ->with('status', __('flash.organization_required'));
         }
 
         return $next($request);

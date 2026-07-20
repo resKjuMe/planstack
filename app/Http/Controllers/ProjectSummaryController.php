@@ -64,7 +64,7 @@ class ProjectSummaryController extends Controller
         if ($merged->isNotEmpty()) {
             $last = $merged->last();
             $lastMerge = [
-                'when' => $last->merged_at->locale('de')->diffForHumans(),
+                'when' => $last->merged_at->locale(app()->getLocale())->diffForHumans(),
                 'pr' => $last->pr_number ? '#'.$last->pr_number : $last->name,
             ];
 

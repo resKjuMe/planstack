@@ -19,10 +19,10 @@ enum Criticality: string
     public function label(): string
     {
         return match ($this) {
-            self::LOW => 'unkritisch',
-            self::MEDIUM => 'mittel',
-            self::HIGH => 'hoch',
-            self::CRITICAL => 'kritisch',
+            self::LOW => __('enums.criticality_low'),
+            self::MEDIUM => __('enums.criticality_medium'),
+            self::HIGH => __('enums.criticality_high'),
+            self::CRITICAL => __('enums.criticality_critical'),
         };
     }
 

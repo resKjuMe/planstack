@@ -5,22 +5,22 @@
 
 @php
     $timeline = collect();
-    $timeline->push(['when' => $task->created_at, 'title' => 'Angelegt', 'body' => $task->creator?->name]);
+    $timeline->push(['when' => $task->created_at, 'title' => __('tasks.created'), 'body' => $task->creator?->name]);
     if ($task->claimed_at) {
-        $timeline->push(['when' => $task->claimed_at, 'title' => 'Beansprucht', 'body' => $task->claimer?->name]);
+        $timeline->push(['when' => $task->claimed_at, 'title' => __('tasks.claimed'), 'body' => $task->claimer?->name]);
     }
     if ($task->concern) {
-        $timeline->push(['when' => $task->concern->created_at, 'title' => 'Concern gemeldet', 'body' => $task->concern->creator?->name]);
+        $timeline->push(['when' => $task->concern->created_at, 'title' => __('tasks.concern_reported'), 'body' => $task->concern->creator?->name]);
     }
     if ($task->last_reviewed_at) {
-        $revDetail = trim(($task->last_review_recommendation?->label() ?? 'reviewt').($task->reviewer ? ' · '.$task->reviewer->name : ''));
-        $timeline->push(['when' => $task->last_reviewed_at, 'title' => 'Reviewt', 'body' => $revDetail]);
+        $revDetail = trim(($task->last_review_recommendation?->label() ?? __('tasks.reviewed_2')).($task->reviewer ? ' · '.$task->reviewer->name : ''));
+        $timeline->push(['when' => $task->last_reviewed_at, 'title' => __('tasks.reviewed'), 'body' => $revDetail]);
     }
     if ($task->merged_at) {
-        $timeline->push(['when' => $task->merged_at, 'title' => 'Gemerged', 'body' => null]);
+        $timeline->push(['when' => $task->merged_at, 'title' => __('tasks.merged'), 'body' => null]);
     }
     foreach ($events as $e) {
-        $body = preg_replace('/^\**\s*'.preg_quote($e['label'], '/').'\b\s*:?\s*\**\s*/iu', '', $e['text']);
+        $body = preg_replace('/^\**\s*'.preg_quote($e['match'], '/').'\b\s*:?\s*\**\s*/iu', '', $e['text']);
         $timeline->push(['when' => $e['date'] ?? null, 'title' => $e['label'], 'body' => trim((string) $body) ?: null]);
     }
 
@@ -31,7 +31,7 @@
 
 @if ($timeline->isNotEmpty())
 <section class="bg-white rounded-lg shadow p-6">
-    <h3 class="font-semibold text-gray-900 mb-4">Verlauf</h3>
+    <h3 class="font-semibold text-gray-900 mb-4">{{ __('tasks.history') }}</h3>
     <ol class="relative space-y-4 border-l border-gray-200 pl-5">
         @foreach ($timeline as $e)
             <li class="relative">

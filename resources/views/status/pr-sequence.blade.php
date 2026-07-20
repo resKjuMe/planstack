@@ -54,31 +54,31 @@
          x-init="$watch('doneOpen', v => localStorage.setItem('ps-seq-done-open', v ? '1' : '0'));
                  $watch('blockedOpen', v => sessionStorage.setItem('ps-seq-blocked-open', v ? '1' : '0'))">
 
-        <x-page-head title="PR-Sequenz" class="mb-4">
+        <x-page-head :title="__('common.pr_sequence')" class="mb-4">
             <ul class="list-disc space-y-1 ps-4">
-                <li><span class="font-medium">PR-Sequenz</span>: empfohlene Bearbeitungs-Reihenfolge der offenen PRs — aktiver PR zuerst, dann Flaschenhälse, dann nach Sequenz.</li>
-                <li>Kennzahlen: offene PRs, Story Points gesamt, blockierte PRs und der kritische Pfad (Kette der Flaschenhälse).</li>
-                <li>Ein <span class="font-medium">Flaschenhals</span> blockiert viele Folge-PRs — solche zuerst zu erledigen bringt am meisten.</li>
-                <li>Die Filter-Pills schränken auf Pickbar/Blockiert/Probleme/Geclaimt ein; viele blockierte PRs sind einklappbar, abgeschlossene stehen im Sammelblock unten.</li>
+                <li><span class="font-medium">{{ __('common.pr_sequence') }}</span>: {{ __('status.recommended_order_for_working_through') }}</li>
+                <li>{{ __('status.metrics_open_prs_total_story_points') }}</li>
+                <li>{{ __('status.on') }} <span class="font-medium">{{ __('status.bottleneck') }}</span> {{ __('status.blocks_many_downstream_prs_finishing') }}</li>
+                <li>{{ __('status.the_filter_pills_narrow_to_pickable') }}</li>
             </ul>
         </x-page-head>
 
         {{-- Kennzahlen-Kacheln (Card-Stil wie „Kalibrierung") --}}
         <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <div class="rounded-lg bg-white p-4 ring-1 ring-gray-200">
-                <div class="text-xs font-medium text-gray-400">Offene PRs</div>
+                <div class="text-xs font-medium text-gray-400">{{ __('status.open_prs') }}</div>
                 <div class="mt-1 text-[22px] font-semibold leading-tight text-gray-900">{{ $counts['all'] }}</div>
             </div>
             <div class="rounded-lg bg-white p-4 ring-1 ring-gray-200">
-                <div class="text-xs font-medium text-gray-400">Story Points gesamt</div>
+                <div class="text-xs font-medium text-gray-400">{{ __('status.total_story_points') }}</div>
                 <div class="mt-1 text-[22px] font-semibold leading-tight text-gray-900">{{ $totalSp }}</div>
             </div>
             <div class="rounded-lg bg-white p-4 ring-1 ring-gray-200">
-                <div class="text-xs font-medium text-gray-400">Blockiert</div>
+                <div class="text-xs font-medium text-gray-400">{{ __('common.blocks') }}</div>
                 <div class="mt-1 text-[22px] font-semibold leading-tight text-red-600">{{ $counts['blocked'] }}</div>
             </div>
             <div class="rounded-lg bg-white p-4 ring-1 ring-gray-200">
-                <div class="text-xs font-medium text-gray-400">Kritischer Pfad</div>
+                <div class="text-xs font-medium text-gray-400">{{ __('status.critical_path') }}</div>
                 <div class="mt-1 break-words font-mono text-[15px] font-medium leading-snug text-gray-900">{{ $criticalPath !== '' ? $criticalPath : '—' }}</div>
             </div>
         </div>
@@ -86,11 +86,11 @@
         {{-- Filterleiste: Pills mit Icon + Zähler-Badge, rein clientseitig --}}
         @php
             $chips = [
-                'all' => ['label' => 'Alle', 'icon' => 'list', 'count' => $counts['all']],
-                'pickable' => ['label' => 'Pickbar', 'icon' => 'play', 'count' => $counts['pickable']],
-                'blocked' => ['label' => 'Blockiert', 'icon' => 'lock', 'count' => $counts['blocked']],
-                'concerned' => ['label' => 'Probleme', 'icon' => 'alert', 'count' => $counts['concerned']],
-                'claimed' => ['label' => 'Geclaimt', 'icon' => 'hand', 'count' => $counts['claimed']],
+                'all' => ['label' => __('common.all'), 'icon' => 'list', 'count' => $counts['all']],
+                'pickable' => ['label' => __('status.pickable'), 'icon' => 'play', 'count' => $counts['pickable']],
+                'blocked' => ['label' => __('common.blocks'), 'icon' => 'lock', 'count' => $counts['blocked']],
+                'concerned' => ['label' => __('status.concerns'), 'icon' => 'alert', 'count' => $counts['concerned']],
+                'claimed' => ['label' => __('status.claimed'), 'icon' => 'hand', 'count' => $counts['claimed']],
             ];
         @endphp
         <div class="mt-4 inline-flex flex-wrap items-center gap-1 rounded-full bg-gray-100 p-1">
@@ -111,7 +111,7 @@
             @forelse ($main as $task)
                 @include('status.partials.seq-row', ['task' => $task, 'inCollapse' => false])
             @empty
-                <p class="px-4 py-6 text-sm text-[var(--seq-faint)]">Keine offenen PRs.</p>
+                <p class="px-4 py-6 text-sm text-[var(--seq-faint)]">{{ __('status.no_open_prs') }}</p>
             @endforelse
 
             {{-- Eingeklappte blockierte PRs ohne Flaschenhals-Status --}}
@@ -119,8 +119,8 @@
                 <button type="button" x-show="filter === 'all'" @click="blockedOpen = !blockedOpen"
                         class="flex w-full items-center gap-2 px-4 py-3 text-xs font-medium text-[var(--seq-muted)] hover:text-[var(--seq-text)]">
                     <svg class="h-3.5 w-3.5 shrink-0 transition-transform" :class="blockedOpen && 'rotate-90'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6l-6 6"/></svg>
-                    <span x-show="!blockedOpen">{{ $blockedPlain->count() }} weitere blockierte PRs anzeigen</span>
-                    <span x-show="blockedOpen" x-cloak>{{ $blockedPlain->count() }} weitere blockierte PRs ausblenden</span>
+                    <span x-show="!blockedOpen">{{ __('status.show_count_more_blocked_prs', ['count' => $blockedPlain->count()]) }}</span>
+                    <span x-show="blockedOpen" x-cloak>{{ __('status.hide_count_more_blocked_prs', ['count' => $blockedPlain->count()]) }}</span>
                 </button>
                 @foreach ($blockedPlain as $task)
                     @include('status.partials.seq-row', ['task' => $task, 'inCollapse' => true])
@@ -130,7 +130,7 @@
             {{-- Leerhinweis, wenn der aktive Filter nichts übrig lässt --}}
             @if ($tasks->isNotEmpty())
                 <p x-show="filter !== 'all' && counts[filter] === 0" x-cloak
-                   class="px-4 py-6 text-sm text-[var(--seq-faint)]">Keine PRs in diesem Filter.</p>
+                   class="px-4 py-6 text-sm text-[var(--seq-faint)]">{{ __('status.no_prs_in_this_filter') }}</p>
             @endif
         </div>
 
@@ -142,7 +142,7 @@
                     <svg class="h-4 w-4 transition-transform" :class="doneOpen && 'rotate-90'" viewBox="0 0 20 20" fill="currentColor">
                         <path fill-rule="evenodd" d="M7.293 4.293a1 1 0 011.414 0l5 5a1 1 0 010 1.414l-5 5a1 1 0 01-1.414-1.414L11.586 10 7.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" />
                     </svg>
-                    {{ $completed->count() }} abgeschlossene PR{{ $completed->count() === 1 ? '' : 's' }}
+                    {{ trans_choice('status.completed_prs', $completed->count(), ['count' => $completed->count()]) }}
                 </button>
                 <div x-show="doneOpen" x-cloak class="mt-2 flex flex-wrap gap-x-3 gap-y-1.5">
                     @foreach ($completed as $task)

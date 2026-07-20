@@ -24,13 +24,13 @@ class ProjectPrSyncController extends Controller
         }
 
         if ($result['checked'] === 0) {
-            return back()->with('status', 'Keine offenen PRs mit PR-Nummer zum Abgleichen.');
+            return back()->with('status', __('flash.pr_sync_none'));
         }
 
-        $message = "{$result['merged']} PR(s) als merged getaggt · {$result['checked']} geprüft";
+        $message = __('flash.pr_sync_summary', ['merged' => $result['merged'], 'checked' => $result['checked']]);
 
         if ($result['errors'] > 0) {
-            $message .= " · {$result['errors']} Fehler: ".$this->errorDetail($result);
+            $message .= ' · '.__('flash.pr_sync_errors', ['count' => $result['errors']]).': '.$this->errorDetail($result);
         }
 
         return back()->with($result['errors'] > 0 && $result['merged'] === 0 ? 'error' : 'status', $message);
@@ -44,9 +44,9 @@ class ProjectPrSyncController extends Controller
     private function errorDetail(array $result): string
     {
         $hints = [
-            401 => 'Token ungültig oder abgelaufen',
-            403 => 'kein Zugriff oder Rate-Limit (ggf. SSO für die Organisation autorisieren)',
-            404 => 'PR/Repo nicht gefunden oder Token ohne Zugriff',
+            401 => __('flash.pr_sync_hint_401'),
+            403 => __('flash.pr_sync_hint_403'),
+            404 => __('flash.pr_sync_hint_404'),
         ];
 
         $codes = array_values(array_unique($result['statuses']));
@@ -60,7 +60,7 @@ class ProjectPrSyncController extends Controller
         $detail = implode(', ', $parts);
 
         if ($result['tokenMissing']) {
-            $detail .= ' — kein GITHUB_TOKEN gesetzt';
+            $detail .= ' — '.__('flash.pr_sync_no_token');
         }
 
         return $detail;

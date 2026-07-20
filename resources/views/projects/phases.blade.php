@@ -1,7 +1,7 @@
 <x-app-layout>
     <x-slot name="header">
         <h2 class="font-semibold text-xl text-gray-800 leading-tight">
-            Projekt bearbeiten – <span class="font-mono">{{ $project->alias }}</span>
+            {{ __('projects.edit_project') }} – <span class="font-mono">{{ $project->alias }}</span>
         </h2>
     </x-slot>
 
@@ -13,17 +13,17 @@
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
             <x-flash />
 
-            <x-page-head title="Phasen">
+            <x-page-head :title="__('common.phases')">
                 <ul class="list-disc space-y-1 ps-4">
-                    <li>Phasen bündeln Tasks zu Abschnitten (z. B. „Fundament", „Ausbau") und bestimmen deren Reihenfolge im Diagramm und in der Summary.</li>
-                    <li><span class="font-medium">Anlegen</span> ergänzt eine neue Phase am Ende der Liste.</li>
-                    <li><span class="font-medium">Pfeile</span> ändern die Reihenfolge, <span class="font-medium">Bearbeiten</span> benennt eine Phase um.</li>
-                    <li><span class="font-medium">Löschen</span> entfernt nur die Phase — die enthaltenen Tasks bleiben erhalten und sind danach keiner Phase mehr zugeordnet.</li>
+                    <li>{{ __('projects.phases_group_tasks_into_sections_e_g') }}</li>
+                    <li><span class="font-medium">{{ __('common.create') }}</span> {{ __('projects.adds_a_new_phase_at_the_end_of_the_list') }}</li>
+                    <li><span class="font-medium">{{ __('projects.arrows') }}</span> {{ __('projects.change_the_order') }} <span class="font-medium">{{ __('common.edit') }}</span> {{ __('projects.rename_a_phase') }}</li>
+                    <li><span class="font-medium">{{ __('common.delete') }}</span> {{ __('projects.removes_only_the_phase_the_contained') }}</li>
                 </ul>
             </x-page-head>
 
             <div class="bg-white rounded-lg shadow p-6">
-                <h3 class="mb-4 font-semibold text-gray-900">Phasen ({{ $phases->count() }})</h3>
+                <h3 class="mb-4 font-semibold text-gray-900">{{ __('projects.phases_count', ['count' => $phases->count()]) }}</h3>
 
                 <div class="divide-y divide-gray-100">
                     @forelse ($phases as $phase)
@@ -49,9 +49,9 @@
                                     <input type="text" name="name" value="{{ $phase->name }}" required maxlength="100"
                                            class="block w-full rounded-md border-gray-300 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
                                            x-ref="nameInput">
-                                    <x-primary-button class="!py-1.5">Speichern</x-primary-button>
+                                    <x-primary-button class="!py-1.5">{{ __('common.save') }}</x-primary-button>
                                     <button type="button" @click="editing = false"
-                                            class="whitespace-nowrap text-xs text-gray-500 hover:text-gray-700">Abbrechen</button>
+                                            class="whitespace-nowrap text-xs text-gray-500 hover:text-gray-700">{{ __('common.cancel') }}</button>
                                 </form>
                             @endcan
 
@@ -61,7 +61,7 @@
                                     <form method="POST" action="{{ route('projects.phases.move', [$project, $phase]) }}">
                                         @csrf
                                         <input type="hidden" name="direction" value="up">
-                                        <button type="submit" title="Nach oben"
+                                        <button type="submit" :title="__('projects.move_up')"
                                                 class="rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-700 disabled:opacity-30 disabled:hover:bg-transparent"
                                                 @disabled($loop->first)>
                                             <svg class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M10 5a.75.75 0 01.53.22l5 5a.75.75 0 11-1.06 1.06L10 6.81l-4.47 4.47a.75.75 0 01-1.06-1.06l5-5A.75.75 0 0110 5z" clip-rule="evenodd"/></svg>
@@ -71,7 +71,7 @@
                                     <form method="POST" action="{{ route('projects.phases.move', [$project, $phase]) }}">
                                         @csrf
                                         <input type="hidden" name="direction" value="down">
-                                        <button type="submit" title="Nach unten"
+                                        <button type="submit" :title="__('projects.move_down')"
                                                 class="rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-700 disabled:opacity-30 disabled:hover:bg-transparent"
                                                 @disabled($loop->last)>
                                             <svg class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M10 15a.75.75 0 01-.53-.22l-5-5a.75.75 0 111.06-1.06L10 13.19l4.47-4.47a.75.75 0 111.06 1.06l-5 5A.75.75 0 0110 15z" clip-rule="evenodd"/></svg>
@@ -79,19 +79,19 @@
                                     </form>
 
                                     <button type="button" @click="editing = true; $nextTick(() => $refs.nameInput.focus())"
-                                            class="ms-1 text-xs text-indigo-600 hover:underline">Bearbeiten</button>
+                                            class="ms-1 text-xs text-indigo-600 hover:underline">{{ __('common.edit') }}</button>
 
                                     <form method="POST" action="{{ route('projects.phases.destroy', [$project, $phase]) }}"
-                                          onsubmit="return confirm('Phase „{{ $phase->name }}“ löschen? Die {{ $phase->tasks_count }} enthaltenen Task(s) bleiben erhalten, verlieren aber die Phasenzuordnung.');">
+                                          onsubmit="return confirm('{{ __('projects.delete_phase_name_the_count_contained', ['name' => $phase->name, 'count' => $phase->tasks_count]) }}');">
                                         @csrf
                                         @method('DELETE')
-                                        <button type="submit" class="ms-1 text-xs text-red-500 hover:underline">Löschen</button>
+                                        <button type="submit" class="ms-1 text-xs text-red-500 hover:underline">{{ __('common.delete') }}</button>
                                     </form>
                                 </div>
                             @endcan
                         </div>
                     @empty
-                        <p class="py-3 text-sm text-gray-400">Noch keine Phasen angelegt.</p>
+                        <p class="py-3 text-sm text-gray-400">{{ __('projects.no_phases_created_yet') }}</p>
                     @endforelse
                 </div>
 
@@ -99,11 +99,11 @@
                     <form method="POST" action="{{ route('projects.phases.store', $project) }}"
                           class="mt-5 border-t pt-5">
                         @csrf
-                        <x-input-label for="name" value="Neue Phase" />
+                        <x-input-label for="name" :value="__('projects.new_phase')" />
                         <div class="mt-1 flex items-center gap-3">
                             <x-text-input id="name" name="name" type="text" class="block flex-1"
-                                          :value="old('name')" required maxlength="100" placeholder="z. B. Fundament" />
-                            <x-primary-button>Anlegen</x-primary-button>
+                                          :value="old('name')" required maxlength="100" :placeholder="__('projects.e_g_foundation')" />
+                            <x-primary-button>{{ __('common.create') }}</x-primary-button>
                         </div>
                         <x-input-error :messages="$errors->get('name')" class="mt-2" />
                     </form>

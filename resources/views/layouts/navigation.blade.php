@@ -20,20 +20,20 @@
                 @if ($hasOrg)
                 <div class="hidden space-x-8 sm:-my-px sm:ms-10 sm:flex">
                     <x-nav-link :href="route('projects.index')" :active="request()->routeIs('projects.*')">
-                        {{ __('Projekte') }}
+                        {{ __('common.projects') }}
                     </x-nav-link>
                     <x-nav-link :href="route('teams.index')" :active="request()->routeIs('teams.*')">
-                        {{ __('Teams') }}
+                        {{ __('common.teams') }}
                     </x-nav-link>
                     <x-nav-link :href="route('skill.setup')" :active="request()->routeIs('skill.*')">
                         <svg class="me-1 inline h-4 w-4 text-gray-400" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
                             <path d="M10.75 2.75a.75.75 0 0 0-1.5 0v8.614L6.295 8.235a.75.75 0 1 0-1.09 1.03l4.25 4.5a.75.75 0 0 0 1.09 0l4.25-4.5a.75.75 0 0 0-1.09-1.03l-2.955 3.129V2.75Z" />
                             <path d="M3.5 12.75a.75.75 0 0 0-1.5 0v2.5A2.75 2.75 0 0 0 4.75 18h10.5A2.75 2.75 0 0 0 18 15.25v-2.5a.75.75 0 0 0-1.5 0v2.5c0 .69-.56 1.25-1.25 1.25H4.75c-.69 0-1.25-.56-1.25-1.25v-2.5Z" />
                         </svg>
-                        {{ __('Planstack-Skill') }}
+                        {{ __('nav.planstack_skill') }}
                     </x-nav-link>
                     <x-nav-link :href="route('changelog')" :active="request()->routeIs('changelog')" class="font-mono">
-                        <svg class="js-changelog-new me-1 inline h-4 w-4 text-indigo-500" style="display:none" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" title="Neue Änderungen">
+                        <svg class="js-changelog-new me-1 inline h-4 w-4 text-indigo-500" style="display:none" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" title="{{ __('nav.new_changes') }}">
                             <path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/><path d="M20 3v4"/><path d="M22 5h-4"/><path d="M4 17v2"/><path d="M5 18H3"/>
                         </svg>
                         v{{ config('changelog.releases.0.version') }}
@@ -47,7 +47,7 @@
                 <x-dropdown align="right" width="w-56">
                     <x-slot name="trigger">
                         <button class="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-gray-500 bg-white hover:text-gray-700 focus:outline-none transition ease-in-out duration-150">
-                            <span class="js-psci-update me-1 align-middle text-indigo-600" style="display:none" title="Update für die CI-Status-Anzeige verfügbar">
+                            <span class="js-psci-update me-1 align-middle text-indigo-600" style="display:none" title="{{ __('common.update_available_for_the_ci_status') }}">
                                 <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 16V8"/><path d="m8.5 11.5 3.5-3.5 3.5 3.5"/></svg>
                             </span>
                             <div>{{ Auth::user()->name }}</div>
@@ -63,19 +63,19 @@
                     <x-slot name="content">
                         <x-dropdown-link :href="route('organization.index')" class="flex items-center gap-2">
                             <svg class="h-4 w-4 shrink-0 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z"/><path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2"/><path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2"/><path d="M10 6h4"/><path d="M10 10h4"/><path d="M10 14h4"/><path d="M10 18h4"/></svg>
-                            {{ __('Organisation') }}
+                            {{ __('common.organization') }}
                         </x-dropdown-link>
 
                         <x-dropdown-link :href="route('profile.edit')" class="flex items-center gap-2">
                             <svg class="h-4 w-4 shrink-0 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-                            Profil
+                            {{ __('common.profile') }}
                         </x-dropdown-link>
 
                         {{-- Einrichtungs-/Downloadseite der CI-Status-Anzeige --}}
                         @if ($hasOrg)
                         <x-dropdown-link :href="url('/planstack-ci/setup')" class="flex items-center gap-2 whitespace-nowrap">
                             <svg class="h-4 w-4 shrink-0 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
-                            {{ __('TamperMonkey Script') }}
+                            {{ __('nav.tampermonkey_script') }}
                             <span class="js-psci-update ms-2 rounded-full bg-indigo-600 px-1.5 py-0.5 text-[10px] font-semibold text-white align-middle" style="display:none">v{{ $ciVersion }}</span>
                         </x-dropdown-link>
                         @endif
@@ -88,7 +88,7 @@
                                     onclick="event.preventDefault();
                                                 this.closest('form').submit();">
                                 <svg class="h-4 w-4 shrink-0 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/></svg>
-                                Abmelden
+                                {{ __('nav.sign_out') }}
                             </x-dropdown-link>
                         </form>
                     </x-slot>
@@ -112,13 +112,13 @@
         @if ($hasOrg)
         <div class="pt-2 pb-3 space-y-1">
             <x-responsive-nav-link :href="route('projects.index')" :active="request()->routeIs('projects.*')">
-                {{ __('Projekte') }}
+                {{ __('common.projects') }}
             </x-responsive-nav-link>
             <x-responsive-nav-link :href="route('teams.index')" :active="request()->routeIs('teams.*')">
-                {{ __('Teams') }}
+                {{ __('common.teams') }}
             </x-responsive-nav-link>
             <x-responsive-nav-link :href="route('skill.setup')" :active="request()->routeIs('skill.*')">
-                {{ __('Planstack-Skill') }}
+                {{ __('nav.planstack_skill') }}
             </x-responsive-nav-link>
             <x-responsive-nav-link :href="route('changelog')" :active="request()->routeIs('changelog')">
                 v{{ config('changelog.releases.0.version') }}
@@ -135,23 +135,23 @@
 
             <div class="mt-3 space-y-1">
                 <x-responsive-nav-link :href="route('organization.index')">
-                    {{ __('Organisation') }}
+                    {{ __('common.organization') }}
                 </x-responsive-nav-link>
 
                 <x-responsive-nav-link :href="route('profile.edit')">
-                    Profil
+                    {{ __('common.profile') }}
                 </x-responsive-nav-link>
 
                 @if ($hasOrg)
                 {{-- Einrichtungs-/Downloadseite der CI-Status-Anzeige --}}
                 <x-responsive-nav-link :href="url('/planstack-ci/setup')">
-                    {{ __('TamperMonkey Script') }}
+                    {{ __('nav.tampermonkey_script') }}
                     <span class="js-psci-update ms-2 rounded-full bg-indigo-600 px-1.5 py-0.5 text-[10px] font-semibold text-white align-middle" style="display:none">v{{ $ciVersion }}</span>
                 </x-responsive-nav-link>
 
                 {{-- Download des allgemeinen Planstack-Skills für Claude Code --}}
                 <x-responsive-nav-link :href="route('skill.download')">
-                    {{ __('Planstack-Skill') }}
+                    {{ __('nav.planstack_skill') }}
                 </x-responsive-nav-link>
                 @endif
 
@@ -162,7 +162,7 @@
                     <x-responsive-nav-link :href="route('logout')"
                             onclick="event.preventDefault();
                                         this.closest('form').submit();">
-                        Abmelden
+                        {{ __('nav.sign_out') }}
                     </x-responsive-nav-link>
                 </form>
             </div>

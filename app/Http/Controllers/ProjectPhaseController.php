@@ -39,7 +39,7 @@ class ProjectPhaseController extends Controller
             'position' => ((int) $project->phases()->max('position')) + 1,
         ]);
 
-        return back()->with('status', "Phase \"{$data['name']}\" angelegt.");
+        return back()->with('status', __('flash.phase_created', ['name' => $data['name']]));
     }
 
     public function update(Request $request, Project $project, Phase $phase): RedirectResponse
@@ -52,7 +52,7 @@ class ProjectPhaseController extends Controller
 
         $phase->update(['name' => $data['name']]);
 
-        return back()->with('status', 'Phase umbenannt.');
+        return back()->with('status', __('flash.phase_renamed'));
     }
 
     /**
@@ -79,7 +79,7 @@ class ProjectPhaseController extends Controller
             $neighbour->save();
         }
 
-        return back()->with('status', 'Reihenfolge aktualisiert.');
+        return back()->with('status', __('flash.order_updated'));
     }
 
     public function destroy(Project $project, Phase $phase): RedirectResponse
@@ -90,6 +90,6 @@ class ProjectPhaseController extends Controller
         // niemals mitgelöscht.
         $phase->delete();
 
-        return back()->with('status', 'Phase gelöscht.');
+        return back()->with('status', __('flash.phase_deleted'));
     }
 }

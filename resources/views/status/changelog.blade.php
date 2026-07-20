@@ -1,9 +1,9 @@
 <x-status-shell :project="$project" :active="$active" :bare="true">
-    <x-page-head title="Changelog" class="mb-4">
+    <x-page-head :title="__('common.changelog')" class="mb-4">
         <ul class="list-disc space-y-1 ps-4">
-            <li><span class="font-medium">Changelog</span>: Änderungsprotokoll aller Tasks dieses Projekts, chronologisch nach Datum und Uhrzeit.</li>
-            <li>Jede Zeile nennt Zeit, geänderten Task und Verursacher; Aufklappen zeigt die geänderten Felder mit Vorher/Nachher.</li>
-            <li>„+N weitere Felder" blendet zusätzliche Änderungen einer Zeile ein.</li>
+            <li><span class="font-medium">{{ __('common.changelog') }}</span>: {{ __('status.change_log_of_all_tasks_in_this_project') }}</li>
+            <li>{{ __('status.each_row_shows_the_time_the_changed') }}</li>
+            <li>{{ __('status.n_more_fields_reveals_additional') }}</li>
         </ul>
     </x-page-head>
 
@@ -53,9 +53,9 @@
                             <table class="w-full text-sm">
                                 <thead>
                                     <tr class="text-left text-xs text-gray-400">
-                                        <th class="pr-4 py-1 font-medium">Feld</th>
-                                        <th class="pr-4 py-1 font-medium">Vorher</th>
-                                        <th class="py-1 font-medium">Nachher</th>
+                                        <th class="pr-4 py-1 font-medium">{{ __('common.field') }}</th>
+                                        <th class="pr-4 py-1 font-medium">{{ __('status.before') }}</th>
+                                        <th class="py-1 font-medium">{{ __('status.after') }}</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -77,8 +77,8 @@
                             </table>
                             @if (! empty($section['hidden']))
                                 <button type="button" @click="moreOpen = !moreOpen" class="mt-1 text-xs text-indigo-600 hover:underline">
-                                    <span x-show="!moreOpen">+ {{ count($section['hidden']) }} weitere Felder</span>
-                                    <span x-show="moreOpen" x-cloak>weniger anzeigen</span>
+                                    <span x-show="!moreOpen">{{ __('status.count_more_fields', ['count' => count($section['hidden'])]) }}</span>
+                                    <span x-show="moreOpen" x-cloak>{{ __('status.show_less') }}</span>
                                 </button>
                             @endif
                         </div>
@@ -86,7 +86,7 @@
                 </div>
             </div>
         @empty
-            <p class="p-6 text-sm text-gray-400">Noch keine Änderungen protokolliert.</p>
+            <p class="p-6 text-sm text-gray-400">{{ __('status.no_changes_logged_yet') }}</p>
         @endforelse
     </div>
 

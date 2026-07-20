@@ -28,7 +28,7 @@ class OrganizationInvitationMail extends Mailable
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: 'Einladung zu '.$this->organization->name.' auf Planstack',
+            subject: __('emails.invitation_subject', ['organization' => $this->organization->name]),
         );
     }
 

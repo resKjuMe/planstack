@@ -21,16 +21,16 @@ enum TaskStatus: string
     public function label(): string
     {
         return match ($this) {
-            self::UNKNOWN => 'ausstehend',
-            self::BLOCKED => 'blockiert',
-            self::CONCERNED => 'problematisch',
-            self::PICKABLE => 'pickbar',
-            self::CLAIMED => 'beansprucht',
-            self::ANALYZING => 'in Analyse',
-            self::IN_PROGRESS => 'in Arbeit',
-            self::IN_REVIEW => 'in Review',
-            self::COMPLETED => 'erledigt',
-            self::MERGED => 'gemerged',
+            self::UNKNOWN => __('enums.status_unknown'),
+            self::BLOCKED => __('enums.status_blocked'),
+            self::CONCERNED => __('enums.status_concerned'),
+            self::PICKABLE => __('enums.status_pickable'),
+            self::CLAIMED => __('enums.status_claimed'),
+            self::ANALYZING => __('enums.status_analyzing'),
+            self::IN_PROGRESS => __('enums.status_in_progress'),
+            self::IN_REVIEW => __('enums.status_in_review'),
+            self::COMPLETED => __('enums.status_completed'),
+            self::MERGED => __('enums.status_merged'),
         };
     }
 

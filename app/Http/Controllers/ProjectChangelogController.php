@@ -68,12 +68,12 @@ class ProjectChangelogController extends Controller
             ->unique()->values();
 
         $sources = [
-            Project::class => ['label' => 'Projekt', 'ids' => collect([$project->id])],
-            Task::class => ['label' => 'Task', 'ids' => $allTaskIds],
-            Phase::class => ['label' => 'Phase', 'ids' => $allPhaseIds],
-            TaskConcern::class => ['label' => 'Concern', 'ids' => $allConcernIds],
-            TaskRequirement::class => ['label' => 'Abhängigkeit', 'ids' => $allRequirementIds],
-            ProjectMembership::class => ['label' => 'Mitgliedschaft', 'ids' => $allMembershipIds],
+            Project::class => ['label' => __('changelog.source_project'), 'ids' => collect([$project->id])],
+            Task::class => ['label' => __('changelog.source_task'), 'ids' => $allTaskIds],
+            Phase::class => ['label' => __('changelog.source_phase'), 'ids' => $allPhaseIds],
+            TaskConcern::class => ['label' => __('changelog.source_concern'), 'ids' => $allConcernIds],
+            TaskRequirement::class => ['label' => __('changelog.source_dependency'), 'ids' => $allRequirementIds],
+            ProjectMembership::class => ['label' => __('changelog.source_membership'), 'ids' => $allMembershipIds],
         ];
 
         $query = null;
@@ -131,7 +131,7 @@ class ProjectChangelogController extends Controller
                 ]];
                 if ($merged) {
                     array_unshift($sections, [
-                        'label' => 'Task '.$this->auditActionVerb('updated'),
+                        'label' => __('changelog.source_task').' '.$this->auditActionVerb('updated'),
                         'rows' => [[
                             'field' => $this->auditFieldLabel('status'),
                             'old' => $this->statusLabel($merged['old']),
@@ -143,8 +143,8 @@ class ProjectChangelogController extends Controller
                 return [
                     'when' => Carbon::parse($log->created_at)->setTimezone('Europe/Berlin'),
                     'headline' => $this->auditHeadline($log, ...$lookups, merged: $merged),
-                    'causer' => $log->causer_id ? ($refs['users'][$log->causer_id] ?? "Nutzer #{$log->causer_id}") : 'System',
-                    'causer_short' => $log->causer_id ? $this->shortName($refs['users'][$log->causer_id] ?? "Nutzer #{$log->causer_id}") : 'System',
+                    'causer' => $log->causer_id ? ($refs['users'][$log->causer_id] ?? __('changelog.user_ref', ['id' => $log->causer_id])) : __('changelog.system'),
+                    'causer_short' => $log->causer_id ? $this->shortName($refs['users'][$log->causer_id] ?? __('changelog.user_ref', ['id' => $log->causer_id])) : __('changelog.system'),
                     'sections' => array_map(fn ($s) => [
                         'label' => $s['label'],
                         'visible' => array_slice($s['rows'], 0, 3),
@@ -387,7 +387,7 @@ class ProjectChangelogController extends Controller
         $id = (int) $log->entity_id;
         $values = $log->new_values ?: ($log->old_values ?: []);
         $verb = $this->auditActionVerb($log->action);
-        $taskLabel = fn (mixed $taskId) => $taskId ? ($tasksById[$taskId] ?? "Task #{$taskId}") : '?';
+        $taskLabel = fn (mixed $taskId) => $taskId ? ($tasksById[$taskId] ?? __('changelog.task_ref', ['id' => $taskId])) : '?';
         $text = fn (string $v) => ['t' => 'text', 'v' => $v];
         $tag = fn (string $v) => ['t' => 'tag', 'v' => $v];
 
@@ -405,7 +405,7 @@ class ProjectChangelogController extends Controller
                         $statusLabel .= ' ('.$this->initials($claimer).')';
                     }
                 }
-                $segments = [$tag($tasksById[$id] ?? ($values['name'] ?? "Task #{$id}")), $text(' · ')];
+                $segments = [$tag($tasksById[$id] ?? ($values['name'] ?? __('changelog.task_ref', ['id' => $id]))), $text(' · ')];
                 if ($old !== null) {
                     $segments[] = ['t' => 'status', 'v' => $this->statusLabel($old), 'cls' => $this->statusBadge($old)];
                     $segments[] = $text(' → ');
@@ -419,15 +419,15 @@ class ProjectChangelogController extends Controller
                 return $segments;
             }
 
-            return [$tag($tasksById[$id] ?? ($values['name'] ?? "Task #{$id}")), $text(' · '.$verb)];
+            return [$tag($tasksById[$id] ?? ($values['name'] ?? __('changelog.task_ref', ['id' => $id]))), $text(' · '.$verb)];
         }
 
         if ($log->entity_class === TaskConcern::class) {
             $taskId = $values['task_id'] ?? $concernTaskById[$id] ?? null;
-            $segments = [$text('Concern zu '), $tag($taskLabel($taskId))];
+            $segments = [$text(__('changelog.concern_prefix')), $tag($taskLabel($taskId))];
 
             if ($merged) {
-                $segments[] = $text(' · Status → ');
+                $segments[] = $text(__('changelog.status_arrow'));
                 $segments[] = ['t' => 'status', 'v' => $this->statusLabel($merged['new']), 'cls' => $this->statusBadge($merged['new'])];
             } else {
                 $segments[] = $text(' '.$verb);
@@ -443,8 +443,8 @@ class ProjectChangelogController extends Controller
         }
 
         return match ($log->entity_class) {
-            Project::class => [$text('Projekt '), $tag($project->alias), $text(' '.$verb)],
-            Phase::class => [$text('Phase '), $tag($phasesById[$id] ?? ($values['name'] ?? "#{$id}")), $text(' '.$verb)],
+            Project::class => [$text(__('changelog.project_prefix')), $tag($project->alias), $text(' '.$verb)],
+            Phase::class => [$text(__('changelog.phase_prefix')), $tag($phasesById[$id] ?? ($values['name'] ?? __('changelog.entity_ref', ['id' => $id]))), $text(' '.$verb)],
             TaskRequirement::class => [
                 $tag($taskLabel($values['task_id'] ?? $requirementsById[$id]->task_id ?? null)),
                 $text(' ← '),
@@ -452,25 +452,25 @@ class ProjectChangelogController extends Controller
                 $text(' '.$verb),
             ],
             ProjectMembership::class => [
-                $text('Mitgliedschaft: '),
+                $text(__('changelog.membership_prefix')),
                 $tag((function () use ($values, $membershipUserById, $id, $usersById) {
                     $userId = $values['user_id'] ?? $membershipUserById[$id] ?? null;
 
-                    return $userId ? ($usersById[$userId] ?? "Nutzer #{$userId}") : "#{$id}";
+                    return $userId ? ($usersById[$userId] ?? __('changelog.user_ref', ['id' => $userId])) : __('changelog.entity_ref', ['id' => $id]);
                 })()),
                 $text(' '.$verb),
             ],
-            default => [$text("#{$id} ".$verb)],
+            default => [$text(__('changelog.entity_ref', ['id' => $id]).' '.$verb)],
         };
     }
 
     private function auditActionVerb(string $action): string
     {
         return match ($action) {
-            'created' => 'erstellt',
-            'updated' => 'aktualisiert',
-            'deleted' => 'gelöscht',
-            'restored' => 'wiederhergestellt',
+            'created' => __('changelog.action_created'),
+            'updated' => __('changelog.action_updated'),
+            'deleted' => __('changelog.action_deleted'),
+            'restored' => __('changelog.action_restored'),
             default => $action,
         };
     }
@@ -478,31 +478,31 @@ class ProjectChangelogController extends Controller
     private function auditFieldLabel(string $key): string
     {
         return match ($key) {
-            'name' => 'Name',
-            'alias' => 'Kürzel',
-            'summary' => 'Zusammenfassung',
-            'description' => 'Beschreibung',
-            'description_acceptance_criteria' => 'Akzeptanzkriterien',
-            'github_repo' => 'GitHub-Repo',
-            'skill_description' => 'Skill-Beschreibung',
-            'status' => 'Status',
-            'phase_id' => 'Phase',
-            'position' => 'Position',
-            'effort_story_points' => 'Story Points',
-            'effort_man_days' => 'Personentage',
-            'effort_tokens' => 'Tokens',
-            'affected_files' => 'Dateien',
-            'pr_number' => 'PR-Nummer',
-            'reviewed_by' => 'Reviewed by',
-            'claimed_by_id' => 'Beansprucht von',
-            'claimed_at' => 'Beansprucht am',
-            'merged_at' => 'Gemergt am',
-            'created_by_id' => 'Erstellt von',
-            'task_id' => 'Task',
-            'parent_id' => 'Abhängig von',
-            'role' => 'Rolle',
-            'user_id' => 'Benutzer',
-            'project_id' => 'Projekt',
+            'name' => __('changelog.field_name'),
+            'alias' => __('changelog.field_alias'),
+            'summary' => __('changelog.field_summary'),
+            'description' => __('changelog.field_description'),
+            'description_acceptance_criteria' => __('changelog.field_acceptance_criteria'),
+            'github_repo' => __('changelog.field_github_repo'),
+            'skill_description' => __('changelog.field_skill_description'),
+            'status' => __('changelog.field_status'),
+            'phase_id' => __('changelog.field_phase'),
+            'position' => __('changelog.field_position'),
+            'effort_story_points' => __('changelog.field_story_points'),
+            'effort_man_days' => __('changelog.field_man_days'),
+            'effort_tokens' => __('changelog.field_tokens'),
+            'affected_files' => __('changelog.field_files'),
+            'pr_number' => __('changelog.field_pr_number'),
+            'reviewed_by' => __('changelog.field_reviewed_by'),
+            'claimed_by_id' => __('changelog.field_claimed_by'),
+            'claimed_at' => __('changelog.field_claimed_at'),
+            'merged_at' => __('changelog.field_merged_at'),
+            'created_by_id' => __('changelog.field_created_by'),
+            'task_id' => __('changelog.field_task'),
+            'parent_id' => __('changelog.field_parent'),
+            'role' => __('changelog.field_role'),
+            'user_id' => __('changelog.field_user'),
+            'project_id' => __('changelog.field_project'),
             default => ucfirst(str_replace('_', ' ', $key)),
         };
     }
@@ -517,7 +517,7 @@ class ProjectChangelogController extends Controller
         }
 
         if (is_bool($value)) {
-            return $value ? 'Ja' : 'Nein';
+            return $value ? __('changelog.value_yes') : __('changelog.value_no');
         }
 
         if (is_array($value)) {
@@ -525,15 +525,15 @@ class ProjectChangelogController extends Controller
         }
 
         if (in_array($key, self::USER_REF_FIELDS, true)) {
-            return $refs['users'][$value] ?? "Nutzer #{$value}";
+            return $refs['users'][$value] ?? __('changelog.user_ref', ['id' => $value]);
         }
 
         if (in_array($key, ['task_id', 'parent_id'], true)) {
-            return $refs['tasks'][$value] ?? "Task #{$value}";
+            return $refs['tasks'][$value] ?? __('changelog.task_ref', ['id' => $value]);
         }
 
         if ($key === 'phase_id') {
-            return $refs['phases'][$value] ?? "Phase #{$value}";
+            return $refs['phases'][$value] ?? __('changelog.phase_ref', ['id' => $value]);
         }
 
         if (str_ends_with($key, '_at')) {

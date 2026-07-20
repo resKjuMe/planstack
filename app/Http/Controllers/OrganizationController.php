@@ -39,7 +39,7 @@ class OrganizationController extends Controller
         $user = $request->user();
 
         if ($user->organization_id !== null) {
-            return back()->withErrors(['name' => 'Du gehörst bereits einer Organisation an.']);
+            return back()->withErrors(['name' => __('flash.already_in_organization')]);
         }
 
         $organization = Organization::create([
@@ -51,7 +51,7 @@ class OrganizationController extends Controller
         $user->save();
 
         return redirect()->route('organization.index')
-            ->with('status', "Organisation \"{$organization->name}\" gegründet.");
+            ->with('status', __('flash.organization_founded', ['name' => $organization->name]));
     }
 
     /**
@@ -64,7 +64,7 @@ class OrganizationController extends Controller
         $user = $request->user();
 
         if ($user->organization_id !== null) {
-            return back()->withErrors(['token' => 'Du gehörst bereits einer Organisation an.']);
+            return back()->withErrors(['token' => __('flash.already_in_organization')]);
         }
 
         $data = $request->validate(['token' => ['required', 'string']]);
@@ -76,7 +76,7 @@ class OrganizationController extends Controller
 
         if (! $invitation) {
             return back()
-                ->withErrors(['token' => 'Kein Treffer für diesen Einladungscode.'])
+                ->withErrors(['token' => __('flash.invitation_code_no_match')])
                 ->withInput();
         }
 
@@ -91,7 +91,7 @@ class OrganizationController extends Controller
         $invitation->forceFill(['accepted_at' => now()])->save();
 
         return redirect()->route('organization.index')
-            ->with('status', "Du bist der Organisation \"{$invitation->organization->name}\" beigetreten.");
+            ->with('status', __('flash.organization_joined', ['name' => $invitation->organization->name]));
     }
 
     /**
@@ -129,7 +129,7 @@ class OrganizationController extends Controller
         if ($existing) {
             if ($existing->organization_id !== null && $existing->organization_id !== $organization->id) {
                 return back()->withErrors([
-                    'email' => 'Diese Person gehört bereits einer anderen Organisation an.',
+                    'email' => __('flash.person_in_other_organization'),
                 ])->withInput();
             }
 
@@ -142,7 +142,7 @@ class OrganizationController extends Controller
                 $existing->teams()->syncWithoutDetaching($teamIds);
             }
 
-            return back()->with('status', "{$existing->name} wurde der Organisation hinzugefügt.");
+            return back()->with('status', __('flash.person_added_to_organization', ['name' => $existing->name]));
         }
 
         // Individuelle, einmalige Einladung anlegen.
@@ -164,11 +164,11 @@ class OrganizationController extends Controller
             $invitation->delete();
 
             return back()->withErrors([
-                'email' => 'Die Einladung konnte nicht versendet werden. Bitte später erneut versuchen.',
+                'email' => __('flash.invitation_send_failed'),
             ])->withInput();
         }
 
-        return back()->with('status', "Einladung an {$data['email']} versendet.");
+        return back()->with('status', __('flash.invitation_sent', ['email' => $data['email']]));
     }
 
     public function leave(Request $request): RedirectResponse
@@ -182,7 +182,7 @@ class OrganizationController extends Controller
 
         if ($organization->isOwner($user)) {
             return back()->withErrors([
-                'leave' => 'Als Gründer kannst du nicht austreten – lösche stattdessen die Organisation.',
+                'leave' => __('flash.owner_cannot_leave'),
             ]);
         }
 
@@ -190,7 +190,7 @@ class OrganizationController extends Controller
         $user->save();
 
         return redirect()->route('organization.index')
-            ->with('status', "Du hast die Organisation \"{$organization->name}\" verlassen.");
+            ->with('status', __('flash.organization_left', ['name' => $organization->name]));
     }
 
     public function destroy(Request $request): RedirectResponse
@@ -208,6 +208,6 @@ class OrganizationController extends Controller
         $organization->delete();
 
         return redirect()->route('organization.index')
-            ->with('status', "Organisation \"{$name}\" gelöscht.");
+            ->with('status', __('flash.organization_deleted', ['name' => $name]));
     }
 }

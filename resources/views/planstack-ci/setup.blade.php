@@ -2,7 +2,7 @@
 <x-app-layout>
     <x-slot name="header">
         <h2 class="font-semibold text-xl text-gray-800 leading-tight">
-            Planstack CI-Status
+            {{ __('ci.planstack_ci_status') }}
             <span class="ms-1 text-sm font-normal text-gray-400">v{{ $ciVersion }}</span>
         </h2>
     </x-slot>
@@ -49,67 +49,54 @@
     </style>
 
     <div class="psci max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <p class="sub">Zeigt je PR-Knoten im Planstack-Diagramm den echten CI-/Merge-Status (✓ / ✗ / x/x Steps, „ready to merge" …). Die Daten kommen über deine lokale GitHub-CLI — ganz ohne Token im Browser.</p>
+      <p class="sub">{{ __('ci.shows_the_real_ci_merge_status_on_each') }}</p>
 
       <div class="card">
-        <div class="status"><span id="dot" class="dot"></span><span id="statustext">Lokaler Server wird geprüft…</span></div>
+        <div class="status"><span id="dot" class="dot"></span><span id="statustext">{{ __('ci.checking_local_server') }}</span></div>
         <p class="muted" id="statushint" style="margin:8px 0 0"></p>
       </div>
 
-      <h2>1 · Was du brauchst</h2>
+      <h2>1 · {{ __('ci.what_you_need') }}</h2>
       <div class="card">
         <ol>
           <li><b>Node.js</b> (LTS) — <a href="https://nodejs.org/" target="_blank" rel="noopener">nodejs.org</a></li>
-          <li><b>GitHub CLI</b> (<code>gh</code>) — <a href="https://cli.github.com/" target="_blank" rel="noopener">cli.github.com</a>, danach einmalig anmelden:
+          <li><b>GitHub CLI</b> (<code>gh</code>) — <a href="https://cli.github.com/" target="_blank" rel="noopener">cli.github.com</a>, {{ __('ci.then_sign_in_once') }}
             <pre><code>gh auth login</code></pre>
           </li>
-          <li><b>Tampermonkey</b>-Browser-Erweiterung — <a href="https://www.tampermonkey.net/" target="_blank" rel="noopener">tampermonkey.net</a></li>
+          <li><b>Tampermonkey</b>{{ __('ci.browser_extension') }} — <a href="https://www.tampermonkey.net/" target="_blank" rel="noopener">tampermonkey.net</a></li>
         </ol>
       </div>
 
-      <h2>2 · Downloads</h2>
+      <h2>2 · {{ __('ci.downloads') }}</h2>
       <div class="card">
         <div class="btns">
-          <a class="btn" href="{{ asset('planstack-ci/planstack-ci.user.min.js') }}">⬇ Userscript installieren</a>
+          <a class="btn" href="{{ asset('planstack-ci/planstack-ci.user.min.js') }}">⬇ {{ __('ci.install_the_userscript') }}</a>
           <a class="btn sec" href="{{ asset('planstack-ci/ci-server.cjs') }}" download>⬇ ci-server.cjs</a>
         </div>
-        <p class="muted" style="margin-top:12px">Userscript-Link öffnen → Tampermonkey zeigt „Installieren". <code>ci-server.cjs</code> speichern (z.&nbsp;B. Windows <code>%USERPROFILE%\planstack\</code>, Mac <code>~/planstack/</code>).</p>
+        <p class="muted" style="margin-top:12px">{{ __('ci.open_the_userscript_link_tampermonkey') }} <code>ci-server.cjs</code> {!! __('ci.save_it_e_g_nbsp_windows') !!} <code>%USERPROFILE%\planstack\</code>, {{ __('ci.mac') }} <code>~/planstack/</code>).</p>
       </div>
 
-      <h2>3 · Schnell-Einrichtung mit Claude Code <span class="muted" style="font-size:.9rem">(empfohlen)</span></h2>
+      <h2>3 · {{ __('ci.quick_setup_with_claude_code') }} <span class="muted" style="font-size:.9rem">{{ __('ci.recommended') }}</span></h2>
       <div class="card">
-        <p class="muted" style="margin-top:0">Hast du <a href="https://claude.com/claude-code" target="_blank" rel="noopener">Claude Code</a>? Kopier den passenden Prompt in ein Claude-Code-Fenster — es installiert Node/gh (falls nötig), lädt den Server, richtet den Autostart ein und startet ihn. Nur <code>gh auth login</code> machst du einmal selbst (interaktiv).</p>
+        <p class="muted" style="margin-top:0">{{ __('ci.do_you_have') }} <a href="https://claude.com/claude-code" target="_blank" rel="noopener">Claude Code</a>{{ __('ci.copy_the_matching_prompt_into_a_claude') }} <code>gh auth login</code> {{ __('ci.you_do_yourself_once_interactively') }}</p>
         <div class="qtabs">
           <div class="qtab active" data-qtab="qwin">Windows</div>
           <div class="qtab" data-qtab="qmac">macOS</div>
         </div>
 
         <div class="qpanel active" id="qwin">
-          <button type="button" class="copybtn" data-copy="#qwin-prompt">Prompt kopieren</button>
-<pre><code id="qwin-prompt">Richte den Planstack-CI-Status-Server auf diesem Windows-PC ein:
-1. Prüfe, ob Node.js und die GitHub CLI (gh) installiert sind. Fehlt etwas, installiere es per winget:
-   winget install OpenJS.NodeJS.LTS
-   winget install GitHub.cli
-2. Prüfe `gh auth status`. Bin ich nicht eingeloggt, sag mir, dass ich einmal `gh auth login` selbst ausführen muss, und warte darauf.
-3. Lade {{ asset('planstack-ci/ci-server.cjs') }} nach %USERPROFILE%\planstack\ci-server.cjs herunter.
-4. Richte einen Autostart bei jeder Anmeldung ein: eine .vbs im Startup-Ordner (shell:startup), die `node %USERPROFILE%\planstack\ci-server.cjs` versteckt (ohne Fenster) startet. Starte sie anschließend sofort.
-5. Verifiziere, dass http://127.0.0.1:8757/version die Antwort {"version":"{{ $ciVersion }}"} liefert, und melde mir das Ergebnis.</code></pre>
+          <button type="button" class="copybtn" data-copy="#qwin-prompt">{{ __('ci.copy_prompt') }}</button>
+<pre><code id="qwin-prompt">{{ __('ci.setup_prompt_win', ['asset' => asset('planstack-ci/ci-server.cjs'), 'version' => $ciVersion]) }}</code></pre>
         </div>
 
         <div class="qpanel" id="qmac">
-          <button type="button" class="copybtn" data-copy="#qmac-prompt">Prompt kopieren</button>
-<pre><code id="qmac-prompt">Richte den Planstack-CI-Status-Server auf diesem Mac ein:
-1. Prüfe, ob Node.js und die GitHub CLI (gh) installiert sind. Fehlt etwas, installiere es per Homebrew:
-   brew install node gh
-2. Prüfe `gh auth status`. Bin ich nicht eingeloggt, sag mir, dass ich einmal `gh auth login` selbst ausführen muss, und warte darauf.
-3. Lade {{ asset('planstack-ci/ci-server.cjs') }} nach ~/planstack/ci-server.cjs herunter.
-4. Richte einen LaunchAgent ein (~/Library/LaunchAgents/net.planstack.ciserver.plist) mit RunAtLoad und KeepAlive, der `node ~/planstack/ci-server.cjs` bei jedem Login startet, und lade ihn (launchctl load).
-5. Verifiziere, dass http://127.0.0.1:8757/version die Antwort {"version":"{{ $ciVersion }}"} liefert, und melde mir das Ergebnis.</code></pre>
+          <button type="button" class="copybtn" data-copy="#qmac-prompt">{{ __('ci.copy_prompt') }}</button>
+<pre><code id="qmac-prompt">{{ __('ci.setup_prompt_mac', ['asset' => asset('planstack-ci/ci-server.cjs'), 'version' => $ciVersion]) }}</code></pre>
         </div>
-        <p class="muted" style="margin-top:12px">Danach noch das <b>Userscript</b> aus Schritt 2 in Tampermonkey installieren — fertig.</p>
+        <p class="muted" style="margin-top:12px">{{ __('ci.then_install_the') }} <b>Userscript</b> {{ __('ci.from_step_2_in_tampermonkey_done') }}</p>
       </div>
 
-      <h2>4 · Manuell einrichten <span class="muted" style="font-size:.9rem">(Alternative)</span></h2>
+      <h2>4 · {{ __('ci.set_up_manually') }} <span class="muted" style="font-size:.9rem">{{ __('ci.alternative') }}</span></h2>
       <div class="tabs">
         <div class="tab active" data-tab="win">Windows</div>
         <div class="tab" data-tab="mac">macOS</div>
@@ -117,12 +104,12 @@
 
       <div class="panel active" id="win">
         <ol>
-          <li>Node.js &amp; GitHub CLI installieren, dann <code>gh auth login</code> ausführen.</li>
-          <li><code>ci-server.cjs</code> herunterladen, z.&nbsp;B. nach <code>%USERPROFILE%\planstack\ci-server.cjs</code>.</li>
-          <li>Server testen (PowerShell):
+          <li>{{ __('ci.install_node_js_github_cli_then') }} <code>gh auth login</code> {{ __('ci.run') }}</li>
+          <li><code>ci-server.cjs</code> {!! __('ci.download_it_e_g_nbsp_to') !!} <code>%USERPROFILE%\planstack\ci-server.cjs</code>.</li>
+          <li>{{ __('ci.test_the_server_powershell') }}
             <pre><code>node "$env:USERPROFILE\planstack\ci-server.cjs"</code></pre>
-            Erwartet: <code>[ci-server] v{{ $ciVersion }} läuft auf http://127.0.0.1:8757</code>. Mit <kbd class="kbd">Strg</kbd>+<kbd class="kbd">C</kbd> beenden.</li>
-          <li><b>Autostart bei jeder Anmeldung</b> (kein Admin nötig) — in PowerShell einfügen:
+            {{ __('ci.expected') }} <code>[ci-server] v{{ $ciVersion }} läuft auf http://127.0.0.1:8757</code>. {{ __('ci.with') }} <kbd class="kbd">{{ __('ci.ctrl') }}</kbd>+<kbd class="kbd">C</kbd> {{ __('ci.quit') }}</li>
+          <li><b>{{ __('ci.autostart_on_every_login') }}</b> {{ __('ci.no_admin_required_paste_into_powershell') }}
             <pre><code>$node = (Get-Command node).Source
 $srv  = "$env:USERPROFILE\planstack\ci-server.cjs"
 $vbs  = Join-Path ([Environment]::GetFolderPath('Startup')) 'PlanstackCiServer.vbs'
@@ -131,20 +118,20 @@ Set sh = CreateObject("WScript.Shell")
 sh.Run """$node"" ""$srv""", 0, False
 "@
 wscript $vbs   # sofort starten</code></pre>
-            Startet ab jetzt versteckt bei jedem Login. Entfernen: <code>PlanstackCiServer.vbs</code> aus dem Autostart-Ordner löschen (<code>explorer shell:startup</code>).</li>
+            {{ __('ci.it_now_starts_hidden_at_every_login_to') }} <code>PlanstackCiServer.vbs</code> {{ __('ci.from_the_startup_folder') }}<code>explorer shell:startup</code>).</li>
         </ol>
       </div>
 
       <div class="panel" id="mac">
         <ol>
-          <li>Node.js &amp; GitHub CLI installieren, dann anmelden:
+          <li>{{ __('ci.install_node_js_github_cli_then_sign_in') }}
             <pre><code>brew install node gh
 gh auth login</code></pre></li>
-          <li><code>ci-server.cjs</code> herunterladen, z.&nbsp;B. nach <code>~/planstack/ci-server.cjs</code>.</li>
-          <li>Server testen:
+          <li><code>ci-server.cjs</code> {!! __('ci.download_it_e_g_nbsp_to') !!} <code>~/planstack/ci-server.cjs</code>.</li>
+          <li>{{ __('ci.test_the_server') }}
             <pre><code>node ~/planstack/ci-server.cjs</code></pre>
-            Erwartet: <code>[ci-server] v{{ $ciVersion }} läuft auf http://127.0.0.1:8757</code>. Mit <kbd class="kbd">Ctrl</kbd>+<kbd class="kbd">C</kbd> beenden.</li>
-          <li><b>Autostart beim Login</b> via LaunchAgent — im Terminal ausführen:
+            {{ __('ci.expected') }} <code>[ci-server] v{{ $ciVersion }} läuft auf http://127.0.0.1:8757</code>. {{ __('ci.with') }} <kbd class="kbd">Ctrl</kbd>+<kbd class="kbd">C</kbd> {{ __('ci.quit') }}</li>
+          <li><b>{{ __('ci.autostart_at_login') }}</b> {{ __('ci.via_launchagent_run_in_the_terminal') }}
             <pre><code>mkdir -p ~/Library/LaunchAgents
 cat > ~/Library/LaunchAgents/net.planstack.ciserver.plist <<'PLIST'
 &lt;?xml version="1.0" encoding="UTF-8"?&gt;
@@ -158,13 +145,13 @@ cat > ~/Library/LaunchAgents/net.planstack.ciserver.plist <<'PLIST'
 &lt;/dict&gt;&lt;/plist&gt;
 PLIST
 launchctl load ~/Library/LaunchAgents/net.planstack.ciserver.plist</code></pre>
-            Läuft ab jetzt automatisch. Entfernen: <code>launchctl unload</code> + plist löschen.</li>
+            {{ __('ci.it_now_runs_automatically_to_remove') }} <code>launchctl unload</code> {{ __('ci.delete_the_plist') }}</li>
         </ol>
       </div>
 
-      <h2>5 · Fertig</h2>
+      <h2>5 · {{ __('ci.done') }}</h2>
       <div class="card">
-        <p style="margin:0">Lade die Diagramm-Seite neu. An jedem PR-Knoten erscheint jetzt der CI-/Merge-Status; der Hinweis über dem Diagramm verschwindet automatisch. Bei einer neuen Version meldet Tampermonkey das Update automatisch (bzw. der Hinweisbalken zeigt „Aktualisieren").</p>
+        <p style="margin:0">{{ __('ci.reload_the_diagram_page_the_ci_merge') }}</p>
       </div>
     </div>
 
@@ -186,13 +173,13 @@ launchctl load ~/Library/LaunchAgents/net.planstack.ciserver.plist</code></pre>
           document.getElementById(t.dataset.qtab).classList.add('active');
         });
       });
-      // Prompt kopieren
+      // {{ __('ci.copy_prompt') }}
       document.querySelectorAll('.copybtn').forEach(function (b) {
         b.addEventListener('click', function () {
           var el = document.querySelector(b.dataset.copy);
           if (!el) return;
           navigator.clipboard.writeText(el.textContent.trim()).then(function () {
-            var prev = b.textContent; b.textContent = 'Kopiert ✓';
+            var prev = b.textContent; b.textContent = @js(__('common.copied'));
             setTimeout(function () { b.textContent = prev; }, 1500);
           });
         });
@@ -204,12 +191,12 @@ launchctl load ~/Library/LaunchAgents/net.planstack.ciserver.plist</code></pre>
       }
       fetch('http://127.0.0.1:8757/version').then(function (r) { return r.json(); }).then(function (d) {
         document.getElementById('dot').className = 'dot up';
-        document.getElementById('statustext').textContent = 'Lokaler Server läuft (v' + d.version + ')';
-        document.getElementById('statushint').textContent = 'Alles bereit — die Diagramm-Seite zeigt jetzt CI-Status.';
+        document.getElementById('statustext').textContent = @js(__('ci.local_server_is_running_v')) + d.version + ')';
+        document.getElementById('statushint').textContent = @js(__('ci.all_set_the_diagram_page_now_shows_ci'));
       }).catch(function () {
         document.getElementById('dot').className = 'dot down';
-        document.getElementById('statustext').textContent = 'Lokaler Server nicht erreichbar';
-        document.getElementById('statushint').textContent = 'Folge den Schritten unten, dann diese Seite neu laden.';
+        document.getElementById('statustext').textContent = @js(__('ci.local_server_unreachable'));
+        document.getElementById('statushint').textContent = @js(__('ci.follow_the_steps_below_then_reload_this'));
       });
     </script>
 </x-app-layout>

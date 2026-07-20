@@ -2,12 +2,12 @@
 
 @php
     $tabs = [
-        'diagram' => ['label' => 'Diagramm', 'route' => 'projects.diagram'],
-        'pr-sequence' => ['label' => 'PR-Sequenz', 'route' => 'projects.pr-sequence'],
-        'summary' => ['label' => 'Summary', 'route' => 'projects.summary'],
-        'board' => ['label' => 'Board', 'route' => 'projects.show'],
-        'changelog' => ['label' => 'Changelog', 'route' => 'projects.changelog'],
-        'calibration' => ['label' => 'Kalibrierung', 'route' => 'projects.calibration'],
+        'diagram' => ['label' => __('common.diagram'), 'route' => 'projects.diagram'],
+        'pr-sequence' => ['label' => __('common.pr_sequence'), 'route' => 'projects.pr-sequence'],
+        'summary' => ['label' => __('common.summary'), 'route' => 'projects.summary'],
+        'board' => ['label' => __('common.board'), 'route' => 'projects.show'],
+        'changelog' => ['label' => __('common.changelog'), 'route' => 'projects.changelog'],
+        'calibration' => ['label' => __('common.calibration'), 'route' => 'projects.calibration'],
     ];
 @endphp
 
