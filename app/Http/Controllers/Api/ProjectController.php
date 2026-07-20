@@ -193,7 +193,7 @@ class ProjectController extends ApiController
             'unlocks' => $task->x_unlocks ?? 0,
             'sp' => (int) $task->effort_story_points,
             'gate' => ($task->x_gate ?? '—') === '—' ? null : $task->x_gate,
-            'status' => $task->x_display_status?->value ?? $task->status->value,
+            'status' => $task->x_display_status?->value ?? $task->status?->value ?? $task->orgStatus?->key,
         ], fn ($v) => $v !== null);
     }
 
@@ -306,7 +306,7 @@ class ProjectController extends ApiController
     private function boardEtag(Project $project, Collection $tasks, array $cfg): string
     {
         $state = $tasks
-            ->map(fn ($t) => "{$t->id}:{$t->status->value}:{$t->pr_number}:{$t->claimed_by_id}:{$t->x_unlocks}")
+            ->map(fn ($t) => "{$t->id}:{$t->status?->value}:{$t->pr_number}:{$t->claimed_by_id}:{$t->x_unlocks}")
             ->implode('|');
 
         return substr(hash('xxh128', $state.'#'.$project->config_version.'#'.$cfg['board.scope'].'#'.$cfg['board.format']), 0, 16);

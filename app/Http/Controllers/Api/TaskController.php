@@ -588,8 +588,8 @@ class TaskController extends ApiController
             return response()->json([
                 'id' => $decorated->id,
                 'name' => $decorated->name,
-                'status' => $decorated->status->value,
-                'display_status' => ($decorated->x_display_status ?? $decorated->status)->value,
+                'status' => $decorated->status?->value ?? $decorated->orgStatus?->key,
+                'display_status' => ($decorated->x_display_status ?? $decorated->status)?->value ?? $decorated->orgStatus?->key,
             ]);
         }
 

@@ -156,9 +156,13 @@ class TaskBoardService
      * done marker (✓, muted node, "hide done" toggle) only. Progress KPIs and
      * gate satisfaction use isDelivered(), which also counts an open PR.
      */
-    public function isDone(TaskStatus $status): bool
+    public function isDone(?TaskStatus $status): bool
     {
-        return in_array($status, [TaskStatus::COMPLETED, TaskStatus::MERGED], true);
+        // Null when a task sits in a custom (org-defined) status with no ENUM
+        // value — the legacy enum-based progress paths must treat that as "not
+        // done" rather than crash. (Custom statuses flagged counts_as_done drive
+        // the board via status_id, not this enum path.)
+        return $status !== null && in_array($status, [TaskStatus::COMPLETED, TaskStatus::MERGED], true);
     }
 
     /**

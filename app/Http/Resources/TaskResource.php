@@ -92,10 +92,13 @@ class TaskResource extends JsonResource
             'test_cases' => $this->description_test_cases,
             'criticality' => $this->criticality?->value,
             'criticality_label' => $this->criticality?->label(),
-            'status' => $this->status->value,
-            'status_label' => $this->status->label(),
-            'display_status' => ($this->x_display_status ?? $this->status)->value,
-            'display_status_label' => ($this->x_display_status ?? $this->status)->label(),
+            // status may be null when the task sits in a custom (org-defined)
+            // status with no canonical ENUM value — fall back to the org status
+            // key/label (status_id is the authority).
+            'status' => $this->status?->value ?? $this->orgStatus?->key,
+            'status_label' => $this->status?->label() ?? $this->orgStatus?->label,
+            'display_status' => ($this->x_display_status ?? $this->status)?->value ?? $this->orgStatus?->key,
+            'display_status_label' => ($this->x_display_status ?? $this->status)?->label() ?? $this->orgStatus?->label,
             'phase_id' => $this->phase_id,
             'phase' => $this->whenLoaded('phase', fn () => [
                 'id' => $this->phase?->id,
@@ -131,7 +134,7 @@ class TaskResource extends JsonResource
             'prerequisites' => $this->whenLoaded('prerequisites', fn () => $this->prerequisites->map(fn ($p) => [
                 'id' => $p->id,
                 'name' => $p->name,
-                'status' => $p->status->value,
+                'status' => $p->status?->value ?? $p->orgStatus?->key,
             ])->values()),
 
             'concern' => $this->whenLoaded('concern', fn () => $this->concern ? [
