@@ -329,11 +329,11 @@ export default function Board({ data }) {
             </div>
 
             {/* CSS grid: collapsed bars = fixed narrow track, expanded columns
-                share the rest (1fr). Transitioning grid-template-columns animates
-                a column's collapse/expand; the fixed row (1fr) + min-height makes
-                every column fill the full board height. */}
+                share the rest (1fr); the fixed row (1fr) + min-height makes every
+                column fill the full board height. Collapse/expand is animated per
+                cell (.board-cell) on mount — cheaper than morphing track widths. */}
             <div
-                className="grid gap-3 pb-4 min-h-[65vh] transition-[grid-template-columns] duration-300 ease-in-out"
+                className="grid gap-3 pb-4 min-h-[65vh]"
                 style={{
                     gridTemplateColumns: cells.map((c) => c.track).join(' '),
                     gridTemplateRows: '1fr',

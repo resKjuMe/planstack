@@ -28,7 +28,7 @@ export default function BoardColumn({
             className={[
                 // Width comes from the parent grid track (expanded = 1fr share,
                 // collapsed bars = fixed); the column just fills its cell.
-                'flex h-full w-full min-w-0 flex-col rounded-lg p-2 transition',
+                'board-cell flex h-full w-full min-w-0 flex-col rounded-lg p-2 transition',
                 overLimit ? 'bg-rose-50/70 dark:bg-rose-900/20' : 'bg-gray-50/70 dark:bg-gray-800/40',
                 isDragActive && !isDropAllowed ? 'opacity-40' : '',
                 isOver && isDropAllowed ? 'ring-2 ring-indigo-400 dark:ring-indigo-500' : '',
