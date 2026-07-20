@@ -392,7 +392,7 @@
                             @endforeach
                         </div>
                         <button type="button" @click="help = ! help" :aria-expanded="help"
-                                :aria-label="__('claude.explanation_of_the_presets')" :title="__('common.show_hide_explanation')"
+                                aria-label="{{ __('claude.explanation_of_the_presets') }}" title="{{ __('common.show_hide_explanation') }}"
                                 class="shrink-0 text-gray-400 hover:text-indigo-600 focus:outline-none">
                             <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg>
                         </button>
@@ -491,7 +491,7 @@
                                         </div>
 
                                         <button type="button" @click="help = ! help" :aria-expanded="help"
-                                                :aria-label="__('claude.explanation_of_label', ['label' => __($s['label'])])" :title="__('common.show_hide_explanation')"
+                                                aria-label="{{ __('claude.explanation_of_label', ['label' => __($s['label'])]) }}" title="{{ __('common.show_hide_explanation') }}"
                                                 class="shrink-0 text-gray-400 hover:text-indigo-600 focus:outline-none">
                                             <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg>
                                         </button>

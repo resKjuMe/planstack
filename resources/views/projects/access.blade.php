@@ -138,7 +138,7 @@
                                         @can('manageMembers', $project)
                                             @if (! $isOwner && $roleByUser->has($user->id))
                                                 <form method="POST" action="{{ route('projects.members.destroy', [$project, $user]) }}"
-                                                      :title="__('projects.reset_to_worker')">
+                                                      title="{{ __('projects.reset_to_worker') }}">
                                                     @csrf
                                                     @method('DELETE')
                                                     <button class="text-xs text-gray-400 hover:underline">{{ __('projects.reset') }}</button>

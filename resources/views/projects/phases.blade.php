@@ -61,7 +61,7 @@
                                     <form method="POST" action="{{ route('projects.phases.move', [$project, $phase]) }}">
                                         @csrf
                                         <input type="hidden" name="direction" value="up">
-                                        <button type="submit" :title="__('projects.move_up')"
+                                        <button type="submit" title="{{ __('projects.move_up') }}"
                                                 class="rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-700 disabled:opacity-30 disabled:hover:bg-transparent"
                                                 @disabled($loop->first)>
                                             <svg class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M10 5a.75.75 0 01.53.22l5 5a.75.75 0 11-1.06 1.06L10 6.81l-4.47 4.47a.75.75 0 01-1.06-1.06l5-5A.75.75 0 0110 5z" clip-rule="evenodd"/></svg>
@@ -71,7 +71,7 @@
                                     <form method="POST" action="{{ route('projects.phases.move', [$project, $phase]) }}">
                                         @csrf
                                         <input type="hidden" name="direction" value="down">
-                                        <button type="submit" :title="__('projects.move_down')"
+                                        <button type="submit" title="{{ __('projects.move_down') }}"
                                                 class="rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-700 disabled:opacity-30 disabled:hover:bg-transparent"
                                                 @disabled($loop->last)>
                                             <svg class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M10 15a.75.75 0 01-.53-.22l-5-5a.75.75 0 111.06-1.06L10 13.19l4.47-4.47a.75.75 0 111.06 1.06l-5 5A.75.75 0 0110 15z" clip-rule="evenodd"/></svg>
@@ -79,13 +79,14 @@
                                     </form>
 
                                     <button type="button" @click="editing = true; $nextTick(() => $refs.nameInput.focus())"
-                                            class="ms-1 text-xs text-indigo-600 hover:underline">{{ __('common.edit') }}</button>
+                                            class="ms-1 inline-flex items-center py-1 text-xs leading-none text-indigo-600 hover:underline">{{ __('common.edit') }}</button>
 
                                     <form method="POST" action="{{ route('projects.phases.destroy', [$project, $phase]) }}"
+                                          class="flex items-center"
                                           onsubmit="return confirm('{{ __('projects.delete_phase_name_the_count_contained', ['name' => $phase->name, 'count' => $phase->tasks_count]) }}');">
                                         @csrf
                                         @method('DELETE')
-                                        <button type="submit" class="ms-1 text-xs text-red-500 hover:underline">{{ __('common.delete') }}</button>
+                                        <button type="submit" class="ms-1 inline-flex items-center py-1 text-xs leading-none text-red-500 hover:underline">{{ __('common.delete') }}</button>
                                     </form>
                                 </div>
                             @endcan

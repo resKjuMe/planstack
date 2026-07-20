@@ -11,6 +11,11 @@
             <p class="text-sm text-gray-500">{{ __('changelog.all_visible_changes_to_planstack_newest') }}</p>
 
             @forelse ($releases as $release)
+                @php
+                    $loc = app()->getLocale();
+                    $tldr = $release['tldr'][$loc] ?? $release['tldr']['de'] ?? [];
+                    $changes = $release['changes'][$loc] ?? $release['changes']['de'] ?? [];
+                @endphp
                 <div x-data="{ open: false }" data-release-version="{{ $release['version'] }}" class="bg-white rounded-lg shadow">
                     {{-- Kopfzeile: Version + TL;DR (fett, einzeilig, truncated) + Datum + Chevron --}}
                     <button type="button" @click="open = ! open"
@@ -19,8 +24,8 @@
                         <span class="cl-new-badge shrink-0 inline-flex items-center rounded-full bg-indigo-100 px-2 py-0.5 text-xs font-semibold text-indigo-700" style="display:none">{{ __('changelog.new') }}</span>
 
                         <span class="min-w-0 flex-1 truncate text-sm">
-                            @if (!empty($release['tldr']))
-                                @foreach ($release['tldr'] as $kw)@if (! $loop->first)<span class="text-gray-500">&nbsp;·&nbsp;</span>@endif<span class="font-bold text-gray-900">{{ $kw }}</span>@endforeach
+                            @if (!empty($tldr))
+                                @foreach ($tldr as $kw)@if (! $loop->first)<span class="text-gray-500">&nbsp;·&nbsp;</span>@endif<span class="font-bold text-gray-900">{{ $kw }}</span>@endforeach
                             @endif
                         </span>
 
@@ -33,11 +38,11 @@
                     {{-- Details: erst nach dem Aufklappen --}}
                     <div x-cloak x-show="open" class="border-t border-gray-100 px-6 py-4">
                         <ul class="space-y-2">
-                            @foreach ($release['changes'] as $change)
+                            @foreach ($changes as $change)
                                 @php
-                                    // „Neu:"-Präfix wird als Badge dargestellt statt als Text.
-                                    $isNew = \Illuminate\Support\Str::startsWith($change, 'Neu:');
-                                    $text = $isNew ? ltrim(\Illuminate\Support\Str::after($change, 'Neu:')) : $change;
+                                    // „Neu:"/„New:"-Präfix wird als Badge dargestellt statt als Text.
+                                    $isNew = \Illuminate\Support\Str::startsWith($change, ['Neu:', 'New:']);
+                                    $text = $isNew ? ltrim(\Illuminate\Support\Str::after($change, ':')) : $change;
                                 @endphp
                                 <li class="flex gap-2 text-sm text-gray-700">
                                     <svg class="mt-0.5 h-4 w-4 shrink-0 text-indigo-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>

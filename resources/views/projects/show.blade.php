@@ -48,7 +48,7 @@
                                                 {{ $task->name }}
                                             </a>
                                             @if ($task->concern)
-                                                <span :title="__('common.concern')" class="text-orange-500 text-xs">⚠ {{ __('common.concern') }}</span>
+                                                <span title="{{ __('common.concern') }}" class="text-orange-500 text-xs">⚠ {{ __('common.concern') }}</span>
                                             @endif
                                         </div>
                                         <p class="mt-1 text-sm text-gray-700">{{ $task->summary }}</p>
