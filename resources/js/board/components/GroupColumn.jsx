@@ -12,14 +12,18 @@ function DropSection({ status, label, dotClass, count, cards, dragActive, allowe
         <div
             ref={setNodeRef}
             className={[
-                'rounded-md transition',
+                // Constant padding so the (inset) highlight has breathing room and
+                // cards never sit on top of the outline.
+                'rounded-lg p-1.5 transition',
                 dragActive && ! allowed ? 'opacity-40' : '',
-                isOver && dragActive && allowed ? 'ring-2 ring-inset ring-indigo-400 dark:ring-indigo-500' : '',
+                isOver && dragActive && allowed
+                    ? 'bg-indigo-50/70 dark:bg-indigo-900/20 ring-2 ring-inset ring-indigo-400 dark:ring-indigo-500'
+                    : '',
             ].join(' ')}
         >
             {/* Status sub-header — always visible, so the group column is
                 permanently divided by status (not only while dragging). */}
-            <div className="mb-1 flex items-center justify-between gap-1 px-1 text-[10px] font-medium uppercase tracking-wide text-gray-400 dark:text-gray-500">
+            <div className="mb-1.5 flex items-center justify-between gap-1 px-0.5 text-[10px] font-medium uppercase tracking-wide text-gray-400 dark:text-gray-500">
                 <span className="flex items-center gap-1 truncate">
                     <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${dotClass}`} aria-hidden />
                     <span className="truncate">{label}</span>
