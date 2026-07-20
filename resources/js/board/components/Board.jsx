@@ -126,6 +126,16 @@ export default function Board({ data }) {
         setDragging(null);
     }, [collapse]);
 
+    // Reliably clear the drag state even if the source card unmounted mid-drag
+    // (a card dragged out of a grouped column: the group splits into member
+    // columns, replacing the original node, so its own dragend may not fire).
+    useEffect(() => {
+        if (!dragging) return undefined;
+        const onEnd = () => endDrag();
+        document.addEventListener('dragend', onEnd);
+        return () => document.removeEventListener('dragend', onEnd);
+    }, [dragging, endDrag]);
+
     const handleDrop = useCallback(
         async (targetStatus) => {
             const drag = dragging;
