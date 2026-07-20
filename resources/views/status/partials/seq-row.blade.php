@@ -1,33 +1,32 @@
 @php
-    use App\Enums\TaskStatus;
     use Illuminate\Support\Str;
 
     /** Inherited from pr-sequence.blade.php: $task, $project, $ic, $isActiveFn, $isBottleneckFn, $maxSp, $inCollapse */
-    $ds = $task->x_display_status;
-    $cat = match ($ds) {
-        TaskStatus::PICKABLE => 'pickable',
-        TaskStatus::BLOCKED => 'blocked',
-        TaskStatus::CONCERNED => 'concerned',
-        TaskStatus::CLAIMED => 'claimed',
-        default => 'other',
+    // Status aus der je Organisation konfigurierbaren Definition (via annotate):
+    // Rolle (kanonisch) / Kind / Farbtoken statt festem Enum, damit Custom-Status
+    // mit eigener Bezeichnung und Farbe erscheinen.
+    $role = $task->x_status_role;
+    $kind = $task->x_status_kind;
+    $token = $task->x_status_color;
+
+    // Filter-Kategorie (Chips) bleibt an der Aktions-Rolle/Kind ausgerichtet,
+    // da die Pills fachlich Rollen abbilden; die ANZEIGE (Farbe/Bezeichnung)
+    // folgt dem tatsächlichen Status.
+    $cat = match ($role) {
+        'PICKABLE' => 'pickable',
+        'BLOCKED' => 'blocked',
+        'CONCERNED' => 'concerned',
+        'CLAIMED' => 'claimed',
+        default => $kind === 'exception' ? 'concerned' : 'other',
     };
     $isActive = $isActiveFn($task);
-    // "Bereit" statt des internen PICKABLE-Wortlauts.
-    $statusLabel = $ds === TaskStatus::PICKABLE ? __('status.ready') : $ds->label();
 
-    // Rail + Badge je Status (Farbschema: beansprucht=hellblau, Analyse=blau,
-    // Arbeit=dunkelblau, Review=lila, Problem/blockiert=rot, pickbar=grün);
-    // Badge-Text immer dunkler Ton derselben Familie.
-    [$rail, $badge] = match ($ds) {
-        TaskStatus::IN_REVIEW => ['bg-[var(--seq-purple-rail)]', 'bg-[var(--seq-purple-tint)] text-[var(--seq-purple-text)]'],
-        TaskStatus::IN_PROGRESS => ['bg-[var(--seq-navy-rail)]', 'bg-[var(--seq-navy-tint)] text-[var(--seq-navy-text)]'],
-        TaskStatus::ANALYZING => ['bg-[var(--seq-blue-rail)]', 'bg-[var(--seq-blue-tint)] text-[var(--seq-blue-text)]'],
-        TaskStatus::CLAIMED => ['bg-[var(--seq-sky-rail)]', 'bg-[var(--seq-sky-tint)] text-[var(--seq-sky-text)]'],
-        TaskStatus::BLOCKED => ['bg-[var(--seq-red-rail-soft)]', 'bg-[var(--seq-red-tint)] text-[var(--seq-red-text)]'],
-        TaskStatus::CONCERNED => ['bg-[var(--seq-red-rail)]', 'bg-[var(--seq-red-tint)] text-[var(--seq-red-text)]'],
-        TaskStatus::PICKABLE => ['bg-[var(--seq-green-rail)]', 'bg-[var(--seq-green-tint)] text-[var(--seq-green-text)]'],
-        default => ['bg-transparent', 'bg-[var(--seq-surface-1)] text-[var(--seq-muted)]'],
-    };
+    // Bezeichnung + Farbe direkt aus dem tatsächlichen (konfigurierten) Status —
+    // gleiche Token-Palette wie Board und Summary, damit die Farben konsistent
+    // sind. Rail = solide Statusfarbe, Badge = getönte Variante.
+    $statusLabel = $task->x_status_label;
+    $rail = \App\Support\StatusPalette::bar($token);
+    $badge = $task->x_status_badge;
 
     $bottleneck = $isBottleneckFn($task);
     $sp = (int) $task->effort_story_points;
@@ -95,7 +94,7 @@
     <p class="mt-1.5 text-sm text-[var(--seq-muted)] whitespace-normal break-words">{{ $task->summary }}</p>
 
     {{-- Beanspruchung: von wem, seit wann (falls erfasst) --}}
-    @if ($ds === TaskStatus::CLAIMED && $task->claimer)
+    @if ($role === 'CLAIMED' && $task->claimer)
         <p class="mt-1 text-xs text-[var(--seq-sky-text)]">
             {{ __('status.claimed_by') }} <span class="font-medium">{{ $task->claimer->name }}</span>@if ($task->claimed_at) · {{ __('status.since') }} {{ $task->claimed_at->locale('de')->diffForHumans() }}@endif
         </p>
@@ -103,7 +102,7 @@
 
     {{-- Problem-Grund direkt in der Zeile (nur wenn er über die Bemerkung hinausgeht) --}}
     @php $reason = $task->concern?->summary ?: $task->concern?->description_blocker; @endphp
-    @if ($ds === TaskStatus::CONCERNED && $reason && $reason !== $task->summary)
+    @if ($role === 'CONCERNED' && $reason && $reason !== $task->summary)
         <p class="mt-1 inline-flex items-start gap-1 text-sm text-[var(--seq-red-text)]">{!! $ic('alert', 'mt-0.5 h-3.5 w-3.5') !!} {{ $reason }}</p>
     @endif
 

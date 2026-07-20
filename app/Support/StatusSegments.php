@@ -80,6 +80,12 @@ class StatusSegments
             $task->x_display_key = $key;
             $task->x_status_label = $status ? $this->label($status) : $key;
             $task->x_status_badge = StatusPalette::badge($status?->color_token);
+            // Role (canonical action role or null for custom), kind and color
+            // token — let role/kind-aware views (PR sequence) present custom
+            // statuses without falling back to the enum.
+            $task->x_status_role = $status?->role?->value;
+            $task->x_status_kind = $status?->kind;
+            $task->x_status_color = $status?->color_token;
         }
     }
 

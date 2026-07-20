@@ -4,12 +4,16 @@ namespace App\Http\Controllers;
 
 use App\Enums\TaskStatus;
 use App\Models\Project;
+use App\Support\StatusSegments;
 use App\Support\TaskBoardService;
 use Illuminate\View\View;
 
 class ProjectPrSequenceController extends Controller
 {
-    public function __construct(private readonly TaskBoardService $board) {}
+    public function __construct(
+        private readonly TaskBoardService $board,
+        private readonly StatusSegments $segments,
+    ) {}
 
     /**
      * The PR sequence table.
@@ -21,9 +25,12 @@ class ProjectPrSequenceController extends Controller
         $all = $this->board->decorate($project);
         $all->load('concern:id,task_id,summary,description_blocker');
         $this->board->attachUnlocks($all); // x_dependents / x_unlocks over the full set
+        // Attach the org's configurable status (role/kind/label/color) per task so
+        // custom statuses show through with their own identity instead of the enum.
+        $this->segments->annotate($project, $all);
 
         // Merged PRs drop off the sequence; only outstanding work is listed.
-        $tasks = $all->reject(fn ($t) => $t->status === TaskStatus::MERGED)->values();
+        $tasks = $all->reject(fn ($t) => $t->x_status_role === TaskStatus::MERGED->value)->values();
 
         // Per task: keep the board sequence number (position in the full,
         // non-merged sequence) and turn the gate into a readable list with
@@ -41,11 +48,14 @@ class ProjectPrSequenceController extends Controller
             $task->x_dep_met = $items->where('met', true)->count();
         }
 
-        // COMPLETED work is collapsed into its own block; the rest is the list.
-        $completed = $tasks->filter(fn ($t) => $t->x_display_status === TaskStatus::COMPLETED)->values();
-        $open = $tasks->reject(fn ($t) => $t->x_display_status === TaskStatus::COMPLETED)->values();
+        // "Done" work (kind=done, e.g. COMPLETED and custom done statuses) is
+        // collapsed into its own block; the rest is the list.
+        $completed = $tasks->filter(fn ($t) => $t->x_status_kind === 'done')->values();
+        $open = $tasks->reject(fn ($t) => $t->x_status_kind === 'done')->values();
 
-        $count = fn (TaskStatus $s) => $open->filter(fn ($t) => $t->x_display_status === $s)->count();
+        // Filter-chip counts by action role (custom statuses fall outside these
+        // buckets and show only under "all").
+        $countRole = fn (TaskStatus $role) => $open->filter(fn ($t) => $t->x_status_role === $role->value)->count();
 
         return view('status.pr-sequence', [
             'project' => $project,
@@ -54,10 +64,10 @@ class ProjectPrSequenceController extends Controller
             'completed' => $completed,
             'counts' => [
                 'all' => $open->count(),
-                'pickable' => $count(TaskStatus::PICKABLE),
-                'blocked' => $count(TaskStatus::BLOCKED),
-                'concerned' => $count(TaskStatus::CONCERNED),
-                'claimed' => $count(TaskStatus::CLAIMED),
+                'pickable' => $countRole(TaskStatus::PICKABLE),
+                'blocked' => $countRole(TaskStatus::BLOCKED),
+                'concerned' => $countRole(TaskStatus::CONCERNED),
+                'claimed' => $countRole(TaskStatus::CLAIMED),
             ],
         ]);
     }

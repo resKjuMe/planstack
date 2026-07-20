@@ -1,4 +1,3 @@
-@php use App\Enums\TaskStatus; @endphp
 <x-status-shell :project="$project" :active="$active" :bare="true">
     @php
         // Inline-Icons (Tabler Outline, 24er-ViewBox); Größe bestimmt der Aufrufer.
@@ -22,7 +21,10 @@
             return '<svg class="'.$cls.' shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'.$paths[$name].'</svg>';
         };
 
-        $isActiveFn = fn ($t) => in_array($t->x_display_status, [TaskStatus::IN_PROGRESS, TaskStatus::ANALYZING, TaskStatus::IN_REVIEW], true);
+        // Aktiv = in Arbeit/Analyse/Review (auch Custom-Status dieser Art), aber
+        // nicht das bloße "beansprucht" (CLAIMED) — Farbschema/Reihenfolge folgen
+        // dem Kind statt festen Enum-Werten.
+        $isActiveFn = fn ($t) => in_array($t->x_status_kind, ['active', 'review'], true) && $t->x_status_role !== 'CLAIMED';
         $isBottleneckFn = fn ($t) => ($t->x_dependents ?? 0) >= 3;
 
         // Reihenfolge: aktiver PR zuerst, dann Flaschenhälse (absteigend nach
@@ -35,7 +37,7 @@
 
         // Blockierte PRs ohne Flaschenhals-Status wandern ab >5 Stück hinter
         // einen Expander ans Listenende (Zustand pro Session gemerkt).
-        $blockedPlain = $ordered->filter(fn ($t) => $t->x_display_status === TaskStatus::BLOCKED && ! $isBottleneckFn($t) && ! $isActiveFn($t))->values();
+        $blockedPlain = $ordered->filter(fn ($t) => $t->x_status_role === 'BLOCKED' && ! $isBottleneckFn($t) && ! $isActiveFn($t))->values();
         $collapseBlocked = $blockedPlain->count() > 5;
         $blockedIds = $collapseBlocked ? $blockedPlain->pluck('id')->flip() : collect();
         $main = $collapseBlocked ? $ordered->reject(fn ($t) => $blockedIds->has($t->id))->values() : $ordered;
