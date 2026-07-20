@@ -17,7 +17,7 @@
                             <h3 class="text-lg font-semibold text-gray-900">{{ $organization->name }}</h3>
                             <p class="mt-1 text-sm text-gray-500">
                                 Gegründet von {{ $organization->owner?->name }}
-                                · {{ $organization->members->count() }} {{ \Illuminate\Support\Str::plural('Mitglied', $organization->members->count()) }}
+                                · {{ $organization->members->count() }} {{ $organization->members->count() === 1 ? 'Mitglied' : 'Mitglieder' }}
                             </p>
                         </div>
                     </div>

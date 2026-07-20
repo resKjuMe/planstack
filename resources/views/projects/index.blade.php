@@ -7,7 +7,7 @@
                 <div>
                     <h1 class="text-2xl font-bold text-gray-900">Projekte</h1>
                     <p class="mt-1 text-sm text-gray-500">
-                        {{ $activeCount }} {{ Str::plural('Projekt', $activeCount) }}
+                        {{ $activeCount }} {{ $activeCount === 1 ? 'Projekt' : 'Projekte' }}
                         · {{ number_format($openTasks, 0, ',', '.') }} offene Tasks
                         · {{ number_format($totalSp, 0, ',', '.') }} Story Points
                     </p>
