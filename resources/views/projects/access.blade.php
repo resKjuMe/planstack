@@ -67,18 +67,18 @@
 
                     @can('manageMembers', $project)
                         @if ($assignableTeams->isNotEmpty())
-                            <form method="POST" action="{{ route('projects.teams.store', $project) }}" class="mt-5 flex items-end gap-3 border-t pt-5">
+                            <form method="POST" action="{{ route('projects.teams.store', $project) }}" class="mt-5 border-t pt-5">
                                 @csrf
-                                <div class="flex-1">
-                                    <x-input-label for="team_id" value="Team zuweisen" />
-                                    <select id="team_id" name="team_id" class="mt-1 block w-full rounded-md border-gray-300 text-sm">
+                                <x-input-label for="team_id" value="Team zuweisen" />
+                                <div class="mt-1 flex items-center gap-3">
+                                    <select id="team_id" name="team_id" class="block flex-1 rounded-md border-gray-300 text-sm">
                                         @foreach ($assignableTeams as $team)
                                             <option value="{{ $team->id }}">{{ $team->name }}</option>
                                         @endforeach
                                     </select>
-                                    <x-input-error :messages="$errors->get('team_id')" class="mt-2" />
+                                    <x-primary-button>Zuweisen</x-primary-button>
                                 </div>
-                                <x-primary-button>Zuweisen</x-primary-button>
+                                <x-input-error :messages="$errors->get('team_id')" class="mt-2" />
                             </form>
                         @else
                             <p class="mt-4 text-xs text-gray-400 border-t pt-4">Keine weiteren eigenen Teams zum Zuweisen. Neue Teams unter „Teams“ anlegen.</p>

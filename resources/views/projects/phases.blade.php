@@ -97,15 +97,15 @@
 
                 @can('contribute', $project)
                     <form method="POST" action="{{ route('projects.phases.store', $project) }}"
-                          class="mt-5 flex items-end gap-3 border-t pt-5">
+                          class="mt-5 border-t pt-5">
                         @csrf
-                        <div class="flex-1">
-                            <x-input-label for="name" value="Neue Phase" />
-                            <x-text-input id="name" name="name" type="text" class="mt-1 block w-full"
+                        <x-input-label for="name" value="Neue Phase" />
+                        <div class="mt-1 flex items-center gap-3">
+                            <x-text-input id="name" name="name" type="text" class="block flex-1"
                                           :value="old('name')" required maxlength="100" placeholder="z. B. Fundament" />
-                            <x-input-error :messages="$errors->get('name')" class="mt-2" />
+                            <x-primary-button>Anlegen</x-primary-button>
                         </div>
-                        <x-primary-button>Anlegen</x-primary-button>
+                        <x-input-error :messages="$errors->get('name')" class="mt-2" />
                     </form>
                 @endcan
             </div>

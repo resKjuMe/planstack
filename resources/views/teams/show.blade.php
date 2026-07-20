@@ -12,16 +12,18 @@
             @can('update', $team)
                 <div class="bg-white rounded-lg shadow p-6">
                     <h3 class="font-semibold text-gray-900 mb-4">Team umbenennen</h3>
-                    <form method="POST" action="{{ route('teams.update', $team) }}" class="flex flex-wrap items-end gap-3">
+                    <form method="POST" action="{{ route('teams.update', $team) }}">
                         @csrf
                         @method('PATCH')
-                        <div class="flex-1 min-w-64">
-                            <x-input-label for="name" value="Teamname" />
-                            <x-text-input id="name" name="name" type="text" class="mt-1 block w-full"
-                                          :value="old('name', $team->name)" required maxlength="100" />
-                            <x-input-error :messages="$errors->get('name')" class="mt-1" />
+                        <x-input-label for="name" value="Teamname" />
+                        <div class="mt-1 flex flex-wrap items-center gap-3">
+                            <div class="flex-1 min-w-64">
+                                <x-text-input id="name" name="name" type="text" class="block w-full"
+                                              :value="old('name', $team->name)" required maxlength="100" />
+                            </div>
+                            <x-primary-button>Speichern</x-primary-button>
                         </div>
-                        <x-primary-button>Speichern</x-primary-button>
+                        <x-input-error :messages="$errors->get('name')" class="mt-1" />
                     </form>
                 </div>
             @endcan
@@ -65,14 +67,16 @@
                 </table>
 
                 @can('manageMembers', $team)
-                    <form method="POST" action="{{ route('teams.members.store', $team) }}" class="mt-5 flex flex-wrap items-end gap-3 border-t pt-5">
+                    <form method="POST" action="{{ route('teams.members.store', $team) }}" class="mt-5 border-t pt-5">
                         @csrf
-                        <div class="flex-1 min-w-64">
-                            <x-input-label for="email" value="User per E-Mail hinzufügen" />
-                            <x-text-input id="email" name="email" type="email" class="mt-1 block w-full" :value="old('email')" required />
-                            <p class="mt-1 text-xs text-gray-400">Nur die Creator:in kann Mitglieder ausschließlich per E-Mail hinzufügen.</p>
+                        <x-input-label for="email" value="User per E-Mail hinzufügen" />
+                        <div class="mt-1 flex flex-wrap items-center gap-3">
+                            <div class="flex-1 min-w-64">
+                                <x-text-input id="email" name="email" type="email" class="block w-full" :value="old('email')" required />
+                            </div>
+                            <x-primary-button>Hinzufügen</x-primary-button>
                         </div>
-                        <x-primary-button>Hinzufügen</x-primary-button>
+                        <p class="mt-1 text-xs text-gray-400">Nur der Ersteller kann Mitglieder ausschließlich per E-Mail hinzufügen.</p>
                     </form>
                 @endcan
             </div>

@@ -30,15 +30,15 @@
     @endif
 
     {{-- Create a new token. --}}
-    <form method="POST" action="{{ route('profile.tokens.store') }}" class="mt-6 flex items-end gap-3">
+    <form method="POST" action="{{ route('profile.tokens.store') }}" class="mt-6">
         @csrf
-        <div class="flex-1">
-            <x-input-label for="token_name" :value="'Token-Name'" />
-            <x-text-input id="token_name" name="name" type="text" class="mt-1 block w-full"
+        <x-input-label for="token_name" :value="'Token-Name'" />
+        <div class="mt-1 flex items-center gap-3">
+            <x-text-input id="token_name" name="name" type="text" class="block flex-1"
                           :value="old('name', 'planstack')" required />
-            <x-input-error :messages="$errors->get('name')" class="mt-2" />
+            <x-primary-button>Token erstellen</x-primary-button>
         </div>
-        <x-primary-button>Token erstellen</x-primary-button>
+        <x-input-error :messages="$errors->get('name')" class="mt-2" />
     </form>
 
     {{-- Existing tokens. --}}
