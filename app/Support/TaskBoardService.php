@@ -109,17 +109,7 @@ class TaskBoardService
      */
     public function displayStatusFor(Task $task): TaskStatus
     {
-        $explicit = [
-            TaskStatus::COMPLETED,
-            TaskStatus::MERGED,
-            TaskStatus::CLAIMED,
-            TaskStatus::CONCERNED,
-            TaskStatus::ANALYZING,
-            TaskStatus::IN_PROGRESS,
-            TaskStatus::IN_REVIEW,
-        ];
-
-        if (in_array($task->status, $explicit, true)) {
+        if ($task->status->isExplicit()) {
             return $task->status;
         }
 

@@ -97,6 +97,65 @@ enum TaskStatus: string
     }
 
     /**
+     * The semantic family of a status. Bundles the meaning that was previously
+     * scattered across in_array()/match checks so the later move to dynamic,
+     * per-organization statuses only has to touch this one mapping. A dynamic
+     * status will carry the same `kind` values.
+     *
+     * waiting   – not started yet (UNKNOWN/PICKABLE)
+     * exception – off the regular flow (BLOCKED derived, CONCERNED explicit)
+     * active    – claimed and being worked on (CLAIMED/ANALYZING/IN_PROGRESS)
+     * review    – in review (IN_REVIEW)
+     * done      – finished (COMPLETED/MERGED)
+     */
+    public function kind(): string
+    {
+        return match ($this) {
+            self::UNKNOWN, self::PICKABLE => 'waiting',
+            self::BLOCKED, self::CONCERNED => 'exception',
+            self::CLAIMED, self::ANALYZING, self::IN_PROGRESS => 'active',
+            self::IN_REVIEW => 'review',
+            self::COMPLETED, self::MERGED => 'done',
+        };
+    }
+
+    /**
+     * Fully closed — COMPLETED or MERGED. Drives progress/done markers. (Gate
+     * satisfaction additionally counts an open PR; see TaskBoardService.)
+     */
+    public function isDone(): bool
+    {
+        return $this->kind() === 'done';
+    }
+
+    /**
+     * Off-flow exception state (BLOCKED or CONCERNED).
+     */
+    public function isException(): bool
+    {
+        return $this->kind() === 'exception';
+    }
+
+    /**
+     * A waiting state (UNKNOWN/PICKABLE) whose effective board status is derived
+     * from the gate rather than stored authoritatively.
+     */
+    public function isWaiting(): bool
+    {
+        return $this->kind() === 'waiting';
+    }
+
+    /**
+     * An explicit lifecycle state that is kept as-is on the board (not re-derived
+     * from the gate). Everything except the waiting states and the derived
+     * BLOCKED — i.e. CONCERNED plus active/review/done.
+     */
+    public function isExplicit(): bool
+    {
+        return ! in_array($this, [self::UNKNOWN, self::PICKABLE, self::BLOCKED], true);
+    }
+
+    /**
      * Tailwind classes for a status badge. Single source of truth shared by the
      * Summary and PR-sequence views so their status colours never drift apart.
      */
