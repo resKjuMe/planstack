@@ -3,8 +3,19 @@
 return [
     'title' => 'Manage task statuses',
     'intro' => 'Customize your organization\'s statuses: label, color, order, whether it is a column or an exception lane, whether the column is expanded by default, and an optional WIP limit. The board applies changes immediately.',
-    'deferred_note' => 'Creating and deleting additional (custom) statuses will follow in a later step, once tasks can be assigned to them.',
     'back_to_organization' => 'Back to organization',
+
+    'new_status_title' => 'Add a custom status',
+    'new_status_intro' => 'Custom statuses appear as their own column (or in the exception lane) and as a transition target. Automatic actions (claim/merge/…) never target them — a task reaches them via drag-and-drop.',
+    'kind' => 'Kind',
+    'create_status' => 'Add status',
+    'status_created' => 'Status “:label” created.',
+    'delete' => 'Delete',
+    'delete_status_confirm' => 'Really delete this status?',
+    'status_deleted' => 'Status deleted.',
+    'cannot_delete_canonical' => 'Default statuses cannot be deleted.',
+    'cannot_delete_in_use' => 'Status is still assigned to tasks and cannot be deleted.',
+    'custom_badge' => 'custom',
 
     'statuses' => 'Statuses',
     'col_status' => 'Status',

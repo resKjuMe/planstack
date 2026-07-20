@@ -47,52 +47,126 @@
                         <div class="flex-1"></div>
                     </div>
 
+                    <x-input-error :messages="$errors->get('status')" class="mb-2" />
+
                     @foreach ($statuses as $status)
-                        <form method="POST" action="{{ route('organization.statuses.update', $status) }}"
-                              class="flex items-center gap-3 border-b border-gray-100 dark:border-gray-700 py-2 last:border-0">
-                            @csrf
-                            @method('PATCH')
-                            <div class="w-28 font-mono text-xs text-gray-500 dark:text-gray-400 truncate">{{ $status->key }}</div>
-                            <div class="w-28 text-xs text-gray-500 dark:text-gray-400">
-                                <div>{{ $status->role ?? '—' }}</div>
-                                <span class="rounded bg-gray-100 dark:bg-gray-700 px-1 py-0.5">{{ __('board_admin.kind_'.$status->kind) }}</span>
-                            </div>
-                            <input type="text" name="label" value="{{ $status->label }}" required maxlength="255" class="{{ $inputClass }} w-36">
-                            <input type="text" name="label_en" value="{{ $status->label_en }}" maxlength="255" class="{{ $inputClass }} w-36">
-                            <div class="flex w-40 items-center gap-2">
-                                <span class="h-3 w-3 shrink-0 rounded-full {{ $swatch[$status->color_token] ?? 'bg-gray-400' }}"></span>
-                                <select name="color_token" class="{{ $inputClass }} flex-1">
-                                    @foreach ($colors as $token)
-                                        <option value="{{ $token }}" @selected($status->color_token === $token)>{{ $token }}</option>
+                        {{-- Zeile = Update-Form; die Löschen-Form (nur Custom) ist ein
+                             separates, gleichrangiges Form daneben (gültiges HTML). --}}
+                        <div class="flex items-center gap-2 border-b border-gray-100 dark:border-gray-700 py-2 last:border-0">
+                            <form method="POST" action="{{ route('organization.statuses.update', $status) }}"
+                                  class="flex flex-1 items-center gap-3">
+                                @csrf
+                                @method('PATCH')
+                                <div class="w-28 font-mono text-xs text-gray-500 dark:text-gray-400 truncate">{{ $status->key }}</div>
+                                <div class="w-28 text-xs text-gray-500 dark:text-gray-400">
+                                    <div>
+                                        {{ $status->role ?? '—' }}
+                                        @if ($status->role === null)
+                                            <span class="rounded bg-indigo-100 dark:bg-indigo-900/40 px-1 text-indigo-700 dark:text-indigo-300">{{ __('board_admin.custom_badge') }}</span>
+                                        @endif
+                                    </div>
+                                    <span class="rounded bg-gray-100 dark:bg-gray-700 px-1 py-0.5">{{ __('board_admin.kind_'.$status->kind) }}</span>
+                                </div>
+                                <input type="text" name="label" value="{{ $status->label }}" required maxlength="255" class="{{ $inputClass }} w-36">
+                                <input type="text" name="label_en" value="{{ $status->label_en }}" maxlength="255" class="{{ $inputClass }} w-36">
+                                <div class="flex w-40 items-center gap-2">
+                                    <span class="h-3 w-3 shrink-0 rounded-full {{ $swatch[$status->color_token] ?? 'bg-gray-400' }}"></span>
+                                    <select name="color_token" class="{{ $inputClass }} flex-1">
+                                        @foreach ($colors as $token)
+                                            <option value="{{ $token }}" @selected($status->color_token === $token)>{{ $token }}</option>
+                                        @endforeach
+                                    </select>
+                                </div>
+                                <input type="number" name="position" value="{{ $status->position }}" min="0" class="{{ $inputClass }} w-16">
+                                <div class="w-14 text-center">
+                                    <input type="checkbox" name="is_column" value="1" @checked($status->is_column)
+                                           class="rounded border-gray-300 dark:border-gray-600 text-indigo-600 focus:ring-indigo-500">
+                                </div>
+                                <div class="w-16 text-center">
+                                    <input type="checkbox" name="default_expanded" value="1" @checked($status->default_expanded)
+                                           class="rounded border-gray-300 dark:border-gray-600 text-indigo-600 focus:ring-indigo-500">
+                                </div>
+                                <input type="number" name="wip_limit" value="{{ $status->wip_limit }}" min="1" placeholder="—" class="{{ $inputClass }} w-16">
+                                <select name="group_id" class="{{ $inputClass }} w-32">
+                                    <option value="">{{ __('board_admin.no_group') }}</option>
+                                    @foreach ($groups as $g)
+                                        <option value="{{ $g->id }}" @selected($status->group_id === $g->id)>{{ $g->label }}</option>
                                     @endforeach
                                 </select>
+                                <div class="flex-1 text-right">
+                                    <button class="rounded-md bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-indigo-700">
+                                        {{ __('board_admin.save') }}
+                                    </button>
+                                </div>
+                            </form>
+                            <div class="w-16 text-right">
+                                @if ($status->role === null)
+                                    <form method="POST" action="{{ route('organization.statuses.destroy', $status) }}"
+                                          onsubmit="return confirm('{{ __('board_admin.delete_status_confirm') }}');">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button class="text-xs font-medium text-rose-600 dark:text-rose-400 hover:underline">{{ __('board_admin.delete') }}</button>
+                                    </form>
+                                @endif
                             </div>
-                            <input type="number" name="position" value="{{ $status->position }}" min="0" class="{{ $inputClass }} w-16">
-                            <div class="w-14 text-center">
-                                <input type="checkbox" name="is_column" value="1" @checked($status->is_column)
-                                       class="rounded border-gray-300 dark:border-gray-600 text-indigo-600 focus:ring-indigo-500">
-                            </div>
-                            <div class="w-16 text-center">
-                                <input type="checkbox" name="default_expanded" value="1" @checked($status->default_expanded)
-                                       class="rounded border-gray-300 dark:border-gray-600 text-indigo-600 focus:ring-indigo-500">
-                            </div>
-                            <input type="number" name="wip_limit" value="{{ $status->wip_limit }}" min="1" class="{{ $inputClass }} w-16">
-                            <select name="group_id" class="{{ $inputClass }} w-32">
-                                <option value="">{{ __('board_admin.no_group') }}</option>
-                                @foreach ($groups as $g)
-                                    <option value="{{ $g->id }}" @selected($status->group_id === $g->id)>{{ $g->label }}</option>
-                                @endforeach
-                            </select>
-                            <div class="flex-1 text-right">
-                                <button class="rounded-md bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-indigo-700">
-                                    {{ __('board_admin.save') }}
-                                </button>
-                            </div>
-                        </form>
+                        </div>
                     @endforeach
                 </div>
 
-                <p class="mt-4 text-xs text-gray-400 dark:text-gray-500">{{ __('board_admin.deferred_note') }}</p>
+                {{-- Eigenen Status anlegen --}}
+                <div class="mt-6 border-t pt-5">
+                    <h4 class="font-semibold text-gray-900 dark:text-gray-100">{{ __('board_admin.new_status_title') }}</h4>
+                    <p class="mt-1 mb-3 max-w-3xl text-sm text-gray-500 dark:text-gray-400">{{ __('board_admin.new_status_intro') }}</p>
+                    <form method="POST" action="{{ route('organization.statuses.store') }}" class="flex flex-wrap items-end gap-3">
+                        @csrf
+                        <div>
+                            <x-input-label :value="__('board_admin.col_label')" />
+                            <input type="text" name="label" required maxlength="255" class="{{ $inputClass }} mt-1 w-40">
+                        </div>
+                        <div>
+                            <x-input-label :value="__('board_admin.col_label_en')" />
+                            <input type="text" name="label_en" maxlength="255" class="{{ $inputClass }} mt-1 w-40">
+                        </div>
+                        <div>
+                            <x-input-label :value="__('board_admin.kind')" />
+                            <select name="kind" class="{{ $inputClass }} mt-1">
+                                @foreach (['active', 'review', 'done', 'exception'] as $k)
+                                    <option value="{{ $k }}">{{ __('board_admin.kind_'.$k) }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div>
+                            <x-input-label :value="__('board_admin.col_color')" />
+                            <select name="color_token" class="{{ $inputClass }} mt-1">
+                                @foreach ($colors as $token)
+                                    <option value="{{ $token }}">{{ $token }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div>
+                            <x-input-label :value="__('board_admin.col_wip')" />
+                            <input type="number" name="wip_limit" min="1" placeholder="—" class="{{ $inputClass }} mt-1 w-20">
+                        </div>
+                        <div>
+                            <x-input-label :value="__('board_admin.col_group')" />
+                            <select name="group_id" class="{{ $inputClass }} mt-1">
+                                <option value="">{{ __('board_admin.no_group') }}</option>
+                                @foreach ($groups as $g)
+                                    <option value="{{ $g->id }}">{{ $g->label }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <label class="flex items-center gap-1.5 text-sm text-gray-700 dark:text-gray-300">
+                            <input type="checkbox" name="default_expanded" value="1"
+                                   class="rounded border-gray-300 dark:border-gray-600 text-indigo-600 focus:ring-indigo-500">
+                            {{ __('board_admin.col_expanded') }}
+                        </label>
+                        <button class="rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700">
+                            {{ __('board_admin.create_status') }}
+                        </button>
+                    </form>
+                    <x-input-error :messages="$errors->get('label')" class="mt-2" />
+                </div>
             </div>
 
             {{-- ============ Collapse-Gruppen ============ --}}

@@ -6,6 +6,7 @@ use App\Models\Organization;
 use App\Models\OrgStatus;
 use App\Models\OrgStatusGroup;
 use App\Models\OrgStatusTransition;
+use App\Models\Task;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -128,6 +129,84 @@ class OrganizationTaskStatusController extends Controller
         });
 
         return back()->with('status', __('board_admin.transitions_saved'));
+    }
+
+    /** Kinds a custom status may take (waiting is excluded — it is gate-derived). */
+    public const CUSTOM_KINDS = ['active', 'review', 'done', 'exception'];
+
+    /**
+     * Create a custom (role-less) status. It participates as a board column (or
+     * exception lane) and as a transition target, but is never the automatic
+     * target of a wired action (those resolve by role).
+     */
+    public function storeStatus(Request $request): RedirectResponse
+    {
+        $organization = $this->ownedOrganization($request);
+        $groupIds = $organization->statusGroups()->pluck('id')->all();
+
+        $data = $request->validate([
+            'label' => ['required', 'string', 'max:255'],
+            'label_en' => ['nullable', 'string', 'max:255'],
+            'color_token' => ['required', Rule::in(self::COLORS)],
+            'kind' => ['required', Rule::in(self::CUSTOM_KINDS)],
+            'wip_limit' => ['nullable', 'integer', 'min:1'],
+            'group_id' => ['nullable', 'integer', Rule::in($groupIds)],
+            'is_column' => ['sometimes', 'boolean'],
+            'default_expanded' => ['sometimes', 'boolean'],
+        ]);
+
+        // Unique, slug-based key per org (must not collide with canonical keys).
+        $base = Str::upper(Str::slug($data['label'], '_')) ?: 'STATUS';
+        $key = $base;
+        $i = 1;
+        while ($organization->statuses()->where('key', $key)->exists()) {
+            $key = $base.'_'.(++$i);
+        }
+
+        $isDone = $data['kind'] === 'done';
+
+        $organization->statuses()->create([
+            'role' => null, // custom
+            'key' => $key,
+            'label' => $data['label'],
+            'label_en' => $data['label_en'] ?? null,
+            'kind' => $data['kind'],
+            'color_token' => $data['color_token'],
+            'position' => (int) $organization->statuses()->max('position') + 1,
+            'is_column' => $data['kind'] === 'exception' ? false : $request->boolean('is_column', true),
+            'default_expanded' => $request->boolean('default_expanded'),
+            'wip_limit' => $data['wip_limit'] ?? null,
+            'counts_as_done' => $isDone,
+            'counts_as_delivered' => $isDone,
+            'group_id' => $data['group_id'] ?? null,
+        ]);
+
+        $organization->increment('status_config_version');
+
+        return back()->with('status', __('board_admin.status_created', ['label' => $data['label']]));
+    }
+
+    /**
+     * Delete a custom status. Canonical (role-bearing) statuses are protected,
+     * and a status still assigned to any task cannot be removed.
+     */
+    public function destroyStatus(Request $request, OrgStatus $status): RedirectResponse
+    {
+        $organization = $this->ownedOrganization($request);
+        abort_unless($status->organization_id === $organization->id, 403);
+
+        if ($status->role !== null) {
+            return back()->withErrors(['status' => __('board_admin.cannot_delete_canonical')]);
+        }
+
+        if (Task::where('status_id', $status->id)->exists()) {
+            return back()->withErrors(['status' => __('board_admin.cannot_delete_in_use')]);
+        }
+
+        $status->delete();
+        $organization->increment('status_config_version');
+
+        return back()->with('status', __('board_admin.status_deleted'));
     }
 
     public function storeGroup(Request $request): RedirectResponse

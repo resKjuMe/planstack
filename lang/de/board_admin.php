@@ -3,8 +3,19 @@
 return [
     'title' => 'Task-Status verwalten',
     'intro' => 'Passe die Status deiner Organisation an: Bezeichnung, Farbe, Reihenfolge, ob es eine Spalte oder eine Ausnahme-Leiste ist, ob die Spalte standardmäßig ausgeklappt ist und ein optionales WIP-Limit. Das Board übernimmt Änderungen sofort.',
-    'deferred_note' => 'Das Anlegen und Löschen zusätzlicher (eigener) Status folgt in einem späteren Schritt, sobald Tasks diesen zugewiesen werden können.',
     'back_to_organization' => 'Zurück zur Organisation',
+
+    'new_status_title' => 'Eigenen Status anlegen',
+    'new_status_intro' => 'Zusätzliche Status erscheinen als eigene Spalte (bzw. in der Ausnahme-Leiste) und als Übergangsziel. Sie werden von automatischen Aktionen (beanspruchen/mergen/…) nicht angesteuert – dorthin gelangt ein Task per Drag-and-drop.',
+    'kind' => 'Art',
+    'create_status' => 'Status anlegen',
+    'status_created' => 'Status „:label" angelegt.',
+    'delete' => 'Löschen',
+    'delete_status_confirm' => 'Diesen Status wirklich löschen?',
+    'status_deleted' => 'Status gelöscht.',
+    'cannot_delete_canonical' => 'Standard-Status können nicht gelöscht werden.',
+    'cannot_delete_in_use' => 'Status ist noch Tasks zugewiesen und kann nicht gelöscht werden.',
+    'custom_badge' => 'eigener',
 
     'statuses' => 'Status',
     'col_status' => 'Status',

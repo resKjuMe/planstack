@@ -29,8 +29,8 @@ class DefaultTaskStatuses
         ['PICKABLE',    'pickbar',      'pickable',    'waiting',   'indigo',  0, true,  true,  null, false, false, null],
         ['CLAIMED',     'beansprucht',  'claimed',     'active',    'sky',     1, true,  false, null, false, false, 'in_work'],
         ['ANALYZING',   'in Analyse',   'analyzing',   'active',    'blue',    2, true,  false, null, false, false, 'in_work'],
-        ['IN_PROGRESS', 'in Arbeit',    'in progress', 'active',    'navy',    3, true,  true,  5,    false, false, 'in_work'],
-        ['IN_REVIEW',   'in Review',    'in review',   'review',    'purple',  4, true,  true,  3,    false, false, null],
+        ['IN_PROGRESS', 'in Arbeit',    'in progress', 'active',    'navy',    3, true,  true,  null, false, false, 'in_work'],
+        ['IN_REVIEW',   'in Review',    'in review',   'review',    'purple',  4, true,  true,  null, false, false, null],
         ['MERGED',      'gemerged',     'merged',      'done',      'emerald', 5, true,  false, null, true,  true,  null],
         ['COMPLETED',   'erledigt',     'completed',   'done',      'green',   6, true,  false, null, true,  true,  null],
         // Exception states: not columns, collected in the left-hand lane

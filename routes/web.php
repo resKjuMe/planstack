@@ -63,6 +63,10 @@ Route::middleware('auth')->group(function () {
         ->name('organization.statuses.transitions');
     Route::patch('organization/statuses/{status}', [OrganizationTaskStatusController::class, 'update'])
         ->name('organization.statuses.update');
+    Route::post('organization/statuses', [OrganizationTaskStatusController::class, 'storeStatus'])
+        ->name('organization.statuses.store');
+    Route::delete('organization/statuses/{status}', [OrganizationTaskStatusController::class, 'destroyStatus'])
+        ->name('organization.statuses.destroy');
     Route::post('organization/status-groups', [OrganizationTaskStatusController::class, 'storeGroup'])
         ->name('organization.statuses.groups.store');
     Route::delete('organization/status-groups/{group}', [OrganizationTaskStatusController::class, 'destroyGroup'])
