@@ -29,11 +29,12 @@ class BoardPresenter
         $tasks->loadMissing('concern:id,task_id,summary,description_blocker');
 
         $userId = auth()->id();
+        $maps = $this->orgStatusMaps($project);
 
         return [
             'projectId' => $project->id,
             'currentUserId' => $userId,
-            'tasks' => $tasks->map(fn (Task $t) => $this->task($t, $project, $userId))->values()->all(),
+            'tasks' => $tasks->map(fn (Task $t) => $this->task($t, $project, $userId, $maps))->values()->all(),
             'assignees' => $this->assignees($tasks),
             // Workflow comes from the organization's configurable statuses; for a
             // default-seeded org this equals the former static definition.
@@ -50,23 +51,29 @@ class BoardPresenter
 
     /**
      * One decorated task in wire format. Requires the x_* attributes from
-     * TaskBoardService (call decorate()/board() first).
+     * TaskBoardService (call decorate()/board() first). The board status is keyed
+     * off the task's status_id (the authority), with gate derivation for waiting
+     * statuses; the legacy ENUM is only a fallback for not-yet-backfilled rows.
      *
+     * @param  array{byId: Collection<int, \App\Models\OrgStatus>, roleKey: array<string, string>}|null  $maps
      * @return array<string, mixed>
      */
-    public function task(Task $task, Project $project, ?int $currentUserId): array
+    public function task(Task $task, Project $project, ?int $currentUserId, ?array $maps = null): array
     {
-        $display = $task->x_display_status ?? $this->board->displayStatusFor($task);
+        $maps ??= $this->orgStatusMaps($project);
+        $displayKey = $this->displayStatusKey($task, $maps);
+
+        $blockedKey = $maps['roleKey']['BLOCKED'] ?? 'BLOCKED';
+        $concernedKey = $maps['roleKey']['CONCERNED'] ?? 'CONCERNED';
 
         return [
             'id' => $task->id,
             'name' => $task->name,
             'summary' => $task->summary,
-            // Raw stored status vs. the derived board status. The board groups by
-            // displayStatus (consistent with diagram/summary); the drop endpoint
-            // validates transitions against it too.
-            'status' => $task->status->value,
-            'displayStatus' => $display->value,
+            // Raw stored status (nullable once a task sits in a custom status) vs.
+            // the derived board status key the board groups by.
+            'status' => $task->status?->value,
+            'displayStatus' => $displayKey,
             'claimerId' => $task->claimed_by_id,
             'claimerName' => $task->claimer?->name,
             'storyPoints' => (int) $task->effort_story_points,
@@ -74,16 +81,69 @@ class BoardPresenter
             'prUrl' => $task->x_pr_url,
             'mergedAt' => $task->merged_at?->toIso8601String(),
             'mergedAtHuman' => $task->merged_at?->locale(app()->getLocale())->diffForHumans(),
-            // Exception badges. Because BLOCKED/CONCERNED are exclusive statuses
-            // (no preserved "last regular status"), such a task lives ONLY in the
-            // exception lane — see the note in BoardWorkflow / the React board.
-            'isBlocked' => $display === TaskStatus::BLOCKED,
-            'isConcerned' => $display === TaskStatus::CONCERNED,
+            // Exception badges. Because exception statuses are exclusive (no
+            // preserved "last regular status"), such a task lives ONLY in the
+            // exception lane — see the note in the React board.
+            'isBlocked' => $displayKey === $blockedKey,
+            'isConcerned' => $displayKey === $concernedKey,
             'concernSummary' => $task->concern?->summary ?: $task->concern?->description_blocker,
             'url' => route('projects.tasks.show', [$project, $task]),
             // The existing claim/release buttons stay as an alternative to DnD.
             'canClaim' => $currentUserId !== null && auth()->user()?->can('claim', $task),
             'isClaimed' => $task->claimed_by_id !== null,
+        ];
+    }
+
+    /**
+     * Public accessor for a task's current board status key (used by the
+     * drag-and-drop move endpoint to validate the transition source).
+     */
+    public function displayKeyFor(Task $task, Project $project): string
+    {
+        return $this->displayStatusKey($task, $this->orgStatusMaps($project));
+    }
+
+    /**
+     * The board status key for a task, from its status_id (authority). Waiting
+     * statuses are derived from the gate: unmet prerequisite → BLOCKED role,
+     * else PICKABLE role. Falls back to the enum-derived key when status_id is
+     * not (yet) set.
+     *
+     * @param  array{byId: Collection<int, \App\Models\OrgStatus>, roleKey: array<string, string>}  $maps
+     */
+    private function displayStatusKey(Task $task, array $maps): string
+    {
+        $status = $task->status_id ? $maps['byId']->get($task->status_id) : null;
+
+        if ($status === null) {
+            $enum = $task->x_display_status ?? $this->board->displayStatusFor($task);
+
+            return $enum->value;
+        }
+
+        if ($status->kind === 'waiting') {
+            return ($task->x_unmet ?? 0) >= 1
+                ? ($maps['roleKey']['BLOCKED'] ?? 'BLOCKED')
+                : ($maps['roleKey']['PICKABLE'] ?? 'PICKABLE');
+        }
+
+        return $status->key;
+    }
+
+    /**
+     * Preloaded lookups for an organization's statuses: by id, and role → key.
+     *
+     * @return array{byId: Collection<int, \App\Models\OrgStatus>, roleKey: array<string, string>}
+     */
+    private function orgStatusMaps(Project $project): array
+    {
+        $statuses = $project->organization->statuses()->get();
+
+        return [
+            'byId' => $statuses->keyBy('id'),
+            'roleKey' => $statuses->whereNotNull('role')
+                ->mapWithKeys(fn ($s) => [$s->role->value => $s->key])
+                ->all(),
         ];
     }
 

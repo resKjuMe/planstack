@@ -114,6 +114,14 @@ class TaskBoardService
      */
     public function displayStatusFor(Task $task): TaskStatus
     {
+        // A task in a custom (org-defined) status has no canonical ENUM value.
+        // The board reads status_id (see BoardPresenter); this enum-based path
+        // only feeds the legacy diagram/summary views, so a neutral PICKABLE
+        // placeholder is enough to avoid a null dereference there.
+        if ($task->status === null) {
+            return TaskStatus::PICKABLE;
+        }
+
         if ($task->status->isExplicit()) {
             return $task->status;
         }

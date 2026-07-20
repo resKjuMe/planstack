@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\StatusRole;
 use App\Enums\TaskStatus;
 use App\Http\Requests\StoreTaskRequest;
 use App\Http\Requests\UpdateTaskRequest;
@@ -13,7 +14,6 @@ use App\Support\TaskBoardService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Validation\Rules\Enum;
 use Illuminate\View\View;
 
 class TaskController extends Controller
@@ -168,40 +168,47 @@ class TaskController extends Controller
         $this->authorize('update', $task);
 
         $data = $request->validate([
-            'status' => ['required', new Enum(TaskStatus::class)],
+            'status' => ['required', 'string'],
         ]);
-        $target = TaskStatus::from($data['status']);
 
-        $current = $this->board->decorate($project)
-            ->firstWhere('id', $task->id)?->x_display_status ?? $task->status;
+        $organization = $project->organization;
+        // Target is an org status key (may be a custom, non-enum status).
+        $target = $organization->statusForKey($data['status']);
 
-        // Transition is validated against the organization's configured workflow
-        // (OrgBoardWorkflow); for a default-seeded org this equals the former
-        // static rules. Keys equal the enum values for default statuses.
-        $workflow = OrgBoardWorkflow::forOrganization($project->organization);
+        if ($target === null) {
+            return response()->json(['message' => __('board.move_forbidden', [
+                'from' => '?', 'to' => $data['status'],
+            ])], 422);
+        }
 
-        if (! $workflow->canTransition($current->value, $target->value)) {
+        $decorated = $this->board->decorate($project)->firstWhere('id', $task->id) ?? $task;
+        $currentKey = $this->presenter->displayKeyFor($decorated, $project);
+
+        $workflow = OrgBoardWorkflow::forOrganization($organization);
+        if (! $workflow->canTransition($currentKey, $target->key)) {
             return response()->json([
-                'message' => __('board.move_forbidden', [
-                    'from' => $current->label(),
-                    'to' => $target->label(),
-                ]),
+                'message' => __('board.move_forbidden', ['from' => $currentKey, 'to' => $target->key]),
             ], 422);
         }
 
-        // Side effects mirror the claim toggle and update()'s merged_at stamping,
-        // so a drop into CLAIMED/PICKABLE/MERGED behaves like the dedicated action.
-        $attrs = ['status' => $target->value];
+        // status_id is the authority; the legacy ENUM is mirrored for canonical
+        // keys (null for a custom status). Side effects follow the target's role
+        // so a drop into the CLAIMED/PICKABLE/MERGED-role column behaves like the
+        // dedicated action — for a default org identical to before.
+        $attrs = [
+            'status_id' => $target->id,
+            'status' => TaskStatus::tryFrom($target->key)?->value,
+        ];
 
-        if ($target === TaskStatus::CLAIMED && $task->claimed_by_id === null) {
+        if ($target->role === StatusRole::CLAIMED && $task->claimed_by_id === null) {
             $attrs['claimed_by_id'] = $request->user()->id;
             $attrs['claimed_at'] = now();
-        } elseif ($target === TaskStatus::PICKABLE) {
+        } elseif ($target->role === StatusRole::PICKABLE) {
             $attrs['claimed_by_id'] = null;
             $attrs['claimed_at'] = null;
         }
 
-        if ($target === TaskStatus::MERGED && $task->merged_at === null) {
+        if ($target->role === StatusRole::MERGED && $task->merged_at === null) {
             $attrs['merged_at'] = now();
         }
 
