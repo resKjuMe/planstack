@@ -13,15 +13,13 @@ export function TaskCardView({
     listeners,
     attributes,
     setNodeRef,
-    targets = [],
+    next = null,
+    rest = [],
     labels = {},
     onMove,
 }) {
     const [open, setOpen] = useState(false);
     const stop = (e) => e.stopPropagation();
-
-    const next = targets[0] ?? null;
-    const rest = targets.slice(1);
 
     return (
         <div
@@ -116,11 +114,26 @@ export function TaskCardView({
 
 // Draggable wrapper (@dnd-kit). The whole card is the drag source; interactive
 // children stop pointer propagation so links/buttons stay usable.
-export default function TaskCard({ task, t, csrf, endpoints, dimmed, transitions = {}, labels = {}, onMove }) {
+export default function TaskCard({ task, t, csrf, endpoints, dimmed, transitions = {}, labels = {}, columnOrder = [], onMove }) {
     const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
         id: task.id,
         data: { from: task.displayStatus },
     });
+
+    // Primary action = the nearest FORWARD status (next by column order); the
+    // rest go into the dropdown. Falls back to the first listed target when no
+    // forward transition exists (e.g. only backward moves).
+    const targets = transitions[task.displayStatus] ?? [];
+    const pos = (s) => {
+        const i = columnOrder.indexOf(s);
+        return i === -1 ? Number.POSITIVE_INFINITY : i;
+    };
+    const cur = columnOrder.indexOf(task.displayStatus);
+    const forward = targets
+        .filter((s) => pos(s) > cur)
+        .sort((a, b) => pos(a) - pos(b));
+    const next = forward[0] ?? targets[0] ?? null;
+    const rest = targets.filter((s) => s !== next);
 
     return (
         <TaskCardView
@@ -133,7 +146,8 @@ export default function TaskCard({ task, t, csrf, endpoints, dimmed, transitions
             setNodeRef={setNodeRef}
             listeners={listeners}
             attributes={attributes}
-            targets={transitions[task.displayStatus] ?? []}
+            next={next}
+            rest={rest}
             labels={labels}
             onMove={onMove}
         />

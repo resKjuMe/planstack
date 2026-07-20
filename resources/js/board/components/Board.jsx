@@ -199,10 +199,11 @@ export default function Board({ data }) {
                 dimmed={filters.highlightBlocked && ! task.isBlocked}
                 transitions={workflow.transitions}
                 labels={workflow.labels}
+                columnOrder={workflow.columnOrder}
                 onMove={performMove}
             />
         ),
-        [t, csrf, endpoints, filters.highlightBlocked, workflow.transitions, workflow.labels, performMove],
+        [t, csrf, endpoints, filters.highlightBlocked, workflow.transitions, workflow.labels, workflow.columnOrder, performMove],
     );
 
     const draggingTask = dragging ? tasks.find((tk) => tk.id === dragging.taskId) : null;
