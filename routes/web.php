@@ -9,6 +9,7 @@ use App\Http\Controllers\ProjectClaudeController;
 use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\ProjectDiagramController;
 use App\Http\Controllers\OrganizationController;
+use App\Http\Controllers\OrganizationTaskStatusController;
 use App\Http\Controllers\ProjectMemberController;
 use App\Http\Controllers\ProjectPhaseController;
 use App\Http\Controllers\ProjectPrSequenceController;
@@ -52,6 +53,16 @@ Route::middleware('auth')->group(function () {
     Route::post('organization/invite', [OrganizationController::class, 'invite'])->name('organization.invite');
     Route::post('organization/leave', [OrganizationController::class, 'leave'])->name('organization.leave');
     Route::delete('organization', [OrganizationController::class, 'destroy'])->name('organization.destroy');
+
+    // Verwaltung der org-konfigurierbaren Task-Status (nur Gründer). Die
+    // Transitions-Route steht vor der {status}-Route, damit sie nicht als
+    // Wildcard gebunden wird.
+    Route::get('organization/statuses', [OrganizationTaskStatusController::class, 'index'])
+        ->name('organization.statuses.index');
+    Route::put('organization/status-transitions', [OrganizationTaskStatusController::class, 'updateTransitions'])
+        ->name('organization.statuses.transitions');
+    Route::patch('organization/statuses/{status}', [OrganizationTaskStatusController::class, 'update'])
+        ->name('organization.statuses.update');
 
     // ---- Erfordert die Zugehörigkeit zu einer Organisation ----
     Route::middleware(EnsureUserHasOrganization::class)->group(function () {

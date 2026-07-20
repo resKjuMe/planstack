@@ -1,0 +1,139 @@
+@php
+    // Literal swatch classes (scanned by Tailwind) for the color-token select.
+    $swatch = [
+        'gray' => 'bg-gray-500', 'slate' => 'bg-slate-500', 'indigo' => 'bg-indigo-500',
+        'sky' => 'bg-sky-500', 'blue' => 'bg-blue-500', 'navy' => 'bg-blue-700',
+        'purple' => 'bg-purple-500', 'green' => 'bg-green-500', 'emerald' => 'bg-emerald-500',
+        'teal' => 'bg-teal-500', 'rose' => 'bg-rose-500', 'red' => 'bg-red-500',
+        'orange' => 'bg-orange-500', 'amber' => 'bg-amber-500',
+    ];
+    $inputClass = 'rounded-md border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-sm';
+@endphp
+
+<x-app-layout>
+    <x-slot name="header">
+        <h2 class="font-semibold text-xl text-gray-800 dark:text-gray-100 leading-tight">{{ __('board_admin.title') }}</h2>
+    </x-slot>
+
+    <div class="py-8">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
+            <x-flash />
+
+            <div class="flex items-center justify-between">
+                <p class="max-w-3xl text-sm text-gray-500 dark:text-gray-400">{{ __('board_admin.intro') }}</p>
+                <a href="{{ route('organization.index') }}"
+                   class="shrink-0 text-sm text-indigo-600 dark:text-indigo-400 hover:underline">← {{ __('board_admin.back_to_organization') }}</a>
+            </div>
+
+            {{-- ============ Status bearbeiten ============ --}}
+            {{-- Jede Zeile ist ein eigenes <form> (div/flex statt Tabelle, damit
+                 das Formular gültiges HTML bleibt und pro Zeile speicherbar ist). --}}
+            <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6 overflow-x-auto">
+                <h3 class="mb-4 text-lg font-semibold text-gray-900 dark:text-gray-100">{{ __('board_admin.statuses') }}</h3>
+
+                <div class="min-w-[56rem] space-y-2">
+                    {{-- Kopfzeile --}}
+                    <div class="flex items-center gap-3 border-b pb-2 text-xs uppercase tracking-wide text-gray-400 dark:text-gray-500">
+                        <div class="w-28">{{ __('board_admin.col_key') }}</div>
+                        <div class="w-28">{{ __('board_admin.col_role') }}</div>
+                        <div class="w-36">{{ __('board_admin.col_label') }}</div>
+                        <div class="w-36">{{ __('board_admin.col_label_en') }}</div>
+                        <div class="w-40">{{ __('board_admin.col_color') }}</div>
+                        <div class="w-16">{{ __('board_admin.col_position') }}</div>
+                        <div class="w-14 text-center">{{ __('board_admin.col_is_column') }}</div>
+                        <div class="w-16 text-center">{{ __('board_admin.col_expanded') }}</div>
+                        <div class="w-16">{{ __('board_admin.col_wip') }}</div>
+                        <div class="flex-1"></div>
+                    </div>
+
+                    @foreach ($statuses as $status)
+                        <form method="POST" action="{{ route('organization.statuses.update', $status) }}"
+                              class="flex items-center gap-3 border-b border-gray-100 dark:border-gray-700 py-2 last:border-0">
+                            @csrf
+                            @method('PATCH')
+                            <div class="w-28 font-mono text-xs text-gray-500 dark:text-gray-400 truncate">{{ $status->key }}</div>
+                            <div class="w-28 text-xs text-gray-500 dark:text-gray-400">
+                                <div>{{ $status->role ?? '—' }}</div>
+                                <span class="rounded bg-gray-100 dark:bg-gray-700 px-1 py-0.5">{{ __('board_admin.kind_'.$status->kind) }}</span>
+                            </div>
+                            <input type="text" name="label" value="{{ $status->label }}" required maxlength="255" class="{{ $inputClass }} w-36">
+                            <input type="text" name="label_en" value="{{ $status->label_en }}" maxlength="255" class="{{ $inputClass }} w-36">
+                            <div class="flex w-40 items-center gap-2">
+                                <span class="h-3 w-3 shrink-0 rounded-full {{ $swatch[$status->color_token] ?? 'bg-gray-400' }}"></span>
+                                <select name="color_token" class="{{ $inputClass }} flex-1">
+                                    @foreach ($colors as $token)
+                                        <option value="{{ $token }}" @selected($status->color_token === $token)>{{ $token }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            <input type="number" name="position" value="{{ $status->position }}" min="0" class="{{ $inputClass }} w-16">
+                            <div class="w-14 text-center">
+                                <input type="checkbox" name="is_column" value="1" @checked($status->is_column)
+                                       class="rounded border-gray-300 dark:border-gray-600 text-indigo-600 focus:ring-indigo-500">
+                            </div>
+                            <div class="w-16 text-center">
+                                <input type="checkbox" name="default_expanded" value="1" @checked($status->default_expanded)
+                                       class="rounded border-gray-300 dark:border-gray-600 text-indigo-600 focus:ring-indigo-500">
+                            </div>
+                            <input type="number" name="wip_limit" value="{{ $status->wip_limit }}" min="1" class="{{ $inputClass }} w-16">
+                            <div class="flex-1 text-right">
+                                <button class="rounded-md bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-indigo-700">
+                                    {{ __('board_admin.save') }}
+                                </button>
+                            </div>
+                        </form>
+                    @endforeach
+                </div>
+
+                <p class="mt-4 text-xs text-gray-400 dark:text-gray-500">{{ __('board_admin.deferred_note') }}</p>
+            </div>
+
+            {{-- ============ Übergänge ============ --}}
+            <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6 overflow-x-auto">
+                <h3 class="mb-1 text-lg font-semibold text-gray-900 dark:text-gray-100">{{ __('board_admin.transitions_title') }}</h3>
+                <p class="mb-4 max-w-3xl text-sm text-gray-500 dark:text-gray-400">{{ __('board_admin.transitions_intro') }}</p>
+
+                <form method="POST" action="{{ route('organization.statuses.transitions') }}">
+                    @csrf
+                    @method('PUT')
+                    <table class="text-sm">
+                        <thead>
+                            <tr>
+                                <th class="p-2 text-left text-xs uppercase tracking-wide text-gray-400 dark:text-gray-500">{{ __('board_admin.transitions_from') }}</th>
+                                @foreach ($statuses as $to)
+                                    <th class="p-2 text-xs font-medium text-gray-500 dark:text-gray-400">
+                                        <span class="[writing-mode:vertical-rl]">{{ $to->label }}</span>
+                                    </th>
+                                @endforeach
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach ($statuses as $from)
+                                <tr class="border-t border-gray-100 dark:border-gray-700">
+                                    <td class="p-2 font-medium text-gray-700 dark:text-gray-300 whitespace-nowrap">{{ $from->label }}</td>
+                                    @foreach ($statuses as $to)
+                                        <td class="p-2 text-center">
+                                            @if ($from->id === $to->id)
+                                                <span class="text-gray-300 dark:text-gray-600">·</span>
+                                            @else
+                                                <input type="checkbox" name="transitions[{{ $from->id }}][]" value="{{ $to->id }}"
+                                                       @checked(in_array($to->id, $transitions[$from->id] ?? [], true))
+                                                       class="rounded border-gray-300 dark:border-gray-600 text-indigo-600 focus:ring-indigo-500">
+                                            @endif
+                                        </td>
+                                    @endforeach
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+
+                    <div class="mt-5">
+                        <button class="rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700">
+                            {{ __('board_admin.save_transitions') }}
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</x-app-layout>
