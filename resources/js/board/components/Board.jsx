@@ -10,6 +10,7 @@ import {
 } from '@dnd-kit/core';
 import BoardColumn from './BoardColumn';
 import CollapsedColumn from './CollapsedColumn';
+import GroupColumn from './GroupColumn';
 import ExceptionLane from './ExceptionLane';
 import QuickFilterBar from './QuickFilterBar';
 import TaskCard, { TaskCardView } from './TaskCard';
@@ -210,14 +211,10 @@ export default function Board({ data }) {
     const EXPANDED_TRACK = 'minmax(0, 1fr)';
     const cells = [];
 
-    // Statuses that belong to any configured group.
-    const groupMemberStatuses = new Set((workflow.collapseGroups ?? []).flatMap((g) => g.statuses));
-
-    // Configured groups render as ONE combined column. While dragging (or when
-    // the user disabled grouping) they split into their individual status
-    // columns so a card can be dropped into a precise status. During a drag the
-    // split members are force-expanded into real columns (never narrow collapsed
-    // bars) so they are proper drop targets and the dragged card stays mounted.
+    // Configured groups render as ONE column (GroupColumn) with per-status drop
+    // sections inside; the "ungroup" toggle shows the member statuses as separate
+    // columns instead. The layout does NOT change on drag (drop zones stay
+    // mounted/measured), which is what keeps @dnd-kit drops reliable.
 
     if (exceptionTasks.length > 0) {
         const exCollapsed = collapse.isCollapsed(EXCEPTIONS_KEY);
@@ -247,36 +244,28 @@ export default function Board({ data }) {
     for (let i = 0; i < workflow.columnOrder.length; ) {
         const group = groupStartingAt(workflow, i);
 
-        // Keep a group merged unless the user ungrouped it, or a drag is in
-        // progress — then split it into its status columns for precise drops.
-        // (@dnd-kit tolerates the re-layout; the drag keeps running.)
-        const keepMerged = group && ! ungrouped && ! dragging;
-
-        // Group as a single combined column.
-        if (keepMerged) {
-            const groupTasks = group.statuses.flatMap((s) => columnTasksFor(s));
-            const count = group.statuses.reduce((sum, s) => sum + (countByStatus[s] ?? 0), 0);
+        // A group is ALWAYS one column (GroupColumn) with per-status drop sections
+        // inside — unless the user ungrouped it. The board layout never changes on
+        // drag, so the drop zones stay mounted and correctly measured.
+        if (group && ! ungrouped) {
+            const members = group.statuses.map((s) => ({
+                status: s,
+                label: workflow.labels[s] ?? s,
+                dotClass: colorForToken(workflow.colors?.[s]).dot,
+                count: countByStatus[s] ?? 0,
+                allowed: dragging ? allowedTargets(workflow, dragging.from).has(s) : false,
+                cards: columnTasksFor(s).map((task) => renderCard(task)),
+            }));
             cells.push({
                 track: EXPANDED_TRACK,
                 node: (
-                    <BoardColumn
+                    <GroupColumn
                         key={`group:${group.key}`}
-                        status={`group:${group.key}`}
-                        label={group.label}
-                        dotClass="bg-gray-400"
-                        headClass="text-gray-600 dark:text-gray-300"
-                        count={count}
-                        wipLimit={null}
-                        isDragActive={false}
-                        isDropAllowed={false}
-                        collapsible={false}
-                        noDrop
+                        group={group}
+                        members={members}
+                        dragActive={!! dragging}
                         t={t}
-                        onCollapse={() => {}}
-                        footer={null}
-                    >
-                        {groupTasks.map((task) => renderCard(task))}
-                    </BoardColumn>
+                    />
                 ),
             });
             i += group.statuses.length;
@@ -289,9 +278,7 @@ export default function Board({ data }) {
         const color = colorForToken(workflow.colors?.[status]);
         const count = countByStatus[status] ?? 0;
 
-        const forceExpand = !! dragging && groupMemberStatuses.has(status);
-
-        if (collapse.isCollapsed(status) && ! forceExpand) {
+        if (collapse.isCollapsed(status)) {
             cells.push({
                 track: COLLAPSED_TRACK,
                 node: (
