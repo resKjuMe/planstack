@@ -21,6 +21,7 @@ use App\Http\Controllers\TaskConcernController;
 use App\Http\Controllers\TaskController;
 use App\Http\Controllers\TeamController;
 use App\Http\Controllers\TeamMemberController;
+use App\Http\Middleware\EnsureUserHasOrganization;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', fn () => redirect()->route(auth()->check() ? 'projects.index' : 'login'));
@@ -38,6 +39,27 @@ Route::get('/dashboard', fn () => redirect()->route('projects.index'))
     ->name('dashboard');
 
 Route::middleware('auth')->group(function () {
+    // ---- Immer erreichbar, auch ohne Organisation ----
+
+    Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
+    Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
+    Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+
+    // Personal access tokens (API / Planstack skill)
+    Route::post('/profile/tokens', [ApiTokenController::class, 'store'])->name('profile.tokens.store');
+    Route::delete('/profile/tokens/{token}', [ApiTokenController::class, 'destroy'])->name('profile.tokens.destroy');
+
+    // Organisation (jeder User gehört höchstens einer an): gründen, beitreten
+    // (per individuellem Code), einladen, austreten, löschen.
+    Route::get('organization', [OrganizationController::class, 'index'])->name('organization.index');
+    Route::post('organization', [OrganizationController::class, 'store'])->name('organization.store');
+    Route::post('organization/join', [OrganizationController::class, 'join'])->name('organization.join');
+    Route::post('organization/invite', [OrganizationController::class, 'invite'])->name('organization.invite');
+    Route::post('organization/leave', [OrganizationController::class, 'leave'])->name('organization.leave');
+    Route::delete('organization', [OrganizationController::class, 'destroy'])->name('organization.destroy');
+
+    // ---- Erfordert die Zugehörigkeit zu einer Organisation ----
+    Route::middleware(EnsureUserHasOrganization::class)->group(function () {
     // Nutzer-Changelog der Website (Versionsübersicht in der Hauptnavi)
     Route::view('/changelog', 'changelog')->name('changelog');
 
@@ -53,23 +75,6 @@ Route::middleware('auth')->group(function () {
         Route::view('/', 'faq.index')->name('index');
         Route::view('/status-logic', 'faq.status-logic')->name('status-logic');
     });
-
-    Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
-    Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
-    Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
-
-    // Personal access tokens (API / Planstack skill)
-    Route::post('/profile/tokens', [ApiTokenController::class, 'store'])->name('profile.tokens.store');
-    Route::delete('/profile/tokens/{token}', [ApiTokenController::class, 'destroy'])->name('profile.tokens.destroy');
-
-    // Organisation (jeder User gehört höchstens einer an): gründen, beitreten
-    // (per Einladungscode), austreten, löschen.
-    Route::get('organization', [OrganizationController::class, 'index'])->name('organization.index');
-    Route::post('organization', [OrganizationController::class, 'store'])->name('organization.store');
-    Route::post('organization/join', [OrganizationController::class, 'join'])->name('organization.join');
-    Route::post('organization/invite', [OrganizationController::class, 'invite'])->name('organization.invite');
-    Route::post('organization/leave', [OrganizationController::class, 'leave'])->name('organization.leave');
-    Route::delete('organization', [OrganizationController::class, 'destroy'])->name('organization.destroy');
 
     // Teams
     Route::resource('teams', TeamController::class)
@@ -174,6 +179,7 @@ Route::middleware('auth')->group(function () {
     Route::post('projects/{project}/tasks/{task}/checklist/convert', [TaskChecklistController::class, 'convert'])
         ->scopeBindings()
         ->name('projects.tasks.checklist.convert');
+    }); // Ende: erfordert Organisation
 });
 
 require __DIR__.'/auth.php';

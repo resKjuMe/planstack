@@ -1,4 +1,9 @@
-@php $ciVersion = config('planstack_ci.version'); @endphp
+@php
+    $ciVersion = config('planstack_ci.version');
+    // Ohne Organisation nur Profil/Organisation/Logout — die eigentliche App
+    // (Projekte, Teams, Skill …) ist gesperrt (siehe EnsureUserHasOrganization).
+    $hasOrg = Auth::user()?->organization_id !== null;
+@endphp
 <nav x-data="{ open: false }" class="bg-white border-b border-gray-100">
     <!-- Primary Navigation Menu -->
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -12,6 +17,7 @@
                 </div>
 
                 <!-- Navigation Links -->
+                @if ($hasOrg)
                 <div class="hidden space-x-8 sm:-my-px sm:ms-10 sm:flex">
                     <x-nav-link :href="route('projects.index')" :active="request()->routeIs('projects.*')">
                         {{ __('Projekte') }}
@@ -33,6 +39,7 @@
                         v{{ config('changelog.releases.0.version') }}
                     </x-nav-link>
                 </div>
+                @endif
             </div>
 
             <!-- Settings Dropdown -->
@@ -65,11 +72,13 @@
                         </x-dropdown-link>
 
                         {{-- Einrichtungs-/Downloadseite der CI-Status-Anzeige --}}
+                        @if ($hasOrg)
                         <x-dropdown-link :href="url('/planstack-ci/setup')" class="flex items-center gap-2 whitespace-nowrap">
                             <svg class="h-4 w-4 shrink-0 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
                             {{ __('TamperMonkey Script') }}
                             <span class="js-psci-update ms-2 rounded-full bg-indigo-600 px-1.5 py-0.5 text-[10px] font-semibold text-white align-middle" style="display:none">v{{ $ciVersion }}</span>
                         </x-dropdown-link>
+                        @endif
 
                         <!-- Authentication -->
                         <form method="POST" action="{{ route('logout') }}">
@@ -100,6 +109,7 @@
 
     <!-- Responsive Navigation Menu -->
     <div :class="{'block': open, 'hidden': ! open}" class="hidden sm:hidden">
+        @if ($hasOrg)
         <div class="pt-2 pb-3 space-y-1">
             <x-responsive-nav-link :href="route('projects.index')" :active="request()->routeIs('projects.*')">
                 {{ __('Projekte') }}
@@ -114,6 +124,7 @@
                 v{{ config('changelog.releases.0.version') }}
             </x-responsive-nav-link>
         </div>
+        @endif
 
         <!-- Responsive Settings Options -->
         <div class="pt-4 pb-1 border-t border-gray-200">
@@ -128,9 +139,10 @@
                 </x-responsive-nav-link>
 
                 <x-responsive-nav-link :href="route('profile.edit')">
-                    {{ __('Profile') }}
+                    Profil
                 </x-responsive-nav-link>
 
+                @if ($hasOrg)
                 {{-- Einrichtungs-/Downloadseite der CI-Status-Anzeige --}}
                 <x-responsive-nav-link :href="url('/planstack-ci/setup')">
                     {{ __('TamperMonkey Script') }}
@@ -141,6 +153,7 @@
                 <x-responsive-nav-link :href="route('skill.download')">
                     {{ __('Planstack-Skill') }}
                 </x-responsive-nav-link>
+                @endif
 
                 <!-- Authentication -->
                 <form method="POST" action="{{ route('logout') }}">
@@ -149,7 +162,7 @@
                     <x-responsive-nav-link :href="route('logout')"
                             onclick="event.preventDefault();
                                         this.closest('form').submit();">
-                        {{ __('Log Out') }}
+                        Abmelden
                     </x-responsive-nav-link>
                 </form>
             </div>

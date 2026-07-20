@@ -7,6 +7,7 @@ use App\Mail\OrganizationInvitationMail;
 use App\Models\Organization;
 use App\Models\OrganizationInvitation;
 use App\Models\Team;
+use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -94,9 +95,10 @@ class OrganizationController extends Controller
     }
 
     /**
-     * Verschickt einen Registrierungs-Einladungslink per E-Mail. Über den Link
-     * (?invite=CODE) wird das neue Konto automatisch dieser Organisation
-     * zugeordnet.
+     * Lädt eine Person per E-Mail ein. Existiert bereits ein Konto mit dieser
+     * Adresse, wird es direkt der Organisation und den gewählten Teams
+     * zugeordnet; andernfalls wird ein individueller Registrierungslink
+     * verschickt (?invite=TOKEN → Zuordnung nach der Registrierung).
      */
     public function invite(Request $request): RedirectResponse
     {
@@ -120,6 +122,28 @@ class OrganizationController extends Controller
             array_map('intval', $data['team_ids'] ?? []),
             $allowedTeamIds,
         ));
+
+        // Existiert bereits ein Konto mit dieser Adresse? Dann direkt zuordnen
+        // statt eine Registrierung anzustoßen.
+        $existing = User::where('email', $data['email'])->first();
+        if ($existing) {
+            if ($existing->organization_id !== null && $existing->organization_id !== $organization->id) {
+                return back()->withErrors([
+                    'email' => 'Diese Person gehört bereits einer anderen Organisation an.',
+                ])->withInput();
+            }
+
+            if ($existing->organization_id === null) {
+                $existing->organization_id = $organization->id;
+                $existing->save();
+            }
+
+            if ($teamIds) {
+                $existing->teams()->syncWithoutDetaching($teamIds);
+            }
+
+            return back()->with('status', "{$existing->name} wurde der Organisation hinzugefügt.");
+        }
 
         // Individuelle, einmalige Einladung anlegen.
         $invitation = $organization->invitations()->create([
