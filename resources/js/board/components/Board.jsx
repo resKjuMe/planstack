@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { DndContext, DragOverlay, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
+import { DndContext, DragOverlay, MeasuringStrategy, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
 import BoardColumn from './BoardColumn';
 import CollapsedColumn from './CollapsedColumn';
 import ExceptionLane from './ExceptionLane';
@@ -124,7 +124,10 @@ export default function Board({ data }) {
     const performMove = useCallback(
         async (taskId, from, targetStatus) => {
             if (from === targetStatus) return;
-            if (! canTransition(workflow, from, targetStatus)) return;
+            if (! canTransition(workflow, from, targetStatus)) {
+                setToast(t('move_forbidden', { from, to: targetStatus }));
+                return;
+            }
 
             const before = tasks;
             setTasks((prev) =>
@@ -242,6 +245,7 @@ export default function Board({ data }) {
                         isDragActive={false}
                         isDropAllowed={false}
                         collapsible={false}
+                        noDrop
                         t={t}
                         onCollapse={() => {}}
                         footer={null}
@@ -261,7 +265,6 @@ export default function Board({ data }) {
         const count = countByStatus[status] ?? 0;
 
         if (collapse.isCollapsed(status)) {
-            const collapsedDropAllowed = dragging ? allowedTargets(workflow, dragging.from).has(status) : false;
             cells.push({
                 track: COLLAPSED_TRACK,
                 node: (
@@ -272,7 +275,6 @@ export default function Board({ data }) {
                         dotClass={color.dot}
                         onExpand={() => collapse.setCollapsed(status, false)}
                         dropId={status}
-                        dropDisabled={! collapsedDropAllowed}
                     />
                 ),
             });
@@ -340,7 +342,13 @@ export default function Board({ data }) {
                 share the rest (1fr); the fixed row (1fr) + min-height makes every
                 column fill the full board height. Collapse/expand is animated per
                 cell (.board-cell) on mount — cheaper than morphing track widths. */}
-            <DndContext sensors={sensors} onDragStart={onDragStart} onDragEnd={onDragEnd} onDragCancel={() => setDragging(null)}>
+            <DndContext
+                sensors={sensors}
+                measuring={{ droppable: { strategy: MeasuringStrategy.Always } }}
+                onDragStart={onDragStart}
+                onDragEnd={onDragEnd}
+                onDragCancel={() => setDragging(null)}
+            >
                 <div
                     className="grid gap-3 pb-4 min-h-[65vh]"
                     style={{

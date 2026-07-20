@@ -12,12 +12,14 @@ export default function CollapsedColumn({
     title,
     onExpand,
     dropId = null,
-    dropDisabled = true,
 }) {
+    // A collapsed status bar is a live drop zone (drop straight onto it); the
+    // exception bar passes no dropId and stays inert. Transition rules are
+    // enforced on drop.
     const { setNodeRef, isOver } = useDroppable({
         id: dropId ?? `nodrop:${label}`,
         data: { status: dropId },
-        disabled: dropDisabled,
+        disabled: dropId == null,
     });
 
     return (
@@ -30,7 +32,7 @@ export default function CollapsedColumn({
                 'board-cell flex h-full w-full flex-col items-center gap-2 rounded-lg py-2',
                 'bg-gray-50 dark:bg-gray-800/60 ring-1 ring-gray-200 dark:ring-gray-700',
                 'hover:bg-gray-100 dark:hover:bg-gray-700/60 transition',
-                isOver && ! dropDisabled ? 'ring-2 ring-indigo-400 dark:ring-indigo-500' : '',
+                isOver && dropId != null ? 'ring-2 ring-indigo-400 dark:ring-indigo-500' : '',
             ].join(' ')}
         >
             <span className="text-gray-400 dark:text-gray-500 text-xs" aria-hidden>›</span>
