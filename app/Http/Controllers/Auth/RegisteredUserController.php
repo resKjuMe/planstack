@@ -82,9 +82,8 @@ class RegisteredUserController extends Controller
     }
 
     /**
-     * Resolve an invite parameter to an organization (and, for individual
-     * invitation links, the invitation itself). First tries the case-sensitive
-     * invitation token, then falls back to the organization join-code.
+     * Resolve an invite token to its (pending) invitation and organization.
+     * Beitritt erfolgt ausschließlich über individuelle Einladungslinks.
      *
      * @return array{0: ?Organization, 1: ?OrganizationInvitation}
      */
@@ -98,15 +97,6 @@ class RegisteredUserController extends Controller
             ->where('token', $raw)
             ->first();
 
-        if ($invitation) {
-            return [$invitation->organization, $invitation];
-        }
-
-        $code = strtoupper(preg_replace('/[^A-Za-z0-9]/', '', $raw));
-        $organization = $code !== ''
-            ? Organization::where('invite_code', $code)->first()
-            : null;
-
-        return [$organization, null];
+        return [$invitation?->organization, $invitation];
     }
 }

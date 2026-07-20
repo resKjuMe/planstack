@@ -22,6 +22,7 @@ class OrganizationInvitationMail extends Mailable
         public Organization $organization,
         public User $inviter,
         public string $registerUrl,
+        public string $inviteCode,
     ) {}
 
     public function envelope(): Envelope

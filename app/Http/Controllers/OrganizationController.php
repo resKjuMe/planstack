@@ -6,6 +6,7 @@ use App\Http\Requests\StoreOrganizationRequest;
 use App\Mail\OrganizationInvitationMail;
 use App\Models\Organization;
 use App\Models\OrganizationInvitation;
+use App\Models\Team;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -43,7 +44,6 @@ class OrganizationController extends Controller
         $organization = Organization::create([
             'created_by_id' => $user->id,
             'name' => $request->validated()['name'],
-            'invite_code' => Organization::generateInviteCode(),
         ]);
 
         $user->organization_id = $organization->id;
@@ -53,31 +53,44 @@ class OrganizationController extends Controller
             ->with('status', "Organisation \"{$organization->name}\" gegründet.");
     }
 
+    /**
+     * Beitritt eines bereits registrierten Users über den individuellen Code aus
+     * der Einladungs-E-Mail (der Registrierungslink selbst ist nur für neue
+     * Konten). Ordnet Organisation und hinterlegte Teams zu.
+     */
     public function join(Request $request): RedirectResponse
     {
         $user = $request->user();
 
         if ($user->organization_id !== null) {
-            return back()->withErrors(['invite_code' => 'Du gehörst bereits einer Organisation an.']);
+            return back()->withErrors(['token' => 'Du gehörst bereits einer Organisation an.']);
         }
 
-        $request->validate(['invite_code' => ['required', 'string', 'max:16']]);
+        $data = $request->validate(['token' => ['required', 'string']]);
+        $token = trim($data['token']);
 
-        // Eingabe tolerant normalisieren (Bindestriche/Leerzeichen, Groß-/Kleinschreibung).
-        $code = strtoupper(preg_replace('/[^A-Za-z0-9]/', '', (string) $request->input('invite_code')));
-        $organization = Organization::where('invite_code', $code)->first();
+        $invitation = OrganizationInvitation::whereNull('accepted_at')
+            ->where('token', $token)
+            ->first();
 
-        if (! $organization) {
+        if (! $invitation) {
             return back()
-                ->withErrors(['invite_code' => 'Kein Treffer für diesen Einladungscode.'])
+                ->withErrors(['token' => 'Kein Treffer für diesen Einladungscode.'])
                 ->withInput();
         }
 
-        $user->organization_id = $organization->id;
+        $user->organization_id = $invitation->organization_id;
         $user->save();
 
+        $teamIds = Team::whereIn('id', $invitation->team_ids ?? [])->pluck('id')->all();
+        if ($teamIds) {
+            $user->teams()->syncWithoutDetaching($teamIds);
+        }
+
+        $invitation->forceFill(['accepted_at' => now()])->save();
+
         return redirect()->route('organization.index')
-            ->with('status', "Du bist der Organisation \"{$organization->name}\" beigetreten.");
+            ->with('status', "Du bist der Organisation \"{$invitation->organization->name}\" beigetreten.");
     }
 
     /**
@@ -120,7 +133,7 @@ class OrganizationController extends Controller
 
         try {
             Mail::to($data['email'])->send(
-                new OrganizationInvitationMail($organization, $user, $registerUrl)
+                new OrganizationInvitationMail($organization, $user, $registerUrl, $invitation->token)
             );
         } catch (\Throwable $e) {
             report($e);

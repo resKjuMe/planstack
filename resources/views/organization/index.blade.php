@@ -20,23 +20,6 @@
                                 · {{ $organization->members->count() }} {{ \Illuminate\Support\Str::plural('Mitglied', $organization->members->count()) }}
                             </p>
                         </div>
-
-                        {{-- Einladungscode zum Weitergeben (nur Gründer) --}}
-                        @if ($isOwner)
-                        <div x-data="{ copied: false }" class="text-right">
-                            <div class="text-xs font-medium uppercase tracking-wide text-gray-400">Einladungscode</div>
-                            <div class="mt-1 flex items-center gap-2">
-                                <span class="rounded-md bg-gray-100 px-3 py-1.5 font-mono text-base font-semibold tracking-widest text-gray-800">{{ $organization->formattedInviteCode() }}</span>
-                                <button type="button"
-                                        @click="navigator.clipboard.writeText(@js($organization->invite_code)); copied = true; setTimeout(() => copied = false, 1500)"
-                                        class="rounded p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-700" title="Code kopieren">
-                                    <svg x-show="!copied" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
-                                    <svg x-show="copied" x-cloak class="h-5 w-5 text-green-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>
-                                </button>
-                            </div>
-                            <p class="mt-1 text-xs text-gray-400">Zum Beitreten weitergeben.</p>
-                        </div>
-                        @endif
                     </div>
 
                     {{-- Mitglieder --}}
@@ -137,7 +120,7 @@
             @else
                 {{-- ============ Keine Organisation: gründen oder beitreten ============ --}}
                 <p class="text-sm text-gray-500">
-                    Du gehörst noch keiner Organisation an. Gründe eine neue oder tritt einer bestehenden per Einladungscode bei.
+                    Du gehörst noch keiner Organisation an. Gründe eine neue oder tritt einer bestehenden über den persönlichen Code aus deiner Einladungs-E-Mail bei.
                     Jeder User kann nur einer Organisation angehören.
                 </p>
 
@@ -158,20 +141,20 @@
                         </form>
                     </div>
 
-                    {{-- Beitreten --}}
+                    {{-- Beitreten (individueller Code aus der Einladungs-E-Mail) --}}
                     <div class="bg-white rounded-lg shadow p-6">
                         <h3 class="mb-1 font-semibold text-gray-900">Organisation beitreten</h3>
-                        <p class="mb-4 text-sm text-gray-500">Gib den Einladungscode ein, den du vom Gründer erhalten hast.</p>
+                        <p class="mb-4 text-sm text-gray-500">Gib den persönlichen Einladungscode aus deiner Einladungs-E-Mail ein.</p>
                         <form method="POST" action="{{ route('organization.join') }}">
                             @csrf
-                            <x-input-label for="invite_code" value="Einladungscode" />
+                            <x-input-label for="token" value="Einladungscode" />
                             <div class="mt-1 flex items-center gap-3">
-                                <x-text-input id="invite_code" name="invite_code" type="text"
-                                              class="block flex-1 font-mono tracking-widest uppercase"
-                                              :value="old('invite_code')" required maxlength="16" placeholder="XXXX-XXXX" />
+                                <x-text-input id="token" name="token" type="text"
+                                              class="block flex-1 font-mono text-xs"
+                                              :value="old('token')" required placeholder="Code aus der E-Mail" />
                                 <x-primary-button>Beitreten</x-primary-button>
                             </div>
-                            <x-input-error :messages="$errors->get('invite_code')" class="mt-2" />
+                            <x-input-error :messages="$errors->get('token')" class="mt-2" />
                         </form>
                     </div>
                 </div>

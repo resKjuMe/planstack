@@ -12,8 +12,6 @@ return new class extends Migration
             $table->id();
             $table->foreignId('created_by_id')->constrained('users')->cascadeOnDelete();
             $table->string('name', 100);
-            // Einladungscode zum Beitreten (eindeutig, ohne mehrdeutige Zeichen).
-            $table->string('invite_code', 16)->unique();
             $table->timestamps();
         });
 

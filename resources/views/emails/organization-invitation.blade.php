@@ -34,6 +34,13 @@
                 <a href="{{ $registerUrl }}" style="color:#4f46e5;">{{ $registerUrl }}</a>
             </p>
 
+            <div style="margin:0 0 24px; padding:16px; background:#f9fafb; border-radius:8px;">
+                <p style="margin:0 0 8px; font-size:12px; line-height:1.6; color:#6b7280;">
+                    Du hast bereits ein Konto? Dann melde dich an, öffne „Organisation" und gib dort diesen persönlichen Code ein:
+                </p>
+                <p style="margin:0; font-family:monospace; font-size:13px; word-break:break-all; color:#111827;">{{ $inviteCode }}</p>
+            </div>
+
             <p style="margin:0; font-size:12px; line-height:1.6; color:#9ca3af;">
                 Du hast diese Einladung nicht erwartet? Dann kannst du diese E-Mail ignorieren.
             </p>
