@@ -19,6 +19,7 @@ export default function BoardColumn({
     onDrop,
     children,
     footer,
+    collapsible = true,
 }) {
     const [isOver, setIsOver] = useState(false);
     const overLimit = wipLimit != null && count > wipLimit;
@@ -57,8 +58,8 @@ export default function BoardColumn({
                     type="button"
                     // Clicking the header of an empty expanded column collapses it
                     // again (per spec); filled columns collapse via the icon.
-                    onClick={() => count === 0 && onCollapse()}
-                    className={`flex items-center gap-2 text-sm font-semibold ${headClass} ${count === 0 ? 'cursor-pointer' : 'cursor-default'}`}
+                    onClick={() => collapsible && count === 0 && onCollapse()}
+                    className={`flex items-center gap-2 text-sm font-semibold ${headClass} ${collapsible && count === 0 ? 'cursor-pointer' : 'cursor-default'}`}
                 >
                     <span className={`h-2 w-2 rounded-full ${dotClass}`} aria-hidden />
                     <span>{label}</span>
@@ -80,15 +81,17 @@ export default function BoardColumn({
                     >
                         {wipLimit != null ? `${count} / ${wipLimit}` : count}
                     </span>
-                    <button
-                        type="button"
-                        onClick={onCollapse}
-                        title={t('collapse_column')}
-                        aria-label={t('collapse_column')}
-                        className="text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300"
-                    >
-                        ‹
-                    </button>
+                    {collapsible && (
+                        <button
+                            type="button"
+                            onClick={onCollapse}
+                            title={t('collapse_column')}
+                            aria-label={t('collapse_column')}
+                            className="text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300"
+                        >
+                            ‹
+                        </button>
+                    )}
                 </div>
             </div>
 

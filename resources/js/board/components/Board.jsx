@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import BoardColumn from './BoardColumn';
 import CollapsedColumn from './CollapsedColumn';
 import ExceptionLane from './ExceptionLane';
@@ -25,6 +25,22 @@ export default function Board({ data }) {
     const [dragging, setDragging] = useState(null); // { taskId, from }
     const [toast, setToast] = useState(null);
     const [showAllMerged, setShowAllMerged] = useState(false);
+    // Persisted per board: show configured groups as individual status columns.
+    const ungroupKey = `board:${data.projectId}:ungrouped`;
+    const [ungrouped, setUngrouped] = useState(() => {
+        try {
+            return localStorage.getItem(ungroupKey) === '1';
+        } catch {
+            return false;
+        }
+    });
+    useEffect(() => {
+        try {
+            localStorage.setItem(ungroupKey, ungrouped ? '1' : '0');
+        } catch {
+            /* ignore */
+        }
+    }, [ungroupKey, ungrouped]);
     const [filters, setFilters] = useState({
         onlyMine: false,
         highlightBlocked: false,
@@ -180,28 +196,17 @@ export default function Board({ data }) {
         [t, csrf, endpoints, filters.highlightBlocked, dragging, endDrag],
     );
 
-    // --- Build the column row, folding consecutive collapsed columns into the
-    //     configured groups (Backlog / In progress). ---
-    const items = [];
-    for (let i = 0; i < workflow.columnOrder.length; ) {
-        const status = workflow.columnOrder[i];
-        const group = groupStartingAt(workflow, i);
-        if (group && group.statuses.every((s) => collapse.isCollapsed(s))) {
-            items.push({ kind: 'group', group });
-            i += group.statuses.length;
-            continue;
-        }
-        items.push({ kind: 'column', status, collapsed: collapse.isCollapsed(status) });
-        i += 1;
-    }
-
-    // Turn the row into grid cells: each carries its track width. Collapsed bars
-    // keep a fixed narrow track; expanded columns share the rest (1fr). The board
-    // is a CSS grid whose grid-template-columns transitions, so resizing a single
-    // track animates the collapse/expand.
+    // Grid cells with their track width. Collapsed bars keep a fixed narrow
+    // track; expanded columns share the rest (1fr). Transitioning the grid
+    // template animates collapse/expand.
     const COLLAPSED_TRACK = '2.25rem'; // = w-9
     const EXPANDED_TRACK = 'minmax(0, 1fr)';
     const cells = [];
+
+    // Configured groups render as ONE combined column. They split into their
+    // individual status columns only while dragging (so a card can be dropped
+    // into a precise status) or when the user disabled grouping.
+    const showMembers = ungrouped || !!dragging;
 
     if (exceptionTasks.length > 0) {
         const exCollapsed = collapse.isCollapsed(EXCEPTIONS_KEY);
@@ -228,33 +233,47 @@ export default function Board({ data }) {
         });
     }
 
-    for (const item of items) {
-        if (item.kind === 'group') {
-            const count = item.group.statuses.reduce((sum, s) => sum + (countByStatus[s] ?? 0), 0);
+    for (let i = 0; i < workflow.columnOrder.length; ) {
+        const group = groupStartingAt(workflow, i);
+
+        // Group as a single combined column (unless dragging / ungrouped).
+        if (group && ! showMembers) {
+            const groupTasks = group.statuses.flatMap((s) => columnTasksFor(s));
+            const count = group.statuses.reduce((sum, s) => sum + (countByStatus[s] ?? 0), 0);
             cells.push({
-                track: COLLAPSED_TRACK,
+                track: EXPANDED_TRACK,
                 node: (
-                    <CollapsedColumn
-                        key={`group:${item.group.key}`}
-                        label={item.group.label}
-                        count={count}
+                    <BoardColumn
+                        key={`group:${group.key}`}
+                        status={`group:${group.key}`}
+                        label={group.label}
                         dotClass="bg-gray-400"
-                        isDragActive={!!dragging}
-                        onExpand={() => collapse.expandMany(item.group.statuses)}
-                        onDragEnter={() => collapsedDragEnter(item.group.statuses)}
-                        onDragLeave={collapsedDragLeave}
-                    />
+                        headClass="text-gray-600 dark:text-gray-300"
+                        count={count}
+                        wipLimit={null}
+                        isDragActive={false}
+                        isDropAllowed={false}
+                        collapsible={false}
+                        t={t}
+                        onCollapse={() => {}}
+                        onDrop={() => {}}
+                        footer={null}
+                    >
+                        {groupTasks.map((task) => renderCard(task))}
+                    </BoardColumn>
                 ),
             });
+            i += group.statuses.length;
             continue;
         }
 
-        const { status } = item;
+        const status = workflow.columnOrder[i];
+        i += 1;
         const label = workflow.labels[status] ?? status;
         const color = colorForToken(workflow.colors?.[status]);
         const count = countByStatus[status] ?? 0;
 
-        if (item.collapsed) {
+        if (collapse.isCollapsed(status)) {
             cells.push({
                 track: COLLAPSED_TRACK,
                 node: (
@@ -325,6 +344,9 @@ export default function Board({ data }) {
                     currentUserId={currentUserId}
                     staleDays={workflow.mergedStaleDays}
                     staleCount={staleCount}
+                    hasGroups={(workflow.collapseGroups?.length ?? 0) > 0}
+                    ungrouped={ungrouped}
+                    onToggleUngrouped={() => setUngrouped((v) => !v)}
                 />
             </div>
 

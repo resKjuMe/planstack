@@ -12,6 +12,9 @@ export default function QuickFilterBar({
     currentUserId,
     staleDays,
     staleCount,
+    hasGroups = false,
+    ungrouped = false,
+    onToggleUngrouped,
 }) {
     const set = (patch) => setFilters((f) => ({ ...f, ...patch }));
 
@@ -54,6 +57,8 @@ export default function QuickFilterBar({
                 () => set({ highlightBlocked: !filters.highlightBlocked }),
                 t('highlight_blocked'),
             )}
+
+            {hasGroups && chip(ungrouped, onToggleUngrouped, t('ungroup'))}
 
             <label className="inline-flex items-center gap-1.5 text-xs text-gray-600 dark:text-gray-300">
                 <span>{t('assignee')}</span>

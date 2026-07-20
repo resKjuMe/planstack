@@ -27,6 +27,7 @@ return [
     'assignee_unassigned' => 'Niemand',
     'clear_filters' => 'Filter zurücksetzen',
     'active_filter_remove' => 'Filter entfernen',
+    'ungroup' => 'Gruppen auflösen',
 
     // Ausnahme-Leiste
     'exceptions_lane' => 'Blockiert / Problematisch',

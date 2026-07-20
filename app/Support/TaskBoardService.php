@@ -38,7 +38,7 @@ class TaskBoardService
     public function decorate(Project $project): Collection
     {
         $tasks = $project->tasks()
-            ->with(['phase', 'claimer', 'orgStatus', 'prerequisites:id,name,status,pr_number'])
+            ->with(['phase', 'claimer', 'orgStatus', 'prerequisites:id,name,status_id,pr_number', 'prerequisites.orgStatus'])
             ->orderBy('id')
             ->get();
 

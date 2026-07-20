@@ -27,6 +27,7 @@ return [
     'assignee_unassigned' => 'Unassigned',
     'clear_filters' => 'Clear filters',
     'active_filter_remove' => 'Remove filter',
+    'ungroup' => 'Ungroup columns',
 
     // Exception lane
     'exceptions_lane' => 'Blocked / Concerned',
