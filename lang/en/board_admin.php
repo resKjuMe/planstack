@@ -17,6 +17,17 @@ return [
     'cannot_delete_in_use' => 'Status is still assigned to tasks and cannot be deleted.',
     'custom_badge' => 'custom',
 
+    'automations' => 'Automations',
+    'automations_hint' => 'Automatically set fields when a task enters this status. Values: @actor (current user), @now, @clear (empty), or a literal value.',
+    'effect_field' => 'Field',
+    'effect_value' => 'Value',
+    'effect_value_placeholder' => '@actor / @now / @clear / value',
+    'effect_only_if_empty' => 'only if empty',
+    'add_effect' => '+ effect',
+    'save_effects' => 'Save automations',
+    'effects_saved' => 'Automations saved.',
+    'no_effects' => 'No automations.',
+
     'statuses' => 'Statuses',
     'col_status' => 'Status',
     'col_key' => 'Key',

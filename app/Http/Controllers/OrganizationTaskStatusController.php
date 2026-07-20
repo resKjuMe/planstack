@@ -7,6 +7,7 @@ use App\Models\OrgStatus;
 use App\Models\OrgStatusGroup;
 use App\Models\OrgStatusTransition;
 use App\Models\Task;
+use App\Support\StatusEffects;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -207,6 +208,37 @@ class OrganizationTaskStatusController extends Controller
         $organization->increment('status_config_version');
 
         return back()->with('status', __('board_admin.status_deleted'));
+    }
+
+    /**
+     * Replace a status's on-enter effects (automatic assignments + field
+     * population). Fields are restricted to the effect allow-list.
+     */
+    public function updateEffects(Request $request, OrgStatus $status): RedirectResponse
+    {
+        $organization = $this->ownedOrganization($request);
+        abort_unless($status->organization_id === $organization->id, 403);
+
+        $validated = $request->validate([
+            'effects' => ['nullable', 'array'],
+            'effects.*.field' => ['required', Rule::in(StatusEffects::ALLOWED_FIELDS)],
+            'effects.*.value' => ['nullable', 'string', 'max:255'],
+            'effects.*.only_if_empty' => ['sometimes'],
+        ]);
+
+        $effects = [];
+        foreach ($validated['effects'] ?? [] as $effect) {
+            $effects[] = [
+                'field' => $effect['field'],
+                'value' => $effect['value'] ?? '',
+                'only_if_empty' => ! empty($effect['only_if_empty']),
+            ];
+        }
+
+        $status->update(['on_enter_effects' => $effects ?: null]);
+        $organization->increment('status_config_version');
+
+        return back()->with('status', __('board_admin.effects_saved'));
     }
 
     public function storeGroup(Request $request): RedirectResponse

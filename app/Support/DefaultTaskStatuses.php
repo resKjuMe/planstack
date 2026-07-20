@@ -4,7 +4,6 @@ namespace App\Support;
 
 use App\Models\Organization;
 use App\Models\OrgStatus;
-use App\Models\OrgStatusAutomation;
 use App\Models\OrgStatusGroup;
 use App\Models\OrgStatusTransition;
 use Illuminate\Support\Facades\DB;
@@ -57,24 +56,24 @@ class DefaultTaskStatuses
     ];
 
     /**
-     * Wired action => [target key, field effects]. Mirrors the side effects that
-     * are hard-coded in the controllers/MCP today.
+     * On-enter field effects per status key: applied when a task enters the
+     * status (e.g. via a board drop). Mirrors the side effects that were
+     * hard-coded before. value tokens: @actor, @now, @clear.
      *
-     * @var array<int, array{0: string, 1: string, 2: array<int, array<string, mixed>>}>
+     * @var array<string, array<int, array<string, mixed>>>
      */
-    private const AUTOMATIONS = [
-        ['claim',           'CLAIMED',   [['field' => 'claimed_by_id', 'value' => '@actor'], ['field' => 'claimed_at', 'value' => '@now']]],
-        ['release',         'PICKABLE',  [['field' => 'claimed_by_id', 'value' => '@clear'], ['field' => 'claimed_at', 'value' => '@clear']]],
-        ['analyze',         'ANALYZING', []],
-        ['in_progress',     'IN_PROGRESS', []],
-        ['in_review',       'IN_REVIEW', []],
-        ['done_with_pr',    'IN_REVIEW', []],
-        ['done_without_pr', 'IN_PROGRESS', []],
-        ['merge',           'MERGED',    [['field' => 'merged_at', 'value' => '@now', 'only_if_empty' => true]]],
-        ['split_parent',    'COMPLETED', []],
-        ['concern',         'CONCERNED', []],
-        ['resolve_claimed', 'CLAIMED',   []],
-        ['resolve_unclaimed', 'PICKABLE', []],
+    private const ON_ENTER = [
+        'CLAIMED' => [
+            ['field' => 'claimed_by_id', 'value' => '@actor', 'only_if_empty' => true],
+            ['field' => 'claimed_at', 'value' => '@now', 'only_if_empty' => true],
+        ],
+        'PICKABLE' => [
+            ['field' => 'claimed_by_id', 'value' => '@clear'],
+            ['field' => 'claimed_at', 'value' => '@clear'],
+        ],
+        'MERGED' => [
+            ['field' => 'merged_at', 'value' => '@now', 'only_if_empty' => true],
+        ],
     ];
 
     /**
@@ -120,6 +119,7 @@ class DefaultTaskStatuses
                     'counts_as_done' => $done,
                     'counts_as_delivered' => $delivered,
                     'group_id' => $group ? $groupIdByKey[$group] : null,
+                    'on_enter_effects' => self::ON_ENTER[$key] ?? null,
                 ]);
                 $statusIdByKey[$key] = $row->id;
             }
@@ -131,15 +131,6 @@ class DefaultTaskStatuses
                         'to_status_id' => $statusIdByKey[$to],
                     ]);
                 }
-            }
-
-            foreach (self::AUTOMATIONS as [$action, $target, $effects]) {
-                OrgStatusAutomation::create([
-                    'organization_id' => $organization->id,
-                    'action' => $action,
-                    'target_status_id' => $statusIdByKey[$target],
-                    'effects' => $effects,
-                ]);
             }
         });
     }

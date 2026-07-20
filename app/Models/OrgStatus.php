@@ -19,7 +19,7 @@ class OrgStatus extends Model
     protected $fillable = [
         'organization_id', 'role', 'key', 'label', 'label_en', 'kind',
         'color_token', 'position', 'is_column', 'default_expanded', 'wip_limit',
-        'counts_as_done', 'counts_as_delivered', 'group_id',
+        'counts_as_done', 'counts_as_delivered', 'group_id', 'on_enter_effects',
     ];
 
     protected function casts(): array
@@ -32,6 +32,7 @@ class OrgStatus extends Model
             'wip_limit' => 'integer',
             'counts_as_done' => 'boolean',
             'counts_as_delivered' => 'boolean',
+            'on_enter_effects' => 'array',
         ];
     }
 

@@ -17,6 +17,17 @@ return [
     'cannot_delete_in_use' => 'Status ist noch Tasks zugewiesen und kann nicht gelöscht werden.',
     'custom_badge' => 'eigener',
 
+    'automations' => 'Automationen',
+    'automations_hint' => 'Beim Eintritt in diesen Status automatisch Felder setzen. Werte: @actor (aktueller Nutzer), @now (jetzt), @clear (leeren) oder ein fester Wert.',
+    'effect_field' => 'Feld',
+    'effect_value' => 'Wert',
+    'effect_value_placeholder' => '@actor / @now / @clear / Wert',
+    'effect_only_if_empty' => 'nur wenn leer',
+    'add_effect' => '+ Effekt',
+    'save_effects' => 'Automationen speichern',
+    'effects_saved' => 'Automationen gespeichert.',
+    'no_effects' => 'Keine Automationen.',
+
     'statuses' => 'Status',
     'col_status' => 'Status',
     'col_key' => 'Schlüssel',

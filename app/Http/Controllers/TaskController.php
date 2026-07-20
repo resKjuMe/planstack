@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Enums\StatusRole;
 use App\Enums\TaskStatus;
 use App\Http\Requests\StoreTaskRequest;
 use App\Http\Requests\UpdateTaskRequest;
@@ -10,6 +9,7 @@ use App\Models\Project;
 use App\Models\Task;
 use App\Support\BoardPresenter;
 use App\Support\OrgBoardWorkflow;
+use App\Support\StatusEffects;
 use App\Support\TaskBoardService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -192,25 +192,15 @@ class TaskController extends Controller
         }
 
         // status_id is the authority; the legacy ENUM is mirrored for canonical
-        // keys (null for a custom status). Side effects follow the target's role
-        // so a drop into the CLAIMED/PICKABLE/MERGED-role column behaves like the
-        // dedicated action — for a default org identical to before.
+        // keys (null for a custom status). The target status's configurable
+        // on-enter effects (assignments / field population) are applied on top —
+        // for a default org these reproduce the former claim/release/merge
+        // side effects.
         $attrs = [
             'status_id' => $target->id,
             'status' => TaskStatus::tryFrom($target->key)?->value,
         ];
-
-        if ($target->role === StatusRole::CLAIMED && $task->claimed_by_id === null) {
-            $attrs['claimed_by_id'] = $request->user()->id;
-            $attrs['claimed_at'] = now();
-        } elseif ($target->role === StatusRole::PICKABLE) {
-            $attrs['claimed_by_id'] = null;
-            $attrs['claimed_at'] = null;
-        }
-
-        if ($target->role === StatusRole::MERGED && $task->merged_at === null) {
-            $attrs['merged_at'] = now();
-        }
+        $attrs = array_merge($attrs, StatusEffects::resolve($task, $target, $request->user()));
 
         $task->update($attrs);
 

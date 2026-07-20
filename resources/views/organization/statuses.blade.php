@@ -8,6 +8,7 @@
         'orange' => 'bg-orange-500', 'amber' => 'bg-amber-500',
     ];
     $inputClass = 'rounded-md border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-sm';
+    $effectFields = \App\Support\StatusEffects::ALLOWED_FIELDS;
 @endphp
 
 <x-app-layout>
@@ -50,9 +51,12 @@
                     <x-input-error :messages="$errors->get('status')" class="mb-2" />
 
                     @foreach ($statuses as $status)
-                        {{-- Zeile = Update-Form; die Löschen-Form (nur Custom) ist ein
-                             separates, gleichrangiges Form daneben (gültiges HTML). --}}
-                        <div class="flex items-center gap-2 border-b border-gray-100 dark:border-gray-700 py-2 last:border-0">
+                        {{-- Zeile = Update-Form; Löschen-Form (nur Custom) und der
+                             Automationen-Editor sind gleichrangige Geschwister
+                             (gültiges HTML). Alpine hält die Effekt-Zeilen. --}}
+                        <div x-data="{ openFx: false, rows: @js($status->on_enter_effects ?? []) }"
+                             class="border-b border-gray-100 dark:border-gray-700 last:border-0">
+                        <div class="flex items-center gap-2 py-2">
                             <form method="POST" action="{{ route('organization.statuses.update', $status) }}"
                                   class="flex flex-1 items-center gap-3">
                                 @csrf
@@ -99,7 +103,11 @@
                                     </button>
                                 </div>
                             </form>
-                            <div class="w-16 text-right">
+                            <div class="flex w-28 items-center justify-end gap-3">
+                                <button type="button" x-on:click="openFx = !openFx"
+                                        class="text-xs text-gray-500 dark:text-gray-400 hover:underline">
+                                    ⚙ {{ __('board_admin.automations') }}
+                                </button>
                                 @if ($status->role === null)
                                     <form method="POST" action="{{ route('organization.statuses.destroy', $status) }}"
                                           onsubmit="return confirm('{{ __('board_admin.delete_status_confirm') }}');">
@@ -109,6 +117,41 @@
                                     </form>
                                 @endif
                             </div>
+                        </div>
+
+                        {{-- Automationen (On-Enter-Effekte) --}}
+                        <div x-show="openFx" x-cloak class="pb-3 ps-2">
+                            <p class="mb-2 text-xs text-gray-400 dark:text-gray-500">{{ __('board_admin.automations_hint') }}</p>
+                            <form method="POST" action="{{ route('organization.statuses.effects', $status) }}">
+                                @csrf
+                                @method('PUT')
+                                <template x-for="(row, idx) in rows" :key="idx">
+                                    <div class="mb-2 flex flex-wrap items-center gap-2">
+                                        <select x-bind:name="'effects[' + idx + '][field]'" x-model="row.field" class="{{ $inputClass }}">
+                                            <option value="">{{ __('board_admin.effect_field') }}</option>
+                                            @foreach ($effectFields as $f)
+                                                <option value="{{ $f }}">{{ $f }}</option>
+                                            @endforeach
+                                        </select>
+                                        <input type="text" x-bind:name="'effects[' + idx + '][value]'" x-model="row.value"
+                                               placeholder="{{ __('board_admin.effect_value_placeholder') }}" class="{{ $inputClass }} w-52">
+                                        <label class="flex items-center gap-1 text-xs text-gray-600 dark:text-gray-300">
+                                            <input type="checkbox" value="1" x-bind:name="'effects[' + idx + '][only_if_empty]'" x-model="row.only_if_empty"
+                                                   class="rounded border-gray-300 dark:border-gray-600 text-indigo-600 focus:ring-indigo-500">
+                                            {{ __('board_admin.effect_only_if_empty') }}
+                                        </label>
+                                        <button type="button" x-on:click="rows.splice(idx, 1)"
+                                                class="text-rose-600 dark:text-rose-400 hover:underline">×</button>
+                                    </div>
+                                </template>
+                                <p x-show="rows.length === 0" class="mb-2 text-xs text-gray-400 dark:text-gray-500">{{ __('board_admin.no_effects') }}</p>
+                                <div class="flex items-center gap-3">
+                                    <button type="button" x-on:click="rows.push({ field: '', value: '', only_if_empty: false })"
+                                            class="text-xs font-medium text-indigo-600 dark:text-indigo-400 hover:underline">{{ __('board_admin.add_effect') }}</button>
+                                    <button type="submit" class="rounded-md bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-indigo-700">{{ __('board_admin.save_effects') }}</button>
+                                </div>
+                            </form>
+                        </div>
                         </div>
                     @endforeach
                 </div>
