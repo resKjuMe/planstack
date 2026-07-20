@@ -1,29 +1,30 @@
 <x-app-layout>
+    <x-slot name="header">
+        <div class="flex items-center justify-between">
+            <h2 class="font-semibold text-xl text-gray-800 leading-tight">Projekte</h2>
+            <a href="{{ route('projects.create') }}"
+               class="inline-flex items-center whitespace-nowrap rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500">
+                + Neues Projekt
+            </a>
+        </div>
+    </x-slot>
+
     <div class="py-8">
-        <div class="max-w-7xl mx-auto sm:px-6 lg:px-8" x-data="{ q: '', filter: 'all' }">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8" x-data="{ q: '', filter: 'all' }">
             <x-flash />
 
-            <div class="flex flex-wrap items-start justify-between gap-4">
-                <div>
-                    <h1 class="text-2xl font-bold text-gray-900">Projekte</h1>
-                    <p class="mt-1 text-sm text-gray-500">
-                        {{ $activeCount }} {{ $activeCount === 1 ? 'Projekt' : 'Projekte' }}
-                        · {{ number_format($openTasks, 0, ',', '.') }} offene Tasks
-                        · {{ number_format($totalSp, 0, ',', '.') }} Story Points
-                    </p>
-                </div>
-                <div class="flex items-center gap-3">
-                    <div class="relative">
-                        <svg class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                            <path fill-rule="evenodd" d="M9 3.5a5.5 5.5 0 100 11 5.5 5.5 0 000-11zM2 9a7 7 0 1112.452 4.391l3.328 3.329a.75.75 0 11-1.06 1.06l-3.329-3.328A7 7 0 012 9z" clip-rule="evenodd" />
-                        </svg>
-                        <input type="search" x-model="q" placeholder="Projekte durchsuchen …"
-                               class="w-64 rounded-md border-0 bg-white py-2 pl-9 pr-3 text-sm text-gray-700 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-500">
-                    </div>
-                    <a href="{{ route('projects.create') }}"
-                       class="inline-flex items-center whitespace-nowrap rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500">
-                        + Neues Projekt
-                    </a>
+            <div class="flex flex-wrap items-center justify-between gap-4">
+                <p class="text-sm text-gray-500">
+                    {{ $activeCount }} {{ $activeCount === 1 ? 'Projekt' : 'Projekte' }}
+                    · {{ number_format($openTasks, 0, ',', '.') }} offene Tasks
+                    · {{ number_format($totalSp, 0, ',', '.') }} Story Points
+                </p>
+                <div class="relative">
+                    <svg class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                        <path fill-rule="evenodd" d="M9 3.5a5.5 5.5 0 100 11 5.5 5.5 0 000-11zM2 9a7 7 0 1112.452 4.391l3.328 3.329a.75.75 0 11-1.06 1.06l-3.329-3.328A7 7 0 012 9z" clip-rule="evenodd" />
+                    </svg>
+                    <input type="search" x-model="q" placeholder="Projekte durchsuchen …"
+                           class="w-64 rounded-md border-0 bg-white py-2 pl-9 pr-3 text-sm text-gray-700 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-500">
                 </div>
             </div>
 
