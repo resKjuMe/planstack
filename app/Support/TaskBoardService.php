@@ -105,7 +105,12 @@ class TaskBoardService
     /**
      * The effective status shown on the board. Explicit lifecycle states are
      * kept as-is; a waiting task (UNKNOWN/PICKABLE/BLOCKED) is derived from the
-     * gate: any unmet prerequisite → BLOCKED, otherwise PICKABLE when startable.
+     * gate: any unmet prerequisite → BLOCKED, otherwise PICKABLE.
+     *
+     * The raw UNKNOWN ("ausstehend") state is intentionally never surfaced: a
+     * waiting task always resolves to BLOCKED or PICKABLE, so the board needs no
+     * UNKNOWN column. (UNKNOWN remains the stored default until the per-org
+     * status seed replaces it with PICKABLE as the initial status.)
      */
     public function displayStatusFor(Task $task): TaskStatus
     {
@@ -117,11 +122,7 @@ class TaskBoardService
             return TaskStatus::BLOCKED;
         }
 
-        if ($task->x_pickable) {
-            return TaskStatus::PICKABLE;
-        }
-
-        return $task->status;
+        return TaskStatus::PICKABLE;
     }
 
     /**

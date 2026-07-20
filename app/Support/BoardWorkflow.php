@@ -26,7 +26,8 @@ class BoardWorkflow
      * @var array<int, TaskStatus>
      */
     public const COLUMN_ORDER = [
-        TaskStatus::UNKNOWN,
+        // UNKNOWN ("ausstehend") entfällt bewusst als Spalte: wartende Tasks
+        // erscheinen abgeleitet als PICKABLE oder BLOCKED (siehe displayStatusFor).
         TaskStatus::PICKABLE,
         TaskStatus::CLAIMED,
         TaskStatus::ANALYZING,
@@ -75,8 +76,7 @@ class BoardWorkflow
     public static function transitions(): array
     {
         return [
-            TaskStatus::UNKNOWN->value => [TaskStatus::PICKABLE->value, TaskStatus::CLAIMED->value],
-            TaskStatus::PICKABLE->value => [TaskStatus::CLAIMED->value, TaskStatus::UNKNOWN->value],
+            TaskStatus::PICKABLE->value => [TaskStatus::CLAIMED->value],
             TaskStatus::CLAIMED->value => [TaskStatus::ANALYZING->value, TaskStatus::IN_PROGRESS->value, TaskStatus::PICKABLE->value],
             TaskStatus::ANALYZING->value => [TaskStatus::IN_PROGRESS->value, TaskStatus::IN_REVIEW->value, TaskStatus::CLAIMED->value],
             TaskStatus::IN_PROGRESS->value => [TaskStatus::IN_REVIEW->value, TaskStatus::COMPLETED->value, TaskStatus::ANALYZING->value],
@@ -112,11 +112,8 @@ class BoardWorkflow
     public static function collapseGroups(): array
     {
         return [
-            [
-                'key' => 'backlog',
-                'label' => __('board.group_backlog'),
-                'statuses' => [TaskStatus::UNKNOWN->value, TaskStatus::PICKABLE->value],
-            ],
+            // "Backlog"-Gruppe entfiel mit UNKNOWN ("ausstehend"); PICKABLE steht
+            // nun allein. Nur noch die "In Arbeit"-Gruppe wird zusammengefasst.
             [
                 'key' => 'in_work',
                 'label' => __('board.group_in_work'),
