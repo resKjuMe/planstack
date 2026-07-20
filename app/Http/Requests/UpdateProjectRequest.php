@@ -25,6 +25,7 @@ class UpdateProjectRequest extends FormRequest
             'name' => ['required', 'string', 'max:100'],
             'description' => ['nullable', 'string'],
             'github_repo' => ['nullable', 'string', 'max:255', 'regex:#^[\w.-]+/[\w.-]+$#'],
+            'archived' => ['boolean'],
             // skill_description wird jetzt auf der „Claude"-Unterseite gepflegt.
         ];
     }

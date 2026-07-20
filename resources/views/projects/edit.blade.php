@@ -48,6 +48,20 @@
                         <x-input-error :messages="$errors->get('github_repo')" class="mt-2" />
                     </div>
 
+                    <div class="border-t border-gray-100 pt-5">
+                        <label for="archived" class="flex items-start gap-3">
+                            {{-- Hidden-Feld sorgt dafür, dass eine abgewählte Checkbox als 0 ankommt. --}}
+                            <input type="hidden" name="archived" value="0">
+                            <input id="archived" name="archived" type="checkbox" value="1"
+                                   {{ old('archived', $project->archived_at) ? 'checked' : '' }}
+                                   class="mt-0.5 rounded border-gray-300 text-indigo-600 shadow-sm focus:ring-indigo-500">
+                            <span class="text-sm text-gray-700">
+                                Projekt archivieren
+                                <span class="block text-xs text-gray-400">Blendet das Projekt aus der Projektliste aus – es bleibt nur über die Filter-Pill „Archiviert" sichtbar.</span>
+                            </span>
+                        </label>
+                    </div>
+
                     <div class="flex items-center justify-end gap-3">
                         <a href="{{ route('projects.show', $project) }}" class="text-sm text-gray-500 hover:text-gray-700">Abbrechen</a>
                         <x-primary-button>Speichern</x-primary-button>

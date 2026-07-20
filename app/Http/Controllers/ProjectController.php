@@ -21,12 +21,10 @@ class ProjectController extends Controller
     {
         $userId = Auth::id();
 
-        // done_sp spiegelt TaskBoardService::isDelivered() (PR vorhanden oder
-        // COMPLETED/MERGED) — dieselbe Definition wie die Phasen-Fortschrittsbalken
-        // im Status-Bereich, nur hier als Aggregat statt in PHP je Task berechnet.
-        // closed_tasks_count ist bewusst enger (nur COMPLETED/MERGED, kein offener
-        // PR): für die Kopfzeile zählt "offen" den Task-Lifecycle, nicht das
-        // SP-Gate.
+        // done_sp zählt bewusst nur erledigte/gemergte Tasks (COMPLETED/MERGED) —
+        // ein offener PR allein gilt in der Projektübersicht nicht als Fortschritt.
+        // Damit ist die SP-Definition deckungsgleich mit closed_tasks_count, das
+        // in der Kopfzeile die offenen Tasks bestimmt.
         // Zugriff kommt über Teamzuweisung (Project::hasMember()); memberships
         // (users_to_projects) trägt nur noch die Rolle, nicht mehr den Zugriff —
         // reine WORKER ohne expliziten Rollen-Datensatz müssen daher über
@@ -39,9 +37,8 @@ class ProjectController extends Controller
                 'status', [TaskStatus::COMPLETED, TaskStatus::MERGED]
             )])
             ->withSum('tasks as total_sp', 'effort_story_points')
-            ->withSum(['tasks as done_sp' => fn (Builder $q) => $q->where(
-                fn (Builder $q) => $q->whereNotNull('pr_number')
-                    ->orWhereIn('status', [TaskStatus::COMPLETED, TaskStatus::MERGED])
+            ->withSum(['tasks as done_sp' => fn (Builder $q) => $q->whereIn(
+                'status', [TaskStatus::COMPLETED, TaskStatus::MERGED]
             )], 'effort_story_points')
             ->with(['owner', 'teams:id,name'])
             ->latest()
@@ -53,10 +50,15 @@ class ProjectController extends Controller
             $project->x_status_segments = $this->statusSegments($project);
         }
 
-        $openTasks = $projects->sum(fn (Project $p) => $p->tasks_count - $p->closed_tasks_count);
-        $totalSp = (int) $projects->sum('total_sp');
+        // Kopfzeilen-Statistiken beziehen sich auf die aktiven (nicht archivierten)
+        // Projekte — archivierte sind standardmäßig ausgeblendet und zählen erst
+        // über die Filter-Pill „Archiviert" wieder mit.
+        $activeProjects = $projects->whereNull('archived_at');
+        $activeCount = $activeProjects->count();
+        $openTasks = $activeProjects->sum(fn (Project $p) => $p->tasks_count - $p->closed_tasks_count);
+        $totalSp = (int) $activeProjects->sum('total_sp');
 
-        return view('projects.index', compact('projects', 'userId', 'openTasks', 'totalSp'));
+        return view('projects.index', compact('projects', 'userId', 'activeCount', 'openTasks', 'totalSp'));
     }
 
     /**
@@ -162,7 +164,15 @@ class ProjectController extends Controller
 
     public function update(UpdateProjectRequest $request, Project $project): RedirectResponse
     {
-        $project->update($request->validated());
+        $data = $request->validated();
+
+        // Archiv-Status aus der Checkbox ableiten: bereits gesetztes archived_at
+        // bleibt erhalten (Zeitpunkt der ersten Archivierung), sonst jetzt.
+        $data['archived_at'] = $request->boolean('archived')
+            ? ($project->archived_at ?? now())
+            : null;
+
+        $project->update($data);
 
         return redirect()
             ->route('projects.show', $project)

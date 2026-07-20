@@ -7,7 +7,7 @@
                 <div>
                     <h1 class="text-2xl font-bold text-gray-900">Projekte</h1>
                     <p class="mt-1 text-sm text-gray-500">
-                        {{ $projects->count() }} {{ Str::plural('Projekt', $projects->count()) }}
+                        {{ $activeCount }} {{ Str::plural('Projekt', $activeCount) }}
                         · {{ number_format($openTasks, 0, ',', '.') }} offene Tasks
                         · {{ number_format($totalSp, 0, ',', '.') }} Story Points
                     </p>
@@ -33,6 +33,7 @@
                     'mine' => 'Meine Projekte',
                     'in_arbeit' => 'In Arbeit',
                     'fast_fertig' => 'Fast fertig',
+                    'archived' => 'Archiviert',
                 ] as $key => $label)
                     <button type="button" @click="filter = '{{ $key }}'"
                             class="rounded-full px-4 py-1.5 text-sm font-medium transition"
@@ -69,6 +70,7 @@
                                 'fast_fertig' => 'bg-green-500',
                             ][$category];
                             $isMine = $project->created_by_id === $userId;
+                            $isArchived = $project->archived_at !== null;
 
                             // Zwei Initialen aus dem Owner-Namen, z. B. "Christian Mietze" → "CM".
                             $initials = collect(preg_split('/\s+/', trim($project->owner?->name ?? '?')))
@@ -80,8 +82,12 @@
                             $avatarPalette = ['bg-emerald-600', 'bg-indigo-600', 'bg-rose-600', 'bg-amber-600', 'bg-sky-600', 'bg-fuchsia-600'];
                             $avatarClass = $avatarPalette[($project->created_by_id ?? 0) % count($avatarPalette)];
                         @endphp
+                        {{-- Archivierte Projekte erscheinen ausschließlich unter der Pill
+                             „Archiviert"; alle übrigen Filter zeigen nur aktive Projekte. --}}
                         <div class="h-full" x-show="
-                                (filter === 'all'
+                                ((filter === 'archived') === {{ $isArchived ? 'true' : 'false' }})
+                                && (filter === 'archived'
+                                    || filter === 'all'
                                     || (filter === 'mine' && {{ $isMine ? 'true' : 'false' }})
                                     || filter === @js($category))
                                 && (q === '' || @js(Str::lower($project->alias.' '.$project->name)).includes(q.toLowerCase()))

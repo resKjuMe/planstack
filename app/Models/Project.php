@@ -26,6 +26,7 @@ class Project extends Model
         'skill_description',
         'config',
         'config_version',
+        'archived_at',
     ];
 
     /**
@@ -35,7 +36,17 @@ class Project extends Model
     {
         return [
             'config' => 'array',
+            'archived_at' => 'datetime',
         ];
+    }
+
+    /**
+     * Archivierte Projekte werden in der Projektliste ausgeblendet und sind
+     * nur über die Filter-Pill „Archiviert" sichtbar.
+     */
+    public function isArchived(): bool
+    {
+        return $this->archived_at !== null;
     }
 
     /**
