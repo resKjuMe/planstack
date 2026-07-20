@@ -265,7 +265,7 @@ export default function Board({ data }) {
                         key={`group:${group.key}`}
                         group={group}
                         members={members}
-                        dotClass={members[0]?.dotClass ?? 'bg-gray-400'}
+                        dotClass={members[Math.floor(members.length / 2)]?.dotClass ?? 'bg-gray-400'}
                         dragActive={!! dragging}
                         t={t}
                     />
