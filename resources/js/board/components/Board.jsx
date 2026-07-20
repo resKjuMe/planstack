@@ -196,11 +196,14 @@ export default function Board({ data }) {
     const EXPANDED_TRACK = 'minmax(0, 1fr)';
     const cells = [];
 
-    // Configured groups render as ONE combined column. They split into their
-    // individual status columns while dragging (so a card can be dropped into a
-    // precise status) or when the user disabled grouping. Exception: the group
-    // the drag STARTED from stays merged — splitting it would unmount the dragged
-    // card's node and the browser would abort the native drag.
+    // Statuses that belong to any configured group.
+    const groupMemberStatuses = new Set((workflow.collapseGroups ?? []).flatMap((g) => g.statuses));
+
+    // Configured groups render as ONE combined column. While dragging (or when
+    // the user disabled grouping) they split into their individual status
+    // columns so a card can be dropped into a precise status. During a drag the
+    // split members are force-expanded into real columns (never narrow collapsed
+    // bars) so they are proper drop targets and the dragged card stays mounted.
 
     if (exceptionTasks.length > 0) {
         const exCollapsed = collapse.isCollapsed(EXCEPTIONS_KEY);
@@ -272,7 +275,9 @@ export default function Board({ data }) {
         const color = colorForToken(workflow.colors?.[status]);
         const count = countByStatus[status] ?? 0;
 
-        if (collapse.isCollapsed(status)) {
+        const forceExpand = !! dragging && groupMemberStatuses.has(status);
+
+        if (collapse.isCollapsed(status) && ! forceExpand) {
             cells.push({
                 track: COLLAPSED_TRACK,
                 node: (
