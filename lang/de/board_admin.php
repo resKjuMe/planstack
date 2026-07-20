@@ -28,6 +28,10 @@ return [
     'effects_saved' => 'Automationen gespeichert.',
     'no_effects' => 'Keine Automationen.',
 
+    'drag_to_sort' => 'Zum Sortieren ziehen',
+    'save_order' => 'Reihenfolge speichern',
+    'order_saved' => 'Reihenfolge gespeichert.',
+
     'statuses' => 'Status',
     'col_status' => 'Status',
     'col_key' => 'Schlüssel',

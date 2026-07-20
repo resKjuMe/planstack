@@ -74,6 +74,9 @@ class DefaultTaskStatuses
             ['field' => 'claimed_by_id', 'value' => '@clear'],
             ['field' => 'claimed_at', 'value' => '@clear'],
         ],
+        'IN_REVIEW' => [
+            ['field' => 'reviewed_by', 'value' => '@actor', 'only_if_empty' => true],
+        ],
         'MERGED' => [
             ['field' => 'merged_at', 'value' => '@now', 'only_if_empty' => true],
         ],

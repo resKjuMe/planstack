@@ -241,6 +241,31 @@ class OrganizationTaskStatusController extends Controller
         return back()->with('status', __('board_admin.effects_saved'));
     }
 
+    /**
+     * Persist a new status order from the drag-and-drop list (comma-separated
+     * status ids). Only this org's statuses are (re)positioned.
+     */
+    public function reorder(Request $request): RedirectResponse
+    {
+        $organization = $this->ownedOrganization($request);
+
+        $ids = array_filter(array_map('intval', explode(',', (string) $request->input('order'))));
+        $valid = $organization->statuses()->pluck('id')->all();
+
+        $position = 0;
+        foreach ($ids as $id) {
+            if (in_array($id, $valid, true)) {
+                OrgStatus::where('id', $id)
+                    ->where('organization_id', $organization->id)
+                    ->update(['position' => $position++]);
+            }
+        }
+
+        $organization->increment('status_config_version');
+
+        return back()->with('status', __('board_admin.order_saved'));
+    }
+
     public function storeGroup(Request $request): RedirectResponse
     {
         $organization = $this->ownedOrganization($request);

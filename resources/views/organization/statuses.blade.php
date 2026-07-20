@@ -32,15 +32,15 @@
             <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6 overflow-x-auto">
                 <h3 class="mb-4 text-lg font-semibold text-gray-900 dark:text-gray-100">{{ __('board_admin.statuses') }}</h3>
 
-                <div class="min-w-[72rem] space-y-2">
+                <div class="min-w-[72rem] space-y-2" id="status-sortable">
                     {{-- Kopfzeile --}}
                     <div class="flex items-center gap-3 border-b pb-2 text-xs uppercase tracking-wide text-gray-400 dark:text-gray-500">
+                        <div class="w-5"></div>
                         <div class="w-28">{{ __('board_admin.col_key') }}</div>
                         <div class="w-28">{{ __('board_admin.col_role') }}</div>
                         <div class="w-36">{{ __('board_admin.col_label') }}</div>
                         <div class="w-36">{{ __('board_admin.col_label_en') }}</div>
-                        <div class="w-40">{{ __('board_admin.col_color') }}</div>
-                        <div class="w-16">{{ __('board_admin.col_position') }}</div>
+                        <div class="w-10">{{ __('board_admin.col_color') }}</div>
                         <div class="w-14 text-center">{{ __('board_admin.col_is_column') }}</div>
                         <div class="w-16 text-center">{{ __('board_admin.col_expanded') }}</div>
                         <div class="w-16">{{ __('board_admin.col_wip') }}</div>
@@ -54,9 +54,12 @@
                         {{-- Zeile = Update-Form; Löschen-Form (nur Custom) und der
                              Automationen-Editor sind gleichrangige Geschwister
                              (gültiges HTML). Alpine hält die Effekt-Zeilen. --}}
-                        <div x-data="{ openFx: false, rows: @js($status->on_enter_effects ?? []) }"
+                        <div x-data="{ openFx: false, pickerOpen: false, color: '{{ $status->color_token }}', swatch: @js($swatch), rows: @js($status->on_enter_effects ?? []) }"
+                             data-status-row data-status-id="{{ $status->id }}"
                              class="border-b border-gray-100 dark:border-gray-700 last:border-0">
                         <div class="flex items-center gap-2 py-2">
+                            <span data-drag-handle title="{{ __('board_admin.drag_to_sort') }}"
+                                  class="w-5 shrink-0 cursor-grab select-none text-center text-gray-300 dark:text-gray-600 hover:text-gray-500">⠿</span>
                             <form method="POST" action="{{ route('organization.statuses.update', $status) }}"
                                   class="flex flex-1 items-center gap-3">
                                 @csrf
@@ -73,15 +76,23 @@
                                 </div>
                                 <input type="text" name="label" value="{{ $status->label }}" required maxlength="255" class="{{ $inputClass }} w-36">
                                 <input type="text" name="label_en" value="{{ $status->label_en }}" maxlength="255" class="{{ $inputClass }} w-36">
-                                <div class="flex w-40 items-center gap-2">
-                                    <span class="h-3 w-3 shrink-0 rounded-full {{ $swatch[$status->color_token] ?? 'bg-gray-400' }}"></span>
-                                    <select name="color_token" class="{{ $inputClass }} flex-1">
+                                {{-- Farb-Picker: nur der farbige Punkt; Klick öffnet das Flyout --}}
+                                <div class="relative w-10">
+                                    <input type="hidden" name="color_token" x-bind:value="color">
+                                    <button type="button" x-on:click="pickerOpen = !pickerOpen" title="{{ __('board_admin.col_color') }}" class="p-1">
+                                        <span class="block h-2 w-2 rounded-full" x-bind:class="swatch[color]"></span>
+                                    </button>
+                                    <div x-show="pickerOpen" x-cloak x-on:click.outside="pickerOpen = false"
+                                         class="absolute z-10 mt-1 grid grid-cols-7 gap-1.5 rounded-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-2 shadow-lg">
                                         @foreach ($colors as $token)
-                                            <option value="{{ $token }}" @selected($status->color_token === $token)>{{ $token }}</option>
+                                            <button type="button" title="{{ $token }}"
+                                                    x-on:click="color = '{{ $token }}'; pickerOpen = false"
+                                                    class="h-5 w-5 rounded-full {{ $swatch[$token] }}"
+                                                    x-bind:class="color === '{{ $token }}' ? 'ring-2 ring-offset-1 ring-gray-800 dark:ring-gray-200 dark:ring-offset-gray-800' : ''"></button>
                                         @endforeach
-                                    </select>
+                                    </div>
                                 </div>
-                                <input type="number" name="position" value="{{ $status->position }}" min="0" class="{{ $inputClass }} w-16">
+                                <input type="hidden" name="position" value="{{ $status->position }}">
                                 <div class="w-14 text-center">
                                     <input type="checkbox" name="is_column" value="1" @checked($status->is_column)
                                            class="rounded border-gray-300 dark:border-gray-600 text-indigo-600 focus:ring-indigo-500">
@@ -156,11 +167,74 @@
                     @endforeach
                 </div>
 
+                {{-- Reihenfolge per Drag&Drop; erscheint erst nach einer Änderung. --}}
+                <form method="POST" action="{{ route('organization.statuses.reorder') }}" class="mt-3">
+                    @csrf
+                    @method('PUT')
+                    <input type="hidden" name="order" id="status-order-ids">
+                    <button type="submit" id="status-order-save"
+                            class="hidden rounded-md bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-indigo-700">
+                        {{ __('board_admin.save_order') }}
+                    </button>
+                </form>
+
+                <script>
+                    (function () {
+                        const list = document.getElementById('status-sortable');
+                        if (!list) return;
+                        const saveBtn = document.getElementById('status-order-save');
+                        const orderInput = document.getElementById('status-order-ids');
+                        let dragEl = null;
+
+                        function rows() {
+                            return [...list.querySelectorAll('[data-status-row]')];
+                        }
+                        function afterElement(y) {
+                            return rows()
+                                .filter((r) => r !== dragEl)
+                                .reduce((closest, child) => {
+                                    const box = child.getBoundingClientRect();
+                                    const offset = y - box.top - box.height / 2;
+                                    return offset < 0 && offset > closest.offset
+                                        ? { offset, element: child }
+                                        : closest;
+                                }, { offset: Number.NEGATIVE_INFINITY }).element;
+                        }
+                        function markDirty() {
+                            orderInput.value = rows().map((r) => r.dataset.statusId).join(',');
+                            saveBtn.classList.remove('hidden');
+                        }
+
+                        rows().forEach((row) => {
+                            const handle = row.querySelector('[data-drag-handle]');
+                            if (handle) {
+                                handle.addEventListener('mousedown', () => row.setAttribute('draggable', 'true'));
+                                handle.addEventListener('mouseup', () => row.removeAttribute('draggable'));
+                            }
+                            row.addEventListener('dragstart', () => { dragEl = row; row.classList.add('opacity-40'); });
+                            row.addEventListener('dragend', () => {
+                                row.classList.remove('opacity-40');
+                                row.removeAttribute('draggable');
+                                markDirty();
+                            });
+                        });
+
+                        list.addEventListener('dragover', (e) => {
+                            if (!dragEl) return;
+                            e.preventDefault();
+                            const after = afterElement(e.clientY);
+                            if (after == null) list.appendChild(dragEl);
+                            else list.insertBefore(dragEl, after);
+                        });
+                    })();
+                </script>
+
                 {{-- Eigenen Status anlegen --}}
                 <div class="mt-6 border-t pt-5">
                     <h4 class="font-semibold text-gray-900 dark:text-gray-100">{{ __('board_admin.new_status_title') }}</h4>
                     <p class="mt-1 mb-3 max-w-3xl text-sm text-gray-500 dark:text-gray-400">{{ __('board_admin.new_status_intro') }}</p>
-                    <form method="POST" action="{{ route('organization.statuses.store') }}" class="flex flex-wrap items-end gap-3">
+                    <form method="POST" action="{{ route('organization.statuses.store') }}" class="flex flex-wrap items-end gap-3"
+                          x-data="{ pickerOpen: false, color: 'indigo', swatch: @js($swatch) }">
                         @csrf
                         <div>
                             <x-input-label :value="__('board_admin.col_label')" />
@@ -180,11 +254,21 @@
                         </div>
                         <div>
                             <x-input-label :value="__('board_admin.col_color')" />
-                            <select name="color_token" class="{{ $inputClass }} mt-1">
-                                @foreach ($colors as $token)
-                                    <option value="{{ $token }}">{{ $token }}</option>
-                                @endforeach
-                            </select>
+                            <div class="relative mt-1">
+                                <input type="hidden" name="color_token" x-bind:value="color">
+                                <button type="button" x-on:click="pickerOpen = !pickerOpen" title="{{ __('board_admin.col_color') }}" class="p-1">
+                                    <span class="block h-2 w-2 rounded-full" x-bind:class="swatch[color]"></span>
+                                </button>
+                                <div x-show="pickerOpen" x-cloak x-on:click.outside="pickerOpen = false"
+                                     class="absolute z-10 mt-1 grid grid-cols-7 gap-1.5 rounded-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-2 shadow-lg">
+                                    @foreach ($colors as $token)
+                                        <button type="button" title="{{ $token }}"
+                                                x-on:click="color = '{{ $token }}'; pickerOpen = false"
+                                                class="h-5 w-5 rounded-full {{ $swatch[$token] }}"
+                                                x-bind:class="color === '{{ $token }}' ? 'ring-2 ring-offset-1 ring-gray-800 dark:ring-gray-200 dark:ring-offset-gray-800' : ''"></button>
+                                    @endforeach
+                                </div>
+                            </div>
                         </div>
                         <div>
                             <x-input-label :value="__('board_admin.col_wip')" />

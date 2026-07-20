@@ -28,6 +28,10 @@ return [
     'effects_saved' => 'Automations saved.',
     'no_effects' => 'No automations.',
 
+    'drag_to_sort' => 'Drag to reorder',
+    'save_order' => 'Save order',
+    'order_saved' => 'Order saved.',
+
     'statuses' => 'Statuses',
     'col_status' => 'Status',
     'col_key' => 'Key',

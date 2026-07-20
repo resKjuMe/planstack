@@ -69,6 +69,8 @@ Route::middleware('auth')->group(function () {
         ->name('organization.statuses.destroy');
     Route::put('organization/statuses/{status}/effects', [OrganizationTaskStatusController::class, 'updateEffects'])
         ->name('organization.statuses.effects');
+    Route::put('organization/status-order', [OrganizationTaskStatusController::class, 'reorder'])
+        ->name('organization.statuses.reorder');
     Route::post('organization/status-groups', [OrganizationTaskStatusController::class, 'storeGroup'])
         ->name('organization.statuses.groups.store');
     Route::delete('organization/status-groups/{group}', [OrganizationTaskStatusController::class, 'destroyGroup'])
