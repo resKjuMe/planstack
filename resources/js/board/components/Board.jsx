@@ -208,7 +208,9 @@ export default function Board({ data }) {
     // track; expanded columns share the rest (1fr). Transitioning the grid
     // template animates collapse/expand.
     const COLLAPSED_TRACK = '2.25rem'; // = w-9
-    const EXPANDED_TRACK = 'minmax(0, 1fr)';
+    // Readable minimum so columns don't shrink until content is clipped; the
+    // board scrolls horizontally (overflow-x-auto) when they no longer fit.
+    const EXPANDED_TRACK = 'minmax(16rem, 1fr)';
     const cells = [];
 
     // Configured groups render as ONE column (GroupColumn) with per-status drop
@@ -366,7 +368,7 @@ export default function Board({ data }) {
                 onDragCancel={() => { lastOverStatus.current = null; setDragging(null); }}
             >
                 <div
-                    className="grid gap-3 pb-4 min-h-[65vh]"
+                    className="grid gap-3 pb-4 min-h-[65vh] overflow-x-auto"
                     style={{
                         gridTemplateColumns: cells.map((c) => c.track).join(' '),
                         gridTemplateRows: '1fr',

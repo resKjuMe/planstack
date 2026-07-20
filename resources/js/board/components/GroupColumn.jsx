@@ -5,7 +5,7 @@ import { useDroppable } from '@dnd-kit/core';
 // times (also when not dragging) so @dnd-kit measures it before a drag starts —
 // no mount/unmount churn mid-drag, which is what broke drop detection when the
 // group used to split into separate grid columns.
-function DropSection({ status, label, dotClass, cards, dragActive, allowed }) {
+function DropSection({ status, label, dotClass, count, cards, dragActive, allowed }) {
     const { setNodeRef, isOver } = useDroppable({ id: status, data: { status } });
 
     return (
@@ -13,17 +13,19 @@ function DropSection({ status, label, dotClass, cards, dragActive, allowed }) {
             ref={setNodeRef}
             className={[
                 'rounded-md transition',
-                dragActive ? 'p-1 ring-1 ring-gray-200 dark:ring-gray-700' : '',
                 dragActive && ! allowed ? 'opacity-40' : '',
                 isOver && dragActive && allowed ? 'ring-2 ring-indigo-400 dark:ring-indigo-500' : '',
             ].join(' ')}
         >
-            {dragActive && (
-                <div className="mb-1 flex items-center gap-1 px-1 text-[10px] font-medium uppercase tracking-wide text-gray-400 dark:text-gray-500">
-                    <span className={`h-1.5 w-1.5 rounded-full ${dotClass}`} aria-hidden />
-                    {label}
-                </div>
-            )}
+            {/* Status sub-header — always visible, so the group column is
+                permanently divided by status (not only while dragging). */}
+            <div className="mb-1 flex items-center justify-between gap-1 px-1 text-[10px] font-medium uppercase tracking-wide text-gray-400 dark:text-gray-500">
+                <span className="flex items-center gap-1 truncate">
+                    <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${dotClass}`} aria-hidden />
+                    <span className="truncate">{label}</span>
+                </span>
+                <span>{count}</span>
+            </div>
             <div className="space-y-2">{cards}</div>
         </div>
     );
