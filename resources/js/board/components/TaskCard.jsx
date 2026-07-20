@@ -1,32 +1,26 @@
 import React from 'react';
+import { useDraggable } from '@dnd-kit/core';
 
-// A single task card. Draggable (HTML5 native DnD) as the primary status
-// change; the claim/release button remains as a plain form POST (full reload),
-// unchanged from the pre-React board, so it keeps working as an alternative.
-export default function TaskCard({ task, t, csrf, endpoints, dimmed, isDragging, onDragStart, onDragEnd }) {
+// Presentational card (also used for the drag overlay). No drag wiring here.
+export function TaskCardView({ task, t, csrf, endpoints, dimmed, dragging, overlay, listeners, attributes, setNodeRef }) {
     const claimUrl = endpoints.claim.replace('__TASK__', String(task.id));
 
     return (
         <div
-            draggable
-            onDragStart={(e) => {
-                e.dataTransfer.effectAllowed = 'move';
-                // Some browsers require data to be set for the drag to start.
-                e.dataTransfer.setData('text/plain', String(task.id));
-                onDragStart(task);
-            }}
-            onDragEnd={onDragEnd}
+            ref={setNodeRef}
+            {...(attributes || {})}
+            {...(listeners || {})}
             className={[
-                'group cursor-grab active:cursor-grabbing rounded-lg bg-white dark:bg-gray-800',
-                'shadow-sm ring-1 ring-gray-100 dark:ring-gray-700 p-3 transition',
-                isDragging ? 'opacity-40' : '',
+                'group select-none rounded-lg bg-white dark:bg-gray-800 shadow-sm ring-1 ring-gray-100 dark:ring-gray-700 p-3 transition',
+                overlay ? 'cursor-grabbing shadow-lg rotate-1' : 'cursor-grab active:cursor-grabbing',
+                dragging ? 'opacity-40' : '',
                 dimmed ? 'opacity-40' : '',
             ].join(' ')}
         >
             <div className="flex items-center justify-between gap-2">
                 <a
                     href={task.url}
-                    draggable={false}
+                    onPointerDown={(e) => e.stopPropagation()}
                     className="font-mono text-sm font-semibold text-indigo-700 dark:text-indigo-400 hover:underline"
                 >
                     {task.name}
@@ -57,11 +51,7 @@ export default function TaskCard({ task, t, csrf, endpoints, dimmed, isDragging,
                 <span className="truncate">{task.claimerName ?? t('unassigned')}</span>
                 <span className="flex items-center gap-2 shrink-0">
                     {task.prNumber && (
-                        <a
-                            href={task.prUrl || undefined}
-                            draggable={false}
-                            className="text-gray-500 dark:text-gray-400 hover:underline"
-                        >
+                        <a href={task.prUrl || undefined} onPointerDown={(e) => e.stopPropagation()} className="text-gray-500 dark:text-gray-400 hover:underline">
                             #{task.prNumber}
                         </a>
                     )}
@@ -69,8 +59,8 @@ export default function TaskCard({ task, t, csrf, endpoints, dimmed, isDragging,
                 </span>
             </div>
 
-            {task.canClaim && (
-                <form method="POST" action={claimUrl} className="mt-2">
+            {task.canClaim && !overlay && (
+                <form method="POST" action={claimUrl} className="mt-2" onPointerDown={(e) => e.stopPropagation()}>
                     <input type="hidden" name="_token" value={csrf} />
                     <button
                         type="submit"
@@ -81,5 +71,28 @@ export default function TaskCard({ task, t, csrf, endpoints, dimmed, isDragging,
                 </form>
             )}
         </div>
+    );
+}
+
+// Draggable wrapper (@dnd-kit). The whole card is the drag source; interactive
+// children stop pointer propagation so links/buttons stay clickable.
+export default function TaskCard({ task, t, csrf, endpoints, dimmed }) {
+    const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
+        id: task.id,
+        data: { from: task.displayStatus },
+    });
+
+    return (
+        <TaskCardView
+            task={task}
+            t={t}
+            csrf={csrf}
+            endpoints={endpoints}
+            dimmed={dimmed}
+            dragging={isDragging}
+            setNodeRef={setNodeRef}
+            listeners={listeners}
+            attributes={attributes}
+        />
     );
 }

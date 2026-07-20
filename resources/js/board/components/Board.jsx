@@ -1,17 +1,16 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { DndContext, DragOverlay, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
 import BoardColumn from './BoardColumn';
 import CollapsedColumn from './CollapsedColumn';
 import ExceptionLane from './ExceptionLane';
 import QuickFilterBar from './QuickFilterBar';
-import TaskCard from './TaskCard';
+import TaskCard, { TaskCardView } from './TaskCard';
 import Toast from './Toast';
 import { makeT } from '../i18n';
 import { moveTask } from '../api';
 import { useBoardCollapseState } from '../useBoardCollapseState';
 import { colorForToken } from '../statusColors';
 import { allowedTargets, canTransition, groupStartingAt } from '../workflowConfig';
-
-const HOVER_EXPAND_MS = 500;
 
 // Synthetic collapse key for the exception lane so its collapsed/expanded state
 // persists through the same per-board localStorage mechanism as the columns.
@@ -47,8 +46,6 @@ export default function Board({ data }) {
         assignee: 'all',
         showStaleMerged: false,
     });
-
-    const hoverTimer = useRef(null);
 
     // --- Filtering (assignee axis removes cards; highlightBlocked only dims) ---
     const matchesFilters = useCallback(
@@ -116,38 +113,20 @@ export default function Board({ data }) {
 
     const collapse = useBoardCollapseState(data.projectId, defaultExpandedKeys);
 
-    // --- Drag-and-drop ---
-    const endDrag = useCallback(() => {
-        if (hoverTimer.current) {
-            clearTimeout(hoverTimer.current);
-            hoverTimer.current = null;
-        }
-        collapse.clearTempExpand();
-        setDragging(null);
-    }, [collapse]);
+    // --- Drag-and-drop (@dnd-kit) ---
+    // The dragged card is rendered as a decoupled DragOverlay, so the board may
+    // freely re-layout during the drag (groups split into their status columns)
+    // without aborting the drag — the failure mode of native HTML5 DnD here.
+    const sensors = useSensors(
+        useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
+    );
 
-    // Reliably clear the drag state even if the source card unmounted mid-drag
-    // (a card dragged out of a grouped column: the group splits into member
-    // columns, replacing the original node, so its own dragend may not fire).
-    useEffect(() => {
-        if (!dragging) return undefined;
-        const onEnd = () => endDrag();
-        document.addEventListener('dragend', onEnd);
-        return () => document.removeEventListener('dragend', onEnd);
-    }, [dragging, endDrag]);
-
-    const handleDrop = useCallback(
-        async (targetStatus) => {
-            const drag = dragging;
-            const before = tasks;
-            endDrag();
-            if (!drag) return;
-
-            const { taskId, from } = drag;
+    const performMove = useCallback(
+        async (taskId, from, targetStatus) => {
             if (from === targetStatus) return;
-            if (!canTransition(workflow, from, targetStatus)) return; // not a drop target anyway
+            if (! canTransition(workflow, from, targetStatus)) return;
 
-            // Optimistic move; reconcile with the server's authoritative result.
+            const before = tasks;
             setTasks((prev) =>
                 prev.map((tk) =>
                     tk.id === taskId ? { ...tk, status: targetStatus, displayStatus: targetStatus } : tk,
@@ -157,37 +136,31 @@ export default function Board({ data }) {
             const res = await moveTask({ endpoints, csrf }, taskId, targetStatus);
             if (res.ok) {
                 setTasks((prev) => prev.map((tk) => (tk.id === taskId ? res.task : tk)));
-                // Keep the target visible after a drop — even if it collapses by
-                // default (it is now populated).
-                collapse.setCollapsed(targetStatus, false);
+                collapse.setCollapsed(targetStatus, false); // keep the now-populated target visible
             } else {
                 setTasks(before); // snap back
                 setToast(t('move_error', { message: res.message }));
             }
         },
-        [dragging, tasks, endDrag, workflow, endpoints, csrf, t, collapse],
+        [tasks, workflow, endpoints, csrf, t, collapse],
     );
 
-    const collapsedDragEnter = useCallback(
-        (statuses) => {
-            if (!dragging) return;
-            if (hoverTimer.current) clearTimeout(hoverTimer.current);
-            hoverTimer.current = setTimeout(() => {
-                hoverTimer.current = null;
-                statuses.forEach((s) => collapse.setTempExpand(s, true));
-            }, HOVER_EXPAND_MS);
-        },
-        [dragging, collapse],
-    );
-
-    const collapsedDragLeave = useCallback(() => {
-        // Only cancel a still-pending expand; once expanded, the now-visible
-        // column takes over hovering and we keep it open for the rest of the drag.
-        if (hoverTimer.current) {
-            clearTimeout(hoverTimer.current);
-            hoverTimer.current = null;
-        }
+    const onDragStart = useCallback((event) => {
+        setDragging({ taskId: event.active.id, from: event.active.data.current?.from });
     }, []);
+
+    const onDragEnd = useCallback(
+        (event) => {
+            setDragging(null);
+            const taskId = event.active?.id;
+            const from = event.active?.data.current?.from;
+            const target = event.over?.data.current?.status;
+            if (taskId != null && from != null && target) {
+                performMove(taskId, from, target);
+            }
+        },
+        [performMove],
+    );
 
     const renderCard = useCallback(
         (task) => (
@@ -197,14 +170,13 @@ export default function Board({ data }) {
                 t={t}
                 csrf={csrf}
                 endpoints={endpoints}
-                dimmed={filters.highlightBlocked && !task.isBlocked}
-                isDragging={dragging?.taskId === task.id}
-                onDragStart={(tk) => setDragging({ taskId: tk.id, from: tk.displayStatus })}
-                onDragEnd={endDrag}
+                dimmed={filters.highlightBlocked && ! task.isBlocked}
             />
         ),
-        [t, csrf, endpoints, filters.highlightBlocked, dragging, endDrag],
+        [t, csrf, endpoints, filters.highlightBlocked],
     );
+
+    const draggingTask = dragging ? tasks.find((tk) => tk.id === dragging.taskId) : null;
 
     // Grid cells with their track width. Collapsed bars keep a fixed narrow
     // track; expanded columns share the rest (1fr). Transitioning the grid
@@ -247,10 +219,10 @@ export default function Board({ data }) {
     for (let i = 0; i < workflow.columnOrder.length; ) {
         const group = groupStartingAt(workflow, i);
 
-        // Keep a group merged unless the user ungrouped, or a drag is in progress
-        // that did NOT start inside this group (then split it for precise drops).
-        const keepMerged =
-            group && ! ungrouped && (! dragging || group.statuses.includes(dragging.from));
+        // Keep a group merged unless the user ungrouped it, or a drag is in
+        // progress — then split it into its status columns for precise drops.
+        // (@dnd-kit tolerates the re-layout; the drag keeps running.)
+        const keepMerged = group && ! ungrouped && ! dragging;
 
         // Group as a single combined column.
         if (keepMerged) {
@@ -272,7 +244,6 @@ export default function Board({ data }) {
                         collapsible={false}
                         t={t}
                         onCollapse={() => {}}
-                        onDrop={() => {}}
                         footer={null}
                     >
                         {groupTasks.map((task) => renderCard(task))}
@@ -290,6 +261,7 @@ export default function Board({ data }) {
         const count = countByStatus[status] ?? 0;
 
         if (collapse.isCollapsed(status)) {
+            const collapsedDropAllowed = dragging ? allowedTargets(workflow, dragging.from).has(status) : false;
             cells.push({
                 track: COLLAPSED_TRACK,
                 node: (
@@ -298,10 +270,9 @@ export default function Board({ data }) {
                         label={label}
                         count={count}
                         dotClass={color.dot}
-                        isDragActive={!!dragging}
                         onExpand={() => collapse.setCollapsed(status, false)}
-                        onDragEnter={() => collapsedDragEnter([status])}
-                        onDragLeave={collapsedDragLeave}
+                        dropId={status}
+                        dropDisabled={! collapsedDropAllowed}
                     />
                 ),
             });
@@ -340,7 +311,6 @@ export default function Board({ data }) {
                     isDropAllowed={dropAllowed}
                     t={t}
                     onCollapse={() => collapse.setCollapsed(status, true)}
-                    onDrop={handleDrop}
                     footer={footer}
                 >
                     {visible.map((task) => renderCard(task))}
@@ -370,15 +340,23 @@ export default function Board({ data }) {
                 share the rest (1fr); the fixed row (1fr) + min-height makes every
                 column fill the full board height. Collapse/expand is animated per
                 cell (.board-cell) on mount — cheaper than morphing track widths. */}
-            <div
-                className="grid gap-3 pb-4 min-h-[65vh]"
-                style={{
-                    gridTemplateColumns: cells.map((c) => c.track).join(' '),
-                    gridTemplateRows: '1fr',
-                }}
-            >
-                {cells.map((c) => c.node)}
-            </div>
+            <DndContext sensors={sensors} onDragStart={onDragStart} onDragEnd={onDragEnd} onDragCancel={() => setDragging(null)}>
+                <div
+                    className="grid gap-3 pb-4 min-h-[65vh]"
+                    style={{
+                        gridTemplateColumns: cells.map((c) => c.track).join(' '),
+                        gridTemplateRows: '1fr',
+                    }}
+                >
+                    {cells.map((c) => c.node)}
+                </div>
+
+                <DragOverlay>
+                    {draggingTask ? (
+                        <TaskCardView task={draggingTask} t={t} csrf={csrf} endpoints={endpoints} overlay />
+                    ) : null}
+                </DragOverlay>
+            </DndContext>
 
             <Toast message={toast} onDismiss={() => setToast(null)} />
         </div>
