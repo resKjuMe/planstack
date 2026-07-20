@@ -9,9 +9,9 @@
     <form method="POST" action="{{ route('register') }}">
         @csrf
 
-        {{-- Einladungscode aus dem Registrierungslink (?invite=CODE) mitführen. --}}
-        @if (! empty($inviteCode))
-            <input type="hidden" name="invite" value="{{ $inviteCode }}">
+        {{-- Einladungswert aus dem Registrierungslink (?invite=…) mitführen. --}}
+        @if (! empty($inviteParam))
+            <input type="hidden" name="invite" value="{{ $inviteParam }}">
         @endif
 
         <!-- Name -->

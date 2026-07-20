@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Models\Organization;
+use App\Models\OrganizationInvitation;
+use App\Models\Team;
 use App\Models\User;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Http\RedirectResponse;
@@ -22,15 +24,16 @@ class RegisteredUserController extends Controller
      */
     public function create(Request $request): View
     {
-        $inviteCode = $this->normalizeInviteCode($request->query('invite'));
+        $inviteParam = trim((string) $request->query('invite'));
+        [$organization, $invitation] = $this->resolveInvite($inviteParam);
 
         return view('auth.register', [
-            'inviteCode' => $inviteCode,
-            'inviteOrganization' => $inviteCode
-                ? Organization::where('invite_code', $inviteCode)->first()
-                : null,
-            // Aus dem Einladungslink vorbefüllte E-Mail-Adresse.
-            'prefillEmail' => $request->query('email'),
+            // Rohwert unverändert durchreichen (individueller Token ist
+            // Groß-/Kleinschreibungs-sensitiv; der Org-Code nicht).
+            'inviteParam' => $inviteParam !== '' ? $inviteParam : null,
+            'inviteOrganization' => $organization,
+            // Bei einer individuellen Einladung die hinterlegte Adresse vorbefüllen.
+            'prefillEmail' => $invitation?->email,
         ]);
     }
 
@@ -53,13 +56,22 @@ class RegisteredUserController extends Controller
             'password' => Hash::make($request->password),
         ]);
 
-        // Registrierung über einen Einladungslink (?invite=CODE) ordnet das neue
-        // Konto direkt der eingeladenen Organisation zu.
-        if ($code = $this->normalizeInviteCode($request->input('invite'))) {
-            if ($organization = Organization::where('invite_code', $code)->first()) {
-                $user->organization_id = $organization->id;
-                $user->save();
+        // Registrierung über einen Einladungslink (?invite=…): individueller
+        // Token → Organisation + hinterlegte Teams; sonst Org-Beitrittscode →
+        // nur Organisation.
+        [$organization, $invitation] = $this->resolveInvite(trim((string) $request->input('invite')));
+
+        if ($organization) {
+            $user->organization_id = $organization->id;
+            $user->save();
+        }
+
+        if ($invitation) {
+            $teamIds = Team::whereIn('id', $invitation->team_ids ?? [])->pluck('id')->all();
+            if ($teamIds) {
+                $user->teams()->syncWithoutDetaching($teamIds);
             }
+            $invitation->forceFill(['accepted_at' => now()])->save();
         }
 
         event(new Registered($user));
@@ -70,13 +82,31 @@ class RegisteredUserController extends Controller
     }
 
     /**
-     * Normalize a submitted invite code (strip separators, upper-case). Returns
-     * null for empty input.
+     * Resolve an invite parameter to an organization (and, for individual
+     * invitation links, the invitation itself). First tries the case-sensitive
+     * invitation token, then falls back to the organization join-code.
+     *
+     * @return array{0: ?Organization, 1: ?OrganizationInvitation}
      */
-    private function normalizeInviteCode(?string $raw): ?string
+    private function resolveInvite(string $raw): array
     {
-        $code = strtoupper(preg_replace('/[^A-Za-z0-9]/', '', (string) $raw));
+        if ($raw === '') {
+            return [null, null];
+        }
 
-        return $code !== '' ? $code : null;
+        $invitation = OrganizationInvitation::whereNull('accepted_at')
+            ->where('token', $raw)
+            ->first();
+
+        if ($invitation) {
+            return [$invitation->organization, $invitation];
+        }
+
+        $code = strtoupper(preg_replace('/[^A-Za-z0-9]/', '', $raw));
+        $organization = $code !== ''
+            ? Organization::where('invite_code', $code)->first()
+            : null;
+
+        return [$organization, null];
     }
 }

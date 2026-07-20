@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\StoreOrganizationRequest;
 use App\Mail\OrganizationInvitationMail;
 use App\Models\Organization;
+use App\Models\OrganizationInvitation;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -25,7 +26,10 @@ class OrganizationController extends Controller
         $organization = $user->organization;
         $organization?->load(['owner', 'members']);
 
-        return view('organization.index', compact('user', 'organization'));
+        // Teams, die der Gründer einer Einladung zuordnen kann (seine eigenen).
+        $assignableTeams = $user->teams()->orderBy('name')->get();
+
+        return view('organization.index', compact('user', 'organization', 'assignableTeams'));
     }
 
     public function store(StoreOrganizationRequest $request): RedirectResponse
@@ -91,14 +95,28 @@ class OrganizationController extends Controller
             abort(403);
         }
 
-        $data = $request->validate(['email' => ['required', 'email', 'max:255']]);
-
-        // Empfänger-Adresse mitgeben, damit sie auf der Registrierungsseite
-        // vorbefüllt ist.
-        $registerUrl = route('register', [
-            'invite' => $organization->invite_code,
-            'email' => $data['email'],
+        $data = $request->validate([
+            'email' => ['required', 'email', 'max:255'],
+            'team_ids' => ['nullable', 'array'],
+            'team_ids.*' => ['integer'],
         ]);
+
+        // Nur eigene Teams des Gründers dürfen zugeordnet werden.
+        $allowedTeamIds = $user->teams()->pluck('teams.id')->all();
+        $teamIds = array_values(array_intersect(
+            array_map('intval', $data['team_ids'] ?? []),
+            $allowedTeamIds,
+        ));
+
+        // Individuelle, einmalige Einladung anlegen.
+        $invitation = $organization->invitations()->create([
+            'created_by_id' => $user->id,
+            'email' => $data['email'],
+            'token' => OrganizationInvitation::generateToken(),
+            'team_ids' => $teamIds ?: null,
+        ]);
+
+        $registerUrl = route('register', ['invite' => $invitation->token]);
 
         try {
             Mail::to($data['email'])->send(
@@ -106,6 +124,7 @@ class OrganizationController extends Controller
             );
         } catch (\Throwable $e) {
             report($e);
+            $invitation->delete();
 
             return back()->withErrors([
                 'email' => 'Die Einladung konnte nicht versendet werden. Bitte später erneut versuchen.',

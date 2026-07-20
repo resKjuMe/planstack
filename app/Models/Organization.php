@@ -35,6 +35,14 @@ class Organization extends Model
         return $this->hasMany(User::class);
     }
 
+    /**
+     * Individual invitations issued for this organization.
+     */
+    public function invitations(): HasMany
+    {
+        return $this->hasMany(OrganizationInvitation::class);
+    }
+
     public function isOwner(User $user): bool
     {
         return $this->created_by_id === $user->id;
