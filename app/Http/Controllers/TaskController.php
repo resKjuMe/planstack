@@ -8,7 +8,7 @@ use App\Http\Requests\UpdateTaskRequest;
 use App\Models\Project;
 use App\Models\Task;
 use App\Support\BoardPresenter;
-use App\Support\BoardWorkflow;
+use App\Support\OrgBoardWorkflow;
 use App\Support\TaskBoardService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -175,7 +175,12 @@ class TaskController extends Controller
         $current = $this->board->decorate($project)
             ->firstWhere('id', $task->id)?->x_display_status ?? $task->status;
 
-        if (! BoardWorkflow::canTransition($current, $target)) {
+        // Transition is validated against the organization's configured workflow
+        // (OrgBoardWorkflow); for a default-seeded org this equals the former
+        // static rules. Keys equal the enum values for default statuses.
+        $workflow = OrgBoardWorkflow::forOrganization($project->organization);
+
+        if (! $workflow->canTransition($current->value, $target->value)) {
             return response()->json([
                 'message' => __('board.move_forbidden', [
                     'from' => $current->label(),
