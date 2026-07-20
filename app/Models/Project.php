@@ -27,6 +27,7 @@ class Project extends Model
         'config',
         'config_version',
         'archived_at',
+        'completed_at',
     ];
 
     /**
@@ -37,6 +38,7 @@ class Project extends Model
         return [
             'config' => 'array',
             'archived_at' => 'datetime',
+            'completed_at' => 'datetime',
         ];
     }
 
@@ -47,6 +49,16 @@ class Project extends Model
     public function isArchived(): bool
     {
         return $this->archived_at !== null;
+    }
+
+    /**
+     * Abgeschlossene Projekte zeigen in der Übersicht das Badge „Abgeschlossen"
+     * und sind über die gleichnamige Filter-Pill filterbar; sie bleiben normal
+     * in der Liste sichtbar (anders als archivierte).
+     */
+    public function isCompleted(): bool
+    {
+        return $this->completed_at !== null;
     }
 
     /**

@@ -172,6 +172,11 @@ class ProjectController extends Controller
             ? ($project->archived_at ?? now())
             : null;
 
+        // Analog zum Archiv-Status: bereits gesetztes completed_at bleibt erhalten.
+        $data['completed_at'] = $request->boolean('completed')
+            ? ($project->completed_at ?? now())
+            : null;
+
         $project->update($data);
 
         return redirect()

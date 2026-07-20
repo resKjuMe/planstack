@@ -33,6 +33,7 @@
                     'mine' => 'Meine Projekte',
                     'in_arbeit' => 'In Arbeit',
                     'fast_fertig' => 'Fast fertig',
+                    'completed' => 'Abgeschlossen',
                     'archived' => 'Archiviert',
                 ] as $key => $label)
                     <button type="button" @click="filter = '{{ $key }}'"
@@ -53,21 +54,29 @@
                         @php
                             $sp = (int) $project->total_sp;
                             $pct = $sp > 0 ? (int) $project->done_sp / $sp * 100 : 0;
-                            $category = $pct <= 0 ? 'nicht_gestartet' : ($pct >= 80 ? 'fast_fertig' : 'in_arbeit');
+                            $isCompleted = $project->completed_at !== null;
+                            // Abgeschlossene Projekte tragen die Kategorie „completed" (Badge
+                            // + Filter-Pill) und überschreiben damit die berechnete Kategorie.
+                            $category = $isCompleted
+                                ? 'completed'
+                                : ($pct <= 0 ? 'nicht_gestartet' : ($pct >= 80 ? 'fast_fertig' : 'in_arbeit'));
                             $categoryLabel = [
                                 'nicht_gestartet' => 'Nicht gestartet',
                                 'in_arbeit' => 'In Arbeit',
                                 'fast_fertig' => 'Fast fertig',
+                                'completed' => 'Abgeschlossen',
                             ][$category];
                             $badgeClass = [
                                 'nicht_gestartet' => 'bg-gray-100 text-gray-600',
                                 'in_arbeit' => 'bg-amber-100 text-amber-700',
                                 'fast_fertig' => 'bg-green-100 text-green-700',
+                                'completed' => 'bg-blue-100 text-blue-700',
                             ][$category];
                             $barClass = [
                                 'nicht_gestartet' => 'bg-gray-300',
                                 'in_arbeit' => 'bg-indigo-600',
                                 'fast_fertig' => 'bg-green-500',
+                                'completed' => 'bg-blue-500',
                             ][$category];
                             $isMine = $project->created_by_id === $userId;
                             $isArchived = $project->archived_at !== null;

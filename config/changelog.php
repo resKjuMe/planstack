@@ -8,9 +8,10 @@ return [
         [
             'version' => '1.9.0',
             'date' => '2026-07-20',
-            'tldr' => ['Phasen-Verwaltung', 'Projekte archivieren', 'Fortschritt zählt nur Erledigtes'],
+            'tldr' => ['Phasen-Verwaltung', 'Projekte archivieren', 'Projekte abschließen', 'Fortschritt zählt nur Erledigtes'],
             'changes' => [
                 'Neu: Vollständige Phasen-Verwaltung je Projekt (Tab „Phasen" in der Projektbearbeitung) — Phasen anlegen, umbenennen, per Pfeilen umsortieren und löschen. Beim Löschen bleiben die enthaltenen Tasks erhalten und verlieren nur die Phasenzuordnung.',
+                'Neu: Projekte lassen sich als „abgeschlossen" markieren (Schalter auf der Bearbeiten-Seite). Abgeschlossene Projekte tragen in der Übersicht das Badge „Abgeschlossen" und sind über die gleichnamige Filter-Pill filterbar; sie bleiben normal in der Liste.',
                 'Neu: Projekte lassen sich archivieren (Schalter auf der Bearbeiten-Seite). Archivierte Projekte verschwinden aus der Projektliste und sind nur noch über die neue Filter-Pill „Archiviert" sichtbar; die Kennzahlen oben zählen nur aktive Projekte.',
                 'Der Fortschritt zählt jetzt einheitlich nur noch erledigte bzw. gemergte Tasks — in der Projektübersicht, in der Summary (KPI-Kacheln und Phasen-Balken) und im Phasenfilter des Diagramms. Ein bloß offener Pull Request gilt nicht mehr als Fortschritt.',
             ],

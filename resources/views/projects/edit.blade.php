@@ -48,7 +48,19 @@
                         <x-input-error :messages="$errors->get('github_repo')" class="mt-2" />
                     </div>
 
-                    <div class="border-t border-gray-100 pt-5">
+                    <div class="border-t border-gray-100 pt-5 space-y-4">
+                        <label for="completed" class="flex items-start gap-3">
+                            {{-- Hidden-Feld sorgt dafür, dass eine abgewählte Checkbox als 0 ankommt. --}}
+                            <input type="hidden" name="completed" value="0">
+                            <input id="completed" name="completed" type="checkbox" value="1"
+                                   {{ old('completed', $project->completed_at) ? 'checked' : '' }}
+                                   class="mt-0.5 rounded border-gray-300 text-indigo-600 shadow-sm focus:ring-indigo-500">
+                            <span class="text-sm text-gray-700">
+                                Projekt abgeschlossen
+                                <span class="block text-xs text-gray-400">Zeigt in der Übersicht das Badge „Abgeschlossen" und ist über die Filter-Pill „Abgeschlossen" filterbar. Das Projekt bleibt normal in der Liste.</span>
+                            </span>
+                        </label>
+
                         <label for="archived" class="flex items-start gap-3">
                             {{-- Hidden-Feld sorgt dafür, dass eine abgewählte Checkbox als 0 ankommt. --}}
                             <input type="hidden" name="archived" value="0">
