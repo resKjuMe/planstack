@@ -1,8 +1,3 @@
-@php
-    $statuses = \App\Enums\TaskStatus::cases();
-    $byStatus = $project->tasks->groupBy(fn ($t) => $t->status->value);
-@endphp
-
 <x-app-layout>
     <x-slot name="header">
         <x-project-header-bar :project="$project" />
@@ -13,7 +8,7 @@
     </x-slot>
 
     <div class="py-8">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
             <x-flash />
 
             <x-page-head :title="__('common.board')">
@@ -29,50 +24,14 @@
                 <p class="text-sm text-gray-600 dark:text-gray-400 max-w-3xl">{{ $project->description }}</p>
             @endif
 
-            {{-- Board --}}
-            <div class="overflow-x-auto pb-4">
-                <div class="flex gap-4 min-w-max">
-                    @foreach ($statuses as $status)
-                        @php $tasks = $byStatus->get($status->value, collect()); @endphp
-                        <div class="w-72 shrink-0">
-                            <div class="flex items-center justify-between mb-2">
-                                <x-task-status :status="$status" />
-                                <span class="text-xs text-gray-400 dark:text-gray-500">{{ $tasks->count() }}</span>
-                            </div>
-                            <div class="space-y-2 min-h-8">
-                                @foreach ($tasks as $task)
-                                    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm ring-1 ring-gray-100 dark:ring-gray-700 p-3">
-                                        <div class="flex items-center justify-between">
-                                            <a href="{{ route('projects.tasks.show', [$project, $task]) }}"
-                                               class="font-mono text-sm font-semibold text-indigo-700 dark:text-indigo-400 hover:underline">
-                                                {{ $task->name }}
-                                            </a>
-                                            @if ($task->concern)
-                                                <span title="{{ __('common.concern') }}" class="text-orange-500 dark:text-orange-400 text-xs">⚠ {{ __('common.concern') }}</span>
-                                            @endif
-                                        </div>
-                                        <p class="mt-1 text-sm text-gray-700 dark:text-gray-300">{{ $task->summary }}</p>
-                                        <div class="mt-2 flex items-center justify-between text-xs text-gray-400 dark:text-gray-500">
-                                            <span>{{ $task->claimer?->name ?? '—' }}</span>
-                                            <span>
-                                                @if ($task->effort_story_points) {{ $task->effort_story_points }} SP @endif
-                                            </span>
-                                        </div>
-                                        @can('claim', $task)
-                                            <form method="POST" action="{{ route('projects.tasks.claim', [$project, $task]) }}" class="mt-2">
-                                                @csrf
-                                                <button class="w-full rounded bg-gray-50 dark:bg-gray-800/50 px-2 py-1 text-xs font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700">
-                                                    {{ $task->claimed_by_id ? __('common.release') : __('common.claim') }}
-                                                </button>
-                                            </form>
-                                        @endcan
-                                    </div>
-                                @endforeach
-                            </div>
-                        </div>
-                    @endforeach
-                </div>
-            </div>
+            {{-- Kanban-Board (React). Der komplette Zustand kommt server-gerendert
+                 aus BoardPresenter::payload(); die App hydriert daraus und spricht
+                 für Statuswechsel den board-move-Endpunkt an. --}}
+            <div id="board-root"></div>
+            <script>
+                window.__PLANSTACK_BOARD__ = @json($boardData);
+            </script>
+            @vite('resources/js/board/index.jsx')
         </div>
     </div>
 </x-app-layout>

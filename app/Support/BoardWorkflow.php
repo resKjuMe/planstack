@@ -32,8 +32,10 @@ class BoardWorkflow
         TaskStatus::ANALYZING,
         TaskStatus::IN_PROGRESS,
         TaskStatus::IN_REVIEW,
-        TaskStatus::COMPLETED,
+        // MERGED vor COMPLETED (bewusste Board-Reihenfolge, unabhaengig vom
+        // Lifecycle in TaskStatus::displayOrder()).
         TaskStatus::MERGED,
+        TaskStatus::COMPLETED,
     ];
 
     /**
