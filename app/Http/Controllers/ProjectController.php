@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Enums\ProjectRole;
+use App\Enums\StatusRole;
 use App\Enums\TaskStatus;
 use App\Http\Requests\StoreProjectRequest;
 use App\Http\Requests\UpdateProjectRequest;
@@ -39,12 +40,12 @@ class ProjectController extends Controller
                 ->where('created_by_id', $userId)
                 ->orWhereHas('teams.members', fn ($m) => $m->where('users.id', $userId))))
             ->withCount('tasks')
-            ->withCount(['tasks as closed_tasks_count' => fn (Builder $q) => $q->whereIn(
-                'status', [TaskStatus::COMPLETED, TaskStatus::MERGED]
+            ->withCount(['tasks as closed_tasks_count' => fn (Builder $q) => $q->whereHas(
+                'orgStatus', fn (Builder $s) => $s->whereIn('role', [StatusRole::COMPLETED->value, StatusRole::MERGED->value])
             )])
             ->withSum('tasks as total_sp', 'effort_story_points')
-            ->withSum(['tasks as done_sp' => fn (Builder $q) => $q->whereIn(
-                'status', [TaskStatus::COMPLETED, TaskStatus::MERGED]
+            ->withSum(['tasks as done_sp' => fn (Builder $q) => $q->whereHas(
+                'orgStatus', fn (Builder $s) => $s->whereIn('role', [StatusRole::COMPLETED->value, StatusRole::MERGED->value])
             )], 'effort_story_points')
             ->with(['owner', 'teams:id,name'])
             ->latest()
