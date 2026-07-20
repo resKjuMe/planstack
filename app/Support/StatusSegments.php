@@ -1,0 +1,121 @@
+<?php
+
+namespace App\Support;
+
+use App\Models\OrgStatus;
+use App\Models\Project;
+use App\Models\Task;
+use Illuminate\Support\Collection;
+use Illuminate\Support\Str;
+
+/**
+ * Builds the stacked status progress-bar segments (summary phase bars + project
+ * overview) from an organization's CONFIGURABLE statuses — so custom statuses
+ * appear with their own label and color instead of being collapsed onto a
+ * canonical enum value. Tasks are grouped by the same board display key the
+ * React board uses (via BoardPresenter), so waiting tasks still resolve to
+ * PICKABLE/BLOCKED by their gate.
+ */
+class StatusSegments
+{
+    public function __construct(private readonly BoardPresenter $presenter) {}
+
+    /** @var array<int, Collection<int, OrgStatus>> memoized ordered statuses per project */
+    private array $orderedCache = [];
+
+    /**
+     * Ordered status segments present in $tasks. Each: label, count, bar, text,
+     * badge, width (SP share, %).
+     *
+     * @param  Collection<int, Task>  $tasks  decorated tasks (x_* attributes set)
+     * @return array<int, array<string, mixed>>
+     */
+    public function segments(Project $project, Collection $tasks): array
+    {
+        $keys = $this->presenter->displayKeysFor($tasks, $project);
+
+        $count = [];
+        $sp = [];
+        foreach ($tasks as $task) {
+            $key = $keys[$task->id];
+            $count[$key] = ($count[$key] ?? 0) + 1;
+            $sp[$key] = ($sp[$key] ?? 0) + (int) $task->effort_story_points;
+        }
+
+        $totalSp = max(1, array_sum($sp));
+
+        $segments = [];
+        foreach ($this->ordered($project) as $status) {
+            if (($count[$status->key] ?? 0) === 0) {
+                continue;
+            }
+            $segments[] = [
+                'label' => $this->label($status),
+                'count' => $count[$status->key],
+                'bar' => StatusPalette::bar($status->color_token),
+                'text' => StatusPalette::text($status->color_token),
+                'badge' => StatusPalette::badge($status->color_token),
+                'width' => round($sp[$status->key] / $totalSp * 100, 1),
+            ];
+        }
+
+        return $segments;
+    }
+
+    /**
+     * Attach per-task display presentation (x_display_key, x_status_label,
+     * x_status_badge) so lists can show the configured status — including custom
+     * ones — instead of the enum fallback.
+     *
+     * @param  Collection<int, Task>  $tasks
+     */
+    public function annotate(Project $project, Collection $tasks): void
+    {
+        $keys = $this->presenter->displayKeysFor($tasks, $project);
+        $byKey = $this->ordered($project)->keyBy('key');
+
+        foreach ($tasks as $task) {
+            $key = $keys[$task->id];
+            $status = $byKey->get($key);
+            $task->x_display_key = $key;
+            $task->x_status_label = $status ? $this->label($status) : $key;
+            $task->x_status_badge = StatusPalette::badge($status?->color_token);
+        }
+    }
+
+    /**
+     * Statuses ordered for the stacked bar: most-complete first (done → review →
+     * active → waiting → exception), within a kind by board position descending.
+     *
+     * @return Collection<int, OrgStatus>
+     */
+    private function ordered(Project $project): Collection
+    {
+        return $this->orderedCache[$project->id] ??= $project->organization->statuses()->get()
+            ->sort(function (OrgStatus $a, OrgStatus $b) {
+                $rank = self::kindRank($a->kind) <=> self::kindRank($b->kind);
+
+                return $rank !== 0 ? $rank : $b->position <=> $a->position;
+            })
+            ->values();
+    }
+
+    private static function kindRank(?string $kind): int
+    {
+        return match ($kind) {
+            'done' => 0,
+            'review' => 1,
+            'active' => 2,
+            'waiting' => 3,
+            'exception' => 4,
+            default => 5,
+        };
+    }
+
+    private function label(OrgStatus $status): string
+    {
+        return Str::startsWith(app()->getLocale(), 'en') && $status->label_en
+            ? $status->label_en
+            : $status->label;
+    }
+}

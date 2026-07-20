@@ -151,7 +151,7 @@
                                             <li class="flex flex-wrap items-center gap-2 text-sm">
                                                 <a href="{{ route('projects.tasks.show', [$project, $task]) }}"
                                                    class="font-mono font-medium text-indigo-700 dark:text-indigo-400 hover:underline">{{ $task->name }}</a>
-                                                <span class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium {{ $task->x_display_status->badgeClasses() }}">{{ $task->x_display_status->label() }}</span>
+                                                <span class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium {{ $task->x_status_badge }}">{{ $task->x_status_label }}</span>
                                                 <span class="text-gray-500 dark:text-gray-400 truncate">{{ $task->summary }}</span>
                                             </li>
                                         @endforeach

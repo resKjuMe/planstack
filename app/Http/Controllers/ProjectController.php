@@ -4,10 +4,10 @@ namespace App\Http\Controllers;
 
 use App\Enums\ProjectRole;
 use App\Enums\StatusRole;
-use App\Enums\TaskStatus;
 use App\Http\Requests\StoreProjectRequest;
 use App\Http\Requests\UpdateProjectRequest;
 use App\Models\Project;
+use App\Support\StatusSegments;
 use App\Support\TaskBoardService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
@@ -16,7 +16,10 @@ use Illuminate\View\View;
 
 class ProjectController extends Controller
 {
-    public function __construct(private readonly TaskBoardService $board) {}
+    public function __construct(
+        private readonly TaskBoardService $board,
+        private readonly StatusSegments $segments,
+    ) {}
 
     public function index(): View
     {
@@ -70,32 +73,17 @@ class ProjectController extends Controller
 
     /**
      * Nach SP gewichtete Balken-Segmente je Anzeige-Status (merged → offen),
-     * identisch zur Summary. Tasks ohne Story Points erscheinen nicht im Balken.
+     * identisch zur Summary — aus den je Organisation konfigurierbaren Status
+     * (inkl. Custom-Status). Tasks ohne Story Points erscheinen nicht im Balken.
      *
      * @return array<int, array<string, mixed>>
      */
     private function statusSegments(Project $project): array
     {
-        $tasks = $this->board->decorate($project);
-        $sp = max(1, (int) $tasks->sum('effort_story_points'));
-
-        $segments = [];
-        foreach (TaskStatus::displayOrder() as $status) {
-            $inStatus = $tasks->filter(fn ($t) => $t->x_display_status === $status);
-            $segSp = (int) $inStatus->sum('effort_story_points');
-            if ($inStatus->isEmpty() || $segSp <= 0) {
-                continue;
-            }
-            $segments[] = [
-                'label' => $status->label(),
-                'count' => $inStatus->count(),
-                'bar' => $status->barClasses(),
-                'text' => $status->textClasses(),
-                'width' => round($segSp / $sp * 100, 1),
-            ];
-        }
-
-        return $segments;
+        return array_values(array_filter(
+            $this->segments->segments($project, $this->board->decorate($project)),
+            fn ($seg) => $seg['width'] > 0,
+        ));
     }
 
     public function create(): View

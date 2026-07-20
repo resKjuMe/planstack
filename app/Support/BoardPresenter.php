@@ -104,6 +104,21 @@ class BoardPresenter
     }
 
     /**
+     * Batch variant: board status key per task, building the org-status lookups
+     * only once. Used by the summary/overview progress bars so they group tasks
+     * by the same (custom-status-aware) key the board uses.
+     *
+     * @param  Collection<int, Task>  $tasks
+     * @return array<int, string> taskId => display key
+     */
+    public function displayKeysFor(Collection $tasks, Project $project): array
+    {
+        $maps = $this->orgStatusMaps($project);
+
+        return $tasks->mapWithKeys(fn (Task $t) => [$t->id => $this->displayStatusKey($t, $maps)])->all();
+    }
+
+    /**
      * The board status key for a task, from its status_id (authority). Waiting
      * statuses are derived from the gate: unmet prerequisite → BLOCKED role,
      * else PICKABLE role. Falls back to the enum-derived key when status_id is

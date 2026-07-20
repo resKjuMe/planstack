@@ -4,13 +4,17 @@ namespace App\Http\Controllers;
 
 use App\Enums\TaskStatus;
 use App\Models\Project;
+use App\Support\StatusSegments;
 use App\Support\TaskBoardService;
 use Illuminate\Support\Collection;
 use Illuminate\View\View;
 
 class ProjectSummaryController extends Controller
 {
-    public function __construct(private readonly TaskBoardService $board) {}
+    public function __construct(
+        private readonly TaskBoardService $board,
+        private readonly StatusSegments $segments,
+    ) {}
 
     /**
      * KPI tiles, per-phase progress and pickable-PR cards.
@@ -22,6 +26,10 @@ class ProjectSummaryController extends Controller
         $tasks = $this->board->decorate($project);
         $byId = $tasks->keyBy('id');
         $this->board->attachUnlocks($tasks);
+        // Attach per-task display status (label + badge) from the org's
+        // configurable statuses so custom statuses show through everywhere here
+        // (open-PR badges below and the phase progress bars).
+        $this->segments->annotate($project, $tasks);
 
         return view('status.summary', [
             'project' => $project,
@@ -112,29 +120,15 @@ class ProjectSummaryController extends Controller
 
         foreach ($project->phases as $phase) {
             $pt = $tasks->where('phase_id', $phase->id);
-            $sp = max(1, (int) $pt->sum('effort_story_points'));
             // Fortschritt/„verbleibend" nur nach erledigt/gemergt (nicht offener PR).
             $remaining = $pt->filter(fn ($t) => ! $this->board->isDone($t));
 
             // Phases that hold unfinished prerequisites of this phase's tasks.
             $blockers = $this->phaseBlockers($phase, $pt, $byId);
 
-            // One entry per status present in this phase: badge + bar segment (SP-based).
-            $statuses = [];
-            foreach (TaskStatus::displayOrder() as $status) {
-                $inStatus = $pt->filter(fn ($t) => $t->x_display_status === $status);
-                if ($inStatus->isEmpty()) {
-                    continue;
-                }
-                $statuses[] = [
-                    'label' => $status->label(),
-                    'count' => $inStatus->count(),
-                    'badge' => $status->badgeClasses(),
-                    'bar' => $status->barClasses(),
-                    'text' => $status->textClasses(),
-                    'width' => round((int) $inStatus->sum('effort_story_points') / $sp * 100, 1),
-                ];
-            }
+            // One entry per status present in this phase: badge + bar segment
+            // (SP-based), from the org's configurable statuses (incl. custom ones).
+            $statuses = $this->segments->segments($project, $pt);
 
             $doneCount = $pt->count() - $remaining->count();
 
