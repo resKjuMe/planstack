@@ -214,9 +214,10 @@ export default function Board({ data }) {
     const cells = [];
 
     // Configured groups render as ONE combined column. They split into their
-    // individual status columns only while dragging (so a card can be dropped
-    // into a precise status) or when the user disabled grouping.
-    const showMembers = ungrouped || !!dragging;
+    // individual status columns while dragging (so a card can be dropped into a
+    // precise status) or when the user disabled grouping. Exception: the group
+    // the drag STARTED from stays merged — splitting it would unmount the dragged
+    // card's node and the browser would abort the native drag.
 
     if (exceptionTasks.length > 0) {
         const exCollapsed = collapse.isCollapsed(EXCEPTIONS_KEY);
@@ -246,8 +247,13 @@ export default function Board({ data }) {
     for (let i = 0; i < workflow.columnOrder.length; ) {
         const group = groupStartingAt(workflow, i);
 
-        // Group as a single combined column (unless dragging / ungrouped).
-        if (group && ! showMembers) {
+        // Keep a group merged unless the user ungrouped, or a drag is in progress
+        // that did NOT start inside this group (then split it for precise drops).
+        const keepMerged =
+            group && ! ungrouped && (! dragging || group.statuses.includes(dragging.from));
+
+        // Group as a single combined column.
+        if (keepMerged) {
             const groupTasks = group.statuses.flatMap((s) => columnTasksFor(s));
             const count = group.statuses.reduce((sum, s) => sum + (countByStatus[s] ?? 0), 0);
             cells.push({
