@@ -311,6 +311,10 @@ class McpServer
                 : 'Task ist bereits beansprucht.');
         }
 
+        if (! $this->statuses->allowsTransition($task, StatusRole::CLAIMED)) {
+            throw new McpToolException($this->transitionMessage($task, StatusRole::CLAIMED));
+        }
+
         $this->statuses->applyRole($task, StatusRole::CLAIMED, $user);
 
         return $this->json($this->taskPayload($project, $task));
@@ -352,6 +356,11 @@ class McpServer
             'done' => $task->pr_number !== null ? StatusRole::IN_REVIEW : StatusRole::IN_PROGRESS,
             default => StatusRole::IN_PROGRESS,
         };
+
+        if (! $this->statuses->allowsTransition($task, $role)) {
+            throw new McpToolException($this->transitionMessage($task, $role));
+        }
+
         $this->statuses->applyRole($task, $role, $user);
 
         return $this->json($this->taskPayload($project, $task));
@@ -382,6 +391,10 @@ class McpServer
     {
         $task = $this->findTask($project, $args);
         $this->authorize('update', $task, $project);
+
+        if (! $this->statuses->allowsTransition($task, StatusRole::MERGED)) {
+            throw new McpToolException($this->transitionMessage($task, StatusRole::MERGED));
+        }
 
         $this->statuses->applyRole($task, StatusRole::MERGED, $user);
 
@@ -658,6 +671,14 @@ class McpServer
      *
      * @param  array<string, mixed>  $args
      */
+    private function transitionMessage(Task $task, StatusRole $target): string
+    {
+        return __('board.move_forbidden', [
+            'from' => $task->status?->value ?? $task->orgStatus?->key ?? '?',
+            'to' => $target->value,
+        ]);
+    }
+
     private function findTask(Project $project, array $args): Task
     {
         $ref = $args['task'] ?? null;

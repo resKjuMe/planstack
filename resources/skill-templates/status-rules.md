@@ -9,3 +9,5 @@ Vorrang vor dem Skript. Lebenszyklus: `PICKABLE → CLAIMED → ANALYZING → IN
 - **done**: mit PR → `IN_REVIEW`, ohne PR → `IN_PROGRESS`.
 - **COMPLETED** nur per Split; **MERGED** nur per `/merge` (idempotent) — erst der Merge nimmt den Task vom Board.
 - Fortschritt und Pickbarkeit berechnet der Server — nicht lokal nachbilden.
+
+**Wichtig – Statuswechsel sind erzwungen:** Der konkrete Status-Satz, seine Bezeichnungen und die **erlaubten Übergänge** sind **pro Organisation konfigurierbar**. Die verdrahteten Aktionen (`claim`, `set-status`/`done`, `merge`, `complete`) werden serverseitig gegen den Übergangsgraphen geprüft — ein unerlaubter Wechsel liefert `409` (bzw. MCP-Tool-Fehler). Folge daher dem Lebenszyklus in der richtigen Reihenfolge (nicht Status „überspringen"). Den **tatsächlichen** Status-/Übergangsplan dieser Organisation liefert `GET /config` unter `status_rules` (Abschnitt „Status dieser Organisation"); bei einer Änderung ändert sich `skill_revision` — dann neu laden. Ausnahmen ohne Übergangsprüfung: `release`, `concern`/`resolve`, `split`.

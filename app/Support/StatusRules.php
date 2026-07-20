@@ -53,7 +53,7 @@ class StatusRules
 
         if ($transitions->isNotEmpty()) {
             $lines[] = '';
-            $lines[] = 'Erlaubte Statuswechsel per Board (Drag-and-drop):';
+            $lines[] = 'Erlaubte Statuswechsel (Board-Drag UND API/MCP-Aktionen werden dagegen geprüft; unerlaubt → 409):';
             foreach ($statuses as $from) {
                 $tos = ($transitions[$from->id] ?? collect())
                     ->map(fn ($t) => $byId->get($t->to_status_id)?->key)

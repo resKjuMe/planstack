@@ -44,12 +44,15 @@ class DefaultTaskStatuses
      *
      * @var array<string, array<int, string>>
      */
-    private const TRANSITIONS = [
+    public const TRANSITIONS = [
         'PICKABLE' => ['CLAIMED'],
-        'CLAIMED' => ['ANALYZING', 'IN_PROGRESS', 'PICKABLE'],
+        // CLAIMED→IN_REVIEW und IN_REVIEW→MERGED decken die verdrahteten Aktionen
+        // (done mit PR direkt aus beansprucht, merge aus Review) ab, damit die
+        // Transition-Prüfung auf API/MCP die Standard-L2L-Abläufe nicht abweist.
+        'CLAIMED' => ['ANALYZING', 'IN_PROGRESS', 'IN_REVIEW', 'PICKABLE'],
         'ANALYZING' => ['IN_PROGRESS', 'IN_REVIEW', 'CLAIMED'],
         'IN_PROGRESS' => ['IN_REVIEW', 'COMPLETED', 'ANALYZING'],
-        'IN_REVIEW' => ['COMPLETED', 'IN_PROGRESS'],
+        'IN_REVIEW' => ['COMPLETED', 'MERGED', 'IN_PROGRESS'],
         'COMPLETED' => ['MERGED', 'IN_REVIEW'],
         'MERGED' => ['COMPLETED'],
         'BLOCKED' => ['PICKABLE', 'CLAIMED'],
@@ -150,6 +153,31 @@ class DefaultTaskStatuses
      * don't already have effects configured (never clobbers user customizations).
      * No-op if the on_enter_effects column does not exist yet.
      */
+    /**
+     * Ensure every default transition edge exists for the org (add missing ones
+     * by status key; never removes custom edges). Used to backfill the expanded
+     * lifecycle graph onto existing organizations so the transition check on the
+     * API/MCP actions matches the documented workflow.
+     */
+    public static function syncDefaultTransitions(Organization $organization): void
+    {
+        $idByKey = $organization->statuses()->pluck('id', 'key');
+
+        foreach (self::TRANSITIONS as $from => $targets) {
+            $fromId = $idByKey[$from] ?? null;
+            if ($fromId === null) {
+                continue;
+            }
+            foreach ($targets as $to) {
+                $toId = $idByKey[$to] ?? null;
+                if ($toId === null) {
+                    continue;
+                }
+                OrgStatusTransition::firstOrCreate(['from_status_id' => $fromId, 'to_status_id' => $toId]);
+            }
+        }
+    }
+
     public static function applyDefaultEffects(Organization $organization): void
     {
         if (! Schema::hasColumn('task_statuses', 'on_enter_effects')) {

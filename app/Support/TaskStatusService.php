@@ -22,6 +22,28 @@ use App\Models\User;
 class TaskStatusService
 {
     /**
+     * Whether moving the task into the status carrying $targetRole is an allowed
+     * transition per the organisation's workflow. Returns true when there is
+     * nothing to enforce (no org, or the current/target status is unresolved).
+     * Same status is always allowed.
+     */
+    public function allowsTransition(Task $task, StatusRole $targetRole): bool
+    {
+        $organization = $task->project?->organization;
+        if ($organization === null) {
+            return true;
+        }
+
+        $current = $task->orgStatus;
+        $target = $organization->statusForRole($targetRole);
+        if ($current === null || $target === null) {
+            return true;
+        }
+
+        return OrgBoardWorkflow::forOrganization($organization)->canTransition($current->key, $target->key);
+    }
+
+    /**
      * Move the task into the org status carrying $role and apply its on-enter
      * effects. $extra attributes win over the effects. Falls back to the legacy
      * enum when the org has no status for the role (unseeded).

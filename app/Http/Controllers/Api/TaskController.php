@@ -126,6 +126,10 @@ class TaskController extends ApiController
                 : 'Task ist bereits beansprucht.');
         }
 
+        if (! $this->statuses->allowsTransition($task, StatusRole::CLAIMED)) {
+            return $this->transitionConflict($task, StatusRole::CLAIMED);
+        }
+
         // Config-driven: move to the CLAIMED-role status and apply its on-enter
         // effects (default seed sets claimed_by_id=@actor, claimed_at=@now).
         $this->statuses->applyRole($task, StatusRole::CLAIMED, $request->user());
@@ -314,6 +318,11 @@ class TaskController extends ApiController
             'done' => $task->pr_number !== null ? StatusRole::IN_REVIEW : StatusRole::IN_PROGRESS,
             'in_progress' => StatusRole::IN_PROGRESS,
         };
+
+        if (! $this->statuses->allowsTransition($task, $role)) {
+            return $this->transitionConflict($task, $role);
+        }
+
         $this->statuses->applyRole($task, $role, $request->user());
 
         return $this->ack($project, $task);
@@ -342,6 +351,10 @@ class TaskController extends ApiController
     {
         $this->authorize('update', $task);
 
+        if (! $this->statuses->allowsTransition($task, StatusRole::MERGED)) {
+            return $this->transitionConflict($task, StatusRole::MERGED);
+        }
+
         $this->markMerged($task);
 
         return $this->ack($project, $task);
@@ -367,9 +380,15 @@ class TaskController extends ApiController
         }
 
         if ($data['merge'] ?? false) {
+            if (! $this->statuses->allowsTransition($task, StatusRole::MERGED)) {
+                return $this->transitionConflict($task, StatusRole::MERGED);
+            }
             $this->markMerged($task, $request->user());
         } else {
             $role = $task->pr_number !== null ? StatusRole::IN_REVIEW : StatusRole::IN_PROGRESS;
+            if (! $this->statuses->allowsTransition($task, $role)) {
+                return $this->transitionConflict($task, $role);
+            }
             $this->statuses->applyRole($task, $role, $request->user());
         }
 
@@ -598,6 +617,18 @@ class TaskController extends ApiController
         }
 
         return new TaskResource($decorated);
+    }
+
+    /**
+     * 409 for a disallowed status transition (config workflow), naming the
+     * current and target status.
+     */
+    private function transitionConflict(Task $task, StatusRole $target): JsonResponse
+    {
+        return $this->conflict(__('board.move_forbidden', [
+            'from' => $task->status?->value ?? $task->orgStatus?->key ?? '?',
+            'to' => $target->value,
+        ]));
     }
 
     /**
