@@ -54,16 +54,19 @@
                     </x-slot>
 
                     <x-slot name="content">
-                        <x-dropdown-link :href="route('organization.index')">
+                        <x-dropdown-link :href="route('organization.index')" class="flex items-center gap-2">
+                            <svg class="h-4 w-4 shrink-0 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z"/><path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2"/><path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2"/><path d="M10 6h4"/><path d="M10 10h4"/><path d="M10 14h4"/><path d="M10 18h4"/></svg>
                             {{ __('Organisation') }}
                         </x-dropdown-link>
 
-                        <x-dropdown-link :href="route('profile.edit')">
-                            {{ __('Profile') }}
+                        <x-dropdown-link :href="route('profile.edit')" class="flex items-center gap-2">
+                            <svg class="h-4 w-4 shrink-0 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                            Profil
                         </x-dropdown-link>
 
                         {{-- Einrichtungs-/Downloadseite der CI-Status-Anzeige --}}
-                        <x-dropdown-link :href="url('/planstack-ci/setup')" class="whitespace-nowrap">
+                        <x-dropdown-link :href="url('/planstack-ci/setup')" class="flex items-center gap-2 whitespace-nowrap">
+                            <svg class="h-4 w-4 shrink-0 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
                             {{ __('TamperMonkey Script') }}
                             <span class="js-psci-update ms-2 rounded-full bg-indigo-600 px-1.5 py-0.5 text-[10px] font-semibold text-white align-middle" style="display:none">v{{ $ciVersion }}</span>
                         </x-dropdown-link>
@@ -72,10 +75,11 @@
                         <form method="POST" action="{{ route('logout') }}">
                             @csrf
 
-                            <x-dropdown-link :href="route('logout')"
+                            <x-dropdown-link :href="route('logout')" class="flex items-center gap-2"
                                     onclick="event.preventDefault();
                                                 this.closest('form').submit();">
-                                {{ __('Log Out') }}
+                                <svg class="h-4 w-4 shrink-0 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/></svg>
+                                Abmelden
                             </x-dropdown-link>
                         </form>
                     </x-slot>

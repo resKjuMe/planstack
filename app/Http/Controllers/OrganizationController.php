@@ -3,10 +3,12 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreOrganizationRequest;
+use App\Mail\OrganizationInvitationMail;
 use App\Models\Organization;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\View\View;
 
 /**
@@ -72,6 +74,45 @@ class OrganizationController extends Controller
 
         return redirect()->route('organization.index')
             ->with('status', "Du bist der Organisation \"{$organization->name}\" beigetreten.");
+    }
+
+    /**
+     * Verschickt einen Registrierungs-Einladungslink per E-Mail. Über den Link
+     * (?invite=CODE) wird das neue Konto automatisch dieser Organisation
+     * zugeordnet.
+     */
+    public function invite(Request $request): RedirectResponse
+    {
+        $user = $request->user();
+        $organization = $user->organization;
+
+        // Nur der Gründer der Organisation darf Einladungen versenden.
+        if (! $organization || ! $organization->isOwner($user)) {
+            abort(403);
+        }
+
+        $data = $request->validate(['email' => ['required', 'email', 'max:255']]);
+
+        // Empfänger-Adresse mitgeben, damit sie auf der Registrierungsseite
+        // vorbefüllt ist.
+        $registerUrl = route('register', [
+            'invite' => $organization->invite_code,
+            'email' => $data['email'],
+        ]);
+
+        try {
+            Mail::to($data['email'])->send(
+                new OrganizationInvitationMail($organization, $user, $registerUrl)
+            );
+        } catch (\Throwable $e) {
+            report($e);
+
+            return back()->withErrors([
+                'email' => 'Die Einladung konnte nicht versendet werden. Bitte später erneut versuchen.',
+            ])->withInput();
+        }
+
+        return back()->with('status', "Einladung an {$data['email']} versendet.");
     }
 
     public function leave(Request $request): RedirectResponse

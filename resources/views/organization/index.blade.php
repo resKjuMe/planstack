@@ -21,7 +21,8 @@
                             </p>
                         </div>
 
-                        {{-- Einladungscode zum Weitergeben --}}
+                        {{-- Einladungscode zum Weitergeben (nur Gründer) --}}
+                        @if ($isOwner)
                         <div x-data="{ copied: false }" class="text-right">
                             <div class="text-xs font-medium uppercase tracking-wide text-gray-400">Einladungscode</div>
                             <div class="mt-1 flex items-center gap-2">
@@ -35,6 +36,7 @@
                             </div>
                             <p class="mt-1 text-xs text-gray-400">Zum Beitreten weitergeben.</p>
                         </div>
+                        @endif
                     </div>
 
                     {{-- Mitglieder --}}
@@ -88,6 +90,45 @@
                         @endif
                     </div>
                 </div>
+
+                {{-- Mitglieder per Registrierungslink einladen (nur Gründer) --}}
+                @if ($isOwner)
+                @php $registerUrl = route('register', ['invite' => $organization->invite_code]); @endphp
+                <div class="bg-white rounded-lg shadow p-6">
+                    <h3 class="mb-1 font-semibold text-gray-900">Mitglieder einladen</h3>
+                    <p class="mb-4 text-sm text-gray-500">
+                        Verschicke einen Registrierungslink – wer sich darüber registriert, wird automatisch dieser Organisation zugeordnet.
+                    </p>
+
+                    {{-- Link zum direkten Teilen --}}
+                    <div x-data="{ copied: false }" class="mb-5">
+                        <x-input-label value="Registrierungslink" />
+                        <div class="mt-1 flex items-center gap-3">
+                            <input type="text" readonly value="{{ $registerUrl }}"
+                                   @focus="$event.target.select()"
+                                   class="block flex-1 rounded-md border-gray-300 bg-gray-50 font-mono text-xs text-gray-600 shadow-sm">
+                            <button type="button"
+                                    @click="navigator.clipboard.writeText(@js($registerUrl)); copied = true; setTimeout(() => copied = false, 1500)"
+                                    class="inline-flex items-center rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50">
+                                <span x-show="!copied">Kopieren</span>
+                                <span x-show="copied" x-cloak class="text-green-600">Kopiert</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    {{-- Einladung per E-Mail versenden --}}
+                    <form method="POST" action="{{ route('organization.invite') }}" class="border-t pt-5">
+                        @csrf
+                        <x-input-label for="email" value="Einladung per E-Mail senden" />
+                        <div class="mt-1 flex items-center gap-3">
+                            <x-text-input id="email" name="email" type="email" class="block flex-1"
+                                          :value="old('email')" required placeholder="kollege@firma.de" />
+                            <x-primary-button>Einladung senden</x-primary-button>
+                        </div>
+                        <x-input-error :messages="$errors->get('email')" class="mt-2" />
+                    </form>
+                </div>
+                @endif
             @else
                 {{-- ============ Keine Organisation: gründen oder beitreten ============ --}}
                 <p class="text-sm text-gray-500">

@@ -67,6 +67,7 @@ Route::middleware('auth')->group(function () {
     Route::get('organization', [OrganizationController::class, 'index'])->name('organization.index');
     Route::post('organization', [OrganizationController::class, 'store'])->name('organization.store');
     Route::post('organization/join', [OrganizationController::class, 'join'])->name('organization.join');
+    Route::post('organization/invite', [OrganizationController::class, 'invite'])->name('organization.invite');
     Route::post('organization/leave', [OrganizationController::class, 'leave'])->name('organization.leave');
     Route::delete('organization', [OrganizationController::class, 'destroy'])->name('organization.destroy');
 
