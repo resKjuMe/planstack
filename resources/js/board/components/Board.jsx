@@ -8,7 +8,7 @@ import Toast from './Toast';
 import { makeT } from '../i18n';
 import { moveTask } from '../api';
 import { useBoardCollapseState } from '../useBoardCollapseState';
-import { statusColor } from '../statusColors';
+import { colorForToken } from '../statusColors';
 import { allowedTargets, canTransition, groupStartingAt } from '../workflowConfig';
 
 const HOVER_EXPAND_MS = 500;
@@ -251,7 +251,7 @@ export default function Board({ data }) {
 
         const { status } = item;
         const label = workflow.labels[status] ?? status;
-        const color = statusColor(status);
+        const color = colorForToken(workflow.colors?.[status]);
         const count = countByStatus[status] ?? 0;
 
         if (item.collapsed) {

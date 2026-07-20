@@ -35,7 +35,9 @@ class BoardPresenter
             'currentUserId' => $userId,
             'tasks' => $tasks->map(fn (Task $t) => $this->task($t, $project, $userId))->values()->all(),
             'assignees' => $this->assignees($tasks),
-            'workflow' => BoardWorkflow::toArray(),
+            // Workflow comes from the organization's configurable statuses; for a
+            // default-seeded org this equals the former static definition.
+            'workflow' => OrgBoardWorkflow::forOrganization($project->organization)->toArray(),
             'endpoints' => [
                 // {task} is replaced client-side with the task id.
                 'move' => route('projects.tasks.board-move', [$project, '__TASK__']),

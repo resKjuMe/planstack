@@ -33,9 +33,10 @@ class DefaultTaskStatuses
         ['IN_REVIEW',   'in Review',    'in review',   'review',    'purple',  4, true,  true,  3,    false, false, null],
         ['MERGED',      'gemerged',     'merged',      'done',      'emerald', 5, true,  false, null, true,  true,  null],
         ['COMPLETED',   'erledigt',     'completed',   'done',      'green',   6, true,  false, null, true,  true,  null],
-        // Exception states: not columns, collected in the left-hand lane.
-        ['BLOCKED',     'blockiert',    'blocked',     'exception', 'rose',    7, false, false, null, false, false, null],
-        ['CONCERNED',   'problematisch','concerned',   'exception', 'red',     8, false, false, null, false, false, null],
+        // Exception states: not columns, collected in the left-hand lane
+        // (default_expanded = true → the lane is open by default, as before).
+        ['BLOCKED',     'blockiert',    'blocked',     'exception', 'rose',    7, false, true,  null, false, false, null],
+        ['CONCERNED',   'problematisch','concerned',   'exception', 'red',     8, false, true,  null, false, false, null],
     ];
 
     /**
