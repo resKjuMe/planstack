@@ -42,8 +42,8 @@ class ProjectSummaryController extends Controller
         // Projektübersicht). Für Gate-/Blocker-Logik gilt weiterhin isDelivered()
         // (ein offener PR schaltet Nachfolger frei), siehe phaseBlockers().
         $total = $tasks->count();
-        $done = $tasks->filter(fn ($t) => $this->board->isDone($t->status));
-        $remaining = $tasks->filter(fn ($t) => ! $this->board->isDone($t->status));
+        $done = $tasks->filter(fn ($t) => $this->board->isDone($t));
+        $remaining = $tasks->filter(fn ($t) => ! $this->board->isDone($t));
 
         $totalSp = (int) $tasks->sum('effort_story_points');
         $doneSp = (int) $done->sum('effort_story_points');
@@ -114,7 +114,7 @@ class ProjectSummaryController extends Controller
             $pt = $tasks->where('phase_id', $phase->id);
             $sp = max(1, (int) $pt->sum('effort_story_points'));
             // Fortschritt/„verbleibend" nur nach erledigt/gemergt (nicht offener PR).
-            $remaining = $pt->filter(fn ($t) => ! $this->board->isDone($t->status));
+            $remaining = $pt->filter(fn ($t) => ! $this->board->isDone($t));
 
             // Phases that hold unfinished prerequisites of this phase's tasks.
             $blockers = $this->phaseBlockers($phase, $pt, $byId);

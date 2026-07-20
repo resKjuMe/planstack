@@ -38,7 +38,7 @@ class TaskBoardService
     public function decorate(Project $project): Collection
     {
         $tasks = $project->tasks()
-            ->with(['phase', 'claimer', 'prerequisites:id,name,status,pr_number'])
+            ->with(['phase', 'claimer', 'orgStatus', 'prerequisites:id,name,status,pr_number'])
             ->orderBy('id')
             ->get();
 
@@ -156,24 +156,35 @@ class TaskBoardService
      * done marker (✓, muted node, "hide done" toggle) only. Progress KPIs and
      * gate satisfaction use isDelivered(), which also counts an open PR.
      */
-    public function isDone(?TaskStatus $status): bool
+    /**
+     * Whether a status counts as "done". Config-authoritative: when passed a
+     * Task, the organisation's status flag (counts_as_done on the task's
+     * status_id) decides; a raw TaskStatus (e.g. a prerequisite loaded without
+     * status_id) or null falls back to the canonical COMPLETED/MERGED enum.
+     */
+    public function isDone(Task|TaskStatus|null $status): bool
     {
-        // Null when a task sits in a custom (org-defined) status with no ENUM
-        // value — the legacy enum-based progress paths must treat that as "not
-        // done" rather than crash. (Custom statuses flagged counts_as_done drive
-        // the board via status_id, not this enum path.)
-        return $status !== null && in_array($status, [TaskStatus::COMPLETED, TaskStatus::MERGED], true);
+        if ($status instanceof Task) {
+            $orgStatus = $status->orgStatus;
+            if ($orgStatus !== null) {
+                return (bool) $orgStatus->counts_as_done;
+            }
+
+            return $status->status?->isDone() ?? false;
+        }
+
+        return $status?->isDone() ?? false;
     }
 
     /**
      * Whether a task counts as delivered: it has a PR (an open PR already counts)
-     * or is COMPLETED/MERGED. Used both for progress KPIs and for satisfying
-     * dependents' gates — an open PR keeps the task IN_PROGRESS ("in Arbeit") yet
-     * already contributes to progress and unblocks its dependents.
+     * or its status is "done". Used both for progress KPIs and for satisfying
+     * dependents' gates — an open PR keeps the task in progress yet already
+     * contributes to progress and unblocks its dependents.
      */
     public function isDelivered(Task $task): bool
     {
-        return $task->pr_number !== null || $this->isDone($task->status);
+        return $task->pr_number !== null || $this->isDone($task);
     }
 
     public function formatTokens(?int $tokens): string

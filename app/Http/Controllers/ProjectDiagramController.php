@@ -52,7 +52,7 @@ class ProjectDiagramController extends Controller
             // Fortschritt zählt nur erledigte/gemergte Tasks (COMPLETED/MERGED) —
             // deckungsgleich mit Projektübersicht und Summary; ein offener PR gilt
             // nicht als Fortschritt (Gate-/Kanten-Logik nutzt weiter isDelivered()).
-            $done = (int) $pt->filter(fn ($t) => $this->board->isDone($t->status))->sum('effort_story_points');
+            $done = (int) $pt->filter(fn ($t) => $this->board->isDone($t))->sum('effort_story_points');
 
             $out[] = [
                 'id' => $phase->id,
@@ -141,7 +141,7 @@ class ProjectDiagramController extends Controller
                 // Phase membership drives the header-chip filter in diagram.js
                 // (null = task without a phase, never matched by a chip).
                 'phase' => $task->phase_id,
-                'done' => $this->board->isDone($task->status),
+                'done' => $this->board->isDone($task),
                 'sp' => (int) $task->effort_story_points,
                 'files' => $task->affected_files,
                 'pr' => $task->pr_number,
@@ -177,7 +177,7 @@ class ProjectDiagramController extends Controller
                 // A fully-done node (COMPLETED/MERGED) no longer blocks anyone,
                 // so it never carries the bottleneck badge — relevant now that
                 // merged nodes are drawn.
-                'bottleneck' => ! $this->board->isDone($task->status)
+                'bottleneck' => ! $this->board->isDone($task)
                     && $transitive[$task->id] > $threshold && $transitive[$task->id] >= 2,
             ];
         }
