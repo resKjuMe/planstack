@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
     DndContext,
     DragOverlay,
@@ -156,8 +156,21 @@ export default function Board({ data }) {
         [tasks, workflow, endpoints, csrf, t, collapse],
     );
 
+    // Last droppable the pointer was over during the drag — used as a fallback
+    // when the pointer is released just inside the gap between two (adjacent,
+    // same-group) columns, where pointerWithin would otherwise resolve to null.
+    const lastOverStatus = useRef(null);
+
     const onDragStart = useCallback((event) => {
+        lastOverStatus.current = null;
         setDragging({ taskId: event.active.id, from: event.active.data.current?.from });
+    }, []);
+
+    const onDragOver = useCallback((event) => {
+        const status = event.over?.data.current?.status;
+        if (status) {
+            lastOverStatus.current = status;
+        }
     }, []);
 
     const onDragEnd = useCallback(
@@ -165,7 +178,8 @@ export default function Board({ data }) {
             setDragging(null);
             const taskId = event.active?.id;
             const from = event.active?.data.current?.from;
-            const target = event.over?.data.current?.status;
+            const target = event.over?.data.current?.status ?? lastOverStatus.current;
+            lastOverStatus.current = null;
             if (taskId != null && from != null && target) {
                 performMove(taskId, from, target);
             }
@@ -360,8 +374,9 @@ export default function Board({ data }) {
                 collisionDetection={pointerWithin}
                 measuring={{ droppable: { strategy: MeasuringStrategy.Always } }}
                 onDragStart={onDragStart}
+                onDragOver={onDragOver}
                 onDragEnd={onDragEnd}
-                onDragCancel={() => setDragging(null)}
+                onDragCancel={() => { lastOverStatus.current = null; setDragging(null); }}
             >
                 <div
                     className="grid gap-3 pb-4 min-h-[65vh]"
