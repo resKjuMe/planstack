@@ -125,17 +125,19 @@ class ProjectController extends Controller
             ->with('status', __('flash.project_created', ['alias' => $project->alias]));
     }
 
-    public function show(Project $project): View
+    public function show(Project $project, \App\Support\BoardPresenter $presenter): View
     {
         $this->authorize('view', $project);
 
-        $project->load([
-            'owner',
-            'phases',
-            'tasks' => fn ($q) => $q->with(['claimer', 'concern'])->orderBy('name'),
-        ]);
+        $project->load(['owner', 'phases']);
 
-        return view('projects.show', compact('project'));
+        // The board itself is a React app hydrated from this payload (tasks +
+        // workflow config + view context). TaskBoardService/BoardPresenter build
+        // the same shape the drag-and-drop move endpoint returns.
+        return view('projects.show', [
+            'project' => $project,
+            'boardData' => $presenter->payload($project),
+        ]);
     }
 
     /**

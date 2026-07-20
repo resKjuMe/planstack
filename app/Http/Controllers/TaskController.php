@@ -7,11 +7,22 @@ use App\Http\Requests\StoreTaskRequest;
 use App\Http\Requests\UpdateTaskRequest;
 use App\Models\Project;
 use App\Models\Task;
+use App\Support\BoardPresenter;
+use App\Support\BoardWorkflow;
+use App\Support\TaskBoardService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
+use Illuminate\Validation\Rules\Enum;
 use Illuminate\View\View;
 
 class TaskController extends Controller
 {
+    public function __construct(
+        private readonly TaskBoardService $board,
+        private readonly BoardPresenter $presenter,
+    ) {}
+
     public function create(Project $project): View
     {
         $this->authorize('contribute', $project);
@@ -140,5 +151,61 @@ class TaskController extends Controller
         $task->update(['reviewed_by' => $user->id]);
 
         return back()->with('status', __('flash.review_claimed', ['name' => $task->name]));
+    }
+
+    /**
+     * Board drag-and-drop status change. Validates the transition server-side
+     * against the *derived* board status (the column the card visually sits in)
+     * and returns the updated task as JSON. Rejected transitions → 422 so the
+     * React board can snap the card back and show a toast.
+     *
+     * The card's status change is authoritative here; the display status is
+     * re-derived from gates afterwards (a card dropped into PICKABLE with an
+     * unmet gate will correctly come back as BLOCKED).
+     */
+    public function move(Request $request, Project $project, Task $task): JsonResponse
+    {
+        $this->authorize('update', $task);
+
+        $data = $request->validate([
+            'status' => ['required', new Enum(TaskStatus::class)],
+        ]);
+        $target = TaskStatus::from($data['status']);
+
+        $current = $this->board->decorate($project)
+            ->firstWhere('id', $task->id)?->x_display_status ?? $task->status;
+
+        if (! BoardWorkflow::canTransition($current, $target)) {
+            return response()->json([
+                'message' => __('board.move_forbidden', [
+                    'from' => $current->label(),
+                    'to' => $target->label(),
+                ]),
+            ], 422);
+        }
+
+        // Side effects mirror the claim toggle and update()'s merged_at stamping,
+        // so a drop into CLAIMED/PICKABLE/MERGED behaves like the dedicated action.
+        $attrs = ['status' => $target->value];
+
+        if ($target === TaskStatus::CLAIMED && $task->claimed_by_id === null) {
+            $attrs['claimed_by_id'] = $request->user()->id;
+            $attrs['claimed_at'] = now();
+        } elseif ($target === TaskStatus::PICKABLE) {
+            $attrs['claimed_by_id'] = null;
+            $attrs['claimed_at'] = null;
+        }
+
+        if ($target === TaskStatus::MERGED && $task->merged_at === null) {
+            $attrs['merged_at'] = now();
+        }
+
+        $task->update($attrs);
+
+        $fresh = $this->board->board($project)->firstWhere('id', $task->id);
+
+        return response()->json([
+            'task' => $this->presenter->task($fresh, $project, $request->user()->id),
+        ]);
     }
 }

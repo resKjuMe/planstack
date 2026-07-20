@@ -155,6 +155,11 @@ Route::middleware('auth')->group(function () {
         ->scopeBindings()
         ->name('projects.tasks.claim');
 
+    // Board drag-and-drop status change (JSON; transition validated server-side)
+    Route::post('projects/{project}/tasks/{task}/board-move', [TaskController::class, 'move'])
+        ->scopeBindings()
+        ->name('projects.tasks.board-move');
+
     // Claim the review of a task (sets reviewed_by to the current user).
     Route::post('projects/{project}/tasks/{task}/review-claim', [TaskController::class, 'reviewClaim'])
         ->scopeBindings()
