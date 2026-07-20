@@ -39,7 +39,6 @@
                         <div class="w-28">{{ __('board_admin.col_key') }}</div>
                         <div class="w-36">{{ __('board_admin.col_label') }}</div>
                         <div class="w-36">{{ __('board_admin.col_label_en') }}</div>
-                        <div class="w-10">{{ __('board_admin.col_color') }}</div>
                         <div class="w-14 text-center">{{ __('board_admin.col_is_column') }}</div>
                         <div class="w-16 text-center">{{ __('board_admin.col_expanded') }}</div>
                         <div class="w-16">{{ __('board_admin.col_wip') }}</div>
@@ -63,25 +62,27 @@
                                   class="flex flex-1 items-center gap-3">
                                 @csrf
                                 @method('PATCH')
-                                <div class="w-28 font-mono text-xs text-gray-500 dark:text-gray-400 truncate">{{ $status->key }}</div>
+                                {{-- Farbpunkt (Klick öffnet Flyout) + Schlüssel --}}
+                                <div class="flex w-28 items-center gap-2">
+                                    <div class="relative shrink-0">
+                                        <input type="hidden" name="color_token" x-bind:value="color">
+                                        <button type="button" x-on:click="pickerOpen = !pickerOpen" title="{{ __('board_admin.col_color') }}" class="p-1">
+                                            <span class="block h-2 w-2 rounded-full" x-bind:class="swatch[color]"></span>
+                                        </button>
+                                        <div x-show="pickerOpen" x-cloak x-on:click.outside="pickerOpen = false"
+                                             class="absolute z-10 mt-1 grid grid-cols-7 gap-1.5 rounded-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-2 shadow-lg">
+                                            @foreach ($colors as $token)
+                                                <button type="button" title="{{ $token }}"
+                                                        x-on:click="color = '{{ $token }}'; pickerOpen = false"
+                                                        class="h-5 w-5 rounded-full {{ $swatch[$token] }}"
+                                                        x-bind:class="color === '{{ $token }}' ? 'ring-2 ring-offset-1 ring-gray-800 dark:ring-gray-200 dark:ring-offset-gray-800' : ''"></button>
+                                            @endforeach
+                                        </div>
+                                    </div>
+                                    <span class="font-mono text-xs text-gray-500 dark:text-gray-400 truncate">{{ $status->key }}</span>
+                                </div>
                                 <input type="text" name="label" value="{{ $status->label }}" required maxlength="255" class="{{ $inputClass }} w-36">
                                 <input type="text" name="label_en" value="{{ $status->label_en }}" maxlength="255" class="{{ $inputClass }} w-36">
-                                {{-- Farb-Picker: nur der farbige Punkt; Klick öffnet das Flyout --}}
-                                <div class="relative w-10">
-                                    <input type="hidden" name="color_token" x-bind:value="color">
-                                    <button type="button" x-on:click="pickerOpen = !pickerOpen" title="{{ __('board_admin.col_color') }}" class="p-1">
-                                        <span class="block h-2 w-2 rounded-full" x-bind:class="swatch[color]"></span>
-                                    </button>
-                                    <div x-show="pickerOpen" x-cloak x-on:click.outside="pickerOpen = false"
-                                         class="absolute z-10 mt-1 grid grid-cols-7 gap-1.5 rounded-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-2 shadow-lg">
-                                        @foreach ($colors as $token)
-                                            <button type="button" title="{{ $token }}"
-                                                    x-on:click="color = '{{ $token }}'; pickerOpen = false"
-                                                    class="h-5 w-5 rounded-full {{ $swatch[$token] }}"
-                                                    x-bind:class="color === '{{ $token }}' ? 'ring-2 ring-offset-1 ring-gray-800 dark:ring-gray-200 dark:ring-offset-gray-800' : ''"></button>
-                                        @endforeach
-                                    </div>
-                                </div>
                                 <input type="hidden" name="position" value="{{ $status->position }}">
                                 <div class="w-14 text-center">
                                     <input type="checkbox" name="is_column" value="1" @checked($status->is_column)
