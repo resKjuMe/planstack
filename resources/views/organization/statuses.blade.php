@@ -171,7 +171,7 @@
                 {{-- Neuer Status: gleiches Spaltenraster wie Kopf/Zeilen --}}
                 <form method="POST" action="{{ route('organization.statuses.store') }}"
                       x-data="{ pickerOpen: false, color: 'indigo', swatch: @js($swatch) }"
-                      class="{{ $grid }} mt-3 rounded-md border-2 border-dashed border-gray-200 dark:border-gray-700 px-1 py-3">
+                      class="{{ $grid }} border-t-2 border-dashed border-gray-200 dark:border-gray-700 py-3">
                     @csrf
                     <span class="text-center text-lg leading-none text-indigo-500" aria-hidden>＋</span>
                     {{-- Farbpunkt + Art (kein Schlüssel: wird automatisch vergeben) --}}
