@@ -1,9 +1,9 @@
 @php $ciVersion = config('planstack_ci.version'); @endphp
 <x-app-layout>
     <x-slot name="header">
-        <h2 class="font-semibold text-xl text-gray-800 leading-tight">
+        <h2 class="font-semibold text-xl text-gray-800 dark:text-gray-100 leading-tight">
             {{ __('ci.planstack_ci_status') }}
-            <span class="ms-1 text-sm font-normal text-gray-400">v{{ $ciVersion }}</span>
+            <span class="ms-1 text-sm font-normal text-gray-400 dark:text-gray-500">v{{ $ciVersion }}</span>
         </h2>
     </x-slot>
 
@@ -46,6 +46,20 @@
       .psci .copybtn { float:right; cursor:pointer; font-size:.8rem; font-weight:600; color:var(--brand);
                  background:#fff; border:1px solid var(--brand); border-radius:6px; padding:4px 10px; margin:0 0 8px 8px; }
       .psci .copybtn:hover { background:#eef2ff; }
+
+      /* Dark-Mode: gedaempfte Dunkelwerte, Basisregeln unangetastet */
+      .dark .psci { --card:#1f2937; --ink:#f3f4f6; --muted:#9ca3af; --line:#374151;
+              --brand:#6366f1; --ok:#3fb950; --code:#0d1117; }
+      .dark .psci .dot { background:#6b7280; }
+      .dark .psci .dot.down { background:#f85149; }
+      .dark .psci code { background:#30363d; color:#e6edf3; }
+      .dark .psci pre code { background:none; color:inherit; }
+      .dark .psci a.btn.sec { background:transparent; }
+      .dark .psci .tab { background:#111827; }
+      .dark .psci .qtab { background:#111827; }
+      .dark .psci .kbd { background:#111827; }
+      .dark .psci .copybtn { background:transparent; }
+      .dark .psci .copybtn:hover { background:#312e81; }
     </style>
 
     <div class="psci max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">

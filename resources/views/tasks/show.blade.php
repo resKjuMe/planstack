@@ -28,12 +28,12 @@
     <x-slot name="header">
         <div class="flex flex-wrap items-center justify-between gap-3">
             <div class="flex flex-wrap items-center gap-2">
-                <a href="{{ route('projects.show', $project) }}" class="font-mono text-sm text-gray-400 hover:text-gray-600">{{ $project->alias }}</a>
-                <span class="text-gray-300">/</span>
-                <span class="rounded-md bg-gray-100 px-2 py-0.5 font-mono text-sm font-semibold text-gray-800">{{ $task->name }}</span>
+                <a href="{{ route('projects.show', $project) }}" class="font-mono text-sm text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300">{{ $project->alias }}</a>
+                <span class="text-gray-300 dark:text-gray-600">/</span>
+                <span class="rounded-md bg-gray-100 dark:bg-gray-700 px-2 py-0.5 font-mono text-sm font-semibold text-gray-800 dark:text-gray-100">{{ $task->name }}</span>
                 <x-task-status :status="$task->status" :label="true" />
                 @if ($rec)
-                    <span class="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold {{ $isApprove ? 'bg-green-100 text-green-700' : ($isChanges ? 'bg-amber-100 text-amber-800' : 'bg-gray-100 text-gray-500') }}">
+                    <span class="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold {{ $isApprove ? 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300' : ($isChanges ? 'bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-300' : 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400') }}">
                         @if ($isApprove)
                             <svg viewBox="0 0 24 24" class="h-3.5 w-3.5" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path d="M5 12l5 5l10 -10"/></svg>
                         @elseif ($isChanges)
@@ -55,7 +55,7 @@
                         {{-- Freigeben bei offenem Concern gesperrt (Tooltip, da native title auf disabled-Buttons unzuverlässig). --}}
                         <span class="relative inline-block" x-data="{ tip: false }" @mouseenter="tip = true" @mouseleave="tip = false">
                             <button type="button" disabled
-                                    class="cursor-not-allowed rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-400 opacity-60 ring-1 ring-gray-300">{{ __('common.release') }}</button>
+                                    class="cursor-not-allowed rounded-md bg-white dark:bg-gray-800 px-3 py-2 text-sm font-semibold text-gray-400 dark:text-gray-500 opacity-60 ring-1 ring-gray-300 dark:ring-gray-600">{{ __('common.release') }}</button>
                             <span x-show="tip" x-cloak
                                   class="absolute right-0 top-full z-10 mt-1 w-56 rounded-md bg-gray-900 px-2.5 py-1.5 text-xs text-white shadow-lg">
                                 {{ __('tasks.cannot_be_released_while_a_concern_is') }}
@@ -64,7 +64,7 @@
                     @else
                         <form method="POST" action="{{ route('projects.tasks.claim', [$project, $task]) }}">
                             @csrf
-                            <button class="rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-700 ring-1 ring-gray-300 hover:bg-gray-50">
+                            <button class="rounded-md bg-white dark:bg-gray-800 px-3 py-2 text-sm font-semibold text-gray-700 dark:text-gray-300 ring-1 ring-gray-300 dark:ring-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700/50">
                                 {{ $claimed ? __('common.release') : __('common.claim') }}
                             </button>
                         </form>
@@ -85,9 +85,9 @@
             {{-- Titel + Untertitel + Meta-Chips --}}
             <div class="space-y-3">
                 <div>
-                    <h1 class="text-xl font-semibold text-gray-900">{{ $title }}</h1>
+                    <h1 class="text-xl font-semibold text-gray-900 dark:text-gray-100">{{ $title }}</h1>
                     @if ($subtitle)
-                        <p class="mt-0.5 font-mono text-sm text-gray-400">{{ $subtitle }}</p>
+                        <p class="mt-0.5 font-mono text-sm text-gray-400 dark:text-gray-500">{{ $subtitle }}</p>
                     @endif
                 </div>
                 @include('tasks.partials._meta-chips', ['task' => $task, 'project' => $project])
@@ -103,11 +103,11 @@
                 {{-- Hauptspalte --}}
                 <div class="space-y-6 lg:col-span-8">
                     @if (filled($descClean))
-                        <section class="bg-white rounded-lg shadow p-6" @if ($descLong) x-data="disclosure({ id: 'beschreibung' })" id="beschreibung" @endif>
-                            <h3 class="mb-2 font-semibold text-gray-900">{{ __('common.description') }}</h3>
+                        <section class="bg-white dark:bg-gray-800 rounded-lg shadow p-6" @if ($descLong) x-data="disclosure({ id: 'beschreibung' })" id="beschreibung" @endif>
+                            <h3 class="mb-2 font-semibold text-gray-900 dark:text-gray-100">{{ __('common.description') }}</h3>
                             @if ($descLong)
                                 <div :class="open ? '' : 'line-clamp-[8]'"><x-markdown :content="$descClean" /></div>
-                                <button type="button" @click="toggle()" class="mt-2 text-sm font-medium text-indigo-600 hover:underline"
+                                <button type="button" @click="toggle()" class="mt-2 text-sm font-medium text-indigo-600 dark:text-indigo-400 hover:underline"
                                         x-text="open ? '{{ __('tasks.show_less') }}' : '{{ __('tasks.show_more') }}'"></button>
                             @else
                                 <x-markdown :content="$descClean" />
@@ -138,28 +138,28 @@
 
                 {{-- Sticky-Sidebar --}}
                 <div class="space-y-4 self-start lg:col-span-4 lg:sticky lg:top-6">
-                    <div class="bg-white rounded-lg shadow p-5 space-y-3 text-sm">
-                        <h3 class="font-semibold text-gray-900">{{ __('common.overview') }}</h3>
+                    <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-5 space-y-3 text-sm">
+                        <h3 class="font-semibold text-gray-900 dark:text-gray-100">{{ __('common.overview') }}</h3>
                         <div class="flex items-center justify-between">
-                            <span class="text-gray-400">{{ __('common.status') }}</span>
+                            <span class="text-gray-400 dark:text-gray-500">{{ __('common.status') }}</span>
                             <x-task-status :status="$task->status" :label="true" />
                         </div>
                         @if ($task->criticality)
                             <div class="flex items-center justify-between">
-                                <span class="text-gray-400">{{ __('tasks.criticality') }}</span>
+                                <span class="text-gray-400 dark:text-gray-500">{{ __('tasks.criticality') }}</span>
                                 <span class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold {{ $task->criticality->badgeClasses() }}">{{ $task->criticality->label() }}</span>
                             </div>
                         @endif
                         @if ($hasReview)
                             <div class="flex items-center justify-between">
-                                <span class="text-gray-400">{{ __('tasks.review') }}</span>
-                                <span class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold {{ $isApprove ? 'bg-green-100 text-green-700' : ($isChanges ? 'bg-amber-100 text-amber-800' : 'bg-gray-100 text-gray-500') }}">
+                                <span class="text-gray-400 dark:text-gray-500">{{ __('tasks.review') }}</span>
+                                <span class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold {{ $isApprove ? 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300' : ($isChanges ? 'bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-300' : 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400') }}">
                                     {{ $rec?->label() ?? __('tasks.pending') }}
                                 </span>
                             </div>
                         @endif
                         @if ($task->effort_story_points !== null)
-                            <div class="flex items-center justify-between"><span class="text-gray-400">{{ __('tasks.effort') }}</span><span class="text-gray-700">{{ __('tasks.points_sp', ['points' => $task->effort_story_points]) }}</span></div>
+                            <div class="flex items-center justify-between"><span class="text-gray-400 dark:text-gray-500">{{ __('tasks.effort') }}</span><span class="text-gray-700 dark:text-gray-300">{{ __('tasks.points_sp', ['points' => $task->effort_story_points]) }}</span></div>
                         @endif
                     </div>
 
@@ -167,10 +167,10 @@
 
                     {{-- Leerer Concern: kleine Zeile statt Karte --}}
                     @unless ($concernOpen)
-                        <div class="flex items-center justify-between rounded-lg bg-white px-5 py-3 text-xs text-gray-500 shadow">
+                        <div class="flex items-center justify-between rounded-lg bg-white dark:bg-gray-800 px-5 py-3 text-xs text-gray-500 dark:text-gray-400 shadow">
                             <span>{{ __('tasks.no_concern') }}</span>
                             @can('update', $task)
-                                <a href="{{ route('projects.tasks.concern.edit', [$project, $task]) }}" class="font-medium text-indigo-600 hover:underline">{{ __('common.create') }}</a>
+                                <a href="{{ route('projects.tasks.concern.edit', [$project, $task]) }}" class="font-medium text-indigo-600 dark:text-indigo-400 hover:underline">{{ __('common.create') }}</a>
                             @endcan
                         </div>
                     @endunless

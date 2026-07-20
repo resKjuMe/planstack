@@ -1,6 +1,6 @@
 <x-guest-layout>
     @if (! empty($inviteOrganization))
-        <div class="mb-4 rounded-md border border-indigo-100 bg-indigo-50 p-3 text-sm text-indigo-800">
+        <div class="mb-4 rounded-md border border-indigo-100 dark:border-indigo-900/50 bg-indigo-50 dark:bg-indigo-900/30 p-3 text-sm text-indigo-800 dark:text-indigo-300">
             {{ __('auth.you_ll_automatically_be_added_to_the') }}
             <span class="font-semibold">{{ $inviteOrganization->name }}</span> {{ __('auth.after_signing_up') }}
         </div>
@@ -52,7 +52,7 @@
         </div>
 
         <div class="flex items-center justify-end mt-4">
-            <a class="underline text-sm text-gray-600 hover:text-gray-900 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500" href="{{ route('login') }}">
+            <a class="underline text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500" href="{{ route('login') }}">
                 {{ __('auth.already_registered') }}
             </a>
 

@@ -1,7 +1,7 @@
 <x-app-layout>
     <x-slot name="header">
         <div class="flex items-center justify-between">
-            <h2 class="font-semibold text-xl text-gray-800 leading-tight">{{ __('common.projects') }}</h2>
+            <h2 class="font-semibold text-xl text-gray-800 dark:text-gray-100 leading-tight">{{ __('common.projects') }}</h2>
             <a href="{{ route('projects.create') }}"
                class="inline-flex items-center whitespace-nowrap rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500">
                 + {{ __('projects.new_project') }}
@@ -14,17 +14,17 @@
             <x-flash />
 
             <div class="flex flex-wrap items-center justify-between gap-4">
-                <p class="text-sm text-gray-500">
+                <p class="text-sm text-gray-500 dark:text-gray-400">
                     {{ $activeCount }} {{ $activeCount === 1 ? __('projects.project') : __('common.projects') }}
                     · {{ __('projects.count_open_tasks', ['count' => number_format($openTasks, 0, ',', '.')]) }}
                     · {{ __('projects.count_story_points', ['count' => number_format($totalSp, 0, ',', '.')]) }}
                 </p>
                 <div class="relative">
-                    <svg class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                    <svg class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400 dark:text-gray-500" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
                         <path fill-rule="evenodd" d="M9 3.5a5.5 5.5 0 100 11 5.5 5.5 0 000-11zM2 9a7 7 0 1112.452 4.391l3.328 3.329a.75.75 0 11-1.06 1.06l-3.329-3.328A7 7 0 012 9z" clip-rule="evenodd" />
                     </svg>
                     <input type="search" x-model="q" placeholder="{{ __('projects.search_projects') }}"
-                           class="w-64 rounded-md border-0 bg-white py-2 pl-9 pr-3 text-sm text-gray-700 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-500">
+                           class="w-64 rounded-md border-0 bg-white dark:bg-gray-800 py-2 pl-9 pr-3 text-sm text-gray-700 dark:text-gray-300 shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-gray-600 placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:ring-2 focus:ring-inset focus:ring-indigo-500">
                 </div>
             </div>
 
@@ -39,14 +39,14 @@
                 ] as $key => $label)
                     <button type="button" @click="filter = '{{ $key }}'"
                             class="rounded-full px-4 py-1.5 text-sm font-medium transition"
-                            :class="filter === '{{ $key }}' ? 'bg-gray-900 text-white' : 'bg-white text-gray-600 ring-1 ring-gray-300 hover:bg-gray-50'">
+                            :class="filter === '{{ $key }}' ? 'bg-gray-900 text-white' : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 ring-1 ring-gray-300 dark:ring-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700/50'">
                         {{ $label }}
                     </button>
                 @endforeach
             </div>
 
             @if ($projects->isEmpty())
-                <div class="mt-6 bg-white rounded-lg shadow p-8 text-center text-gray-500">
+                <div class="mt-6 bg-white dark:bg-gray-800 rounded-lg shadow p-8 text-center text-gray-500 dark:text-gray-400">
                     {{ __('projects.no_projects_yet_create_your_first') }}
                 </div>
             @else
@@ -68,10 +68,10 @@
                                 'completed' => __('projects.completed'),
                             ][$category];
                             $badgeClass = [
-                                'nicht_gestartet' => 'bg-gray-100 text-gray-600',
-                                'in_arbeit' => 'bg-amber-100 text-amber-700',
-                                'fast_fertig' => 'bg-green-100 text-green-700',
-                                'completed' => 'bg-blue-100 text-blue-700',
+                                'nicht_gestartet' => 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400',
+                                'in_arbeit' => 'bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300',
+                                'fast_fertig' => 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300',
+                                'completed' => 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300',
                             ][$category];
                             $barClass = [
                                 'nicht_gestartet' => 'bg-gray-300',
@@ -110,9 +110,9 @@
                                  ein klickbares div, das Klicks auf echte Links durchlässt (siehe @click). --}}
                             <div x-data="{ hover: null }"
                                  @click="if (!$event.target.closest('a')) { window.location = @js(route('projects.diagram', $project)) }"
-                                 class="flex h-full cursor-pointer flex-col rounded-lg bg-white p-6 shadow transition hover:shadow-md">
+                                 class="flex h-full cursor-pointer flex-col rounded-lg bg-white dark:bg-gray-800 p-6 shadow transition hover:shadow-md">
                                 <div class="flex items-center justify-between">
-                                    <span class="inline-flex items-center rounded bg-gray-800 px-2 py-0.5 font-mono text-xs font-semibold text-white">
+                                    <span class="inline-flex items-center rounded bg-gray-800 dark:bg-gray-700 px-2 py-0.5 font-mono text-xs font-semibold text-white">
                                         {{ $project->alias }}
                                     </span>
                                     <span class="inline-flex items-center rounded-full px-3 py-1 text-xs font-medium {{ $badgeClass }}">
@@ -120,10 +120,10 @@
                                     </span>
                                 </div>
 
-                                <h3 class="mt-3 text-lg font-semibold text-gray-900">
+                                <h3 class="mt-3 text-lg font-semibold text-gray-900 dark:text-gray-100">
                                     <a href="{{ route('projects.diagram', $project) }}" class="hover:underline">{{ $project->name }}</a>
                                 </h3>
-                                <x-markdown :content="$project->description" class="mt-1 text-sm text-gray-500 line-clamp-2" />
+                                <x-markdown :content="$project->description" class="mt-1 text-sm text-gray-500 dark:text-gray-400 line-clamp-2" />
 
                                 {{-- mt-auto schiebt Fortschritt+Owner+Tasks als Block an den unteren
                                      Kachelrand — unabhängig davon, wie kurz Titel/Beschreibung sind.
@@ -131,14 +131,14 @@
                                 <div class="mt-auto pt-5">
                                     <div>
                                         <div class="flex items-center justify-between text-sm">
-                                            <span :class="hover ? hover.text : 'text-gray-500'"
+                                            <span :class="hover ? hover.text : 'text-gray-500 dark:text-gray-400'"
                                                   x-text="hover ? (hover.label + ' · ' + hover.count + ' / ' + @js($project->tasks_count) + ' ' + @js(__('common.tasks'))) : @js(__('common.progress'))">{{ __('common.progress') }}</span>
-                                            <span class="font-semibold" :class="hover ? hover.text : 'text-gray-900'"
+                                            <span class="font-semibold" :class="hover ? hover.text : 'text-gray-900 dark:text-gray-100'"
                                                   x-text="hover ? (hover.pct + ' % SP') : @js(number_format($pct, 1, ',', '').' %')">{{ number_format($pct, 1, ',', '') }} %</span>
                                         </div>
                                         <div class="relative mt-1.5">
                                             {{-- Sichtbarer dünner Balken --}}
-                                            <div class="flex h-1.5 overflow-hidden rounded-full bg-gray-100">
+                                            <div class="flex h-1.5 overflow-hidden rounded-full bg-gray-100 dark:bg-gray-700">
                                                 @foreach ($project->x_status_segments as $seg)
                                                     <div class="h-full {{ $seg['bar'] }}" style="width: {{ $seg['width'] }}%"></div>
                                                 @endforeach
@@ -162,15 +162,15 @@
                                             </span>
                                             {{-- Name + Teams: zusammen max. so hoch wie der Avatar (16px + 12px = 28px) --}}
                                             <div class="min-w-0">
-                                                <div class="truncate text-sm leading-4 text-gray-700">{{ $project->owner?->name }}</div>
+                                                <div class="truncate text-sm leading-4 text-gray-700 dark:text-gray-300">{{ $project->owner?->name }}</div>
                                                 @if ($project->teams->isNotEmpty())
-                                                    <div class="truncate text-xs leading-none text-gray-400" title="{{ $project->teams->pluck('name')->join(', ') }}">
+                                                    <div class="truncate text-xs leading-none text-gray-400 dark:text-gray-500" title="{{ $project->teams->pluck('name')->join(', ') }}">
                                                         {{ $project->teams->pluck('name')->join(', ') }}
                                                     </div>
                                                 @endif
                                             </div>
                                         </div>
-                                        <span class="shrink-0 whitespace-nowrap text-xs text-gray-400">{{ __('projects.count_tasks', ['count' => $project->tasks_count]) }} · {{ $sp }} SP</span>
+                                        <span class="shrink-0 whitespace-nowrap text-xs text-gray-400 dark:text-gray-500">{{ __('projects.count_tasks', ['count' => $project->tasks_count]) }} · {{ $sp }} SP</span>
                                     </div>
                                 </div>
                             </div>

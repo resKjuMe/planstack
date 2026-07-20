@@ -1,6 +1,6 @@
 <x-app-layout>
     <x-slot name="header">
-        <h2 class="font-semibold text-xl text-gray-800 leading-tight">
+        <h2 class="font-semibold text-xl text-gray-800 dark:text-gray-100 leading-tight">
             Projekt bearbeiten – <span class="font-mono">{{ $project->alias }}</span>
         </h2>
     </x-slot>
@@ -334,18 +334,18 @@
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
             <x-flash />
 
-            <div class="bg-white rounded-lg shadow p-6 space-y-3">
+            <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6 space-y-3">
                 <div class="flex items-start justify-between gap-4">
                     <div>
-                        <h3 class="font-semibold text-gray-800">{{ __('claude.claude_configuration') }}</h3>
-                        <p class="text-sm text-gray-500 mt-1">
+                        <h3 class="font-semibold text-gray-800 dark:text-gray-100">{{ __('claude.claude_configuration') }}</h3>
+                        <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
                             {{ __('claude.token_saving_switches_for_the_board') }} <span class="font-mono">v{{ $project->config_version }}</span>
                             {{ __('claude.header') }} <span class="font-mono">X-Planstack-Config-Version</span>{{ __('claude.without_an_extra_call') }}
                         </p>
                     </div>
-                    <span class="shrink-0 inline-flex items-center rounded-full bg-gray-100 px-3 py-1 text-xs font-mono text-gray-600">v{{ $project->config_version }}</span>
+                    <span class="shrink-0 inline-flex items-center rounded-full bg-gray-100 dark:bg-gray-700 px-3 py-1 text-xs font-mono text-gray-600 dark:text-gray-400">v{{ $project->config_version }}</span>
                 </div>
-                <p class="text-xs text-gray-400">
+                <p class="text-xs text-gray-400 dark:text-gray-500">
                     {{ __('claude.token_load_per_option') }} {{ $badge('g') }} {{ __('claude.low') }} · {{ $badge('y') }} {{ __('claude.medium') }} · {{ $badge('r') }} {{ __('claude.high') }}.
                 </p>
             </div>
@@ -375,16 +375,16 @@
                             'con' => 'claude.highest_token_usage_the_continuous'],
                     ];
                 @endphp
-                <div class="bg-white rounded-lg shadow p-6" x-data="{ help: false }">
+                <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6" x-data="{ help: false }">
                     <input type="hidden" name="profile" :value="profile" />
                     <div class="flex items-center gap-4">
-                        <label class="w-52 shrink-0 text-sm font-medium text-gray-700">{{ __('claude.profile_preset') }}</label>
+                        <label class="w-52 shrink-0 text-sm font-medium text-gray-700 dark:text-gray-300">{{ __('claude.profile_preset') }}</label>
                         <div class="flex-1 flex flex-wrap items-center justify-end gap-2">
                             @foreach ($profilePills as $val => $p)
                                 <button type="button" @click="profile = '{{ $val }}'"
                                         :class="profile === '{{ $val }}'
-                                            ? 'border-indigo-500 bg-indigo-50 text-indigo-700 ring-1 ring-indigo-500'
-                                            : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'"
+                                            ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400 ring-1 ring-indigo-500'
+                                            : 'border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/50'"
                                         class="inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium">
                                     <span class="h-2 w-2 rounded-full {{ $p['dot'] }}"></span>
                                     {{ __($p['label']) }}
@@ -393,24 +393,24 @@
                         </div>
                         <button type="button" @click="help = ! help" :aria-expanded="help"
                                 aria-label="{{ __('claude.explanation_of_the_presets') }}" title="{{ __('common.show_hide_explanation') }}"
-                                class="shrink-0 text-gray-400 hover:text-indigo-600 focus:outline-none">
+                                class="shrink-0 text-gray-400 dark:text-gray-500 hover:text-indigo-600 dark:hover:text-indigo-400 focus:outline-none">
                             <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg>
                         </button>
                     </div>
 
                     <div x-show="help" style="display:none"
-                         class="mt-3 rounded-lg border border-gray-200 bg-gray-50 p-4 text-sm leading-relaxed text-gray-600">
+                         class="mt-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 p-4 text-sm leading-relaxed text-gray-600 dark:text-gray-400">
                         <p>{{ __('claude.a_preset_sets_the_base_values_of_all') }}</p>
                         <ul class="mt-3 space-y-2.5">
                             @foreach ($profilePills as $val => $p)
                                 <li>
-                                    <div class="flex items-center gap-1.5 font-medium text-gray-800">
+                                    <div class="flex items-center gap-1.5 font-medium text-gray-800 dark:text-gray-100">
                                         <span class="h-2 w-2 rounded-full {{ $p['dot'] }}"></span>
                                         {{ __($p['label']) }}
                                     </div>
                                     <div class="ms-3.5">{{ __($p['desc']) }}</div>
-                                    <div class="ms-3.5"><span class="font-medium text-green-700">{{ __('claude.pro') }}</span> {{ __($p['pro']) }}</div>
-                                    <div class="ms-3.5"><span class="font-medium text-rose-700">{{ __('claude.con') }}</span> {{ __($p['con']) }}</div>
+                                    <div class="ms-3.5"><span class="font-medium text-green-700 dark:text-green-300">{{ __('claude.pro') }}</span> {{ __($p['pro']) }}</div>
+                                    <div class="ms-3.5"><span class="font-medium text-rose-700 dark:text-rose-300">{{ __('claude.con') }}</span> {{ __($p['con']) }}</div>
                                 </li>
                             @endforeach
                         </ul>
@@ -419,34 +419,34 @@
                     <x-input-error :messages="$errors->get('profile')" class="mt-2" />
                 </div>
 
-                <div class="bg-white rounded-lg shadow p-6">
+                <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
                     <div class="flex items-baseline justify-between gap-4">
-                        <h4 class="font-semibold text-gray-700">{{ __('claude.estimated_token_usage_compared_to_the') }}</h4>
-                        <span class="shrink-0 text-lg font-bold text-gray-800" x-text="'× ' + tokenRatio().toFixed(1)"></span>
+                        <h4 class="font-semibold text-gray-700 dark:text-gray-300">{{ __('claude.estimated_token_usage_compared_to_the') }}</h4>
+                        <span class="shrink-0 text-lg font-bold text-gray-800 dark:text-gray-100" x-text="'× ' + tokenRatio().toFixed(1)"></span>
                     </div>
-                    <div class="mt-3 h-3 w-full overflow-hidden rounded-full bg-gray-100">
+                    <div class="mt-3 h-3 w-full overflow-hidden rounded-full bg-gray-100 dark:bg-gray-700">
                         <div class="h-full rounded-full transition-all duration-300"
                              :class="tokenBarClass()" :style="'width: ' + Math.max(2, tokenPct()) + '%'"></div>
                     </div>
-                    <div class="mt-2 flex items-center justify-between text-xs text-gray-400">
+                    <div class="mt-2 flex items-center justify-between text-xs text-gray-400 dark:text-gray-500">
                         <span>{{ __('claude.minimal_1_0') }}</span>
                         <span>{{ __('claude.maximal') }}</span>
                     </div>
-                    <p class="mt-2 text-xs text-gray-400">
+                    <p class="mt-2 text-xs text-gray-400 dark:text-gray-500">
                         {{ __('claude.rough_estimate_of_the_board_task') }} <span class="font-medium">{{ __('claude.execution_model') }}</span> {{ __('claude.and') }} <span class="font-medium">{{ __('claude.context_between_tasks') }}</span>.
                     </p>
                 </div>
 
                 @foreach ($groups as $groupTitle => $settings)
-                    <div class="bg-white rounded-lg shadow p-6">
-                        <h4 class="font-semibold text-gray-700">{{ __($groupTitle) }}</h4>
-                        <p class="text-sm text-gray-500 mt-0.5 mb-2">{{ isset($groupDescriptions[$groupTitle]) ? __($groupDescriptions[$groupTitle]) : '' }}</p>
-                        <div class="divide-y divide-gray-100">
+                    <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+                        <h4 class="font-semibold text-gray-700 dark:text-gray-300">{{ __($groupTitle) }}</h4>
+                        <p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5 mb-2">{{ isset($groupDescriptions[$groupTitle]) ? __($groupDescriptions[$groupTitle]) : '' }}</p>
+                        <div class="divide-y divide-gray-100 dark:divide-gray-700">
                             @foreach ($settings as $s)
                                 @php $key = $s['key']; @endphp
                                 <div class="py-3" x-data="{ help: false }">
                                     <div class="flex items-center gap-4">
-                                        <label for="f-{{ $key }}" class="w-52 shrink-0 text-sm font-medium text-gray-700">{{ __($s['label']) }}</label>
+                                        <label for="f-{{ $key }}" class="w-52 shrink-0 text-sm font-medium text-gray-700 dark:text-gray-300">{{ __($s['label']) }}</label>
 
                                         <div class="flex-1 flex flex-wrap items-center justify-end gap-3">
                                             @if ($s['type'] === 'int')
@@ -454,8 +454,8 @@
                                                 {{-- Standard zurücksetzen --}}
                                                 <button type="button" @click="select('{{ $key }}', '')"
                                                         :class="isSelected('{{ $key }}', '')
-                                                            ? 'border-indigo-500 bg-indigo-50 text-indigo-700 ring-1 ring-indigo-500'
-                                                            : 'border-gray-300 bg-white text-gray-500 hover:bg-gray-50'"
+                                                            ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400 ring-1 ring-indigo-500'
+                                                            : 'border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700/50'"
                                                         class="inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium">
                                                     <span x-text="@js(__('claude.default')) + ' ' + defaultOptLabel('{{ $key }}')"></span>
                                                 </button>
@@ -463,15 +463,15 @@
                                                        :value="values['{{ $key }}'] !== '' ? values['{{ $key }}'] : defaultVal('{{ $key }}')"
                                                        @input="values['{{ $key }}'] = $event.target.value"
                                                        class="w-48 accent-indigo-600" />
-                                                <span class="w-7 text-right text-sm font-semibold text-gray-800"
+                                                <span class="w-7 text-right text-sm font-semibold text-gray-800 dark:text-gray-100"
                                                       x-text="values['{{ $key }}'] !== '' ? values['{{ $key }}'] : defaultVal('{{ $key }}')"></span>
                                             @else
                                                 <input type="hidden" name="overrides[{{ $key }}]" :value="values['{{ $key }}']" />
                                                 {{-- Profil-Standard --}}
                                                 <button type="button" @click="select('{{ $key }}', '')"
                                                         :class="isSelected('{{ $key }}', '')
-                                                            ? 'border-indigo-500 bg-indigo-50 text-indigo-700 ring-1 ring-indigo-500'
-                                                            : 'border-gray-300 bg-white text-gray-500 hover:bg-gray-50'"
+                                                            ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400 ring-1 ring-indigo-500'
+                                                            : 'border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700/50'"
                                                         class="inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium">
                                                     <span class="h-2 w-2 rounded-full" :class="dotClass(defaultToken('{{ $key }}'))"></span>
                                                     <span x-text="@js(__('claude.default')) + ' ' + defaultOptLabel('{{ $key }}')"></span>
@@ -480,8 +480,8 @@
                                                 @foreach ($s['options'] as $val => $opt)
                                                     <button type="button" @click="select('{{ $key }}', '{{ $val }}')"
                                                             :class="isSelected('{{ $key }}', '{{ $val }}')
-                                                                ? 'border-indigo-500 bg-indigo-50 text-indigo-700 ring-1 ring-indigo-500'
-                                                                : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'"
+                                                                ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400 ring-1 ring-indigo-500'
+                                                                : 'border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/50'"
                                                             class="inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium">
                                                         <span class="h-2 w-2 rounded-full {{ $dot($opt['token']) }}"></span>
                                                         {{ __($opt['label']) }}
@@ -492,25 +492,25 @@
 
                                         <button type="button" @click="help = ! help" :aria-expanded="help"
                                                 aria-label="{{ __('claude.explanation_of_label', ['label' => __($s['label'])]) }}" title="{{ __('common.show_hide_explanation') }}"
-                                                class="shrink-0 text-gray-400 hover:text-indigo-600 focus:outline-none">
+                                                class="shrink-0 text-gray-400 dark:text-gray-500 hover:text-indigo-600 dark:hover:text-indigo-400 focus:outline-none">
                                             <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg>
                                         </button>
                                     </div>
 
                                     <div x-show="help" style="display:none"
-                                         class="mt-3 rounded-lg border border-gray-200 bg-gray-50 p-4 text-sm leading-relaxed text-gray-600">
+                                         class="mt-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 p-4 text-sm leading-relaxed text-gray-600 dark:text-gray-400">
                                         <p>{{ __($s['desc']) }}</p>
                                         @if (! empty($s['options']))
                                             <ul class="mt-3 space-y-2.5">
                                                 @foreach ($s['options'] as $val => $opt)
                                                     <li>
-                                                        <div class="flex items-center gap-1.5 font-medium text-gray-800">
+                                                        <div class="flex items-center gap-1.5 font-medium text-gray-800 dark:text-gray-100">
                                                             <span class="h-2 w-2 rounded-full {{ $dot($opt['token']) }}"></span>
                                                             {{ __($opt['label']) }}
-                                                            <span class="font-normal text-gray-400">· {{ __('claude.token_load') }} {{ $badgeWord($opt['token']) }}</span>
+                                                            <span class="font-normal text-gray-400 dark:text-gray-500">· {{ __('claude.token_load') }} {{ $badgeWord($opt['token']) }}</span>
                                                         </div>
-                                                        <div class="ms-3.5"><span class="font-medium text-green-700">{{ __('claude.pro') }}</span> {{ __($opt['pro']) }}</div>
-                                                        <div class="ms-3.5"><span class="font-medium text-rose-700">{{ __('claude.con') }}</span> {{ __($opt['con']) }}</div>
+                                                        <div class="ms-3.5"><span class="font-medium text-green-700 dark:text-green-300">{{ __('claude.pro') }}</span> {{ __($opt['pro']) }}</div>
+                                                        <div class="ms-3.5"><span class="font-medium text-rose-700 dark:text-rose-300">{{ __('claude.con') }}</span> {{ __($opt['con']) }}</div>
                                                     </li>
                                                 @endforeach
                                             </ul>
@@ -524,12 +524,12 @@
                     </div>
                 @endforeach
 
-                <div class="bg-white rounded-lg shadow p-6">
-                    <h4 class="font-semibold text-gray-700 mb-2">{{ __('claude.active_client_hints') }}</h4>
+                <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+                    <h4 class="font-semibold text-gray-700 dark:text-gray-300 mb-2">{{ __('claude.active_client_hints') }}</h4>
                     <template x-if="liveHints().length">
                         <div>
-                            <p class="text-sm text-gray-500 mb-2">{{ __('claude.the_server_transmits_these_deviations') }}</p>
-                            <ul class="text-sm font-mono text-gray-600 space-y-1">
+                            <p class="text-sm text-gray-500 dark:text-gray-400 mb-2">{{ __('claude.the_server_transmits_these_deviations') }}</p>
+                            <ul class="text-sm font-mono text-gray-600 dark:text-gray-400 space-y-1">
                                 <template x-for="h in liveHints()" :key="h.key">
                                     <li x-text="h.key + ' = ' + h.value"></li>
                                 </template>
@@ -537,24 +537,24 @@
                         </div>
                     </template>
                     <template x-if="! liveHints().length">
-                        <p class="text-sm text-gray-500">{{ __('claude.none_the_client_uses_its_built_in') }}</p>
+                        <p class="text-sm text-gray-500 dark:text-gray-400">{{ __('claude.none_the_client_uses_its_built_in') }}</p>
                     </template>
 
-                    <div class="mt-5 border-t border-gray-100 pt-5">
+                    <div class="mt-5 border-t border-gray-100 dark:border-gray-700 pt-5">
                         <x-input-label for="skill_description" :value="__('claude.skill_instructions_skill_md')" />
-                        <p class="mt-1 mb-2 text-xs text-gray-400">
+                        <p class="mt-1 mb-2 text-xs text-gray-400 dark:text-gray-500">
                             {{ __('claude.the_skill_receives_these_instructions') }} <span class="font-mono">v{{ $project->config_version }}</span>{{ __('claude.and_are_reloaded_automatically_by_the') }} <span class="font-mono">/config → instructions</span>{{ __('common.text') }}
                             <span class="font-mono">@{{alias}}</span> {{ __('claude.and') }} <span class="font-mono">@{{name}}</span> {{ __('claude.are_replaced_by_the_key_and_name') }}
                         </p>
                         <textarea id="skill_description" name="skill_description" rows="14" spellcheck="false"
-                                  class="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 font-mono text-xs"
+                                  class="block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 font-mono text-xs"
                                   :placeholder='__('claude.skill_instructions_for_this_project')'>{{ old('skill_description', $skillText) }}</textarea>
                         <x-input-error :messages="$errors->get('skill_description')" class="mt-2" />
                     </div>
                 </div>
 
                 <div class="flex items-center justify-end gap-3">
-                    <a href="{{ route('projects.show', $project) }}" class="text-sm text-gray-500 hover:text-gray-700">{{ __('common.cancel') }}</a>
+                    <a href="{{ route('projects.show', $project) }}" class="text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200">{{ __('common.cancel') }}</a>
                     <x-primary-button>{{ __('common.save') }}</x-primary-button>
                 </div>
             </form>

@@ -12,47 +12,47 @@
         @forelse ($changes as $entry)
             @php $date = $entry['when']->format('d.m.Y'); @endphp
             @if ($date !== $lastDate)
-                <div class="{{ $loop->first ? '' : 'pt-4' }} text-xs font-medium text-gray-400">{{ $date }}</div>
+                <div class="{{ $loop->first ? '' : 'pt-4' }} text-xs font-medium text-gray-400 dark:text-gray-500">{{ $date }}</div>
                 @php $lastDate = $date; @endphp
             @endif
 
-            <div x-data="{ open: false }" class="rounded-xl bg-white p-3 ring-1 ring-gray-200">
+            <div x-data="{ open: false }" class="rounded-xl bg-white dark:bg-gray-800 p-3 ring-1 ring-gray-200 dark:ring-gray-700">
                 <button type="button" @click="open = !open" class="flex w-full items-center gap-3 text-left">
-                    <span class="w-10 shrink-0 text-xs text-gray-400">{{ $entry['when']->format('H:i') }}</span>
-                    <span class="flex-1 text-sm text-gray-800">
+                    <span class="w-10 shrink-0 text-xs text-gray-400 dark:text-gray-500">{{ $entry['when']->format('H:i') }}</span>
+                    <span class="flex-1 text-sm text-gray-800 dark:text-gray-100">
                         @foreach ($entry['headline'] as $seg)
                             @switch($seg['t'])
                                 @case('text')
                                     {{ $seg['v'] }}
                                     @break
                                 @case('tag')
-                                    <span class="font-mono font-medium text-indigo-600">{{ $seg['v'] }}</span>
+                                    <span class="font-mono font-medium text-indigo-600 dark:text-indigo-400">{{ $seg['v'] }}</span>
                                     @break
                                 @case('status')
                                     <span class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium {{ $seg['cls'] }}">{{ $seg['v'] }}</span>
                                     @break
                                 @case('quote')
-                                    <span class="text-gray-500">&bdquo;{{ $seg['v'] }}&ldquo;</span>
+                                    <span class="text-gray-500 dark:text-gray-400">&bdquo;{{ $seg['v'] }}&ldquo;</span>
                                     @break
                             @endswitch
                         @endforeach
                     </span>
-                    <span class="shrink-0 text-xs text-gray-400">{{ $entry['causer_short'] }}</span>
-                    <svg class="h-4 w-4 shrink-0 text-gray-400 transition-transform" :class="open && 'rotate-90'"
+                    <span class="shrink-0 text-xs text-gray-400 dark:text-gray-500">{{ $entry['causer_short'] }}</span>
+                    <svg class="h-4 w-4 shrink-0 text-gray-400 dark:text-gray-500 transition-transform" :class="open && 'rotate-90'"
                          viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                         <path d="M9 6l6 6l-6 6" />
                     </svg>
                 </button>
 
-                <div x-show="open" x-cloak class="mt-3 space-y-3 border-t border-gray-100 pt-3">
+                <div x-show="open" x-cloak class="mt-3 space-y-3 border-t border-gray-100 dark:border-gray-700 pt-3">
                     @foreach ($entry['sections'] as $section)
                         <div x-data="{ moreOpen: false }">
                             @if ($section['label'])
-                                <div class="mb-1 text-xs font-medium text-gray-400">{{ $section['label'] }}</div>
+                                <div class="mb-1 text-xs font-medium text-gray-400 dark:text-gray-500">{{ $section['label'] }}</div>
                             @endif
                             <table class="w-full text-sm">
                                 <thead>
-                                    <tr class="text-left text-xs text-gray-400">
+                                    <tr class="text-left text-xs text-gray-400 dark:text-gray-500">
                                         <th class="pr-4 py-1 font-medium">{{ __('common.field') }}</th>
                                         <th class="pr-4 py-1 font-medium">{{ __('status.before') }}</th>
                                         <th class="py-1 font-medium">{{ __('status.after') }}</th>
@@ -61,22 +61,22 @@
                                 <tbody>
                                     @foreach ($section['visible'] as $row)
                                         <tr class="align-top">
-                                            <td class="pr-4 py-1 whitespace-nowrap text-gray-500">{{ $row['field'] }}</td>
-                                            <td class="pr-4 py-1 text-gray-600">{{ $row['old'] ?? '—' }}</td>
-                                            <td class="py-1 font-medium text-gray-800">{{ $row['new'] ?? '—' }}</td>
+                                            <td class="pr-4 py-1 whitespace-nowrap text-gray-500 dark:text-gray-400">{{ $row['field'] }}</td>
+                                            <td class="pr-4 py-1 text-gray-600 dark:text-gray-400">{{ $row['old'] ?? '—' }}</td>
+                                            <td class="py-1 font-medium text-gray-800 dark:text-gray-100">{{ $row['new'] ?? '—' }}</td>
                                         </tr>
                                     @endforeach
                                     @foreach ($section['hidden'] as $row)
                                         <tr x-show="moreOpen" x-cloak class="align-top">
-                                            <td class="pr-4 py-1 whitespace-nowrap text-gray-500">{{ $row['field'] }}</td>
-                                            <td class="pr-4 py-1 text-gray-600">{{ $row['old'] ?? '—' }}</td>
-                                            <td class="py-1 font-medium text-gray-800">{{ $row['new'] ?? '—' }}</td>
+                                            <td class="pr-4 py-1 whitespace-nowrap text-gray-500 dark:text-gray-400">{{ $row['field'] }}</td>
+                                            <td class="pr-4 py-1 text-gray-600 dark:text-gray-400">{{ $row['old'] ?? '—' }}</td>
+                                            <td class="py-1 font-medium text-gray-800 dark:text-gray-100">{{ $row['new'] ?? '—' }}</td>
                                         </tr>
                                     @endforeach
                                 </tbody>
                             </table>
                             @if (! empty($section['hidden']))
-                                <button type="button" @click="moreOpen = !moreOpen" class="mt-1 text-xs text-indigo-600 hover:underline">
+                                <button type="button" @click="moreOpen = !moreOpen" class="mt-1 text-xs text-indigo-600 dark:text-indigo-400 hover:underline">
                                     <span x-show="!moreOpen">{{ __('status.count_more_fields', ['count' => count($section['hidden'])]) }}</span>
                                     <span x-show="moreOpen" x-cloak>{{ __('status.show_less') }}</span>
                                 </button>
@@ -86,7 +86,7 @@
                 </div>
             </div>
         @empty
-            <p class="p-6 text-sm text-gray-400">{{ __('status.no_changes_logged_yet') }}</p>
+            <p class="p-6 text-sm text-gray-400 dark:text-gray-500">{{ __('status.no_changes_logged_yet') }}</p>
         @endforelse
     </div>
 

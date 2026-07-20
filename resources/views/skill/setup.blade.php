@@ -1,15 +1,15 @@
 <x-app-layout>
     <x-slot name="header">
-        <h2 class="font-semibold text-xl text-gray-800 leading-tight">{{ __('skill.planstack_skill_for_claude_code') }}</h2>
+        <h2 class="font-semibold text-xl text-gray-800 dark:text-gray-100 leading-tight">{{ __('skill.planstack_skill_for_claude_code') }}</h2>
     </x-slot>
 
     <div class="py-8">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
 
             {{-- Intro + Download --}}
-            <div class="bg-white rounded-lg shadow p-6">
-                <h3 class="font-semibold text-gray-800">{{ __('skill.one_skill_for_all_your_projects') }}</h3>
-                <p class="mt-2 text-sm text-gray-600 leading-relaxed">
+            <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+                <h3 class="font-semibold text-gray-800 dark:text-gray-100">{{ __('skill.one_skill_for_all_your_projects') }}</h3>
+                <p class="mt-2 text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
                     {{ __('skill.with_the_planstack_skill_claude_code') }}
                     <b>{{ __('skill.cross_project') }}</b> {{ __('skill.it_contains_no_fixed_project_you') }}
                 </p>
@@ -23,7 +23,7 @@
                         </svg>
                         {{ __('skill.download_skill_zip') }}
                     </a>
-                    <p class="mt-2 text-xs text-gray-400">
+                    <p class="mt-2 text-xs text-gray-400 dark:text-gray-500">
                         {{ __('skill.the_zip_contains') }} <span class="font-mono">SKILL.md</span> {{ __('skill.and_a_prefilled') }}
                         <span class="font-mono">config.json</span> {{ __('skill.with_a_freshly_generated_personal') }}
                     </p>
@@ -31,9 +31,9 @@
             </div>
 
             {{-- Installation --}}
-            <div class="bg-white rounded-lg shadow p-6">
-                <h3 class="font-semibold text-gray-800">{{ __('skill.installation') }}</h3>
-                <ol class="mt-3 space-y-2 text-sm text-gray-600" style="list-style: decimal inside;">
+            <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+                <h3 class="font-semibold text-gray-800 dark:text-gray-100">{{ __('skill.installation') }}</h3>
+                <ol class="mt-3 space-y-2 text-sm text-gray-600 dark:text-gray-400" style="list-style: decimal inside;">
                     <li>{{ __('skill.download_and_unzip_the_zip') }}</li>
                     <li>{{ __('skill.the_folder') }} <span class="font-mono">planstack/</span> {{ __('skill.to') }}
                         <span class="font-mono">~/.claude/skills/</span> {{ __('skill.move') }}
@@ -43,45 +43,45 @@
             </div>
 
             {{-- Benutzung --}}
-            <div class="bg-white rounded-lg shadow p-6">
-                <h3 class="font-semibold text-gray-800">{{ __('skill.usage') }}</h3>
+            <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+                <h3 class="font-semibold text-gray-800 dark:text-gray-100">{{ __('skill.usage') }}</h3>
                 <dl class="mt-3 space-y-3 text-sm">
                     <div>
-                        <dt class="font-mono text-gray-800">/planstack &lt;PROJEKT&gt;</dt>
-                        <dd class="text-gray-600">{{ __('skill.works_through_this_project_s_entire') }}</dd>
+                        <dt class="font-mono text-gray-800 dark:text-gray-100">/planstack &lt;PROJEKT&gt;</dt>
+                        <dd class="text-gray-600 dark:text-gray-400">{{ __('skill.works_through_this_project_s_entire') }}</dd>
                     </div>
                     <div>
-                        <dt class="font-mono text-gray-800">/planstack &lt;PROJEKT&gt; &lt;TASK&gt;</dt>
-                        <dd class="text-gray-600">{{ __('skill.works_through_a_single_specific_task') }} (<span class="font-mono">&lt;TASK&gt;</span> {{ __('skill.task_shortcode_e_g') }} <span class="font-mono">C27</span>).</dd>
+                        <dt class="font-mono text-gray-800 dark:text-gray-100">/planstack &lt;PROJEKT&gt; &lt;TASK&gt;</dt>
+                        <dd class="text-gray-600 dark:text-gray-400">{{ __('skill.works_through_a_single_specific_task') }} (<span class="font-mono">&lt;TASK&gt;</span> {{ __('skill.task_shortcode_e_g') }} <span class="font-mono">C27</span>).</dd>
                     </div>
                     <div>
-                        <dt class="font-mono text-gray-800">/planstack review [&lt;PROJEKT&gt;] [&lt;TASK&gt;]</dt>
-                        <dd class="text-gray-600">{{ __('skill.reviews_tasks_that_are_in_review_with_a') }}</dd>
+                        <dt class="font-mono text-gray-800 dark:text-gray-100">/planstack review [&lt;PROJEKT&gt;] [&lt;TASK&gt;]</dt>
+                        <dd class="text-gray-600 dark:text-gray-400">{{ __('skill.reviews_tasks_that_are_in_review_with_a') }}</dd>
                     </div>
                     <div>
-                        <dt class="font-mono text-gray-800">/planstack fix [&lt;PROJEKT&gt;] &lt;TASK|PR&gt;</dt>
-                        <dd class="text-gray-600">{{ __('skill.repairs_an_open_pr_resolves_merge') }}</dd>
+                        <dt class="font-mono text-gray-800 dark:text-gray-100">/planstack fix [&lt;PROJEKT&gt;] &lt;TASK|PR&gt;</dt>
+                        <dd class="text-gray-600 dark:text-gray-400">{{ __('skill.repairs_an_open_pr_resolves_merge') }}</dd>
                     </div>
                     <div>
-                        <dt class="font-mono text-gray-800">/planstack settings</dt>
-                        <dd class="text-gray-600">{{ __('skill.view_change_local_settings_tests') }}</dd>
+                        <dt class="font-mono text-gray-800 dark:text-gray-100">/planstack settings</dt>
+                        <dd class="text-gray-600 dark:text-gray-400">{{ __('skill.view_change_local_settings_tests') }}</dd>
                     </div>
                     <div>
-                        <dt class="font-mono text-gray-800">/planstack update-config [&lt;PROJEKT&gt;]</dt>
-                        <dd class="text-gray-600">{{ __('skill.pulls_the_latest_general_and_optionally') }}</dd>
+                        <dt class="font-mono text-gray-800 dark:text-gray-100">/planstack update-config [&lt;PROJEKT&gt;]</dt>
+                        <dd class="text-gray-600 dark:text-gray-400">{{ __('skill.pulls_the_latest_general_and_optionally') }}</dd>
                     </div>
                 </dl>
-                <p class="mt-3 text-xs text-gray-400">
+                <p class="mt-3 text-xs text-gray-400 dark:text-gray-500">
                     <span class="font-mono">&lt;PROJEKT&gt;</span> {{ __('skill.is_the_project_alias_e_g') }} <span class="font-mono">L2L</span>, <span class="font-mono">LOG</span>).
                     {{ __('skill.the_skill_serves_every_project_your') }}
                 </p>
             </div>
 
             {{-- Hinweise --}}
-            <div class="bg-white rounded-lg shadow p-6">
-                <h3 class="font-semibold text-gray-800">{{ __('skill.good_to_know') }}</h3>
-                <ul class="mt-3 space-y-2 text-sm text-gray-600 list-disc ps-5">
-                    <li><b>{{ __('skill.token') }}</b> {{ __('skill.on_download_a_personal_access_token_is') }} <a href="{{ route('profile.edit') }}" class="text-indigo-600 hover:underline">{{ __('common.profile_api_tokens') }}</a> {{ __('skill.revocable') }}</li>
+            <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+                <h3 class="font-semibold text-gray-800 dark:text-gray-100">{{ __('skill.good_to_know') }}</h3>
+                <ul class="mt-3 space-y-2 text-sm text-gray-600 dark:text-gray-400 list-disc ps-5">
+                    <li><b>{{ __('skill.token') }}</b> {{ __('skill.on_download_a_personal_access_token_is') }} <a href="{{ route('profile.edit') }}" class="text-indigo-600 dark:text-indigo-400 hover:underline">{{ __('common.profile_api_tokens') }}</a> {{ __('skill.revocable') }}</li>
                     <li><b>{{ __('skill.self_updating') }}</b> {{ __('skill.the_skill_automatically_picks_up') }}</li>
                     <li><b>{{ __('skill.no_fixed_project') }}</b> {{ __('skill.the') }} <span class="font-mono">config.json</span> {{ __('skill.contains_only_access_details_url_token') }}</li>
                 </ul>

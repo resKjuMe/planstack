@@ -18,13 +18,13 @@
     <div class="flex flex-wrap items-center gap-x-2 gap-y-1.5 mb-4">
         @foreach ($phases as $ph)
             <button type="button" data-diagram-phase="{{ $ph['id'] }}"
-                    class="flex items-center gap-2 rounded-md bg-gray-50 ring-1 ring-gray-100 px-2.5 py-1"
+                    class="flex items-center gap-2 rounded-md bg-gray-50 dark:bg-gray-700/40 ring-1 ring-gray-100 dark:ring-gray-700 px-2.5 py-1"
                     title="{{ $ph['name'] }} — {{ $ph['pct'] }}% · {{ __('status.click_to_filter') }}">
-                <span class="text-xs font-medium text-gray-600">{{ $ph['short'] }}</span>
-                <span class="h-1.5 w-14 overflow-hidden rounded-full bg-gray-200">
+                <span class="text-xs font-medium text-gray-600 dark:text-gray-400">{{ $ph['short'] }}</span>
+                <span class="h-1.5 w-14 overflow-hidden rounded-full bg-gray-200 dark:bg-gray-700">
                     <span class="block h-full rounded-full {{ $ph['pct'] >= 100 ? 'bg-green-600' : 'bg-indigo-500' }}" style="width: {{ $ph['pct'] }}%"></span>
                 </span>
-                <span class="text-[11px] tabular-nums text-gray-400">{{ $ph['pct'] }}%</span>
+                <span class="text-[11px] tabular-nums text-gray-400 dark:text-gray-500">{{ $ph['pct'] }}%</span>
             </button>
         @endforeach
     </div>
@@ -52,11 +52,11 @@
         $lgSvg = fn ($paths) => '<svg class="ps-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'.$paths.'</svg>';
     @endphp
     <div class="flex flex-wrap items-center justify-between gap-3 mb-3">
-        <div class="ps-diagram-legend flex flex-wrap items-center gap-x-3 gap-y-1.5 text-xs text-gray-600">
+        <div class="ps-diagram-legend flex flex-wrap items-center gap-x-3 gap-y-1.5 text-xs text-gray-600 dark:text-gray-400">
             @foreach ($legendItems as [$cat, $label])
                 <span class="lg-item"><span class="lg-swatch cat-{{ $cat }}">{!! $lgSvg($statusIcons[$cat]) !!}</span>{{ $label }}</span>
             @endforeach
-            <span class="mx-1 h-4 w-px bg-gray-200"></span>
+            <span class="mx-1 h-4 w-px bg-gray-200 dark:bg-gray-700"></span>
             <span class="lg-item">
                 <svg width="26" height="8" aria-hidden="true"><line x1="1" y1="4" x2="25" y2="4" stroke="#64748B" stroke-width="1.5"/></svg>
                 {{ __('status.open_dependency') }}
@@ -70,21 +70,21 @@
 
         <div class="flex items-center gap-3">
             <button type="button" data-diagram-reset hidden
-                    class="text-xs text-indigo-600 hover:underline">{{ __('status.clear_selection') }}</button>
+                    class="text-xs text-indigo-600 dark:text-indigo-400 hover:underline">{{ __('status.clear_selection') }}</button>
             <label data-diagram-desc-wrap
-                   class="inline-flex cursor-pointer items-center gap-1.5 text-xs text-gray-600">
+                   class="inline-flex cursor-pointer items-center gap-1.5 text-xs text-gray-600 dark:text-gray-400">
                 <input type="checkbox" data-diagram-desc
-                       class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
+                       class="rounded border-gray-300 dark:border-gray-600 dark:bg-gray-800 text-indigo-600 dark:text-indigo-400 focus:ring-indigo-500">
                 {{ __('status.short_descriptions') }}
             </label>
             <label data-diagram-hidedone-wrap hidden
-                   class="inline-flex cursor-pointer items-center gap-1.5 text-xs text-gray-600">
+                   class="inline-flex cursor-pointer items-center gap-1.5 text-xs text-gray-600 dark:text-gray-400">
                 <input type="checkbox" data-diagram-hidedone
-                       class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
+                       class="rounded border-gray-300 dark:border-gray-600 dark:bg-gray-800 text-indigo-600 dark:text-indigo-400 focus:ring-indigo-500">
                 {{ __('status.hide_done') }}
             </label>
             <button type="button" data-diagram-png
-                    class="inline-flex items-center gap-1 rounded-md border border-gray-200 px-2 py-1 text-xs text-gray-600 hover:bg-gray-50 disabled:opacity-50">
+                    class="inline-flex items-center gap-1 rounded-md border border-gray-200 dark:border-gray-700 px-2 py-1 text-xs text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700/50 disabled:opacity-50">
                 <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2 -2v-2"/><path d="M7 11l5 5l5 -5"/><path d="M12 4v12"/></svg>
                 {{ __('status.as_png') }}
             </button>
@@ -97,7 +97,7 @@
          data-diagram-name="{{ $project->alias }}"
          data-graph='@json($graph, JSON_HEX_APOS | JSON_HEX_QUOT)'>
         <div class="ps-graph min-h-[280px]"></div>
-        <p class="ps-diagram-empty hidden py-10 text-center text-sm text-gray-400">{{ __('status.no_open_prs') }}</p>
+        <p class="ps-diagram-empty hidden py-10 text-center text-sm text-gray-400 dark:text-gray-500">{{ __('status.no_open_prs') }}</p>
     </div>
 
     <style>
@@ -110,6 +110,8 @@
             background-color: #eef2ff;
             box-shadow: inset 0 0 0 1px #6366f1;
         }
+        .dark [data-diagram-phase]:hover { background-color: #374151; }
+        .dark [data-diagram-phase][data-active] { background-color: rgb(99 102 241 / 0.15); }
 
         /* Zentriert das SVG nur, solange es in den Container passt; ist es
            breiter (useMaxWidth:false in diagram.js lässt es in echter Größe

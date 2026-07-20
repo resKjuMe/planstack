@@ -26,7 +26,7 @@
             </x-page-head>
 
             @if ($project->description)
-                <p class="text-sm text-gray-600 max-w-3xl">{{ $project->description }}</p>
+                <p class="text-sm text-gray-600 dark:text-gray-400 max-w-3xl">{{ $project->description }}</p>
             @endif
 
             {{-- Board --}}
@@ -37,22 +37,22 @@
                         <div class="w-72 shrink-0">
                             <div class="flex items-center justify-between mb-2">
                                 <x-task-status :status="$status" />
-                                <span class="text-xs text-gray-400">{{ $tasks->count() }}</span>
+                                <span class="text-xs text-gray-400 dark:text-gray-500">{{ $tasks->count() }}</span>
                             </div>
                             <div class="space-y-2 min-h-8">
                                 @foreach ($tasks as $task)
-                                    <div class="bg-white rounded-lg shadow-sm ring-1 ring-gray-100 p-3">
+                                    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm ring-1 ring-gray-100 dark:ring-gray-700 p-3">
                                         <div class="flex items-center justify-between">
                                             <a href="{{ route('projects.tasks.show', [$project, $task]) }}"
-                                               class="font-mono text-sm font-semibold text-indigo-700 hover:underline">
+                                               class="font-mono text-sm font-semibold text-indigo-700 dark:text-indigo-400 hover:underline">
                                                 {{ $task->name }}
                                             </a>
                                             @if ($task->concern)
-                                                <span title="{{ __('common.concern') }}" class="text-orange-500 text-xs">⚠ {{ __('common.concern') }}</span>
+                                                <span title="{{ __('common.concern') }}" class="text-orange-500 dark:text-orange-400 text-xs">⚠ {{ __('common.concern') }}</span>
                                             @endif
                                         </div>
-                                        <p class="mt-1 text-sm text-gray-700">{{ $task->summary }}</p>
-                                        <div class="mt-2 flex items-center justify-between text-xs text-gray-400">
+                                        <p class="mt-1 text-sm text-gray-700 dark:text-gray-300">{{ $task->summary }}</p>
+                                        <div class="mt-2 flex items-center justify-between text-xs text-gray-400 dark:text-gray-500">
                                             <span>{{ $task->claimer?->name ?? '—' }}</span>
                                             <span>
                                                 @if ($task->effort_story_points) {{ $task->effort_story_points }} SP @endif
@@ -61,7 +61,7 @@
                                         @can('claim', $task)
                                             <form method="POST" action="{{ route('projects.tasks.claim', [$project, $task]) }}" class="mt-2">
                                                 @csrf
-                                                <button class="w-full rounded bg-gray-50 px-2 py-1 text-xs font-medium text-gray-600 hover:bg-gray-100">
+                                                <button class="w-full rounded bg-gray-50 dark:bg-gray-800/50 px-2 py-1 text-xs font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700">
                                                     {{ $task->claimed_by_id ? __('common.release') : __('common.claim') }}
                                                 </button>
                                             </form>

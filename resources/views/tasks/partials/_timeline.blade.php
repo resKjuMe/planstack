@@ -30,18 +30,18 @@
 @endphp
 
 @if ($timeline->isNotEmpty())
-<section class="bg-white rounded-lg shadow p-6">
-    <h3 class="font-semibold text-gray-900 mb-4">{{ __('tasks.history') }}</h3>
-    <ol class="relative space-y-4 border-l border-gray-200 pl-5">
+<section class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+    <h3 class="font-semibold text-gray-900 dark:text-gray-100 mb-4">{{ __('tasks.history') }}</h3>
+    <ol class="relative space-y-4 border-l border-gray-200 dark:border-gray-700 pl-5">
         @foreach ($timeline as $e)
             <li class="relative">
-                <span class="absolute -left-[1.4rem] top-1.5 h-2.5 w-2.5 rounded-full border-2 border-white bg-gray-300"></span>
+                <span class="absolute -left-[1.4rem] top-1.5 h-2.5 w-2.5 rounded-full border-2 border-white dark:border-gray-800 bg-gray-300 dark:bg-gray-600"></span>
                 <div class="flex flex-wrap items-baseline gap-x-2">
-                    <span class="text-sm font-medium text-gray-800">{{ $e['title'] }}</span>
-                    <span class="text-xs text-gray-400">{{ optional($e['when'])->format('d.m.Y H:i') ?? '' }}</span>
+                    <span class="text-sm font-medium text-gray-800 dark:text-gray-100">{{ $e['title'] }}</span>
+                    <span class="text-xs text-gray-400 dark:text-gray-500">{{ optional($e['when'])->format('d.m.Y H:i') ?? '' }}</span>
                 </div>
                 @if ($e['body'])
-                    <p class="text-sm text-gray-600">{{ $e['body'] }}</p>
+                    <p class="text-sm text-gray-600 dark:text-gray-400">{{ $e['body'] }}</p>
                 @endif
             </li>
         @endforeach

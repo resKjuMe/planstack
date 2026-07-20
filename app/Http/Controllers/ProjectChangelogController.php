@@ -313,7 +313,7 @@ class ProjectChangelogController extends Controller
 
     private function statusBadge(?string $value): string
     {
-        return TaskStatus::tryFrom((string) $value)?->badgeClasses() ?? 'bg-gray-100 text-gray-600';
+        return TaskStatus::tryFrom((string) $value)?->badgeClasses() ?? 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300';
     }
 
     /**
@@ -413,7 +413,7 @@ class ProjectChangelogController extends Controller
                 $segments[] = ['t' => 'status', 'v' => $statusLabel, 'cls' => $this->statusBadge($new['status'])];
                 if (! empty($new['pr_number'])) {
                     $segments[] = $text(' ');
-                    $segments[] = ['t' => 'status', 'v' => '#'.$new['pr_number'], 'cls' => 'bg-gray-100 text-gray-600'];
+                    $segments[] = ['t' => 'status', 'v' => '#'.$new['pr_number'], 'cls' => 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300'];
                 }
 
                 return $segments;

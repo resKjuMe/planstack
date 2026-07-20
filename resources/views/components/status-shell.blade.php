@@ -19,7 +19,7 @@
             @if ($bare)
                 {{ $slot }}
             @else
-                <div class="bg-white rounded-lg shadow p-6 overflow-x-auto">
+                <div class="bg-white rounded-lg shadow p-6 overflow-x-auto dark:bg-gray-800 dark:shadow-black/30">
                     {{ $slot }}
                 </div>
             @endif

@@ -65,21 +65,21 @@
 
         {{-- Kennzahlen-Kacheln (Card-Stil wie „Kalibrierung") --}}
         <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <div class="rounded-lg bg-white p-4 ring-1 ring-gray-200">
-                <div class="text-xs font-medium text-gray-400">{{ __('status.open_prs') }}</div>
-                <div class="mt-1 text-[22px] font-semibold leading-tight text-gray-900">{{ $counts['all'] }}</div>
+            <div class="rounded-lg bg-white dark:bg-gray-800 p-4 ring-1 ring-gray-200 dark:ring-gray-700">
+                <div class="text-xs font-medium text-gray-400 dark:text-gray-500">{{ __('status.open_prs') }}</div>
+                <div class="mt-1 text-[22px] font-semibold leading-tight text-gray-900 dark:text-gray-100">{{ $counts['all'] }}</div>
             </div>
-            <div class="rounded-lg bg-white p-4 ring-1 ring-gray-200">
-                <div class="text-xs font-medium text-gray-400">{{ __('status.total_story_points') }}</div>
-                <div class="mt-1 text-[22px] font-semibold leading-tight text-gray-900">{{ $totalSp }}</div>
+            <div class="rounded-lg bg-white dark:bg-gray-800 p-4 ring-1 ring-gray-200 dark:ring-gray-700">
+                <div class="text-xs font-medium text-gray-400 dark:text-gray-500">{{ __('status.total_story_points') }}</div>
+                <div class="mt-1 text-[22px] font-semibold leading-tight text-gray-900 dark:text-gray-100">{{ $totalSp }}</div>
             </div>
-            <div class="rounded-lg bg-white p-4 ring-1 ring-gray-200">
-                <div class="text-xs font-medium text-gray-400">{{ __('common.blocks') }}</div>
-                <div class="mt-1 text-[22px] font-semibold leading-tight text-red-600">{{ $counts['blocked'] }}</div>
+            <div class="rounded-lg bg-white dark:bg-gray-800 p-4 ring-1 ring-gray-200 dark:ring-gray-700">
+                <div class="text-xs font-medium text-gray-400 dark:text-gray-500">{{ __('common.blocks') }}</div>
+                <div class="mt-1 text-[22px] font-semibold leading-tight text-red-600 dark:text-red-400">{{ $counts['blocked'] }}</div>
             </div>
-            <div class="rounded-lg bg-white p-4 ring-1 ring-gray-200">
-                <div class="text-xs font-medium text-gray-400">{{ __('status.critical_path') }}</div>
-                <div class="mt-1 break-words font-mono text-[15px] font-medium leading-snug text-gray-900">{{ $criticalPath !== '' ? $criticalPath : '—' }}</div>
+            <div class="rounded-lg bg-white dark:bg-gray-800 p-4 ring-1 ring-gray-200 dark:ring-gray-700">
+                <div class="text-xs font-medium text-gray-400 dark:text-gray-500">{{ __('status.critical_path') }}</div>
+                <div class="mt-1 break-words font-mono text-[15px] font-medium leading-snug text-gray-900 dark:text-gray-100">{{ $criticalPath !== '' ? $criticalPath : '—' }}</div>
             </div>
         </div>
 
@@ -93,21 +93,21 @@
                 'claimed' => ['label' => __('status.claimed'), 'icon' => 'hand', 'count' => $counts['claimed']],
             ];
         @endphp
-        <div class="mt-4 inline-flex flex-wrap items-center gap-1 rounded-full bg-gray-100 p-1">
+        <div class="mt-4 inline-flex flex-wrap items-center gap-1 rounded-full bg-gray-100 dark:bg-gray-700 p-1">
             @foreach ($chips as $key => $chip)
                 <button type="button" @click="filter = '{{ $key }}'"
-                        :class="filter === '{{ $key }}' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'"
+                        :class="filter === '{{ $key }}' ? 'bg-white text-gray-900 shadow-sm dark:bg-gray-600 dark:text-gray-100' : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'"
                         class="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-sm font-medium transition-colors">
                     {!! $ic($chip['icon'], 'h-3.5 w-3.5') !!}
                     {{ $chip['label'] }}
                     <span class="inline-flex h-[18px] min-w-[18px] items-center justify-center rounded-full px-1 text-[11px] font-medium"
-                          :class="filter === '{{ $key }}' ? 'bg-gray-100 text-gray-500' : 'bg-white text-gray-400'">{{ $chip['count'] }}</span>
+                          :class="filter === '{{ $key }}' ? 'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-300' : 'bg-white text-gray-400 dark:bg-gray-700 dark:text-gray-400'">{{ $chip['count'] }}</span>
                 </button>
             @endforeach
         </div>
 
         {{-- Liste: gemeinsame Karte, Zeilen durch Trennlinien geteilt --}}
-        <div class="mt-4 divide-y divide-gray-100 overflow-hidden rounded-lg bg-white ring-1 ring-gray-200">
+        <div class="mt-4 divide-y divide-gray-100 dark:divide-gray-700 overflow-hidden rounded-lg bg-white dark:bg-gray-800 ring-1 ring-gray-200 dark:ring-gray-700">
             @forelse ($main as $task)
                 @include('status.partials.seq-row', ['task' => $task, 'inCollapse' => false])
             @empty

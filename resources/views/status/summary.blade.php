@@ -13,85 +13,85 @@
         {{-- 1. KPI-Kacheln --}}
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {{-- Fortschritt --}}
-            <div class="bg-white rounded-lg shadow p-5">
-                <div class="text-xs font-medium text-gray-400 uppercase tracking-wide">{{ __('common.progress') }}</div>
-                <div class="mt-1 text-3xl font-bold text-gray-900">{{ $kpis['progress']['pct'] }} %</div>
-                <div class="mt-1 text-sm text-gray-500">{{ __('status.done_of_total_prs_done', ['done' => $kpis['progress']['done'], 'total' => $kpis['progress']['total']]) }}</div>
-                <div class="mt-3 h-1.5 rounded-full bg-gray-200 overflow-hidden">
+            <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-5">
+                <div class="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide">{{ __('common.progress') }}</div>
+                <div class="mt-1 text-3xl font-bold text-gray-900 dark:text-gray-100">{{ $kpis['progress']['pct'] }} %</div>
+                <div class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ __('status.done_of_total_prs_done', ['done' => $kpis['progress']['done'], 'total' => $kpis['progress']['total']]) }}</div>
+                <div class="mt-3 h-1.5 rounded-full bg-gray-200 dark:bg-gray-700 overflow-hidden">
                     <div class="h-full bg-green-500" style="width: {{ $kpis['progress']['pct'] }}%"></div>
                 </div>
             </div>
 
             {{-- Story Points --}}
-            <div class="bg-white rounded-lg shadow p-5">
-                <div class="text-xs font-medium text-gray-400 uppercase tracking-wide">{{ __('common.story_points') }}</div>
-                <div class="mt-1 text-3xl font-bold text-gray-900">{{ $kpis['storyPoints']['pct'] }} %</div>
-                <div class="mt-1 text-sm text-gray-500">{{ __('status.done_of_total_sp_done', ['done' => $kpis['storyPoints']['done'], 'total' => $kpis['storyPoints']['total']]) }}</div>
-                <div class="mt-3 h-1.5 rounded-full bg-gray-200 overflow-hidden">
+            <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-5">
+                <div class="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide">{{ __('common.story_points') }}</div>
+                <div class="mt-1 text-3xl font-bold text-gray-900 dark:text-gray-100">{{ $kpis['storyPoints']['pct'] }} %</div>
+                <div class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ __('status.done_of_total_sp_done', ['done' => $kpis['storyPoints']['done'], 'total' => $kpis['storyPoints']['total']]) }}</div>
+                <div class="mt-3 h-1.5 rounded-full bg-gray-200 dark:bg-gray-700 overflow-hidden">
                     <div class="h-full bg-green-500" style="width: {{ $kpis['storyPoints']['pct'] }}%"></div>
                 </div>
             </div>
 
             {{-- Dateien --}}
-            <div class="bg-white rounded-lg shadow p-5">
-                <div class="text-xs font-medium text-gray-400 uppercase tracking-wide">{{ __('status.files') }}</div>
-                <div class="mt-1 text-3xl font-bold text-gray-900">{{ $kpis['files']['pct'] }} %</div>
-                <div class="mt-1 text-sm text-gray-500">{{ __('status.done_of_total_files_done', ['done' => $kpis['files']['done'], 'total' => $kpis['files']['total']]) }}</div>
-                <div class="mt-3 h-1.5 rounded-full bg-gray-200 overflow-hidden">
+            <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-5">
+                <div class="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide">{{ __('status.files') }}</div>
+                <div class="mt-1 text-3xl font-bold text-gray-900 dark:text-gray-100">{{ $kpis['files']['pct'] }} %</div>
+                <div class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ __('status.done_of_total_files_done', ['done' => $kpis['files']['done'], 'total' => $kpis['files']['total']]) }}</div>
+                <div class="mt-3 h-1.5 rounded-full bg-gray-200 dark:bg-gray-700 overflow-hidden">
                     <div class="h-full bg-green-500" style="width: {{ $kpis['files']['pct'] }}%"></div>
                 </div>
             </div>
 
             {{-- Tokens --}}
-            <div class="bg-white rounded-lg shadow p-5">
-                <div class="text-xs font-medium text-gray-400 uppercase tracking-wide">{{ __('status.tokens') }}</div>
-                <div class="mt-1 text-3xl font-bold text-gray-900">{{ $kpis['tokens']['pct'] }} %</div>
-                <div class="mt-1 text-sm text-gray-500">{{ __('status.done_of_total_tokens_done', ['done' => $kpis['tokens']['done'], 'total' => $kpis['tokens']['total']]) }}</div>
-                <div class="mt-3 h-1.5 rounded-full bg-gray-200 overflow-hidden">
+            <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-5">
+                <div class="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide">{{ __('status.tokens') }}</div>
+                <div class="mt-1 text-3xl font-bold text-gray-900 dark:text-gray-100">{{ $kpis['tokens']['pct'] }} %</div>
+                <div class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ __('status.done_of_total_tokens_done', ['done' => $kpis['tokens']['done'], 'total' => $kpis['tokens']['total']]) }}</div>
+                <div class="mt-3 h-1.5 rounded-full bg-gray-200 dark:bg-gray-700 overflow-hidden">
                     <div class="h-full bg-green-500" style="width: {{ $kpis['tokens']['pct'] }}%"></div>
                 </div>
             </div>
 
             {{-- Velocity (nur wenn aus Merge-Timestamps berechenbar) --}}
             @if ($kpis['velocity'])
-                <div class="bg-white rounded-lg shadow p-5">
-                    <div class="text-xs font-medium text-gray-400 uppercase tracking-wide">{{ __('status.velocity') }}</div>
-                    <div class="mt-1 text-3xl font-bold text-gray-900">{{ rtrim(rtrim(number_format($kpis['velocity']['rate'], 1, ',', ''), '0'), ',') }} <span class="text-lg font-semibold text-gray-500">{{ __('status.sp_wk') }}</span></div>
+                <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-5">
+                    <div class="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide">{{ __('status.velocity') }}</div>
+                    <div class="mt-1 text-3xl font-bold text-gray-900 dark:text-gray-100">{{ rtrim(rtrim(number_format($kpis['velocity']['rate'], 1, ',', ''), '0'), ',') }} <span class="text-lg font-semibold text-gray-500 dark:text-gray-400">{{ __('status.sp_wk') }}</span></div>
                     @if ($kpis['velocity']['eta'])
-                        <div class="mt-1 text-sm text-gray-500">{{ __('status.forecast_done_around_eta', ['eta' => $kpis['velocity']['eta']]) }}</div>
+                        <div class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ __('status.forecast_done_around_eta', ['eta' => $kpis['velocity']['eta']]) }}</div>
                     @endif
                 </div>
             @endif
 
             {{-- Letzter Merge (nur wenn Merge-Timestamps vorhanden) --}}
             @if ($kpis['lastMerge'])
-                <div class="bg-white rounded-lg shadow p-5">
-                    <div class="text-xs font-medium text-gray-400 uppercase tracking-wide">{{ __('status.last_merge') }}</div>
-                    <div class="mt-1 text-2xl font-bold text-gray-900">{{ $kpis['lastMerge']['when'] }}</div>
-                    <div class="mt-1 text-sm font-mono text-gray-500">{{ $kpis['lastMerge']['pr'] }}</div>
+                <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-5">
+                    <div class="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide">{{ __('status.last_merge') }}</div>
+                    <div class="mt-1 text-2xl font-bold text-gray-900 dark:text-gray-100">{{ $kpis['lastMerge']['when'] }}</div>
+                    <div class="mt-1 text-sm font-mono text-gray-500 dark:text-gray-400">{{ $kpis['lastMerge']['pr'] }}</div>
                 </div>
             @endif
         </div>
 
         {{-- 2. Phasen-Übersicht --}}
-        <div class="bg-white rounded-lg shadow p-6">
-            <h2 class="text-sm font-semibold text-gray-600 mb-4">{{ __('common.phases') }}</h2>
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+            <h2 class="text-sm font-semibold text-gray-600 dark:text-gray-400 mb-4">{{ __('common.phases') }}</h2>
             <div class="space-y-3">
                 @foreach ($rows as $row)
-                    <div x-data="{ open: false, hover: null }" class="rounded-lg ring-1 ring-gray-100 p-4">
+                    <div x-data="{ open: false, hover: null }" class="rounded-lg ring-1 ring-gray-100 dark:ring-gray-700 p-4">
                         <div class="flex flex-wrap items-center justify-between gap-2">
                             <div class="flex items-center gap-2">
-                                <span class="font-medium text-gray-800">{{ $row['phase'] }}</span>
+                                <span class="font-medium text-gray-800 dark:text-gray-100">{{ $row['phase'] }}</span>
                                 @foreach ($row['blocked_by'] as $blocker)
-                                    <span class="inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800">
+                                    <span class="inline-flex items-center rounded-full bg-amber-100 dark:bg-amber-900/40 px-2 py-0.5 text-xs font-medium text-amber-800 dark:text-amber-300">
                                         🔒 {{ __('status.blocked_by_blocker', ['blocker' => $blocker]) }}
                                     </span>
                                 @endforeach
                             </div>
                             <div class="flex items-center gap-2">
-                                <span class="text-sm font-semibold" :class="hover ? hover.text : 'text-gray-500'"
+                                <span class="text-sm font-semibold" :class="hover ? hover.text : 'text-gray-500 dark:text-gray-400'"
                                       x-text="hover ? (hover.label + ' · ' + hover.count + ' / ' + @js($row['total']) + ' Tasks · ' + hover.pct + ' % SP') : @js($row['done'].' / '.$row['total'].' PRs ('.$row['pct'].'%)')">{{ $row['done'] }} / {{ $row['total'] }} PRs ({{ $row['pct'] }}%)</span>
-                                <button type="button" @click="open = !open" class="text-xs text-indigo-600 hover:underline">
+                                <button type="button" @click="open = !open" class="text-xs text-indigo-600 dark:text-indigo-400 hover:underline">
                                     <span x-show="!open">{{ __('status.show_details') }}</span>
                                     <span x-show="open" x-cloak>{{ __('status.hide_details') }}</span>
                                 </button>
@@ -101,7 +101,7 @@
                         {{-- Fortschrittsbalken: ein Segment je Status (SP-anteilig) --}}
                         <div class="relative mt-3">
                             {{-- Sichtbarer Balken --}}
-                            <div class="flex h-2.5 overflow-hidden rounded-full bg-gray-100">
+                            <div class="flex h-2.5 overflow-hidden rounded-full bg-gray-100 dark:bg-gray-900">
                                 @foreach ($row['statuses'] as $s)
                                     <div class="h-full {{ $s['bar'] }}" style="width: {{ $s['width'] }}%"></div>
                                 @endforeach
@@ -126,33 +126,33 @@
 
                         {{-- Sekundäre Metriken (aufklappbar): verbleibend / geplant --}}
                         @php $ptFmt = fn ($v) => rtrim(rtrim(number_format((float) $v, 1, ',', ''), '0'), ','); @endphp
-                        <div x-show="open" x-cloak class="mt-3 border-t border-gray-100 pt-3">
+                        <div x-show="open" x-cloak class="mt-3 border-t border-gray-100 dark:border-gray-700 pt-3">
                             <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm">
                                 <div>
-                                    <dt class="text-gray-400 text-xs">PT</dt>
-                                    <dd class="text-gray-800">{{ $ptFmt($row['pt']['remaining']) }} <span class="text-gray-400">{{ __('status.rem') }}</span> / {{ $ptFmt($row['pt']['total']) }} <span class="text-gray-400">{{ __('status.planned') }}</span></dd>
+                                    <dt class="text-gray-400 dark:text-gray-500 text-xs">PT</dt>
+                                    <dd class="text-gray-800 dark:text-gray-100">{{ $ptFmt($row['pt']['remaining']) }} <span class="text-gray-400 dark:text-gray-500">{{ __('status.rem') }}</span> / {{ $ptFmt($row['pt']['total']) }} <span class="text-gray-400 dark:text-gray-500">{{ __('status.planned') }}</span></dd>
                                 </div>
                                 <div>
-                                    <dt class="text-gray-400 text-xs">{{ __('status.files') }}</dt>
-                                    <dd class="text-gray-800">{{ $row['files']['remaining'] }} <span class="text-gray-400">{{ __('status.rem') }}</span> / {{ $row['files']['total'] }} <span class="text-gray-400">{{ __('status.planned') }}</span></dd>
+                                    <dt class="text-gray-400 dark:text-gray-500 text-xs">{{ __('status.files') }}</dt>
+                                    <dd class="text-gray-800 dark:text-gray-100">{{ $row['files']['remaining'] }} <span class="text-gray-400 dark:text-gray-500">{{ __('status.rem') }}</span> / {{ $row['files']['total'] }} <span class="text-gray-400 dark:text-gray-500">{{ __('status.planned') }}</span></dd>
                                 </div>
                                 <div>
-                                    <dt class="text-gray-400 text-xs">{{ __('status.tokens') }}</dt>
-                                    <dd class="text-gray-800">{{ $row['tokens']['remaining'] }} <span class="text-gray-400">{{ __('status.rem') }}</span> / {{ $row['tokens']['total'] }} <span class="text-gray-400">{{ __('status.planned') }}</span></dd>
+                                    <dt class="text-gray-400 dark:text-gray-500 text-xs">{{ __('status.tokens') }}</dt>
+                                    <dd class="text-gray-800 dark:text-gray-100">{{ $row['tokens']['remaining'] }} <span class="text-gray-400 dark:text-gray-500">{{ __('status.rem') }}</span> / {{ $row['tokens']['total'] }} <span class="text-gray-400 dark:text-gray-500">{{ __('status.planned') }}</span></dd>
                                 </div>
                             </div>
 
                             {{-- Offene (noch nicht gemergte) PRs dieser Phase --}}
                             @if ($row['open_prs']->isNotEmpty())
                                 <div class="mt-4">
-                                    <dt class="text-gray-400 text-xs mb-2">{{ __('status.open_prs_count', ['count' => $row['open_prs']->count()]) }}</dt>
+                                    <dt class="text-gray-400 dark:text-gray-500 text-xs mb-2">{{ __('status.open_prs_count', ['count' => $row['open_prs']->count()]) }}</dt>
                                     <ul class="space-y-1">
                                         @foreach ($row['open_prs'] as $task)
                                             <li class="flex flex-wrap items-center gap-2 text-sm">
                                                 <a href="{{ route('projects.tasks.show', [$project, $task]) }}"
-                                                   class="font-mono font-medium text-indigo-700 hover:underline">{{ $task->name }}</a>
+                                                   class="font-mono font-medium text-indigo-700 dark:text-indigo-400 hover:underline">{{ $task->name }}</a>
                                                 <span class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium {{ $task->x_display_status->badgeClasses() }}">{{ $task->x_display_status->label() }}</span>
-                                                <span class="text-gray-500 truncate">{{ $task->summary }}</span>
+                                                <span class="text-gray-500 dark:text-gray-400 truncate">{{ $task->summary }}</span>
                                             </li>
                                         @endforeach
                                     </ul>
@@ -166,22 +166,22 @@
 
         {{-- 3. Pickbare PRs als Karten --}}
         <div>
-            <h2 class="text-sm font-semibold text-gray-600 mb-4">{{ __('status.pickable_prs_count', ['count' => $pickable->count()]) }}</h2>
+            <h2 class="text-sm font-semibold text-gray-600 dark:text-gray-400 mb-4">{{ __('status.pickable_prs_count', ['count' => $pickable->count()]) }}</h2>
             @if ($pickable->isEmpty())
-                <p class="text-sm text-gray-400">{{ __('status.nothing_pickable_right_now') }}</p>
+                <p class="text-sm text-gray-400 dark:text-gray-500">{{ __('status.nothing_pickable_right_now') }}</p>
             @else
                 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                     @foreach ($pickable as $task)
-                        <div class="bg-white rounded-lg p-4 {{ $loop->first ? 'ring-2 ring-indigo-500 shadow-md' : 'ring-1 ring-gray-100 shadow-sm' }}">
+                        <div class="bg-white dark:bg-gray-800 rounded-lg p-4 {{ $loop->first ? 'ring-2 ring-indigo-500 shadow-md' : 'ring-1 ring-gray-100 dark:ring-gray-700 shadow-sm' }}">
                             <div class="flex items-center justify-between">
                                 <a href="{{ route('projects.tasks.show', [$project, $task]) }}"
-                                   class="font-mono font-semibold text-indigo-700 hover:underline">{{ $task->name }}</a>
+                                   class="font-mono font-semibold text-indigo-700 dark:text-indigo-400 hover:underline">{{ $task->name }}</a>
                                 @if ($loop->first)
                                     <span class="inline-flex items-center rounded-full bg-indigo-600 px-2 py-0.5 text-xs font-semibold text-white">★ {{ __('status.best_pick') }}</span>
                                 @endif
                             </div>
 
-                            <div class="mt-2 flex items-center gap-3 text-xs text-gray-500">
+                            <div class="mt-2 flex items-center gap-3 text-xs text-gray-500 dark:text-gray-400">
                                 <span>{{ $task->effort_story_points }} SP</span>
                                 <span>·</span>
                                 <span>{{ $task->x_tokens }} {{ __('status.tokens') }}</span>
@@ -190,12 +190,12 @@
                             </div>
 
                             @if ($task->x_unlocks > 0)
-                                <div class="mt-2 inline-flex items-center rounded-full bg-green-50 px-2 py-0.5 text-xs font-medium text-green-700">
+                                <div class="mt-2 inline-flex items-center rounded-full bg-green-50 dark:bg-green-900/30 px-2 py-0.5 text-xs font-medium text-green-700 dark:text-green-300">
                                     {{ trans_choice('status.unlocks_followup_prs', $task->x_unlocks, ['count' => $task->x_unlocks]) }}
                                 </div>
                             @endif
 
-                            <p class="mt-2 text-sm text-gray-600">{{ $task->summary }}</p>
+                            <p class="mt-2 text-sm text-gray-600 dark:text-gray-400">{{ $task->summary }}</p>
                         </div>
                     @endforeach
                 </div>

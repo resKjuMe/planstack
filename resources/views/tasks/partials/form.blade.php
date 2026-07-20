@@ -16,7 +16,7 @@
 
         <div>
             <x-input-label for="status" :value="__('common.status')" />
-            <select id="status" name="status" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
+            <select id="status" name="status" class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm">
                 @foreach ($statuses as $status)
                     <option value="{{ $status->value }}"
                         @selected(old('status', $task?->status?->value ?? 'UNKNOWN') === $status->value)>
@@ -37,7 +37,7 @@
 
     <div class="sm:w-60">
         <x-input-label for="criticality" :value="__('tasks.criticality')" />
-        <select id="criticality" name="criticality" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
+        <select id="criticality" name="criticality" class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm">
             <option value="">—</option>
             @foreach (\App\Enums\Criticality::cases() as $crit)
                 <option value="{{ $crit->value }}" @selected(old('criticality', $task?->criticality?->value) === $crit->value)>{{ $crit->label() }}</option>
@@ -49,39 +49,39 @@
     <div>
         <x-input-label for="description" :value="__('common.description')" />
         <textarea id="description" name="description" rows="5"
-                  class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">{{ old('description', $task?->description) }}</textarea>
+                  class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">{{ old('description', $task?->description) }}</textarea>
         <x-input-error :messages="$errors->get('description')" class="mt-2" />
     </div>
 
     <div>
         <x-input-label for="description_acceptance_criteria" :value="__('common.acceptance_criteria')" />
         <textarea id="description_acceptance_criteria" name="description_acceptance_criteria" rows="4"
-                  class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">{{ old('description_acceptance_criteria', $task?->description_acceptance_criteria) }}</textarea>
+                  class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">{{ old('description_acceptance_criteria', $task?->description_acceptance_criteria) }}</textarea>
         <x-input-error :messages="$errors->get('description_acceptance_criteria')" class="mt-2" />
     </div>
 
     <div>
         <x-input-label for="description_target_actual" :value="__('tasks.actual_target_comparison')" />
         <textarea id="description_target_actual" name="description_target_actual" rows="4"
-                  class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                  class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
                   placeholder="{{ __('tasks.actual_behavior_before_the_task_target') }}">{{ old('description_target_actual', $task?->description_target_actual) }}</textarea>
-        <p class="mt-1 text-xs text-gray-400">{{ __('tasks.an_easy_to_understand_before_after') }}</p>
+        <p class="mt-1 text-xs text-gray-400 dark:text-gray-500">{{ __('tasks.an_easy_to_understand_before_after') }}</p>
         <x-input-error :messages="$errors->get('description_target_actual')" class="mt-2" />
     </div>
 
     <div>
         <x-input-label for="description_test_cases" :value="__('tasks.test_cases_test_instructions')" />
         <textarea id="description_test_cases" name="description_test_cases" rows="4"
-                  class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                  class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
                   placeholder="{{ __('tasks.step_by_step_instructions_for_how_the') }}">{{ old('description_test_cases', $task?->description_test_cases) }}</textarea>
-        <p class="mt-1 text-xs text-gray-400">{{ __('tasks.for_humans_how_can_the_result_of_the_pr') }}</p>
+        <p class="mt-1 text-xs text-gray-400 dark:text-gray-500">{{ __('tasks.for_humans_how_can_the_result_of_the_pr') }}</p>
         <x-input-error :messages="$errors->get('description_test_cases')" class="mt-2" />
     </div>
 
     <div class="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
         <div>
             <x-input-label for="phase_id" :value="__('tasks.phase')" />
-            <select id="phase_id" name="phase_id" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
+            <select id="phase_id" name="phase_id" class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm">
                 <option value="">—</option>
                 @foreach ($project->phases as $phase)
                     <option value="{{ $phase->id }}" @selected(old('phase_id', $task?->phase_id) == $phase->id)>{{ $phase->name }}</option>
@@ -114,7 +114,7 @@
             <x-input-label for="affected_files" :value="__('tasks.affected_files_estimated')" />
             <x-text-input id="affected_files" name="affected_files" type="number" min="0" class="mt-1 block w-full sm:w-40"
                           :value="old('affected_files', $task?->affected_files)" />
-            <p class="mt-1 text-xs text-gray-400">{{ __('tasks.always_provide_this_an_estimate_is') }}</p>
+            <p class="mt-1 text-xs text-gray-400 dark:text-gray-500">{{ __('tasks.always_provide_this_an_estimate_is') }}</p>
             <x-input-error :messages="$errors->get('affected_files')" class="mt-2" />
         </div>
         <div>
@@ -127,7 +127,7 @@
 
     <div>
         <x-input-label for="reviewed_by" :value="__('tasks.reviewed_by')" />
-        <select id="reviewed_by" name="reviewed_by" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
+        <select id="reviewed_by" name="reviewed_by" class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm">
             <option value="">—</option>
             @foreach ($project->accessUsers() as $member)
                 <option value="{{ $member->id }}"
@@ -140,13 +140,13 @@
     </div>
 
     @if (($task?->status ?? null) === \App\Enums\TaskStatus::IN_REVIEW)
-        <div class="rounded-md border border-purple-100 bg-purple-50/40 p-4 space-y-4">
-            <p class="text-sm font-semibold text-purple-800">{{ __('tasks.review_result') }}</p>
+        <div class="rounded-md border border-purple-100 dark:border-purple-900/50 bg-purple-50/40 dark:bg-purple-900/30 p-4 space-y-4">
+            <p class="text-sm font-semibold text-purple-800 dark:text-purple-300">{{ __('tasks.review_result') }}</p>
             <div class="grid gap-5 sm:grid-cols-2">
                 <div>
                     <x-input-label for="last_review_recommendation" :value="__('tasks.recommendation')" />
                     <select id="last_review_recommendation" name="last_review_recommendation"
-                            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
+                            class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm">
                         <option value="">—</option>
                         @foreach (\App\Enums\ReviewRecommendation::cases() as $rec)
                             <option value="{{ $rec->value }}"
@@ -167,7 +167,7 @@
             <div>
                 <x-input-label for="last_review_summary" :value="__('tasks.review_analysis_tldr_first_then_detailed')" />
                 <textarea id="last_review_summary" name="last_review_summary" rows="10"
-                          class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 font-mono text-xs"
+                          class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 font-mono text-xs"
                           placeholder="{{ __('tasks.tldr_2') }}&#10;&#10;{{ __('tasks.detailed_analysis') }}">{{ old('last_review_summary', $task?->last_review_summary) }}</textarea>
                 <x-input-error :messages="$errors->get('last_review_summary')" class="mt-2" />
             </div>
@@ -177,14 +177,14 @@
     @if ($candidates->isNotEmpty())
         <div>
             <x-input-label :value="__('tasks.prerequisites_requirements')" />
-            <div class="mt-2 grid gap-2 sm:grid-cols-2 max-h-56 overflow-y-auto rounded-md border border-gray-200 p-3">
+            <div class="mt-2 grid gap-2 sm:grid-cols-2 max-h-56 overflow-y-auto rounded-md border border-gray-200 dark:border-gray-700 p-3">
                 @foreach ($candidates as $candidate)
                     <label class="flex items-center gap-2 text-sm">
                         <input type="checkbox" name="prerequisites[]" value="{{ $candidate->id }}"
-                               class="rounded border-gray-300 text-indigo-600"
+                               class="rounded border-gray-300 dark:border-gray-600 text-indigo-600 dark:text-indigo-400"
                                @checked(in_array($candidate->id, $selected, true))>
-                        <span class="font-mono text-indigo-700">{{ $candidate->name }}</span>
-                        <span class="text-gray-500 truncate">{{ $candidate->summary }}</span>
+                        <span class="font-mono text-indigo-700 dark:text-indigo-400">{{ $candidate->name }}</span>
+                        <span class="text-gray-500 dark:text-gray-400 truncate">{{ $candidate->summary }}</span>
                     </label>
                 @endforeach
             </div>

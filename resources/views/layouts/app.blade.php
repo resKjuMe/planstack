@@ -5,6 +5,8 @@
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta name="csrf-token" content="{{ csrf_token() }}">
 
+        @include('partials.theme-init')
+
         <link rel="icon" href="{{ asset('favicon.ico') }}" sizes="48x48">
         <link rel="icon" href="{{ asset('favicon.svg') }}" type="image/svg+xml">
         <link rel="apple-touch-icon" href="{{ asset('apple-touch-icon-180.png') }}">
@@ -23,12 +25,12 @@
         <style>[x-cloak]{display:none !important;}</style>
     </head>
     <body class="font-sans antialiased">
-        <div class="min-h-screen bg-gray-100">
+        <div class="min-h-screen bg-gray-100 dark:bg-gray-900">
             @include('layouts.navigation')
 
             <!-- Page Heading -->
             @isset($header)
-                <header class="bg-white shadow">
+                <header class="bg-white shadow dark:bg-gray-800 dark:shadow-black/30">
                     <div class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
                         {{ $header }}
                     </div>
@@ -38,7 +40,7 @@
             <!-- Optional sub-navigation directly under the page heading (e.g. the
                  project tabs), spanning the full width in its own light band. -->
             @isset($subheader)
-                <div class="bg-gray-50 border-b border-gray-200">
+                <div class="bg-gray-50 border-b border-gray-200 dark:bg-gray-800/50 dark:border-gray-700">
                     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                         {{ $subheader }}
                     </div>

@@ -128,10 +128,10 @@ class ProjectCalibrationController extends Controller
     private function pillClass(string $deviationClass): string
     {
         return match ($deviationClass) {
-            'green' => 'bg-green-50 text-green-700',
-            'amber' => 'bg-amber-100 text-amber-800',
-            'red' => 'bg-red-100 text-red-700',
-            default => 'bg-gray-100 text-gray-500',
+            'green' => 'bg-green-50 text-green-700 dark:bg-green-900/30 dark:text-green-300',
+            'amber' => 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300',
+            'red' => 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300',
+            default => 'bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400',
         };
     }
 

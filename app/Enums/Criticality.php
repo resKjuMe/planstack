@@ -32,10 +32,10 @@ enum Criticality: string
     public function badgeClasses(): string
     {
         return match ($this) {
-            self::LOW => 'bg-gray-100 text-gray-600',
-            self::MEDIUM => 'bg-blue-100 text-blue-700',
-            self::HIGH => 'bg-amber-100 text-amber-800',
-            self::CRITICAL => 'bg-red-100 text-red-800',
+            self::LOW => 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300',
+            self::MEDIUM => 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300',
+            self::HIGH => 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300',
+            self::CRITICAL => 'bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300',
         };
     }
 }

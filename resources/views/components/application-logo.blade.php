@@ -7,5 +7,5 @@
         <path d="M36 60 L36 72 L80 94 L80 82"/>
         <path d="M124 60 L124 72 L80 94"/>
     </g>
-    <text x="160" y="102" font-family="'Inter', 'Segoe UI', 'DejaVu Sans', Arial, Helvetica, sans-serif" font-size="60" font-weight="600" fill="#2B2B33">Planstack</text>
+    <text x="160" y="102" font-family="'Inter', 'Segoe UI', 'DejaVu Sans', Arial, Helvetica, sans-serif" font-size="60" font-weight="600" fill="#2B2B33" class="dark:fill-gray-100">Planstack</text>
 </svg>

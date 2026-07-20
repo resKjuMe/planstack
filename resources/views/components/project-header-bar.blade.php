@@ -6,7 +6,7 @@
            class="inline-flex items-center rounded bg-gray-800 px-2.5 py-1 text-sm font-mono font-semibold text-white hover:bg-gray-700">
             {{ $project->alias }}
         </a>
-        <h2 class="font-semibold text-xl text-gray-800 leading-tight">{{ $project->name }}</h2>
+        <h2 class="font-semibold text-xl text-gray-800 dark:text-gray-100 leading-tight">{{ $project->name }}</h2>
     </div>
     <x-project-actions :project="$project" />
 </div>

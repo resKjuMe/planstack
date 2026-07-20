@@ -61,16 +61,16 @@ enum TaskStatus: string
     public function textClasses(): string
     {
         return match ($this) {
-            self::UNKNOWN => 'text-gray-500',
-            self::BLOCKED => 'text-rose-500',
-            self::CONCERNED => 'text-red-600',
-            self::PICKABLE => 'text-indigo-500',
-            self::CLAIMED => 'text-sky-600',
-            self::ANALYZING => 'text-blue-500',
-            self::IN_PROGRESS => 'text-blue-700',
-            self::IN_REVIEW => 'text-purple-600',
-            self::COMPLETED => 'text-green-600',
-            self::MERGED => 'text-emerald-600',
+            self::UNKNOWN => 'text-gray-500 dark:text-gray-400',
+            self::BLOCKED => 'text-rose-500 dark:text-rose-400',
+            self::CONCERNED => 'text-red-600 dark:text-red-400',
+            self::PICKABLE => 'text-indigo-500 dark:text-indigo-400',
+            self::CLAIMED => 'text-sky-600 dark:text-sky-400',
+            self::ANALYZING => 'text-blue-500 dark:text-blue-400',
+            self::IN_PROGRESS => 'text-blue-700 dark:text-blue-400',
+            self::IN_REVIEW => 'text-purple-600 dark:text-purple-400',
+            self::COMPLETED => 'text-green-600 dark:text-green-400',
+            self::MERGED => 'text-emerald-600 dark:text-emerald-400',
         };
     }
 
@@ -103,16 +103,16 @@ enum TaskStatus: string
     public function badgeClasses(): string
     {
         return match ($this) {
-            self::UNKNOWN => 'bg-gray-100 text-gray-600',
-            self::BLOCKED => 'bg-rose-100 text-rose-700',
-            self::CONCERNED => 'bg-red-100 text-red-800',
-            self::PICKABLE => 'bg-indigo-100 text-indigo-700',
-            self::CLAIMED => 'bg-sky-100 text-sky-700',
-            self::ANALYZING => 'bg-blue-100 text-blue-700',
-            self::IN_PROGRESS => 'bg-blue-200 text-blue-900',
-            self::IN_REVIEW => 'bg-purple-100 text-purple-700',
-            self::COMPLETED => 'bg-green-100 text-green-700',
-            self::MERGED => 'bg-emerald-100 text-emerald-800',
+            self::UNKNOWN => 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300',
+            self::BLOCKED => 'bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300',
+            self::CONCERNED => 'bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300',
+            self::PICKABLE => 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300',
+            self::CLAIMED => 'bg-sky-100 text-sky-700 dark:bg-sky-900/40 dark:text-sky-300',
+            self::ANALYZING => 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300',
+            self::IN_PROGRESS => 'bg-blue-200 text-blue-900 dark:bg-blue-900/50 dark:text-blue-200',
+            self::IN_REVIEW => 'bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300',
+            self::COMPLETED => 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300',
+            self::MERGED => 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300',
         };
     }
 }

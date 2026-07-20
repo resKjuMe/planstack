@@ -2,6 +2,20 @@
 @tailwind components;
 @tailwind utilities;
 
+@layer base {
+    /* Dark Mode: Standard-Rahmenfarbe. Tailwinds Preflight setzt für ALLE
+       Elemente border-color = gray-200 — bloße `border`/`border-t`/`divide-y`
+       ohne eigene Farbklasse blieben dadurch im Dark Mode hell ("weiße"
+       Trennlinien). Diese Regel kippt die Default-Rahmenfarbe im Dark Mode auf
+       gray-700. Explizite border-*-Utilities liegen im utilities-Layer (danach)
+       und überstimmen sie weiterhin. */
+    .dark *,
+    .dark ::before,
+    .dark ::after {
+        border-color: #374151;
+    }
+}
+
 /* Theme tokens for the PR sequence view. All colors in that view come from
    these variables so the dark variant only swaps values, never markup. */
 :root {
@@ -57,33 +71,34 @@
     --seq-active-row: rgb(59 130 246 / 0.06);
 }
 
-@media (prefers-color-scheme: dark) {
-    :root {
-        --seq-surface-0: #1c1c1f;
-        --seq-surface-1: #27272a;
-        --seq-border: #3f3f46;
-        --seq-text: #f4f4f5;
-        --seq-muted: #a1a1aa;
-        --seq-faint: #71717a;
-        --seq-accent: #a5b4fc;
-        --seq-danger: #f87171;
-        --seq-pill-bg: #fafafa;
-        --seq-pill-text: #18181b;
-        --seq-pill-badge: rgb(0 0 0 / 0.15);
+/* Dark-Variante der Sequence-Tokens. Gesteuert über die .dark-Klasse am <html>
+   (vom Theme-Store gesetzt), damit hell/dunkel/System wie im restlichen UI
+   greift — nicht mehr allein über prefers-color-scheme. */
+.dark {
+    --seq-surface-0: #1c1c1f;
+    --seq-surface-1: #27272a;
+    --seq-border: #3f3f46;
+    --seq-text: #f4f4f5;
+    --seq-muted: #a1a1aa;
+    --seq-faint: #71717a;
+    --seq-accent: #a5b4fc;
+    --seq-danger: #f87171;
+    --seq-pill-bg: #fafafa;
+    --seq-pill-text: #18181b;
+    --seq-pill-badge: rgb(0 0 0 / 0.15);
 
-        --seq-amber-row: rgb(245 158 11 / 0.09);
-        --seq-amber-text: #fbbf24;
-        --seq-red-text: #fca5a5;
-        --seq-green-text: #86efac;
-        --seq-teal-text: #5eead4;
+    --seq-amber-row: rgb(245 158 11 / 0.09);
+    --seq-amber-text: #fbbf24;
+    --seq-red-text: #fca5a5;
+    --seq-green-text: #86efac;
+    --seq-teal-text: #5eead4;
 
-        --seq-sky-text: #7dd3fc;
-        --seq-blue-text: #93c5fd;
-        --seq-navy-rail: #60a5fa;
-        --seq-navy-text: #bfdbfe;
-        --seq-purple-text: #d8b4fe;
-        --seq-active-row: rgb(59 130 246 / 0.10);
-    }
+    --seq-sky-text: #7dd3fc;
+    --seq-blue-text: #93c5fd;
+    --seq-navy-rail: #60a5fa;
+    --seq-navy-text: #bfdbfe;
+    --seq-purple-text: #d8b4fe;
+    --seq-active-row: rgb(59 130 246 / 0.10);
 }
 
 /* Rendered-markdown surface (task descriptions, status docs …). Kept here as a
@@ -113,3 +128,49 @@
 .md-content tbody tr:nth-child(even) { background: #fafafa; }
 .md-content strong { color: #111827; font-weight: 600; }
 .md-content img { max-width: 100%; height: auto; }
+
+/* Dark-Variante der gerenderten Markdown-Oberfläche. Zwei-Klassen-Selektoren
+   (.dark .md-content …) überstimmen sowohl die hellen Regeln oben als auch die
+   inline-<style>-Dubletten in status-shell.blade.php (nur eine Klasse). */
+.dark .md-content { color: #d1d5db; }
+.dark .md-content h1 { color: #f9fafb; }
+.dark .md-content h2 { color: #f3f4f6; }
+.dark .md-content h3 { color: #e5e7eb; }
+.dark .md-content h4 { color: #e5e7eb; }
+.dark .md-content p { color: #d1d5db; }
+.dark .md-content a { color: #a5b4fc; }
+.dark .md-content code { background: #374151; color: #e5e7eb; }
+.dark .md-content pre { background: #111827; }
+.dark .md-content pre code { background: none; color: #e5e7eb; }
+.dark .md-content blockquote { border-left-color: #4b5563; color: #9ca3af; }
+.dark .md-content hr { border-top-color: #374151; }
+.dark .md-content th, .dark .md-content td { border-color: #374151; }
+.dark .md-content th { background: #1f2937; color: #e5e7eb; }
+.dark .md-content tbody tr:nth-child(even) { background: rgb(255 255 255 / 0.03); }
+.dark .md-content strong { color: #f9fafb; }
+
+/* Dark-Fallback für native Formularfelder (@tailwindcss/forms setzt sonst einen
+   weißen Grund). Tailwinds dark:-Utilities (höhere Spezifität) überstimmen diese
+   Regel dort, wo ein Feld/Komponente bereits explizit dunkel gestylt ist.
+   Checkboxen/Radios bleiben ausgenommen (behalten ihre Akzentfarbe). */
+.dark [type='text'],
+.dark [type='email'],
+.dark [type='password'],
+.dark [type='number'],
+.dark [type='url'],
+.dark [type='date'],
+.dark [type='datetime-local'],
+.dark [type='search'],
+.dark [type='tel'],
+.dark textarea,
+.dark select {
+    background-color: #111827;
+    border-color: #4b5563;
+    color: #f3f4f6;
+}
+.dark [type='text']::placeholder,
+.dark [type='email']::placeholder,
+.dark [type='password']::placeholder,
+.dark [type='number']::placeholder,
+.dark [type='search']::placeholder,
+.dark textarea::placeholder { color: #6b7280; }

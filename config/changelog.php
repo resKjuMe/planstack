@@ -6,6 +6,22 @@
 return [
     'releases' => [
         [
+            'version' => '2.1.0',
+            'date' => '2026-07-20',
+            'tldr' => [
+                'de' => ['Dunkles Design'],
+                'en' => ['Dark mode'],
+            ],
+            'changes' => [
+                'de' => [
+                    'Neu: Dunkles Design (Dark Mode). Oben rechts in der Navigation lässt sich das Design umschalten — Hell, Dunkel oder „System" (folgt automatisch der Einstellung deines Betriebssystems). Die Wahl wird pro Browser gespeichert und gilt für die gesamte Oberfläche inkl. Diagramm und Changelog.',
+                ],
+                'en' => [
+                    'New: Dark mode. Switch the appearance from the top right of the navigation — light, dark or "system" (which automatically follows your operating system\'s setting). Your choice is stored per browser and applies to the entire interface, including the diagram and this changelog.',
+                ],
+            ],
+        ],
+        [
             'version' => '2.0.0',
             'date' => '2026-07-20',
             'tldr' => [
