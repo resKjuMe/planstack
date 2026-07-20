@@ -35,4 +35,15 @@ return [
     'transitions_saved' => 'Transitions saved.',
 
     'manage_link' => 'Manage task statuses',
+
+    'col_group' => 'Group',
+    'no_group' => '— none —',
+    'groups_title' => 'Collapse groups',
+    'groups_intro' => 'Fold consecutive collapsed columns into one bar (e.g. “In progress”). A group only appears when at least two of its columns are collapsed.',
+    'group_label' => 'Group label',
+    'add_group' => 'Add group',
+    'delete_group' => 'Delete',
+    'group_saved' => 'Group “:label” saved.',
+    'group_deleted' => 'Group deleted.',
+    'no_groups' => 'No groups yet.',
 ];

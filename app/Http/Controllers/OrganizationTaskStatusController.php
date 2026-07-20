@@ -4,10 +4,12 @@ namespace App\Http\Controllers;
 
 use App\Models\Organization;
 use App\Models\OrgStatus;
+use App\Models\OrgStatusGroup;
 use App\Models\OrgStatusTransition;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
@@ -56,6 +58,7 @@ class OrganizationTaskStatusController extends Controller
             'statuses' => $statuses,
             'transitions' => $transitions,
             'colors' => self::COLORS,
+            'groups' => $organization->statusGroups()->get(),
         ]);
     }
 
@@ -64,12 +67,15 @@ class OrganizationTaskStatusController extends Controller
         $organization = $this->ownedOrganization($request);
         abort_unless($status->organization_id === $organization->id, 403);
 
+        $groupIds = $organization->statusGroups()->pluck('id')->all();
+
         $data = $request->validate([
             'label' => ['required', 'string', 'max:255'],
             'label_en' => ['nullable', 'string', 'max:255'],
             'color_token' => ['required', Rule::in(self::COLORS)],
             'position' => ['required', 'integer', 'min:0'],
             'wip_limit' => ['nullable', 'integer', 'min:1'],
+            'group_id' => ['nullable', 'integer', Rule::in($groupIds)],
             'is_column' => ['sometimes', 'boolean'],
             'default_expanded' => ['sometimes', 'boolean'],
         ]);
@@ -80,6 +86,7 @@ class OrganizationTaskStatusController extends Controller
             'color_token' => $data['color_token'],
             'position' => $data['position'],
             'wip_limit' => $data['wip_limit'] ?? null,
+            'group_id' => $data['group_id'] ?? null,
             'is_column' => $request->boolean('is_column'),
             'default_expanded' => $request->boolean('default_expanded'),
         ]);
@@ -121,5 +128,44 @@ class OrganizationTaskStatusController extends Controller
         });
 
         return back()->with('status', __('board_admin.transitions_saved'));
+    }
+
+    public function storeGroup(Request $request): RedirectResponse
+    {
+        $organization = $this->ownedOrganization($request);
+
+        $data = $request->validate([
+            'label' => ['required', 'string', 'max:255'],
+        ]);
+
+        // Unique, slug-based key per organization.
+        $base = Str::slug($data['label']) ?: 'group';
+        $key = $base;
+        $i = 1;
+        while ($organization->statusGroups()->where('key', $key)->exists()) {
+            $key = $base.'-'.(++$i);
+        }
+
+        $organization->statusGroups()->create([
+            'key' => $key,
+            'label' => $data['label'],
+            'position' => (int) $organization->statusGroups()->max('position') + 1,
+        ]);
+
+        $organization->increment('status_config_version');
+
+        return back()->with('status', __('board_admin.group_saved', ['label' => $data['label']]));
+    }
+
+    public function destroyGroup(Request $request, OrgStatusGroup $group): RedirectResponse
+    {
+        $organization = $this->ownedOrganization($request);
+        abort_unless($group->organization_id === $organization->id, 403);
+
+        // Statuses keep existing; their group_id is set null via the FK.
+        $group->delete();
+        $organization->increment('status_config_version');
+
+        return back()->with('status', __('board_admin.group_deleted'));
     }
 }

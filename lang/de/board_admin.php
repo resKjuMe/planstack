@@ -35,4 +35,15 @@ return [
     'transitions_saved' => 'Übergänge gespeichert.',
 
     'manage_link' => 'Task-Status verwalten',
+
+    'col_group' => 'Gruppe',
+    'no_group' => '— keine —',
+    'groups_title' => 'Collapse-Gruppen',
+    'groups_intro' => 'Fasse aufeinanderfolgende eingeklappte Spalten zu einer Sammel-Leiste zusammen (z. B. „In Arbeit"). Eine Gruppe erscheint nur, wenn mindestens zwei ihrer Spalten eingeklappt sind.',
+    'group_label' => 'Bezeichnung der Gruppe',
+    'add_group' => 'Gruppe anlegen',
+    'delete_group' => 'Löschen',
+    'group_saved' => 'Gruppe „:label" gespeichert.',
+    'group_deleted' => 'Gruppe gelöscht.',
+    'no_groups' => 'Noch keine Gruppen.',
 ];

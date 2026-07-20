@@ -31,7 +31,7 @@
             <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6 overflow-x-auto">
                 <h3 class="mb-4 text-lg font-semibold text-gray-900 dark:text-gray-100">{{ __('board_admin.statuses') }}</h3>
 
-                <div class="min-w-[56rem] space-y-2">
+                <div class="min-w-[72rem] space-y-2">
                     {{-- Kopfzeile --}}
                     <div class="flex items-center gap-3 border-b pb-2 text-xs uppercase tracking-wide text-gray-400 dark:text-gray-500">
                         <div class="w-28">{{ __('board_admin.col_key') }}</div>
@@ -43,6 +43,7 @@
                         <div class="w-14 text-center">{{ __('board_admin.col_is_column') }}</div>
                         <div class="w-16 text-center">{{ __('board_admin.col_expanded') }}</div>
                         <div class="w-16">{{ __('board_admin.col_wip') }}</div>
+                        <div class="w-32">{{ __('board_admin.col_group') }}</div>
                         <div class="flex-1"></div>
                     </div>
 
@@ -76,6 +77,12 @@
                                        class="rounded border-gray-300 dark:border-gray-600 text-indigo-600 focus:ring-indigo-500">
                             </div>
                             <input type="number" name="wip_limit" value="{{ $status->wip_limit }}" min="1" class="{{ $inputClass }} w-16">
+                            <select name="group_id" class="{{ $inputClass }} w-32">
+                                <option value="">{{ __('board_admin.no_group') }}</option>
+                                @foreach ($groups as $g)
+                                    <option value="{{ $g->id }}" @selected($status->group_id === $g->id)>{{ $g->label }}</option>
+                                @endforeach
+                            </select>
                             <div class="flex-1 text-right">
                                 <button class="rounded-md bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-indigo-700">
                                     {{ __('board_admin.save') }}
@@ -86,6 +93,45 @@
                 </div>
 
                 <p class="mt-4 text-xs text-gray-400 dark:text-gray-500">{{ __('board_admin.deferred_note') }}</p>
+            </div>
+
+            {{-- ============ Collapse-Gruppen ============ --}}
+            <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+                <h3 class="mb-1 text-lg font-semibold text-gray-900 dark:text-gray-100">{{ __('board_admin.groups_title') }}</h3>
+                <p class="mb-4 max-w-3xl text-sm text-gray-500 dark:text-gray-400">{{ __('board_admin.groups_intro') }}</p>
+
+                @if ($groups->isNotEmpty())
+                    <ul class="mb-4 divide-y divide-gray-100 dark:divide-gray-700">
+                        @foreach ($groups as $g)
+                            <li class="flex items-center justify-between py-2">
+                                <span class="text-sm text-gray-800 dark:text-gray-200">
+                                    {{ $g->label }}
+                                    <span class="ms-2 font-mono text-xs text-gray-400 dark:text-gray-500">{{ $g->key }}</span>
+                                </span>
+                                <form method="POST" action="{{ route('organization.statuses.groups.destroy', $g) }}"
+                                      onsubmit="return confirm('{{ __('board_admin.delete_group') }}?');">
+                                    @csrf
+                                    @method('DELETE')
+                                    <button class="text-xs font-medium text-rose-600 dark:text-rose-400 hover:underline">{{ __('board_admin.delete_group') }}</button>
+                                </form>
+                            </li>
+                        @endforeach
+                    </ul>
+                @else
+                    <p class="mb-4 text-sm text-gray-400 dark:text-gray-500">{{ __('board_admin.no_groups') }}</p>
+                @endif
+
+                <form method="POST" action="{{ route('organization.statuses.groups.store') }}" class="flex items-end gap-3">
+                    @csrf
+                    <div>
+                        <x-input-label for="group-label" :value="__('board_admin.group_label')" />
+                        <input id="group-label" type="text" name="label" required maxlength="255" class="{{ $inputClass }} mt-1 w-64">
+                        <x-input-error :messages="$errors->get('label')" class="mt-1" />
+                    </div>
+                    <button class="rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700">
+                        {{ __('board_admin.add_group') }}
+                    </button>
+                </form>
             </div>
 
             {{-- ============ Übergänge ============ --}}
