@@ -34,7 +34,7 @@ export default function BoardColumn({
                 'board-cell flex h-full w-full min-w-0 flex-col rounded-lg p-2 transition',
                 overLimit ? 'bg-rose-50/70 dark:bg-rose-900/20' : 'bg-gray-50/70 dark:bg-gray-800/40',
                 isDragActive && ! isDropAllowed ? 'opacity-40' : '',
-                isOver && isDragActive && isDropAllowed ? 'ring-2 ring-indigo-400 dark:ring-indigo-500' : '',
+                isOver && isDragActive && isDropAllowed ? 'ring-2 ring-inset ring-indigo-400 dark:ring-indigo-500' : '',
             ].join(' ')}
         >
             <div className="mb-2 flex items-center justify-between gap-2 px-1">

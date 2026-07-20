@@ -14,7 +14,7 @@ function DropSection({ status, label, dotClass, count, cards, dragActive, allowe
             className={[
                 'rounded-md transition',
                 dragActive && ! allowed ? 'opacity-40' : '',
-                isOver && dragActive && allowed ? 'ring-2 ring-indigo-400 dark:ring-indigo-500' : '',
+                isOver && dragActive && allowed ? 'ring-2 ring-inset ring-indigo-400 dark:ring-indigo-500' : '',
             ].join(' ')}
         >
             {/* Status sub-header — always visible, so the group column is
