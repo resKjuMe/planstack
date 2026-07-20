@@ -110,6 +110,9 @@ class OrgBoardWorkflow
             'mergedStaleDays' => BoardWorkflow::MERGED_STALE_DAYS,
             'labels' => $this->statuses->mapWithKeys(fn ($s) => [$s->key => $this->localizedLabel($s)])->all(),
             'colors' => $this->statuses->mapWithKeys(fn ($s) => [$s->key => $s->color_token])->all(),
+            // key => inner SVG markup (or null). Resolved from the finite icon
+            // palette so the React board renders it without its own icon copy.
+            'icons' => $this->statuses->mapWithKeys(fn ($s) => [$s->key => StatusIcons::svg($s->icon)])->all(),
         ];
     }
 }

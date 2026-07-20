@@ -40,6 +40,8 @@ return [
     'col_label' => 'Bezeichnung (DE)',
     'col_label_en' => 'Bezeichnung (EN)',
     'col_color' => 'Farbe',
+    'col_icon' => 'Icon',
+    'no_icon' => 'Kein Icon',
     'col_position' => 'Position',
     'col_is_column' => 'Spalte',
     'col_expanded' => 'Standard offen',

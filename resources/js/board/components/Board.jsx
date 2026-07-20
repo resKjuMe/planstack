@@ -190,8 +190,11 @@ export default function Board({ data }) {
 
     const renderCard = useCallback(
         (task) => (
+            // Key includes displayStatus so a card force-remounts when its status
+            // changes (e.g. after a drop) — guarantees the split button recomputes
+            // its next/rest targets instead of showing the pre-move status.
             <TaskCard
-                key={task.id}
+                key={`${task.id}:${task.displayStatus}`}
                 task={task}
                 t={t}
                 csrf={csrf}
@@ -200,10 +203,11 @@ export default function Board({ data }) {
                 transitions={workflow.transitions}
                 labels={workflow.labels}
                 columnOrder={workflow.columnOrder}
+                exceptionStatuses={workflow.exceptionStatuses}
                 onMove={performMove}
             />
         ),
-        [t, csrf, endpoints, filters.highlightBlocked, workflow.transitions, workflow.labels, workflow.columnOrder, performMove],
+        [t, csrf, endpoints, filters.highlightBlocked, workflow.transitions, workflow.labels, workflow.columnOrder, workflow.exceptionStatuses, performMove],
     );
 
     const draggingTask = dragging ? tasks.find((tk) => tk.id === dragging.taskId) : null;
@@ -254,14 +258,21 @@ export default function Board({ data }) {
         // inside — unless the user ungrouped it. The board layout never changes on
         // drag, so the drop zones stay mounted and correctly measured.
         if (group && ! ungrouped) {
-            const members = group.statuses.map((s) => ({
-                status: s,
-                label: workflow.labels[s] ?? s,
-                dotClass: colorForToken(workflow.colors?.[s]).dot,
-                count: countByStatus[s] ?? 0,
-                allowed: dragging ? allowedTargets(workflow, dragging.from).has(s) : false,
-                cards: columnTasksFor(s).map((task) => renderCard(task)),
-            }));
+            const members = group.statuses.map((s) => {
+                const c = colorForToken(workflow.colors?.[s]);
+                return {
+                    status: s,
+                    label: workflow.labels[s] ?? s,
+                    dotClass: c.dot,
+                    head: c.head,
+                    icon: workflow.icons?.[s] ?? null,
+                    count: countByStatus[s] ?? 0,
+                    allowed: dragging ? allowedTargets(workflow, dragging.from).has(s) : false,
+                    cards: columnTasksFor(s).map((task) => renderCard(task)),
+                };
+            });
+            // Group header uses the middle member's colour + icon (per user choice).
+            const mid = members[Math.floor(members.length / 2)];
             cells.push({
                 track: EXPANDED_TRACK,
                 node: (
@@ -269,7 +280,9 @@ export default function Board({ data }) {
                         key={`group:${group.key}`}
                         group={group}
                         members={members}
-                        dotClass={members[Math.floor(members.length / 2)]?.dotClass ?? 'bg-gray-400'}
+                        dotClass={mid?.dotClass ?? 'bg-gray-400'}
+                        headClass={mid?.head ?? ''}
+                        icon={mid?.icon ?? null}
                         dragActive={!! dragging}
                         t={t}
                     />
@@ -328,6 +341,7 @@ export default function Board({ data }) {
                     label={label}
                     dotClass={color.dot}
                     headClass={color.head}
+                    icon={workflow.icons?.[status] ?? null}
                     count={count}
                     wipLimit={workflow.wipLimits[status] ?? null}
                     isDragActive={!!dragging}

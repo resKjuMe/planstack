@@ -1,11 +1,12 @@
 import React from 'react';
 import { useDroppable } from '@dnd-kit/core';
+import StatusIcon from './StatusIcon';
 
 // One per-status drop section inside a group column. The droppable EXISTS at all
 // times (also when not dragging) so @dnd-kit measures it before a drag starts —
 // no mount/unmount churn mid-drag, which is what broke drop detection when the
 // group used to split into separate grid columns.
-function DropSection({ status, label, dotClass, count, cards, dragActive, allowed }) {
+function DropSection({ status, label, dotClass, head, icon, count, cards, dragActive, allowed }) {
     const { setNodeRef, isOver } = useDroppable({ id: status, data: { status } });
 
     return (
@@ -25,7 +26,9 @@ function DropSection({ status, label, dotClass, count, cards, dragActive, allowe
                 permanently divided by status (not only while dragging). */}
             <div className="mb-1.5 flex items-center justify-between gap-1 px-0.5 text-[10px] font-medium uppercase tracking-wide text-gray-400 dark:text-gray-500">
                 <span className="flex items-center gap-1 truncate">
-                    <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${dotClass}`} aria-hidden />
+                    {icon
+                        ? <StatusIcon svg={icon} className={`h-3.5 w-3.5 shrink-0 ${head ?? ''}`} />
+                        : <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${dotClass}`} aria-hidden />}
                     <span className="truncate">{label}</span>
                 </span>
                 <span>{count}</span>
@@ -39,14 +42,16 @@ function DropSection({ status, label, dotClass, count, cards, dragActive, allowe
 // member statuses are shown together; while dragging, each member status is a
 // labeled drop section so a card can be dropped into a precise status without
 // the column layout changing (stable @dnd-kit drop zones).
-export default function GroupColumn({ group, members, dotClass = 'bg-gray-400', dragActive, t }) {
+export default function GroupColumn({ group, members, dotClass = 'bg-gray-400', headClass = '', icon, dragActive, t }) {
     const total = members.reduce((sum, m) => sum + m.count, 0);
 
     return (
         <div className="board-cell flex h-full w-full min-w-0 flex-col rounded-lg bg-gray-50/70 dark:bg-gray-800/40 p-2">
             <div className="mb-2 flex items-center justify-between gap-2 px-1">
                 <span className="flex items-center gap-2 text-sm font-semibold text-gray-600 dark:text-gray-300">
-                    <span className={`h-2 w-2 rounded-full ${dotClass}`} aria-hidden />
+                    {icon
+                        ? <StatusIcon svg={icon} className={`h-4 w-4 shrink-0 ${headClass}`} />
+                        : <span className={`h-2 w-2 rounded-full ${dotClass}`} aria-hidden />}
                     <span>{group.label}</span>
                 </span>
                 <span className="text-xs font-semibold text-gray-400 dark:text-gray-500">{total}</span>

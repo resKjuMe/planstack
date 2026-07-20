@@ -1,5 +1,6 @@
 import React from 'react';
 import { useDroppable } from '@dnd-kit/core';
+import StatusIcon from './StatusIcon';
 
 // An expanded status column. Header shows the label, count (and WIP
 // `current / limit`) plus a collapse control. The body is a @dnd-kit drop zone;
@@ -9,6 +10,7 @@ export default function BoardColumn({
     label,
     dotClass,
     headClass,
+    icon,
     count,
     wipLimit,
     isDragActive,
@@ -43,7 +45,9 @@ export default function BoardColumn({
                     onClick={() => collapsible && count === 0 && onCollapse()}
                     className={`flex items-center gap-2 text-sm font-semibold ${headClass} ${collapsible && count === 0 ? 'cursor-pointer' : 'cursor-default'}`}
                 >
-                    <span className={`h-2 w-2 rounded-full ${dotClass}`} aria-hidden />
+                    {icon
+                        ? <StatusIcon svg={icon} className="h-4 w-4 shrink-0" />
+                        : <span className={`h-2 w-2 rounded-full ${dotClass}`} aria-hidden />}
                     <span>{label}</span>
                 </button>
 

@@ -114,7 +114,7 @@ export function TaskCardView({
 
 // Draggable wrapper (@dnd-kit). The whole card is the drag source; interactive
 // children stop pointer propagation so links/buttons stay usable.
-export default function TaskCard({ task, t, csrf, endpoints, dimmed, transitions = {}, labels = {}, columnOrder = [], onMove }) {
+export default function TaskCard({ task, t, csrf, endpoints, dimmed, transitions = {}, labels = {}, columnOrder = [], exceptionStatuses = [], onMove }) {
     const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
         id: task.id,
         data: { from: task.displayStatus },
@@ -122,8 +122,12 @@ export default function TaskCard({ task, t, csrf, endpoints, dimmed, transitions
 
     // Primary action = the nearest FORWARD status (next by column order); the
     // rest go into the dropdown. Falls back to the first listed target when no
-    // forward transition exists (e.g. only backward moves).
-    const targets = transitions[task.displayStatus] ?? [];
+    // forward transition exists (e.g. only backward moves). Exception statuses
+    // (blocked/concerned) are never offered here: BLOCKED is derived from gates
+    // automatically and CONCERNED needs extra info (a concern report).
+    const targets = (transitions[task.displayStatus] ?? []).filter(
+        (s) => ! exceptionStatuses.includes(s),
+    );
     const pos = (s) => {
         const i = columnOrder.indexOf(s);
         return i === -1 ? Number.POSITIVE_INFINITY : i;

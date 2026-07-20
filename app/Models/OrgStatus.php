@@ -18,7 +18,7 @@ class OrgStatus extends Model
 
     protected $fillable = [
         'organization_id', 'role', 'key', 'label', 'label_en', 'kind',
-        'color_token', 'position', 'is_column', 'default_expanded', 'wip_limit',
+        'color_token', 'icon', 'position', 'is_column', 'default_expanded', 'wip_limit',
         'counts_as_done', 'counts_as_delivered', 'group_id', 'on_enter_effects',
     ];
 

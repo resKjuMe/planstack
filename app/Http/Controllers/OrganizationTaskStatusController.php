@@ -8,6 +8,7 @@ use App\Models\OrgStatusGroup;
 use App\Models\OrgStatusTransition;
 use App\Models\Task;
 use App\Support\StatusEffects;
+use App\Support\StatusIcons;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -60,6 +61,8 @@ class OrganizationTaskStatusController extends Controller
             'statuses' => $statuses,
             'transitions' => $transitions,
             'colors' => self::COLORS,
+            'iconKeys' => StatusIcons::keys(),
+            'iconMarkup' => StatusIcons::all(),
             'groups' => $organization->statusGroups()->get(),
         ]);
     }
@@ -75,6 +78,7 @@ class OrganizationTaskStatusController extends Controller
             'label' => ['required', 'string', 'max:255'],
             'label_en' => ['nullable', 'string', 'max:255'],
             'color_token' => ['required', Rule::in(self::COLORS)],
+            'icon' => ['nullable', Rule::in(StatusIcons::keys())],
             'position' => ['required', 'integer', 'min:0'],
             'wip_limit' => ['nullable', 'integer', 'min:1'],
             'group_id' => ['nullable', 'integer', Rule::in($groupIds)],
@@ -86,6 +90,7 @@ class OrganizationTaskStatusController extends Controller
             'label' => $data['label'],
             'label_en' => $data['label_en'] ?? null,
             'color_token' => $data['color_token'],
+            'icon' => $data['icon'] ?? null,
             'position' => $data['position'],
             'wip_limit' => $data['wip_limit'] ?? null,
             'group_id' => $data['group_id'] ?? null,
@@ -149,6 +154,7 @@ class OrganizationTaskStatusController extends Controller
             'label' => ['required', 'string', 'max:255'],
             'label_en' => ['nullable', 'string', 'max:255'],
             'color_token' => ['required', Rule::in(self::COLORS)],
+            'icon' => ['nullable', Rule::in(StatusIcons::keys())],
             'kind' => ['required', Rule::in(self::CUSTOM_KINDS)],
             'wip_limit' => ['nullable', 'integer', 'min:1'],
             'group_id' => ['nullable', 'integer', Rule::in($groupIds)],
@@ -173,6 +179,7 @@ class OrganizationTaskStatusController extends Controller
             'label_en' => $data['label_en'] ?? null,
             'kind' => $data['kind'],
             'color_token' => $data['color_token'],
+            'icon' => $data['icon'] ?? null,
             'position' => (int) $organization->statuses()->max('position') + 1,
             'is_column' => $data['kind'] === 'exception' ? false : $request->boolean('is_column', true),
             'default_expanded' => $request->boolean('default_expanded'),

@@ -40,6 +40,8 @@ return [
     'col_label' => 'Label (DE)',
     'col_label_en' => 'Label (EN)',
     'col_color' => 'Color',
+    'col_icon' => 'Icon',
+    'no_icon' => 'No icon',
     'col_position' => 'Position',
     'col_is_column' => 'Column',
     'col_expanded' => 'Open by default',

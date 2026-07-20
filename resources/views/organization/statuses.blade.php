@@ -9,6 +9,9 @@
     ];
     $inputClass = 'rounded-md border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-sm';
     $effectFields = \App\Support\StatusEffects::ALLOWED_FIELDS;
+    // Placeholder glyph (dashed circle) shown on the icon-picker trigger when no
+    // icon is chosen. Rendered via Alpine x-html into a static <svg> wrapper.
+    $iconPlaceholder = '<circle cx="12" cy="12" r="9" stroke-dasharray="3 3"/>';
     // Gemeinsames Spaltenraster für Kopfzeile, Status-Zeilen und das
     // "Neuer Status"-Formular, damit alle Spalten exakt untereinander fluchten.
     // Letzte Spalte (Aktionen) FEST, nicht auto: sonst variiert ihre Breite je
@@ -58,7 +61,7 @@
                         {{-- Update-Form nutzt display:contents, damit seine Felder direkt
                              im Zeilen-Grid liegen; der Speichern-Button steht ausserhalb
                              und ist per form=… verknüpft. Löschen ist ein eigenes Form. --}}
-                        <div x-data="{ openFx: false, pickerOpen: false, color: '{{ $status->color_token }}', swatch: @js($swatch), rows: @js($status->on_enter_effects ?? []) }"
+                        <div x-data="{ openFx: false, pickerOpen: false, color: '{{ $status->color_token }}', swatch: @js($swatch), iconOpen: false, icon: '{{ $status->icon }}', icons: @js($iconMarkup), placeholder: @js($iconPlaceholder), rows: @js($status->on_enter_effects ?? []) }"
                              data-status-row data-status-id="{{ $status->id }}"
                              class="border-b border-gray-100 dark:border-gray-700 last:border-0">
                             <div class="{{ $grid }} py-2">
@@ -70,8 +73,8 @@
                                     @csrf
                                     @method('PATCH')
                                     <input type="hidden" name="position" value="{{ $status->position }}">
-                                    {{-- Farbpunkt (Klick öffnet Flyout) + Schlüssel --}}
-                                    <div class="flex min-w-0 items-center gap-2">
+                                    {{-- Farbpunkt + Icon (Klick öffnet je ein Flyout) + Schlüssel --}}
+                                    <div class="flex min-w-0 items-center gap-1.5">
                                         <div class="relative shrink-0">
                                             <input type="hidden" name="color_token" x-bind:value="color">
                                             <button type="button" x-on:click="pickerOpen = !pickerOpen" title="{{ __('board_admin.col_color') }}" class="p-1">
@@ -87,6 +90,7 @@
                                                 @endforeach
                                             </div>
                                         </div>
+                                        @include('organization.partials.icon-picker')
                                         <span class="truncate font-mono text-xs text-gray-500 dark:text-gray-400">{{ $status->key }}</span>
                                     </div>
                                     <input type="text" name="label" value="{{ $status->label }}" required maxlength="255" class="{{ $inputClass }} w-full min-w-0">
@@ -173,12 +177,12 @@
 
                 {{-- Neuer Status: gleiches Spaltenraster wie Kopf/Zeilen --}}
                 <form method="POST" action="{{ route('organization.statuses.store') }}"
-                      x-data="{ pickerOpen: false, color: 'indigo', swatch: @js($swatch) }"
+                      x-data="{ pickerOpen: false, color: 'indigo', swatch: @js($swatch), iconOpen: false, icon: '', icons: @js($iconMarkup), placeholder: @js($iconPlaceholder) }"
                       class="{{ $grid }} border-t-2 border-dashed border-gray-200 dark:border-gray-700 py-3">
                     @csrf
                     <span class="text-center text-lg leading-none text-indigo-500" aria-hidden>＋</span>
-                    {{-- Farbpunkt + Art (kein Schlüssel: wird automatisch vergeben) --}}
-                    <div class="flex min-w-0 items-center gap-2">
+                    {{-- Farbpunkt + Icon + Art (kein Schlüssel: wird automatisch vergeben) --}}
+                    <div class="flex min-w-0 items-center gap-1.5">
                         <div class="relative shrink-0">
                             <input type="hidden" name="color_token" x-bind:value="color">
                             <button type="button" x-on:click="pickerOpen = !pickerOpen" title="{{ __('board_admin.col_color') }}" class="p-1">
@@ -194,6 +198,7 @@
                                 @endforeach
                             </div>
                         </div>
+                        @include('organization.partials.icon-picker')
                         <select name="kind" title="{{ __('board_admin.kind') }}" class="{{ $inputClass }} w-full min-w-0">
                             @foreach (['active', 'review', 'done', 'exception'] as $k)
                                 <option value="{{ $k }}">{{ __('board_admin.kind_'.$k) }}</option>

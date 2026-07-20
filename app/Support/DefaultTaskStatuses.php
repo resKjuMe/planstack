@@ -24,19 +24,19 @@ class DefaultTaskStatuses
      * @var array<int, array<string, mixed>>
      */
     private const STATUSES = [
-        // key/role, label(de), label_en, kind, color_token, position, is_column,
-        // default_expanded, wip_limit, done, delivered, group
-        ['PICKABLE',    'pickbar',      'pickable',    'waiting',   'indigo',  0, true,  true,  null, false, false, null],
-        ['CLAIMED',     'beansprucht',  'claimed',     'active',    'sky',     1, true,  false, null, false, false, 'in_work'],
-        ['ANALYZING',   'in Analyse',   'analyzing',   'active',    'blue',    2, true,  false, null, false, false, 'in_work'],
-        ['IN_PROGRESS', 'in Arbeit',    'in progress', 'active',    'navy',    3, true,  true,  null, false, false, 'in_work'],
-        ['IN_REVIEW',   'in Review',    'in review',   'review',    'purple',  4, true,  true,  null, false, false, null],
-        ['MERGED',      'gemerged',     'merged',      'done',      'emerald', 5, true,  false, null, true,  true,  null],
-        ['COMPLETED',   'erledigt',     'completed',   'done',      'green',   6, true,  false, null, true,  true,  null],
+        // key/role, label(de), label_en, kind, color_token, icon, position,
+        // is_column, default_expanded, wip_limit, done, delivered, group
+        ['PICKABLE',    'pickbar',      'pickable',    'waiting',   'indigo',  'inbox',        0, true,  true,  null, false, false, null],
+        ['CLAIMED',     'beansprucht',  'claimed',     'active',    'sky',     'user-check',   1, true,  false, null, false, false, 'in_work'],
+        ['ANALYZING',   'in Analyse',   'analyzing',   'active',    'blue',    'search',       2, true,  false, null, false, false, 'in_work'],
+        ['IN_PROGRESS', 'in Arbeit',    'in progress', 'active',    'navy',    'hammer',       3, true,  true,  null, false, false, 'in_work'],
+        ['IN_REVIEW',   'in Review',    'in review',   'review',    'purple',  'eye',          4, true,  true,  null, false, false, null],
+        ['MERGED',      'gemerged',     'merged',      'done',      'emerald', 'git-merge',    5, true,  false, null, true,  true,  null],
+        ['COMPLETED',   'erledigt',     'completed',   'done',      'green',   'circle-check', 6, true,  false, null, true,  true,  null],
         // Exception states: not columns, collected in the left-hand lane
         // (default_expanded = true → the lane is open by default, as before).
-        ['BLOCKED',     'blockiert',    'blocked',     'exception', 'rose',    7, false, true,  null, false, false, null],
-        ['CONCERNED',   'problematisch','concerned',   'exception', 'red',     8, false, true,  null, false, false, null],
+        ['BLOCKED',     'blockiert',    'blocked',     'exception', 'rose',    'octagon-x',      7, false, true,  null, false, false, null],
+        ['CONCERNED',   'problematisch','concerned',   'exception', 'red',     'triangle-alert', 8, false, true,  null, false, false, null],
     ];
 
     /**
@@ -110,10 +110,16 @@ class DefaultTaskStatuses
                 $groupIdByKey[$g['key']] = $group->id;
             }
 
+            // The icon column is added in a later migration than the seed; only
+            // write it when it already exists (fresh migrate runs the seed first,
+            // then a backfill migration sets icons by key — same pattern as
+            // on_enter_effects).
+            $hasIcon = Schema::hasColumn('task_statuses', 'icon');
+
             $statusIdByKey = [];
             foreach (self::STATUSES as $s) {
-                [$key, $label, $labelEn, $kind, $color, $position, $isColumn, $expanded, $wip, $done, $delivered, $group] = $s;
-                $row = OrgStatus::create([
+                [$key, $label, $labelEn, $kind, $color, $icon, $position, $isColumn, $expanded, $wip, $done, $delivered, $group] = $s;
+                $row = OrgStatus::create(array_filter([
                     'organization_id' => $organization->id,
                     'role' => $key, // default: key == role
                     'key' => $key,
@@ -121,6 +127,7 @@ class DefaultTaskStatuses
                     'label_en' => $labelEn,
                     'kind' => $kind,
                     'color_token' => $color,
+                    'icon' => $hasIcon ? $icon : null,
                     'position' => $position,
                     'is_column' => $isColumn,
                     'default_expanded' => $expanded,
@@ -128,7 +135,7 @@ class DefaultTaskStatuses
                     'counts_as_done' => $done,
                     'counts_as_delivered' => $delivered,
                     'group_id' => $group ? $groupIdByKey[$group] : null,
-                ]);
+                ], fn ($v, $k) => $k !== 'icon' || $hasIcon, ARRAY_FILTER_USE_BOTH));
                 $statusIdByKey[$key] = $row->id;
             }
 
