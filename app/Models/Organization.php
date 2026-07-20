@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\StatusRole;
 use iamfarhad\LaravelAuditLog\Traits\Auditable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -47,5 +48,37 @@ class Organization extends Model
     public function isOwner(User $user): bool
     {
         return $this->created_by_id === $user->id;
+    }
+
+    /**
+     * The organization's configurable task statuses, ordered for the board.
+     */
+    public function statuses(): HasMany
+    {
+        return $this->hasMany(OrgStatus::class)->orderBy('position');
+    }
+
+    public function statusGroups(): HasMany
+    {
+        return $this->hasMany(OrgStatusGroup::class)->orderBy('position');
+    }
+
+    public function statusAutomations(): HasMany
+    {
+        return $this->hasMany(OrgStatusAutomation::class);
+    }
+
+    /**
+     * Resolve the (single) status carrying a given action role, or null if the
+     * organization has none configured for it.
+     */
+    public function statusForRole(StatusRole $role): ?OrgStatus
+    {
+        return $this->statuses()->where('role', $role->value)->first();
+    }
+
+    public function statusForKey(string $key): ?OrgStatus
+    {
+        return $this->statuses()->where('key', $key)->first();
     }
 }
