@@ -7,6 +7,7 @@ use App\Models\OrgStatus;
 use App\Models\OrgStatusGroup;
 use App\Models\OrgStatusTransition;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 /**
  * Seeds an organization with the default task-status configuration — a snapshot
@@ -56,9 +57,11 @@ class DefaultTaskStatuses
     ];
 
     /**
-     * On-enter field effects per status key: applied when a task enters the
-     * status (e.g. via a board drop). Mirrors the side effects that were
-     * hard-coded before. value tokens: @actor, @now, @clear.
+     * Default on-enter field effects, keyed by status ROLE: applied when a task
+     * enters that status (e.g. via a board drop). Mirrors the side effects that
+     * were hard-coded in the controllers/MCP before. value tokens: @actor, @now,
+     * @clear. Applied via applyDefaultEffects() (not in the create() below, since
+     * the column is added in a later migration than the seed).
      *
      * @var array<string, array<int, array<string, mixed>>>
      */
@@ -119,7 +122,6 @@ class DefaultTaskStatuses
                     'counts_as_done' => $done,
                     'counts_as_delivered' => $delivered,
                     'group_id' => $group ? $groupIdByKey[$group] : null,
-                    'on_enter_effects' => self::ON_ENTER[$key] ?? null,
                 ]);
                 $statusIdByKey[$key] = $row->id;
             }
@@ -133,5 +135,29 @@ class DefaultTaskStatuses
                 }
             }
         });
+
+        // Set default on-enter effects. Guarded so the seed still works when run
+        // from an early migration before the on_enter_effects column exists (the
+        // backfill migration applies them there instead).
+        self::applyDefaultEffects($organization);
+    }
+
+    /**
+     * Set the default on-enter effects on an org's role-bearing statuses that
+     * don't already have effects configured (never clobbers user customizations).
+     * No-op if the on_enter_effects column does not exist yet.
+     */
+    public static function applyDefaultEffects(Organization $organization): void
+    {
+        if (! Schema::hasColumn('task_statuses', 'on_enter_effects')) {
+            return;
+        }
+
+        foreach ($organization->statuses()->get() as $status) {
+            $role = $status->role?->value;
+            if ($role !== null && isset(self::ON_ENTER[$role]) && $status->on_enter_effects === null) {
+                $status->update(['on_enter_effects' => self::ON_ENTER[$role]]);
+            }
+        }
     }
 }
