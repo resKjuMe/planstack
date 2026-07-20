@@ -37,7 +37,6 @@
                     <div class="flex items-center gap-3 border-b pb-2 text-xs uppercase tracking-wide text-gray-400 dark:text-gray-500">
                         <div class="w-5"></div>
                         <div class="w-28">{{ __('board_admin.col_key') }}</div>
-                        <div class="w-28">{{ __('board_admin.col_role') }}</div>
                         <div class="w-36">{{ __('board_admin.col_label') }}</div>
                         <div class="w-36">{{ __('board_admin.col_label_en') }}</div>
                         <div class="w-10">{{ __('board_admin.col_color') }}</div>
@@ -65,15 +64,6 @@
                                 @csrf
                                 @method('PATCH')
                                 <div class="w-28 font-mono text-xs text-gray-500 dark:text-gray-400 truncate">{{ $status->key }}</div>
-                                <div class="w-28 text-xs text-gray-500 dark:text-gray-400">
-                                    <div>
-                                        {{ $status->role ?? '—' }}
-                                        @if ($status->role === null)
-                                            <span class="rounded bg-indigo-100 dark:bg-indigo-900/40 px-1 text-indigo-700 dark:text-indigo-300">{{ __('board_admin.custom_badge') }}</span>
-                                        @endif
-                                    </div>
-                                    <span class="rounded bg-gray-100 dark:bg-gray-700 px-1 py-0.5">{{ __('board_admin.kind_'.$status->kind) }}</span>
-                                </div>
                                 <input type="text" name="label" value="{{ $status->label }}" required maxlength="255" class="{{ $inputClass }} w-36">
                                 <input type="text" name="label_en" value="{{ $status->label_en }}" maxlength="255" class="{{ $inputClass }} w-36">
                                 {{-- Farb-Picker: nur der farbige Punkt; Klick öffnet das Flyout --}}
