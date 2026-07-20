@@ -217,8 +217,8 @@
                             <option value="{{ $g->id }}">{{ $g->label }}</option>
                         @endforeach
                     </select>
-                    <div class="flex justify-end">
-                        <button class="rounded-md bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-indigo-700">
+                    <div class="flex justify-start">
+                        <button class="whitespace-nowrap rounded-md bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-indigo-700">
                             {{ __('board_admin.create_status') }}
                         </button>
                     </div>
