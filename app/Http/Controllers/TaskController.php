@@ -21,6 +21,7 @@ class TaskController extends Controller
     public function __construct(
         private readonly TaskBoardService $board,
         private readonly BoardPresenter $presenter,
+        private readonly \App\Support\TaskStatusService $statuses,
     ) {}
 
     public function create(Project $project): View
@@ -113,18 +114,10 @@ class TaskController extends Controller
         $this->authorize('claim', $task);
 
         if ($task->claimed_by_id === null) {
-            $task->update([
-                'claimed_by_id' => request()->user()->id,
-                'claimed_at' => now(),
-                'status' => TaskStatus::CLAIMED->value,
-            ]);
+            $this->statuses->applyRole($task, \App\Enums\StatusRole::CLAIMED, request()->user());
             $message = __('flash.task_claimed', ['name' => $task->name]);
         } else {
-            $task->update([
-                'claimed_by_id' => null,
-                'claimed_at' => null,
-                'status' => TaskStatus::PICKABLE->value,
-            ]);
+            $this->statuses->applyRole($task, \App\Enums\StatusRole::PICKABLE, request()->user());
             $message = __('flash.task_released', ['name' => $task->name]);
         }
 

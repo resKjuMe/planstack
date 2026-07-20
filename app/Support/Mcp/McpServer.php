@@ -2,6 +2,7 @@
 
 namespace App\Support\Mcp;
 
+use App\Enums\StatusRole;
 use App\Enums\TaskStatus;
 use App\Http\Resources\PhaseResource;
 use App\Http\Resources\TaskResource;
@@ -9,6 +10,7 @@ use App\Models\Project;
 use App\Models\Task;
 use App\Models\User;
 use App\Support\TaskBoardService;
+use App\Support\TaskStatusService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 
@@ -25,7 +27,10 @@ class McpServer
     /** Protocol revisions this server understands (newest first). */
     private const SUPPORTED_PROTOCOLS = ['2025-06-18', '2025-03-26', '2024-11-05'];
 
-    public function __construct(private readonly TaskBoardService $board) {}
+    public function __construct(
+        private readonly TaskBoardService $board,
+        private readonly TaskStatusService $statuses,
+    ) {}
 
     /**
      * Echo the client's requested protocol version when we support it, otherwise
@@ -306,11 +311,7 @@ class McpServer
                 : 'Task ist bereits beansprucht.');
         }
 
-        $task->update([
-            'claimed_by_id' => $user->id,
-            'claimed_at' => now(),
-            'status' => TaskStatus::CLAIMED->value,
-        ]);
+        $this->statuses->applyRole($task, StatusRole::CLAIMED, $user);
 
         return $this->json($this->taskPayload($project, $task));
     }
@@ -327,11 +328,7 @@ class McpServer
             throw new McpToolException('Task ist nicht beansprucht.');
         }
 
-        $task->update([
-            'claimed_by_id' => null,
-            'claimed_at' => null,
-            'status' => TaskStatus::PICKABLE->value,
-        ]);
+        $this->statuses->applyRole($task, StatusRole::PICKABLE, $user);
 
         return $this->json($this->taskPayload($project, $task));
     }
@@ -349,12 +346,13 @@ class McpServer
             throw new McpToolException('status muss analyze, in_progress, in_review oder done sein.');
         }
 
-        $task->update(['status' => match ($status) {
-            'analyze' => TaskStatus::ANALYZING,
-            'in_review' => TaskStatus::IN_REVIEW,
-            'done' => $task->pr_number !== null ? TaskStatus::IN_REVIEW : TaskStatus::IN_PROGRESS,
-            default => TaskStatus::IN_PROGRESS,
-        }]);
+        $role = match ($status) {
+            'analyze' => StatusRole::ANALYZING,
+            'in_review' => StatusRole::IN_REVIEW,
+            'done' => $task->pr_number !== null ? StatusRole::IN_REVIEW : StatusRole::IN_PROGRESS,
+            default => StatusRole::IN_PROGRESS,
+        };
+        $this->statuses->applyRole($task, $role, $user);
 
         return $this->json($this->taskPayload($project, $task));
     }
@@ -385,11 +383,7 @@ class McpServer
         $task = $this->findTask($project, $args);
         $this->authorize('update', $task, $project);
 
-        $update = ['status' => TaskStatus::MERGED->value];
-        if ($task->merged_at === null) {
-            $update['merged_at'] = now();
-        }
-        $task->update($update);
+        $this->statuses->applyRole($task, StatusRole::MERGED, $user);
 
         return $this->json($this->taskPayload($project, $task));
     }
@@ -433,7 +427,7 @@ class McpServer
             ],
         );
 
-        $task->update(['status' => TaskStatus::CONCERNED->value]);
+        $this->statuses->applyRole($task, StatusRole::CONCERNED, $user);
 
         return $this->json($this->taskPayload($project, $task->fresh()));
     }
@@ -449,7 +443,7 @@ class McpServer
         $task->concern()->delete();
 
         if ($task->status === TaskStatus::CONCERNED) {
-            $task->update(['status' => $task->claimed_by_id ? TaskStatus::CLAIMED->value : TaskStatus::PICKABLE->value]);
+            $this->statuses->applyRole($task, $task->claimed_by_id ? StatusRole::CLAIMED : StatusRole::PICKABLE, $user);
         }
 
         return $this->json($this->taskPayload($project, $task->fresh()));
@@ -580,7 +574,7 @@ class McpServer
         }
 
         $created = DB::transaction(function () use ($project, $parent, $children, $user) {
-            $parent->update(['status' => TaskStatus::COMPLETED->value]);
+            $this->statuses->applyRole($parent, StatusRole::COMPLETED, $user);
 
             return collect($children)->map(function ($child) use ($project, $parent, $user) {
                 $name = trim((string) ($child['name'] ?? ''));

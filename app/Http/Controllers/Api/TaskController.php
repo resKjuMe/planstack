@@ -3,12 +3,14 @@
 namespace App\Http\Controllers\Api;
 
 use App\Enums\ReviewRecommendation;
+use App\Enums\StatusRole;
 use App\Enums\TaskStatus;
 use App\Http\Middleware\AttachPlanstackConfig;
 use App\Http\Resources\TaskResource;
 use App\Models\Project;
 use App\Models\Task;
 use App\Support\TaskBoardService;
+use App\Support\TaskStatusService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
@@ -18,7 +20,10 @@ use Illuminate\Validation\ValidationException;
 
 class TaskController extends ApiController
 {
-    public function __construct(private readonly TaskBoardService $board) {}
+    public function __construct(
+        private readonly TaskBoardService $board,
+        private readonly TaskStatusService $statuses,
+    ) {}
 
     /**
      * GET /api/projects/{project}/tasks — all tasks with computed board fields.
@@ -121,11 +126,9 @@ class TaskController extends ApiController
                 : 'Task ist bereits beansprucht.');
         }
 
-        $task->update([
-            'claimed_by_id' => $request->user()->id,
-            'claimed_at' => now(),
-            'status' => TaskStatus::CLAIMED->value,
-        ]);
+        // Config-driven: move to the CLAIMED-role status and apply its on-enter
+        // effects (default seed sets claimed_by_id=@actor, claimed_at=@now).
+        $this->statuses->applyRole($task, StatusRole::CLAIMED, $request->user());
 
         return $this->ack($project, $task);
     }
@@ -154,18 +157,22 @@ class TaskController extends ApiController
             ->sortByDesc('x_unlocks')
             ->values();
 
+        $claimedStatus = $project->organization?->statusForRole(StatusRole::CLAIMED);
+
         foreach ($candidates as $candidate) {
             // Atomarer Claim: nur greifen, wenn der Task noch frei ist. Bei
             // paralleler Konkurrenz trifft genau ein Worker (affected rows == 1),
-            // alle anderen probieren den nächsten Kandidaten.
+            // alle anderen probieren den nächsten Kandidaten. Dieser Query-Builder-
+            // Update umgeht Model-Events, daher status_id explizit setzen (via
+            // attributesFor: status_id + enum-Spiegel + On-Enter-Effekte).
+            $attrs = $claimedStatus !== null
+                ? $this->statuses->attributesFor($candidate, $claimedStatus, $request->user())
+                : ['claimed_by_id' => $request->user()->id, 'claimed_at' => now(), 'status' => TaskStatus::CLAIMED->value];
+
             $claimed = Task::whereKey($candidate->id)
                 ->whereNull('claimed_by_id')
                 ->whereNull('pr_number')
-                ->update([
-                    'claimed_by_id' => $request->user()->id,
-                    'claimed_at' => now(),
-                    'status' => TaskStatus::CLAIMED->value,
-                ]);
+                ->update($attrs);
 
             if ($claimed === 1) {
                 return new TaskResource($this->decorateOne($project, $candidate));
@@ -275,11 +282,9 @@ class TaskController extends ApiController
             return $this->conflict('Task ist nicht beansprucht.');
         }
 
-        $task->update([
-            'claimed_by_id' => null,
-            'claimed_at' => null,
-            'status' => TaskStatus::PICKABLE->value,
-        ]);
+        // Config-driven: PICKABLE-role status; its on-enter effects clear the
+        // assignee (default seed: claimed_by_id/@clear, claimed_at/@clear).
+        $this->statuses->applyRole($task, StatusRole::PICKABLE, $request->user());
 
         return $this->ack($project, $task);
     }
@@ -301,12 +306,13 @@ class TaskController extends ApiController
             'status' => ['required', Rule::in(['analyze', 'in_progress', 'in_review', 'done'])],
         ]);
 
-        $task->update(['status' => match ($data['status']) {
-            'analyze' => TaskStatus::ANALYZING,
-            'in_review' => TaskStatus::IN_REVIEW,
-            'done' => $task->pr_number !== null ? TaskStatus::IN_REVIEW : TaskStatus::IN_PROGRESS,
-            'in_progress' => TaskStatus::IN_PROGRESS,
-        }]);
+        $role = match ($data['status']) {
+            'analyze' => StatusRole::ANALYZING,
+            'in_review' => StatusRole::IN_REVIEW,
+            'done' => $task->pr_number !== null ? StatusRole::IN_REVIEW : StatusRole::IN_PROGRESS,
+            'in_progress' => StatusRole::IN_PROGRESS,
+        };
+        $this->statuses->applyRole($task, $role, $request->user());
 
         return $this->ack($project, $task);
     }
@@ -359,26 +365,22 @@ class TaskController extends ApiController
         }
 
         if ($data['merge'] ?? false) {
-            $this->markMerged($task);
+            $this->markMerged($task, $request->user());
         } else {
-            $task->update([
-                'status' => $task->pr_number !== null ? TaskStatus::IN_REVIEW->value : TaskStatus::IN_PROGRESS->value,
-            ]);
+            $role = $task->pr_number !== null ? StatusRole::IN_REVIEW : StatusRole::IN_PROGRESS;
+            $this->statuses->applyRole($task, $role, $request->user());
         }
 
         return $this->ack($project, $task);
     }
 
     /**
-     * Mark a task MERGED, stamping merged_at only on the first transition.
+     * Mark a task MERGED. The MERGED-role status's on-enter effects stamp
+     * merged_at (default seed: @now, only when empty).
      */
-    private function markMerged(Task $task): void
+    private function markMerged(Task $task, ?\App\Models\User $actor = null): void
     {
-        $update = ['status' => TaskStatus::MERGED->value];
-        if ($task->merged_at === null) {
-            $update['merged_at'] = now();
-        }
-        $task->update($update);
+        $this->statuses->applyRole($task, StatusRole::MERGED, $actor);
     }
 
     /**
@@ -421,7 +423,7 @@ class TaskController extends ApiController
             ],
         );
 
-        $task->update(['status' => TaskStatus::CONCERNED->value]);
+        $this->statuses->applyRole($task, StatusRole::CONCERNED, $request->user());
 
         return $this->ack($project, $task->fresh());
     }
@@ -436,7 +438,7 @@ class TaskController extends ApiController
         $task->concern()->delete();
 
         if ($task->status === TaskStatus::CONCERNED) {
-            $task->update(['status' => $task->claimed_by_id ? TaskStatus::CLAIMED->value : TaskStatus::PICKABLE->value]);
+            $this->statuses->applyRole($task, $task->claimed_by_id ? StatusRole::CLAIMED : StatusRole::PICKABLE);
         }
 
         return $this->ack($project, $task->fresh());
@@ -462,7 +464,7 @@ class TaskController extends ApiController
         ]);
 
         $created = DB::transaction(function () use ($project, $task, $validated, $request) {
-            $task->update(['status' => TaskStatus::COMPLETED->value]);
+            $this->statuses->applyRole($task, StatusRole::COMPLETED, $request->user());
 
             return collect($validated['children'])->map(function ($child) use ($project, $task, $request) {
                 $new = $project->tasks()->create([
