@@ -20,6 +20,10 @@ class ProjectController extends Controller
     public function index(): View
     {
         $userId = Auth::id();
+        $user = Auth::user();
+        // Der Organisationsgründer sieht alle Projekte seiner Organisation;
+        // alle anderen nur ihre eigenen bzw. per Team zugänglichen.
+        $isOrgOwner = $user->organization?->isOwner($user) === true;
 
         // done_sp zählt bewusst nur erledigte/gemergte Tasks (COMPLETED/MERGED) —
         // ein offener PR allein gilt in der Projektübersicht nicht als Fortschritt.
@@ -30,8 +34,10 @@ class ProjectController extends Controller
         // reine WORKER ohne expliziten Rollen-Datensatz müssen daher über
         // teams.members geprüft werden, sonst sehen sie ihre Projekte hier nicht.
         $projects = Project::query()
-            ->where('created_by_id', $userId)
-            ->orWhereHas('teams.members', fn ($q) => $q->where('users.id', $userId))
+            ->where('organization_id', $user->organization_id)
+            ->when(! $isOrgOwner, fn ($q) => $q->where(fn ($inner) => $inner
+                ->where('created_by_id', $userId)
+                ->orWhereHas('teams.members', fn ($m) => $m->where('users.id', $userId))))
             ->withCount('tasks')
             ->withCount(['tasks as closed_tasks_count' => fn (Builder $q) => $q->whereIn(
                 'status', [TaskStatus::COMPLETED, TaskStatus::MERGED]
@@ -106,10 +112,10 @@ class ProjectController extends Controller
         // wird — der generische Skill (Bootstrap + serverseitiges Betriebshandbuch)
         // greift automatisch. Projektnotizen werden auf der „Claude"-Unterseite gepflegt.
 
-        $project = Project::create([
-            ...$data,
-            'created_by_id' => $request->user()->id,
-        ]);
+        $project = new Project($data);
+        $project->created_by_id = $request->user()->id;
+        $project->organization_id = $request->user()->organization_id;
+        $project->save();
 
         // The owner is automatically an ADMIN member.
         $project->members()->attach($request->user()->id, ['role' => ProjectRole::ADMIN->value]);

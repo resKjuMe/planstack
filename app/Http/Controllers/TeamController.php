@@ -14,10 +14,13 @@ class TeamController extends Controller
     public function index(): View
     {
         $userId = Auth::id();
+        $orgId = Auth::user()->organization_id;
 
         $teams = Team::query()
-            ->where('created_by_id', $userId)
-            ->orWhereHas('members', fn ($q) => $q->where('users.id', $userId))
+            ->where('organization_id', $orgId)
+            ->where(fn ($q) => $q
+                ->where('created_by_id', $userId)
+                ->orWhereHas('members', fn ($m) => $m->where('users.id', $userId)))
             ->withCount('members')
             ->with('owner')
             ->latest()
@@ -35,10 +38,10 @@ class TeamController extends Controller
 
     public function store(StoreTeamRequest $request): RedirectResponse
     {
-        $team = Team::create([
-            ...$request->validated(),
-            'created_by_id' => $request->user()->id,
-        ]);
+        $team = new Team($request->validated());
+        $team->created_by_id = $request->user()->id;
+        $team->organization_id = $request->user()->organization_id;
+        $team->save();
 
         // The creator is automatically a member.
         $team->members()->attach($request->user()->id);

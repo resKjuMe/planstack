@@ -15,9 +15,16 @@ class Team extends Model
     use HasFactory;
 
     protected $fillable = [
+        // organization_id ist bewusst NICHT fillable — es wird serverseitig aus
+        // dem angemeldeten User gesetzt, nie aus Request-Payload.
         'created_by_id',
         'name',
     ];
+
+    public function organization(): BelongsTo
+    {
+        return $this->belongsTo(Organization::class);
+    }
 
     public function owner(): BelongsTo
     {

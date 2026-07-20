@@ -18,6 +18,9 @@ class Project extends Model
     use HasFactory;
 
     protected $fillable = [
+        // organization_id ist bewusst NICHT fillable — es wird serverseitig aus
+        // dem angemeldeten User gesetzt, nie aus Request-Payload (verhindert das
+        // Anlegen in fremden Organisationen).
         'created_by_id',
         'alias',
         'name',
@@ -99,6 +102,14 @@ class Project extends Model
     public function getRouteKeyName(): string
     {
         return 'alias';
+    }
+
+    /**
+     * The organization this project belongs to.
+     */
+    public function organization(): BelongsTo
+    {
+        return $this->belongsTo(Organization::class);
     }
 
     /**

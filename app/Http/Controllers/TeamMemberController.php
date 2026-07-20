@@ -13,6 +13,12 @@ class TeamMemberController extends Controller
     {
         $user = User::where('email', $request->validated('email'))->firstOrFail();
 
+        // Teams sind organisationsgebunden: nur Mitglieder derselben Organisation
+        // dürfen hinzugefügt werden.
+        if ($user->organization_id !== $team->organization_id) {
+            return back()->withErrors(['email' => 'Dieser User gehört nicht zu deiner Organisation.']);
+        }
+
         if ($team->members()->where('users.id', $user->id)->exists()) {
             return back()->withErrors(['email' => 'Dieser User ist bereits im Team.']);
         }

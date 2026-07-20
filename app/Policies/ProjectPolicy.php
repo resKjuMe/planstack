@@ -15,7 +15,7 @@ class ProjectPolicy
 
     public function view(User $user, Project $project): bool
     {
-        return $project->hasMember($user);
+        return $this->ownsOrganization($user, $project) || $project->hasMember($user);
     }
 
     public function create(User $user): bool
@@ -25,12 +25,14 @@ class ProjectPolicy
 
     public function update(User $user, Project $project): bool
     {
-        return $project->isOwner($user) || $project->roleFor($user) === ProjectRole::ADMIN;
+        return $this->ownsOrganization($user, $project)
+            || $project->isOwner($user)
+            || $project->roleFor($user) === ProjectRole::ADMIN;
     }
 
     public function delete(User $user, Project $project): bool
     {
-        return $project->isOwner($user);
+        return $this->ownsOrganization($user, $project) || $project->isOwner($user);
     }
 
     /**
@@ -38,7 +40,9 @@ class ProjectPolicy
      */
     public function manageMembers(User $user, Project $project): bool
     {
-        return $project->isOwner($user) || $project->roleFor($user) === ProjectRole::ADMIN;
+        return $this->ownsOrganization($user, $project)
+            || $project->isOwner($user)
+            || $project->roleFor($user) === ProjectRole::ADMIN;
     }
 
     /**
@@ -46,6 +50,17 @@ class ProjectPolicy
      */
     public function contribute(User $user, Project $project): bool
     {
-        return $project->hasMember($user);
+        return $this->ownsOrganization($user, $project) || $project->hasMember($user);
+    }
+
+    /**
+     * Der Gründer der Organisation hat volle Rechte auf alle Projekte seiner
+     * Organisation.
+     */
+    private function ownsOrganization(User $user, Project $project): bool
+    {
+        return $user->organization_id !== null
+            && $project->organization_id === $user->organization_id
+            && $user->organization?->isOwner($user) === true;
     }
 }

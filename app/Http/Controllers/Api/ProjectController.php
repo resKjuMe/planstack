@@ -26,12 +26,16 @@ class ProjectController extends ApiController
      */
     public function index(Request $request): JsonResource
     {
-        $userId = $request->user()->id;
+        $user = $request->user();
+        $userId = $user->id;
+        $isOrgOwner = $user->organization?->isOwner($user) === true;
 
         $projects = Project::query()
-            ->where(fn ($q) => $q
-                ->where('created_by_id', $userId)
-                ->orWhereHas('teams.members', fn ($m) => $m->where('users.id', $userId)))
+            ->where('organization_id', $user->organization_id)
+            ->when(! $isOrgOwner, fn ($q) => $q
+                ->where(fn ($inner) => $inner
+                    ->where('created_by_id', $userId)
+                    ->orWhereHas('teams.members', fn ($m) => $m->where('users.id', $userId))))
             ->withCount('tasks')
             ->with('owner')
             ->latest()
@@ -53,10 +57,10 @@ class ProjectController extends ApiController
             'description' => ['nullable', 'string'],
         ]);
 
-        $project = Project::create([
-            ...$data,
-            'created_by_id' => $request->user()->id,
-        ]);
+        $project = new Project($data);
+        $project->created_by_id = $request->user()->id;
+        $project->organization_id = $request->user()->organization_id;
+        $project->save();
 
         // The owner is automatically an ADMIN member (role distribution).
         $project->members()->attach($request->user()->id, ['role' => ProjectRole::ADMIN->value]);
