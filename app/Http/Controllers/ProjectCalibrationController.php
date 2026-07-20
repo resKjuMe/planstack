@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Enums\TaskStatus;
+use App\Enums\StatusRole;
 use App\Models\Project;
 use App\Models\Task;
 use Illuminate\Support\Collection;
@@ -21,7 +21,7 @@ class ProjectCalibrationController extends Controller
         $this->authorize('view', $project);
 
         $tasks = $project->tasks()
-            ->where('status', TaskStatus::MERGED->value)
+            ->whereHas('orgStatus', fn ($q) => $q->where('role', StatusRole::MERGED->value))
             ->with('pullRequests')
             ->get()
             ->filter(fn (Task $task) => $task->pullRequests->isNotEmpty());

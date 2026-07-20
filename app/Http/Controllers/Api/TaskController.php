@@ -196,8 +196,10 @@ class TaskController extends ApiController
 
         $uid = $request->user()->id;
 
+        $reviewStatusId = $project->organization?->statusForRole(StatusRole::IN_REVIEW)?->id;
+
         $candidates = $project->tasks()
-            ->where('status', TaskStatus::IN_REVIEW->value)
+            ->where('status_id', $reviewStatusId)
             ->whereNotNull('pr_number')
             ->whereNull('reviewed_by')
             // Eigene Tasks (selbst beansprucht/umgesetzt) nicht zum Review picken.

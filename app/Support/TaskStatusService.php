@@ -3,7 +3,6 @@
 namespace App\Support;
 
 use App\Enums\StatusRole;
-use App\Enums\TaskStatus;
 use App\Models\OrgStatus;
 use App\Models\Task;
 use App\Models\User;
@@ -34,7 +33,10 @@ class TaskStatusService
         $status = $task->project?->organization?->statusForRole($role);
 
         if ($status === null) {
-            $task->update(array_merge(['status' => $role->value], $extra));
+            // Unseeded org: no status for this role — only apply the extras.
+            if ($extra !== []) {
+                $task->update($extra);
+            }
 
             return;
         }
@@ -53,7 +55,7 @@ class TaskStatusService
     public function attributesFor(Task $task, OrgStatus $status, ?User $actor = null, array $extra = []): array
     {
         return array_merge(
-            ['status_id' => $status->id, 'status' => TaskStatus::tryFrom($status->key)?->value],
+            ['status_id' => $status->id],
             StatusEffects::resolve($task, $status, $actor),
             $extra,
         );

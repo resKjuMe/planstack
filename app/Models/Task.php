@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\StatusRole;
 use App\Enums\TaskStatus;
 use iamfarhad\LaravelAuditLog\Traits\Auditable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -46,10 +47,18 @@ class Task extends Model
         'merged_at',
     ];
 
+    /**
+     * Pending status key set via the `status` mutator, resolved to status_id in
+     * the saving hook (once project_id — and thus the organisation — is known).
+     * Declared properties, so they never become persisted attributes.
+     */
+    protected ?string $pendingStatusKey = null;
+
+    protected bool $hasPendingStatus = false;
+
     protected function casts(): array
     {
         return [
-            'status' => TaskStatus::class,
             'criticality' => \App\Enums\Criticality::class,
             'effort_man_days' => 'decimal:1',
             'effort_story_points' => 'integer',
@@ -64,43 +73,74 @@ class Task extends Model
     }
 
     /**
-     * Dual-write during the status migration (Phase 2): the ENUM `status` stays
-     * the authority, but every save mirrors it into `status_id` (FK to the
-     * organization's configurable status). UNKNOWN maps to the PICKABLE status
-     * (no UNKNOWN in the seeded set). Reads still use `status`; Phase 4 flips the
-     * authority. Removed once the ENUM is dropped (Phase 7).
+     * status_id is the sole stored status (the legacy ENUM column was dropped).
+     * The `status` attribute is a convenience layer over it:
+     *  - reading `$task->status` derives a canonical TaskStatus from the
+     *    organisation status's key (null for a custom status);
+     *  - writing `$task->status = …` (or `['status' => …]`, incl. factories) is
+     *    resolved to the matching org status_id on save.
      */
     protected static function booted(): void
     {
         static::saving(function (Task $task) {
-            if ($task->status === null) {
-                return;
-            }
-            // Only resolve when the enum changed or the mirror is still empty.
-            if (! $task->isDirty('status') && $task->status_id !== null) {
-                return;
+            $needsDefault = ! $task->exists && ($task->attributes['status_id'] ?? null) === null;
+            if (! $task->hasPendingStatus && ! $needsDefault) {
+                return; // nothing status-related to resolve on this save
             }
 
-            $organizationId = Project::whereKey($task->project_id)->value('organization_id');
-            if ($organizationId === null) {
-                return; // legacy/unassigned project — leave mirror untouched
+            $organizationId = $task->project_id
+                ? Project::whereKey($task->project_id)->value('organization_id')
+                : null;
+
+            if ($task->hasPendingStatus) {
+                $task->hasPendingStatus = false;
+                if ($organizationId !== null && $task->pendingStatusKey !== null) {
+                    $id = OrgStatus::query()
+                        ->where('organization_id', $organizationId)
+                        ->where('key', $task->pendingStatusKey)
+                        ->value('id');
+                    if ($id !== null) {
+                        $task->attributes['status_id'] = $id;
+                    }
+                }
             }
 
-            $key = $task->status === TaskStatus::UNKNOWN ? 'PICKABLE' : $task->status->value;
-            $statusId = OrgStatus::query()
-                ->where('organization_id', $organizationId)
-                ->where('key', $key)
-                ->value('id');
-
-            if ($statusId !== null) {
-                $task->status_id = $statusId;
+            // New task still without a status → default to the PICKABLE-role status.
+            if (! $task->exists && ($task->attributes['status_id'] ?? null) === null && $organizationId !== null) {
+                $task->attributes['status_id'] = OrgStatus::query()
+                    ->where('organization_id', $organizationId)
+                    ->where('role', StatusRole::PICKABLE->value)
+                    ->value('id');
             }
         });
     }
 
     /**
-     * The organization's configurable status this task currently sits in (mirror
-     * of the ENUM `status` during the migration).
+     * Read: the canonical TaskStatus derived from the org status's key (null when
+     * the task sits in a custom status without a canonical equivalent).
+     */
+    public function getStatusAttribute(): ?TaskStatus
+    {
+        return $this->orgStatus ? TaskStatus::tryFrom($this->orgStatus->key) : null;
+    }
+
+    /**
+     * Write: remember the desired status key (TaskStatus enum or its string);
+     * resolved to status_id in the saving hook. UNKNOWN maps to PICKABLE (the
+     * retired initial status). Never writes a `status` attribute/column.
+     */
+    public function setStatusAttribute($value): void
+    {
+        $key = $value instanceof TaskStatus ? $value->value : ($value === null ? null : (string) $value);
+        if ($key === 'UNKNOWN') {
+            $key = 'PICKABLE';
+        }
+        $this->pendingStatusKey = $key;
+        $this->hasPendingStatus = true;
+    }
+
+    /**
+     * The organization's configurable status this task sits in (status_id).
      */
     public function orgStatus(): BelongsTo
     {

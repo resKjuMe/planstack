@@ -2,7 +2,7 @@
 
 namespace App\Support;
 
-use App\Enums\TaskStatus;
+use App\Enums\StatusRole;
 use App\Models\Project;
 use App\Models\Task;
 use App\Models\TaskPullRequest;
@@ -32,7 +32,7 @@ class GitHubPrSync
 
         $tasks = $project->tasks()
             ->whereNotNull('pr_number')
-            ->where('status', '!=', TaskStatus::MERGED->value)
+            ->whereDoesntHave('orgStatus', fn ($q) => $q->where('role', StatusRole::MERGED->value))
             ->get();
 
         return $this->syncGrouped(collect([$repo => $tasks]));
@@ -52,7 +52,7 @@ class GitHubPrSync
         /** @var \Illuminate\Database\Eloquent\Collection<int, Task> $tasks */
         $tasks = Task::query()
             ->whereNotNull('pr_number')
-            ->where('status', '!=', TaskStatus::MERGED->value)
+            ->whereDoesntHave('orgStatus', fn ($q) => $q->where('role', StatusRole::MERGED->value))
             ->whereHas('project', fn ($q) => $q->whereNotNull('github_repo'))
             ->with('project:id,github_repo')
             ->get();
@@ -113,7 +113,7 @@ class GitHubPrSync
 
                 $mergedAt = ! empty($data['merged_at']) ? Carbon::parse($data['merged_at']) : now();
                 foreach ($tasksForPr as $task) {
-                    $task->update(['status' => TaskStatus::MERGED->value, 'merged_at' => $mergedAt]);
+                    $task->update(['status' => StatusRole::MERGED->value, 'merged_at' => $mergedAt]);
 
                     TaskPullRequest::updateOrCreate(
                         ['task_id' => $task->id, 'pull_request_id' => $prNumber],
