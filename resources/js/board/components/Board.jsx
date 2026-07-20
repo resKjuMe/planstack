@@ -90,7 +90,15 @@ export default function Board({ data }) {
         [tasks, matchesFilters, isStaleMerged],
     );
 
-    const collapse = useBoardCollapseState(data.projectId, countByStatus);
+    // Keys expanded by default (from the workflow config); everything else
+    // starts collapsed. The exception lane opts in via its own config flag.
+    const defaultExpandedKeys = useMemo(() => {
+        const s = new Set(workflow.defaultExpanded ?? []);
+        if (workflow.exceptionsDefaultExpanded) s.add(EXCEPTIONS_KEY);
+        return s;
+    }, [workflow.defaultExpanded, workflow.exceptionsDefaultExpanded]);
+
+    const collapse = useBoardCollapseState(data.projectId, defaultExpandedKeys);
 
     // --- Drag-and-drop ---
     const endDrag = useCallback(() => {
@@ -123,12 +131,15 @@ export default function Board({ data }) {
             const res = await moveTask({ endpoints, csrf }, taskId, targetStatus);
             if (res.ok) {
                 setTasks((prev) => prev.map((tk) => (tk.id === taskId ? res.task : tk)));
+                // Keep the target visible after a drop — even if it collapses by
+                // default (it is now populated).
+                collapse.setCollapsed(targetStatus, false);
             } else {
                 setTasks(before); // snap back
                 setToast(t('move_error', { message: res.message }));
             }
         },
-        [dragging, tasks, endDrag, workflow, endpoints, csrf, t],
+        [dragging, tasks, endDrag, workflow, endpoints, csrf, t, collapse],
     );
 
     const collapsedDragEnter = useCallback(
@@ -184,6 +195,125 @@ export default function Board({ data }) {
         i += 1;
     }
 
+    // Turn the row into grid cells: each carries its track width. Collapsed bars
+    // keep a fixed narrow track; expanded columns share the rest (1fr). The board
+    // is a CSS grid whose grid-template-columns transitions, so resizing a single
+    // track animates the collapse/expand.
+    const COLLAPSED_TRACK = '2.25rem'; // = w-9
+    const EXPANDED_TRACK = 'minmax(0, 1fr)';
+    const cells = [];
+
+    if (exceptionTasks.length > 0) {
+        const exCollapsed = collapse.isCollapsed(EXCEPTIONS_KEY);
+        cells.push({
+            track: exCollapsed ? COLLAPSED_TRACK : EXPANDED_TRACK,
+            node: exCollapsed ? (
+                <CollapsedColumn
+                    key="exceptions"
+                    label={t('exceptions_lane')}
+                    count={exceptionTasks.length}
+                    dotClass="bg-rose-500"
+                    isDragActive={false}
+                    onExpand={() => collapse.setCollapsed(EXCEPTIONS_KEY, false)}
+                />
+            ) : (
+                <ExceptionLane
+                    key="exceptions"
+                    t={t}
+                    tasks={exceptionTasks}
+                    renderCard={renderCard}
+                    onCollapse={() => collapse.setCollapsed(EXCEPTIONS_KEY, true)}
+                />
+            ),
+        });
+    }
+
+    for (const item of items) {
+        if (item.kind === 'group') {
+            const count = item.group.statuses.reduce((sum, s) => sum + (countByStatus[s] ?? 0), 0);
+            cells.push({
+                track: COLLAPSED_TRACK,
+                node: (
+                    <CollapsedColumn
+                        key={`group:${item.group.key}`}
+                        label={item.group.label}
+                        count={count}
+                        dotClass="bg-gray-400"
+                        isDragActive={!!dragging}
+                        onExpand={() => collapse.expandMany(item.group.statuses)}
+                        onDragEnter={() => collapsedDragEnter(item.group.statuses)}
+                        onDragLeave={collapsedDragLeave}
+                    />
+                ),
+            });
+            continue;
+        }
+
+        const { status } = item;
+        const label = workflow.labels[status] ?? status;
+        const color = statusColor(status);
+        const count = countByStatus[status] ?? 0;
+
+        if (item.collapsed) {
+            cells.push({
+                track: COLLAPSED_TRACK,
+                node: (
+                    <CollapsedColumn
+                        key={status}
+                        label={label}
+                        count={count}
+                        dotClass={color.dot}
+                        isDragActive={!!dragging}
+                        onExpand={() => collapse.setCollapsed(status, false)}
+                        onDragEnter={() => collapsedDragEnter([status])}
+                        onDragLeave={collapsedDragLeave}
+                    />
+                ),
+            });
+            continue;
+        }
+
+        const colTasks = columnTasksFor(status);
+        const isMerged = status === 'MERGED';
+        const cap = workflow.mergedInitialLimit;
+        const visible = isMerged && !showAllMerged ? colTasks.slice(0, cap) : colTasks;
+        const dropAllowed = dragging ? allowedTargets(workflow, dragging.from).has(status) : false;
+
+        const footer =
+            isMerged && colTasks.length > cap ? (
+                <button
+                    type="button"
+                    onClick={() => setShowAllMerged((v) => !v)}
+                    className="w-full rounded bg-gray-100 dark:bg-gray-700/60 px-2 py-1.5 text-xs font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700"
+                >
+                    {showAllMerged ? t('show_fewer') : t('show_all_merged', { count: colTasks.length })}
+                </button>
+            ) : null;
+
+        cells.push({
+            track: EXPANDED_TRACK,
+            node: (
+                <BoardColumn
+                    key={status}
+                    status={status}
+                    label={label}
+                    dotClass={color.dot}
+                    headClass={color.head}
+                    count={count}
+                    wipLimit={workflow.wipLimits[status] ?? null}
+                    isDragActive={!!dragging}
+                    isDropAllowed={dropAllowed}
+                    t={t}
+                    onCollapse={() => collapse.setCollapsed(status, true)}
+                    onDrop={handleDrop}
+                    footer={footer}
+                >
+                    {visible.map((task) => renderCard(task))}
+                </BoardColumn>
+            ),
+        });
+    }
+
     return (
         <div>
             <div className="mb-4">
@@ -198,107 +328,18 @@ export default function Board({ data }) {
                 />
             </div>
 
-            {/* items-stretch + Mindesthöhe: alle Spalten (auch kollabierte Leisten
-                und die Sonderleiste) füllen die volle Board-Höhe. */}
-            <div className="flex items-stretch gap-3 overflow-x-auto pb-4 min-h-[65vh]">
-                {exceptionTasks.length > 0 &&
-                    (collapse.isCollapsed(EXCEPTIONS_KEY) ? (
-                        <CollapsedColumn
-                            key="exceptions"
-                            label={t('exceptions_lane')}
-                            count={exceptionTasks.length}
-                            dotClass="bg-rose-500"
-                            isDragActive={false}
-                            onExpand={() => collapse.setCollapsed(EXCEPTIONS_KEY, false)}
-                        />
-                    ) : (
-                        <ExceptionLane
-                            t={t}
-                            tasks={exceptionTasks}
-                            renderCard={renderCard}
-                            onCollapse={() => collapse.setCollapsed(EXCEPTIONS_KEY, true)}
-                        />
-                    ))}
-
-                {items.map((item) => {
-                    if (item.kind === 'group') {
-                        const count = item.group.statuses.reduce(
-                            (sum, s) => sum + (countByStatus[s] ?? 0),
-                            0,
-                        );
-                        return (
-                            <CollapsedColumn
-                                key={`group:${item.group.key}`}
-                                label={item.group.label}
-                                count={count}
-                                dotClass="bg-gray-400"
-                                isDragActive={!!dragging}
-                                onExpand={() => collapse.expandMany(item.group.statuses)}
-                                onDragEnter={() => collapsedDragEnter(item.group.statuses)}
-                                onDragLeave={collapsedDragLeave}
-                            />
-                        );
-                    }
-
-                    const { status } = item;
-                    const label = workflow.labels[status] ?? status;
-                    const color = statusColor(status);
-                    const count = countByStatus[status] ?? 0;
-
-                    if (item.collapsed) {
-                        return (
-                            <CollapsedColumn
-                                key={status}
-                                label={label}
-                                count={count}
-                                dotClass={color.dot}
-                                isDragActive={!!dragging}
-                                onExpand={() => collapse.setCollapsed(status, false)}
-                                onDragEnter={() => collapsedDragEnter([status])}
-                                onDragLeave={collapsedDragLeave}
-                            />
-                        );
-                    }
-
-                    const colTasks = columnTasksFor(status);
-                    const isMerged = status === 'MERGED';
-                    const cap = workflow.mergedInitialLimit;
-                    const visible = isMerged && !showAllMerged ? colTasks.slice(0, cap) : colTasks;
-                    const dropAllowed = dragging
-                        ? allowedTargets(workflow, dragging.from).has(status)
-                        : false;
-
-                    const footer =
-                        isMerged && colTasks.length > cap ? (
-                            <button
-                                type="button"
-                                onClick={() => setShowAllMerged((v) => !v)}
-                                className="w-full rounded bg-gray-100 dark:bg-gray-700/60 px-2 py-1.5 text-xs font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700"
-                            >
-                                {showAllMerged ? t('show_fewer') : t('show_all_merged', { count: colTasks.length })}
-                            </button>
-                        ) : null;
-
-                    return (
-                        <BoardColumn
-                            key={status}
-                            status={status}
-                            label={label}
-                            dotClass={color.dot}
-                            headClass={color.head}
-                            count={count}
-                            wipLimit={workflow.wipLimits[status] ?? null}
-                            isDragActive={!!dragging}
-                            isDropAllowed={dropAllowed}
-                            t={t}
-                            onCollapse={() => collapse.setCollapsed(status, true)}
-                            onDrop={handleDrop}
-                            footer={footer}
-                        >
-                            {visible.map((task) => renderCard(task))}
-                        </BoardColumn>
-                    );
-                })}
+            {/* CSS grid: collapsed bars = fixed narrow track, expanded columns
+                share the rest (1fr). Transitioning grid-template-columns animates
+                a column's collapse/expand; the fixed row (1fr) + min-height makes
+                every column fill the full board height. */}
+            <div
+                className="grid gap-3 pb-4 min-h-[65vh] transition-[grid-template-columns] duration-300 ease-in-out"
+                style={{
+                    gridTemplateColumns: cells.map((c) => c.track).join(' '),
+                    gridTemplateRows: '1fr',
+                }}
+            >
+                {cells.map((c) => c.node)}
             </div>
 
             <Toast message={toast} onDismiss={() => setToast(null)} />

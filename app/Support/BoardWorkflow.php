@@ -49,6 +49,22 @@ class BoardWorkflow
     ];
 
     /**
+     * Columns expanded by default; everything else starts collapsed (regardless
+     * of whether it holds cards). A manual user choice overrides this and is
+     * persisted per board. The exception lane's default is controlled by
+     * EXCEPTIONS_DEFAULT_EXPANDED.
+     *
+     * @var array<int, TaskStatus>
+     */
+    public const DEFAULT_EXPANDED = [
+        TaskStatus::PICKABLE,
+        TaskStatus::IN_PROGRESS,
+        TaskStatus::IN_REVIEW,
+    ];
+
+    public const EXCEPTIONS_DEFAULT_EXPANDED = true;
+
+    /**
      * Allowed status transitions (drag-and-drop is the primary status change).
      * from → [allowed targets]. Anything not listed is rejected both client-side
      * (target column is not a drop target) and server-side (422). Reverse moves
@@ -139,6 +155,8 @@ class BoardWorkflow
         return [
             'columnOrder' => array_map(fn (TaskStatus $s) => $s->value, self::COLUMN_ORDER),
             'exceptionStatuses' => array_map(fn (TaskStatus $s) => $s->value, self::EXCEPTION_STATUSES),
+            'defaultExpanded' => array_map(fn (TaskStatus $s) => $s->value, self::DEFAULT_EXPANDED),
+            'exceptionsDefaultExpanded' => self::EXCEPTIONS_DEFAULT_EXPANDED,
             'transitions' => self::transitions(),
             'wipLimits' => self::wipLimits(),
             'collapseGroups' => self::collapseGroups(),

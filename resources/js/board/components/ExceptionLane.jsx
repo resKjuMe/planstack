@@ -12,7 +12,7 @@ export default function ExceptionLane({ t, tasks, renderCard, onCollapse }) {
     if (tasks.length === 0) return null;
 
     return (
-        <div className="flex flex-1 min-w-0 flex-col rounded-lg bg-rose-50/60 dark:bg-rose-900/15 p-2 ring-1 ring-rose-100 dark:ring-rose-900/40">
+        <div className="flex h-full w-full min-w-0 flex-col rounded-lg bg-rose-50/60 dark:bg-rose-900/15 p-2 ring-1 ring-rose-100 dark:ring-rose-900/40">
             <div className="mb-2 flex items-center justify-between gap-2 px-1">
                 <span className="flex items-center gap-2 text-sm font-semibold text-rose-700 dark:text-rose-300">
                     <span className="h-2 w-2 rounded-full bg-rose-500" aria-hidden />

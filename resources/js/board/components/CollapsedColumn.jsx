@@ -32,22 +32,26 @@ export default function CollapsedColumn({
                 if (isDragActive) e.preventDefault();
             }}
             className={[
-                'flex w-9 shrink-0 flex-col items-center gap-2 rounded-lg py-2',
+                'flex h-full w-full flex-col items-center gap-2 rounded-lg py-2',
                 'bg-gray-50 dark:bg-gray-800/60 ring-1 ring-gray-200 dark:ring-gray-700',
                 'hover:bg-gray-100 dark:hover:bg-gray-700/60 transition',
                 isDragActive ? 'ring-2 ring-indigo-400 dark:ring-indigo-500' : '',
             ].join(' ')}
         >
             <span className="text-gray-400 dark:text-gray-500 text-xs" aria-hidden>›</span>
-            <span className={`h-1.5 w-1.5 rounded-full ${dotClass}`} aria-hidden />
+            {/* Count lives inside the status-coloured dot near the top, so it
+                stays visible even when a column holds many cards (a bottom-
+                anchored badge would sit below the fold in a tall column). */}
+            <span
+                className={`flex h-5 min-w-5 items-center justify-center rounded-full px-1 text-[10px] font-bold text-white ${dotClass}`}
+            >
+                {count}
+            </span>
             <span
                 className="text-xs font-medium text-gray-600 dark:text-gray-300 whitespace-nowrap"
                 style={{ writingMode: 'vertical-rl' }}
             >
                 {label}
-            </span>
-            <span className="mt-auto rounded-full bg-gray-200 dark:bg-gray-700 px-1.5 text-[10px] font-semibold text-gray-600 dark:text-gray-300">
-                {count}
             </span>
         </button>
     );

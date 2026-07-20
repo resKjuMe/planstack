@@ -23,10 +23,12 @@ function load(projectId) {
 }
 
 /**
- * @param projectId   board identity for the storage key
- * @param countByStatus  { [status]: number } — drives the automatic default
+ * @param projectId          board identity for the storage key
+ * @param defaultExpandedKeys Set of keys expanded by default; every other key
+ *                            starts collapsed (regardless of card count). A
+ *                            manual choice overrides this and is persisted.
  */
-export function useBoardCollapseState(projectId, countByStatus) {
+export function useBoardCollapseState(projectId, defaultExpandedKeys) {
     // Manual overrides only. { [status]: boolean } where true = collapsed.
     const [overrides, setOverrides] = useState(() => load(projectId));
 
@@ -49,10 +51,10 @@ export function useBoardCollapseState(projectId, countByStatus) {
             if (Object.prototype.hasOwnProperty.call(overrides, status)) {
                 return overrides[status];
             }
-            // Automatic default: empty → collapsed, filled → expanded.
-            return (countByStatus[status] ?? 0) === 0;
+            // Default: collapsed unless the key is in the default-expanded set.
+            return !defaultExpandedKeys.has(status);
         },
-        [overrides, tempExpanded, countByStatus],
+        [overrides, tempExpanded, defaultExpandedKeys],
     );
 
     const setCollapsed = useCallback((status, collapsed) => {
