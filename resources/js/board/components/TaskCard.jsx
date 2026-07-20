@@ -18,7 +18,6 @@ export function TaskCardView({
     onMove,
 }) {
     const [open, setOpen] = useState(false);
-    const claimUrl = endpoints.claim.replace('__TASK__', String(task.id));
     const stop = (e) => e.stopPropagation();
 
     const next = targets[0] ?? null;
@@ -80,7 +79,7 @@ export function TaskCardView({
                         <button
                             type="button"
                             onClick={() => onMove(task.id, task.displayStatus, next)}
-                            className="flex-1 truncate rounded-l-md bg-indigo-600 px-2 py-1 text-xs font-medium text-white hover:bg-indigo-700"
+                            className="flex-1 truncate rounded-l bg-gray-50 dark:bg-gray-800/50 px-2 py-1 text-xs font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700"
                         >
                             → {labels[next] ?? next}
                         </button>
@@ -89,7 +88,7 @@ export function TaskCardView({
                                 type="button"
                                 onClick={() => setOpen((o) => ! o)}
                                 aria-label="…"
-                                className="rounded-r-md border-l border-indigo-500/60 bg-indigo-600 px-1.5 py-1 text-xs text-white hover:bg-indigo-700"
+                                className="rounded-r border-l border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-800/50 px-1.5 py-1 text-xs text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700"
                             >
                                 ▾
                             </button>
@@ -102,7 +101,7 @@ export function TaskCardView({
                                     key={s}
                                     type="button"
                                     onClick={() => { onMove(task.id, task.displayStatus, s); setOpen(false); }}
-                                    className="block w-full truncate rounded-md bg-gray-100 dark:bg-gray-700 px-2 py-1 text-left text-xs text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-600"
+                                    className="block w-full truncate rounded bg-gray-50 dark:bg-gray-800/50 px-2 py-1 text-left text-xs font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700"
                                 >
                                     → {labels[s] ?? s}
                                 </button>
@@ -110,15 +109,6 @@ export function TaskCardView({
                         </div>
                     )}
                 </div>
-            )}
-
-            {task.canClaim && ! overlay && (
-                <form method="POST" action={claimUrl} className="mt-2" onPointerDown={stop}>
-                    <input type="hidden" name="_token" value={csrf} />
-                    <button type="submit" className="w-full rounded bg-gray-50 dark:bg-gray-800/50 px-2 py-1 text-xs font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700">
-                        {task.isClaimed ? t('release') : t('claim')}
-                    </button>
-                </form>
             )}
         </div>
     );
