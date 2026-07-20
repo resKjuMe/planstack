@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Models\Project;
 use App\Support\ProjectConfig;
 use App\Support\SkillTemplate;
+use App\Support\StatusRules;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -67,6 +68,18 @@ class ProjectConfigController extends ApiController
         $stored = is_array($project->config) ? $project->config : [];
         $effective = $project->effectiveConfig();
 
+        // Status-Regeln = geteilte Basis + org-spezifischer Block (tatsächliche
+        // Status/Übergänge/Automationen dieser Organisation). Die Skill-Revision
+        // bezieht diesen Block ein, damit Clients Statusänderungen als Drift
+        // erkennen (status_config_version fliesst ueber den Inhalt mit ein).
+        $statusRules = $project->organization
+            ? rtrim(SkillTemplate::statusRules())."\n\n".StatusRules::forOrganization($project->organization)
+            : SkillTemplate::statusRules();
+        $skillRevision = substr(hash(
+            'xxh128',
+            SkillTemplate::operatingManual().'::'.$statusRules.'::'.SkillTemplate::skillInstructions(),
+        ), 0, 12);
+
         // Nur die projektspezifische Ergänzung (leer, wenn nichts hinterlegt).
         $notes = filled($project->skill_description)
             ? SkillTemplate::render($project->skill_description, $project)
@@ -82,11 +95,11 @@ class ProjectConfigController extends ApiController
             // (Header X-Planstack-Skill-Revision) — der Skill lädt sie bei Drift
             // nach, statt neu heruntergeladen zu werden.
             'operating_manual' => SkillTemplate::operatingManual(),
-            'status_rules' => SkillTemplate::statusRules(),
+            'status_rules' => $statusRules,
             // Projektübergreifende Anweisungen des allgemeinen planstack-Skills
             // (z. B. PR-Titel-Konvention). Nur der planstack-Skill lädt sie nach.
             'skill_instructions' => SkillTemplate::skillInstructions(),
-            'skill_revision' => SkillTemplate::sharedRevision(),
+            'skill_revision' => $skillRevision,
             // Anweisungen für `/planstack plan` (Projekt/Phasen/Tasks anlegen,
             // Task-Felder-Leitfaden) — eigene, versionierte Datei, bei jedem
             // plan-Aufruf frisch geladen (self-updating), daher separat.
