@@ -39,14 +39,14 @@ function DropSection({ status, label, dotClass, count, cards, dragActive, allowe
 // member statuses are shown together; while dragging, each member status is a
 // labeled drop section so a card can be dropped into a precise status without
 // the column layout changing (stable @dnd-kit drop zones).
-export default function GroupColumn({ group, members, dragActive, t }) {
+export default function GroupColumn({ group, members, dotClass = 'bg-gray-400', dragActive, t }) {
     const total = members.reduce((sum, m) => sum + m.count, 0);
 
     return (
         <div className="board-cell flex h-full w-full min-w-0 flex-col rounded-lg bg-gray-50/70 dark:bg-gray-800/40 p-2">
             <div className="mb-2 flex items-center justify-between gap-2 px-1">
                 <span className="flex items-center gap-2 text-sm font-semibold text-gray-600 dark:text-gray-300">
-                    <span className="h-2 w-2 rounded-full bg-gray-400" aria-hidden />
+                    <span className={`h-2 w-2 rounded-full ${dotClass}`} aria-hidden />
                     <span>{group.label}</span>
                 </span>
                 <span className="text-xs font-semibold text-gray-400 dark:text-gray-500">{total}</span>
