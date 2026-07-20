@@ -11,7 +11,10 @@
     $effectFields = \App\Support\StatusEffects::ALLOWED_FIELDS;
     // Gemeinsames Spaltenraster für Kopfzeile, Status-Zeilen und das
     // "Neuer Status"-Formular, damit alle Spalten exakt untereinander fluchten.
-    $grid = 'grid items-center gap-x-3 grid-cols-[1.5rem_11rem_minmax(7rem,1fr)_minmax(7rem,1fr)_4.5rem_5.5rem_4.5rem_9rem_auto]';
+    // Letzte Spalte (Aktionen) FEST, nicht auto: sonst variiert ihre Breite je
+    // nach Inhalt (Kopf leer / Zeile mit Icons / Anlegen-Button) und die
+    // 1fr-Spalten fluchten nicht mehr.
+    $grid = 'grid items-center gap-x-3 grid-cols-[1.5rem_11rem_minmax(7rem,1fr)_minmax(7rem,1fr)_4.5rem_5.5rem_4.5rem_9rem_9rem]';
 @endphp
 
 <x-app-layout>
