@@ -1,9 +1,28 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useDraggable } from '@dnd-kit/core';
 
 // Presentational card (also used for the drag overlay). No drag wiring here.
-export function TaskCardView({ task, t, csrf, endpoints, dimmed, dragging, overlay, listeners, attributes, setNodeRef }) {
+export function TaskCardView({
+    task,
+    t,
+    csrf,
+    endpoints,
+    dimmed,
+    dragging,
+    overlay,
+    listeners,
+    attributes,
+    setNodeRef,
+    targets = [],
+    labels = {},
+    onMove,
+}) {
+    const [open, setOpen] = useState(false);
     const claimUrl = endpoints.claim.replace('__TASK__', String(task.id));
+    const stop = (e) => e.stopPropagation();
+
+    const next = targets[0] ?? null;
+    const rest = targets.slice(1);
 
     return (
         <div
@@ -20,25 +39,19 @@ export function TaskCardView({ task, t, csrf, endpoints, dimmed, dragging, overl
             <div className="flex items-center justify-between gap-2">
                 <a
                     href={task.url}
-                    onPointerDown={(e) => e.stopPropagation()}
+                    onPointerDown={stop}
                     className="font-mono text-sm font-semibold text-indigo-700 dark:text-indigo-400 hover:underline"
                 >
                     {task.name}
                 </a>
                 <div className="flex items-center gap-1">
                     {task.isBlocked && (
-                        <span
-                            title={task.concernSummary || t('badge_blocked')}
-                            className="inline-flex items-center rounded-full bg-rose-100 dark:bg-rose-900/50 px-2 py-0.5 text-[10px] font-semibold text-rose-700 dark:text-rose-300"
-                        >
+                        <span title={task.concernSummary || t('badge_blocked')} className="inline-flex items-center rounded-full bg-rose-100 dark:bg-rose-900/50 px-2 py-0.5 text-[10px] font-semibold text-rose-700 dark:text-rose-300">
                             ⛔ {t('badge_blocked')}
                         </span>
                     )}
                     {task.isConcerned && (
-                        <span
-                            title={task.concernSummary || t('badge_concerned')}
-                            className="inline-flex items-center rounded-full bg-orange-100 dark:bg-orange-900/50 px-2 py-0.5 text-[10px] font-semibold text-orange-700 dark:text-orange-300"
-                        >
+                        <span title={task.concernSummary || t('badge_concerned')} className="inline-flex items-center rounded-full bg-orange-100 dark:bg-orange-900/50 px-2 py-0.5 text-[10px] font-semibold text-orange-700 dark:text-orange-300">
                             ⚠ {t('badge_concerned')}
                         </span>
                     )}
@@ -51,7 +64,7 @@ export function TaskCardView({ task, t, csrf, endpoints, dimmed, dragging, overl
                 <span className="truncate">{task.claimerName ?? t('unassigned')}</span>
                 <span className="flex items-center gap-2 shrink-0">
                     {task.prNumber && (
-                        <a href={task.prUrl || undefined} onPointerDown={(e) => e.stopPropagation()} className="text-gray-500 dark:text-gray-400 hover:underline">
+                        <a href={task.prUrl || undefined} onPointerDown={stop} className="text-gray-500 dark:text-gray-400 hover:underline">
                             #{task.prNumber}
                         </a>
                     )}
@@ -59,13 +72,50 @@ export function TaskCardView({ task, t, csrf, endpoints, dimmed, dragging, overl
                 </span>
             </div>
 
-            {task.canClaim && !overlay && (
-                <form method="POST" action={claimUrl} className="mt-2" onPointerDown={(e) => e.stopPropagation()}>
+            {/* Split button: primary = next status, dropdown = the remaining
+                allowed statuses. Uses the same move path as drag-and-drop. */}
+            {! overlay && next && onMove && (
+                <div className="mt-2" onPointerDown={stop}>
+                    <div className="flex">
+                        <button
+                            type="button"
+                            onClick={() => onMove(task.id, task.displayStatus, next)}
+                            className="flex-1 truncate rounded-l-md bg-indigo-600 px-2 py-1 text-xs font-medium text-white hover:bg-indigo-700"
+                        >
+                            → {labels[next] ?? next}
+                        </button>
+                        {rest.length > 0 && (
+                            <button
+                                type="button"
+                                onClick={() => setOpen((o) => ! o)}
+                                aria-label="…"
+                                className="rounded-r-md border-l border-indigo-500/60 bg-indigo-600 px-1.5 py-1 text-xs text-white hover:bg-indigo-700"
+                            >
+                                ▾
+                            </button>
+                        )}
+                    </div>
+                    {open && rest.length > 0 && (
+                        <div className="mt-1 space-y-1">
+                            {rest.map((s) => (
+                                <button
+                                    key={s}
+                                    type="button"
+                                    onClick={() => { onMove(task.id, task.displayStatus, s); setOpen(false); }}
+                                    className="block w-full truncate rounded-md bg-gray-100 dark:bg-gray-700 px-2 py-1 text-left text-xs text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-600"
+                                >
+                                    → {labels[s] ?? s}
+                                </button>
+                            ))}
+                        </div>
+                    )}
+                </div>
+            )}
+
+            {task.canClaim && ! overlay && (
+                <form method="POST" action={claimUrl} className="mt-2" onPointerDown={stop}>
                     <input type="hidden" name="_token" value={csrf} />
-                    <button
-                        type="submit"
-                        className="w-full rounded bg-gray-50 dark:bg-gray-800/50 px-2 py-1 text-xs font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700"
-                    >
+                    <button type="submit" className="w-full rounded bg-gray-50 dark:bg-gray-800/50 px-2 py-1 text-xs font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700">
                         {task.isClaimed ? t('release') : t('claim')}
                     </button>
                 </form>
@@ -75,8 +125,8 @@ export function TaskCardView({ task, t, csrf, endpoints, dimmed, dragging, overl
 }
 
 // Draggable wrapper (@dnd-kit). The whole card is the drag source; interactive
-// children stop pointer propagation so links/buttons stay clickable.
-export default function TaskCard({ task, t, csrf, endpoints, dimmed }) {
+// children stop pointer propagation so links/buttons stay usable.
+export default function TaskCard({ task, t, csrf, endpoints, dimmed, transitions = {}, labels = {}, onMove }) {
     const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
         id: task.id,
         data: { from: task.displayStatus },
@@ -93,6 +143,9 @@ export default function TaskCard({ task, t, csrf, endpoints, dimmed }) {
             setNodeRef={setNodeRef}
             listeners={listeners}
             attributes={attributes}
+            targets={transitions[task.displayStatus] ?? []}
+            labels={labels}
+            onMove={onMove}
         />
     );
 }
