@@ -1,5 +1,13 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { DndContext, DragOverlay, MeasuringStrategy, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
+import {
+    DndContext,
+    DragOverlay,
+    MeasuringStrategy,
+    PointerSensor,
+    pointerWithin,
+    useSensor,
+    useSensors,
+} from '@dnd-kit/core';
 import BoardColumn from './BoardColumn';
 import CollapsedColumn from './CollapsedColumn';
 import ExceptionLane from './ExceptionLane';
@@ -344,6 +352,7 @@ export default function Board({ data }) {
                 cell (.board-cell) on mount — cheaper than morphing track widths. */}
             <DndContext
                 sensors={sensors}
+                collisionDetection={pointerWithin}
                 measuring={{ droppable: { strategy: MeasuringStrategy.Always } }}
                 onDragStart={onDragStart}
                 onDragEnd={onDragEnd}
