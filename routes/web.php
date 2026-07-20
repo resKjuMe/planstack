@@ -8,6 +8,7 @@ use App\Http\Controllers\ProjectChangelogController;
 use App\Http\Controllers\ProjectClaudeController;
 use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\ProjectDiagramController;
+use App\Http\Controllers\OrganizationController;
 use App\Http\Controllers\ProjectMemberController;
 use App\Http\Controllers\ProjectPhaseController;
 use App\Http\Controllers\ProjectPrSequenceController;
@@ -60,6 +61,14 @@ Route::middleware('auth')->group(function () {
     // Personal access tokens (API / Planstack skill)
     Route::post('/profile/tokens', [ApiTokenController::class, 'store'])->name('profile.tokens.store');
     Route::delete('/profile/tokens/{token}', [ApiTokenController::class, 'destroy'])->name('profile.tokens.destroy');
+
+    // Organisation (jeder User gehört höchstens einer an): gründen, beitreten
+    // (per Einladungscode), austreten, löschen.
+    Route::get('organization', [OrganizationController::class, 'index'])->name('organization.index');
+    Route::post('organization', [OrganizationController::class, 'store'])->name('organization.store');
+    Route::post('organization/join', [OrganizationController::class, 'join'])->name('organization.join');
+    Route::post('organization/leave', [OrganizationController::class, 'leave'])->name('organization.leave');
+    Route::delete('organization', [OrganizationController::class, 'destroy'])->name('organization.destroy');
 
     // Teams
     Route::resource('teams', TeamController::class)
