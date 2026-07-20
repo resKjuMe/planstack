@@ -86,6 +86,7 @@ class StatusSegments
             $task->x_status_role = $status?->role?->value;
             $task->x_status_kind = $status?->kind;
             $task->x_status_color = $status?->color_token;
+            $task->x_status_icon = StatusIcons::svg($status?->icon);
         }
     }
 

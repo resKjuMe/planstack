@@ -2,16 +2,21 @@
 
 namespace App\Http\Controllers;
 
-use App\Enums\TaskStatus;
 use App\Models\Project;
 use App\Models\Task;
+use App\Support\StatusIcons;
+use App\Support\StatusSegments;
 use App\Support\TaskBoardService;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Str;
 use Illuminate\View\View;
 
 class ProjectDiagramController extends Controller
 {
-    public function __construct(private readonly TaskBoardService $board) {}
+    public function __construct(
+        private readonly TaskBoardService $board,
+        private readonly StatusSegments $segments,
+    ) {}
 
     /**
      * The dependency graph. The heavy lifting (mermaid source, layout,
@@ -25,6 +30,9 @@ class ProjectDiagramController extends Controller
         $tasks = $this->board->decorate($project);
         $tasks->load('concern:id,task_id,summary,description_blocker', 'reviewer:id,name');
         $this->board->attachUnlocks($tasks); // x_unlocks / x_dependents over the full set
+        // Per-task configured status (role/kind/label/color/icon) so nodes use the
+        // organization's actual status colours and icons (like board/summary).
+        $this->segments->annotate($project, $tasks);
 
         return view('status.diagram', [
             'project' => $project,
@@ -33,6 +41,8 @@ class ProjectDiagramController extends Controller
             // The full graph incl. merged nodes; the "Erledigte ausblenden"
             // toggle hides done (COMPLETED/MERGED) client-side on demand.
             'graph' => $this->buildGraph($project, $tasks),
+            // Legend entries built from the org's configurable statuses.
+            'legend' => $this->buildLegend($project),
         ]);
     }
 
@@ -126,11 +136,10 @@ class ProjectDiagramController extends Controller
 
         $nodes = [];
         foreach ($tasks as $task) {
-            $ds = $task->x_display_status;
             $depTotal = $task->prerequisites->count();
             $depMet = $task->prerequisites->filter(fn ($p) => $this->board->isDelivered($p))->count();
             $reason = $task->concern?->summary ?: $task->concern?->description_blocker;
-            $cat = $this->nodeCategory($ds);
+            $cat = $this->nodeCategory($task);
 
             $nodes[] = [
                 'key' => $keys[$task->id],
@@ -138,6 +147,10 @@ class ProjectDiagramController extends Controller
                 'summary' => $task->summary,
                 'url' => route('projects.tasks.show', [$project, $task]),
                 'cat' => $cat,
+                // Actual configured status: colour token + icon markup + label —
+                // the node renders in the status's own colour with its icon.
+                'color' => $task->x_status_color,
+                'icon' => $task->x_status_icon,
                 // Phase membership drives the header-chip filter in diagram.js
                 // (null = task without a phase, never matched by a chip).
                 'phase' => $task->phase_id,
@@ -146,7 +159,7 @@ class ProjectDiagramController extends Controller
                 'files' => $task->affected_files,
                 'pr' => $task->pr_number,
                 'prUrl' => $task->x_pr_url,
-                'statusLabel' => $ds->label(),
+                'statusLabel' => $task->x_status_label,
                 'unlocks' => (int) ($task->x_unlocks ?? 0),
                 'depOpen' => $depTotal - $depMet,
                 'depTotal' => $depTotal,
@@ -227,22 +240,65 @@ class ProjectDiagramController extends Controller
     }
 
     /**
-     * Collapse the display status into the diagram's colour buckets. CLAIMED,
-     * ANALYZING and IN_PROGRESS each get their own colour but stay part of the
-     * "in Arbeit / beansprucht" family (all carry a claimer name — see
-     * WORK_CATS in diagram.js).
+     * Behaviour bucket for a task's display status (drives claimer display,
+     * review UI, border emphasis and the concern reason — NOT the colour/icon,
+     * which now come from the configured status). Canonical roles keep their
+     * bucket; custom statuses fall back to their kind so they still get a sensible
+     * emphasis and claimer treatment.
      */
-    private function nodeCategory(TaskStatus $ds): string
+    private function nodeCategory(Task $task): string
     {
-        return match ($ds) {
-            TaskStatus::COMPLETED, TaskStatus::MERGED => 'done',
-            TaskStatus::CONCERNED => 'concern',
-            TaskStatus::PICKABLE => 'pickable',
-            TaskStatus::CLAIMED => 'claimed',
-            TaskStatus::ANALYZING => 'analyzing',
-            TaskStatus::IN_PROGRESS => 'inprogress',
-            TaskStatus::IN_REVIEW => 'inreview',
-            default => 'blocked',
+        return match ($task->x_status_role) {
+            'COMPLETED', 'MERGED' => 'done',
+            'CONCERNED' => 'concern',
+            'PICKABLE' => 'pickable',
+            'CLAIMED' => 'claimed',
+            'ANALYZING' => 'analyzing',
+            'IN_PROGRESS' => 'inprogress',
+            'IN_REVIEW' => 'inreview',
+            'BLOCKED' => 'blocked',
+            default => match ($task->x_status_kind) {
+                'done' => 'done',
+                'exception' => 'concern',
+                'review', 'active' => 'inprogress',
+                default => 'pickable',
+            },
         };
+    }
+
+    /**
+     * Legend rows built from the organization's configurable statuses (ordered by
+     * board position): label + colour token + icon + behaviour bucket — the same
+     * presentation the nodes use.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    private function buildLegend(Project $project): array
+    {
+        return $project->organization->statuses()
+            ->orderBy('position')
+            ->get()
+            ->map(fn ($s) => [
+                'label' => Str::startsWith(app()->getLocale(), 'en') && $s->label_en ? $s->label_en : $s->label,
+                'color' => $s->color_token,
+                'icon' => StatusIcons::svg($s->icon),
+                'cat' => match ($s->role?->value) {
+                    'PICKABLE' => 'pickable',
+                    'CLAIMED' => 'claimed',
+                    'ANALYZING' => 'analyzing',
+                    'IN_PROGRESS' => 'inprogress',
+                    'IN_REVIEW' => 'inreview',
+                    'CONCERNED' => 'concern',
+                    'COMPLETED', 'MERGED' => 'done',
+                    'BLOCKED' => 'blocked',
+                    default => match ($s->kind) {
+                        'done' => 'done',
+                        'exception' => 'concern',
+                        'review', 'active' => 'inprogress',
+                        default => 'pickable',
+                    },
+                },
+            ])
+            ->all();
     }
 }

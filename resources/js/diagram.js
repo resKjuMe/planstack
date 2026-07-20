@@ -126,7 +126,9 @@ function nodeLabel(n, showDesc = false) {
     if (n.cat === 'inreview' && n.reviewedBy) {
         reviewed = n.reviewedByMe ? ' is-reviewed' : ' is-reviewed-other';
     }
-    const cls = `ps-node cat-${n.cat}${reviewed}${n.done ? ' is-done' : ''}${n.bottleneck ? ' has-bn' : ''}`;
+    // cat-* drives behaviour (border emphasis, review, claimer); tok-* drives the
+    // colour from the task's actual configured status (color_token).
+    const cls = `ps-node cat-${n.cat} tok-${n.color || 'gray'}${reviewed}${n.done ? ' is-done' : ''}${n.bottleneck ? ' has-bn' : ''}`;
     const parts = [`<div class='${cls}'>`];
 
     // Title line: status icon · name (links to the ticket, click handled in
@@ -144,7 +146,9 @@ function nodeLabel(n, showDesc = false) {
     if (n.claimer) {
         title += ` <span class='who'>· ${esc(initials(n.claimer))}</span>`;
     }
-    parts.push(`<div class='t'>${svgIcon(STATUS_ICONS[n.cat] ?? '')}${title}</div>`);
+    // Icon = the status's configured icon (from the payload); fall back to the
+    // per-category default for statuses without a chosen icon.
+    parts.push(`<div class='t'>${svgIcon(n.icon || STATUS_ICONS[n.cat] || '')}${title}</div>`);
 
     parts.push(`<div class='s'>${subtitle(n)}</div>`);
 

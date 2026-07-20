@@ -33,28 +33,14 @@
          danach Kantenarten und Flaschenhals-Badge. Die Icon-Pfade spiegeln
          STATUS_ICONS in resources/js/diagram.js — bei Änderungen dort mitziehen. --}}
     @php
-        $statusIcons = [
-            'pickable'   => '<path d="M7 4v16l13 -8z"/>',
-            'claimed'    => '<path d="M8 7a4 4 0 1 0 8 0a4 4 0 0 0 -8 0"/><path d="M6 21v-2a4 4 0 0 1 4 -4h4a4 4 0 0 1 4 4v2"/>',
-            'analyzing'  => '<path d="M10 10m-7 0a7 7 0 1 0 14 0a7 7 0 1 0 -14 0"/><path d="M21 21l-6 -6"/>',
-            'inprogress' => '<path d="M7 7h-1a2 2 0 0 0 -2 2v9a2 2 0 0 0 2 2h9a2 2 0 0 0 2 -2v-1"/><path d="M20.385 6.585a2.1 2.1 0 0 0 -2.97 -2.97l-8.415 8.385v3h3l8.385 -8.415z"/><path d="M16 5l3 3"/>',
-            'inreview'   => '<path d="M10 12a2 2 0 1 0 4 0a2 2 0 0 0 -4 0"/><path d="M21 12c-2.4 4 -5.4 6 -9 6c-3.6 0 -6.6 -2 -9 -6c2.4 -4 5.4 -6 9 -6c3.6 0 6.6 2 9 6"/>',
-            'blocked'    => '<path d="M5 13a2 2 0 0 1 2 -2h10a2 2 0 0 1 2 2v6a2 2 0 0 1 -2 2h-10a2 2 0 0 1 -2 -2z"/><path d="M11 16a1 1 0 1 0 2 0a1 1 0 0 0 -2 0"/><path d="M8 11v-4a4 4 0 1 1 8 0v4"/>',
-            'concern'    => '<path d="M12 9v4"/><path d="M10.24 3.957l-8.422 14.06a1.989 1.989 0 0 0 1.7 2.983h16.845a1.989 1.989 0 0 0 1.7 -2.983l-8.423 -14.06a1.989 1.989 0 0 0 -3.4 0z"/><path d="M12 16h.01"/>',
-            'done'       => '<path d="M5 12l5 5l10 -10"/>',
-        ];
         $bottleneckIcon = '<path d="M6.5 7h11"/><path d="M6.5 17h11"/><path d="M6 20v-2a6 6 0 1 1 12 0v2a1 1 0 0 1 -1 1h-10a1 1 0 0 1 -1 -1z"/><path d="M6 4v2a6 6 0 1 0 12 0v-2a1 1 0 0 0 -1 -1h-10a1 1 0 0 0 -1 1z"/>';
-        $legendItems = [
-            ['pickable', __('common.pickable')], ['claimed', __('status.claimed_2')], ['analyzing', __('status.in_analysis')],
-            ['inprogress', __('status.in_progress')], ['inreview', __('status.in_review')], ['blocked', __('common.blocked')],
-            ['concern', __('status.concern')], ['done', __('status.done')],
-        ];
         $lgSvg = fn ($paths) => '<svg class="ps-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'.$paths.'</svg>';
     @endphp
     <div class="flex flex-wrap items-center justify-between gap-3 mb-3">
+        {{-- Legende: je konfiguriertem Status ein Mini-Knoten in seiner Farbe + Icon. --}}
         <div class="ps-diagram-legend flex flex-wrap items-center gap-x-3 gap-y-1.5 text-xs text-gray-600 dark:text-gray-400">
-            @foreach ($legendItems as [$cat, $label])
-                <span class="lg-item"><span class="lg-swatch cat-{{ $cat }}">{!! $lgSvg($statusIcons[$cat]) !!}</span>{{ $label }}</span>
+            @foreach ($legend as $item)
+                <span class="lg-item"><span class="lg-swatch tok-{{ $item['color'] }} cat-{{ $item['cat'] }}">{!! $lgSvg($item['icon']) !!}</span>{{ $item['label'] }}</span>
             @endforeach
             <span class="mx-1 h-4 w-px bg-gray-200 dark:bg-gray-700"></span>
             <span class="lg-item">
@@ -147,40 +133,48 @@
            Alle Selektoren enthalten „ps-node", damit collectDiagramCss() sie in
            den PNG-Export übernimmt. Die Farbtokens stehen zusätzlich auf der
            Legende, damit deren Mini-Knoten exakt dieselben Werte nutzen. ── */
+        /* Flaschenhals-Badge-Farben (status-unabhängig). */
         .ps-node,
-        .ps-diagram-legend {
-            --status-pickable-bg:#F0FDF4;    --status-pickable-border:#16A34A;   --status-pickable-text:#166534;   --status-pickable-sub:#16A34A;
-            --status-claimed-bg:#E0F2FE;     --status-claimed-border:#7DD3FC;    --status-claimed-text:#075985;    --status-claimed-sub:#0369A1;
-            --status-analyzing-bg:#E0F2FE;   --status-analyzing-border:#7DD3FC;  --status-analyzing-text:#075985;  --status-analyzing-sub:#0369A1;
-            --status-inprogress-bg:#E0F2FE;  --status-inprogress-border:#2563EB; --status-inprogress-text:#1E40AF; --status-inprogress-sub:#2563EB;
-            --status-inreview-bg:#FAF5FF;    --status-inreview-border:#A855F7;   --status-inreview-text:#6B21A8;   --status-inreview-sub:#9333EA;   --status-inreview-outline:#D8B4FE;
-            --status-blocked-bg:#FCFCFD;     --status-blocked-border:#C4C4CC;    --status-blocked-text:#52525B;    --status-blocked-sub:#71717A;
-            --status-concern-bg:#FEF2F2;     --status-concern-border:#DC2626;    --status-concern-text:#991B1B;    --status-concern-sub:#B91C1C;
-            --status-done-bg:#F5F5F5;        --status-done-border:#D4D4D8;       --status-done-text:#52525B;       --status-done-sub:#71717A;
-            --bn-bg:#FEF3C7; --bn-border:#F59E0B; --bn-icon:#92400E;
-        }
+        .ps-diagram-legend { --bn-bg:#FEF3C7; --bn-border:#F59E0B; --bn-icon:#92400E; }
 
         .ps-node {
             position: relative;
             line-height: 1.25; text-align: center;
             padding: 5px 10px; border-radius: 8px;
-            background: #ffffff; border: 1px solid transparent;
+            /* Farbe = tatsächlicher Status (Token, s.u.); neutraler Fallback. */
+            background: var(--n-bg, #ffffff);
+            border: 1.5px solid var(--n-border, transparent);
+            color: var(--n-text, #3f3f46);
+            --ps-sub: var(--n-sub, #71717a);
         }
 
-        .ps-node.cat-pickable,   .ps-diagram-legend .cat-pickable   { background:var(--status-pickable-bg);   border:2px solid var(--status-pickable-border);   color:var(--status-pickable-text);   --ps-sub:var(--status-pickable-sub); }
-        .ps-node.cat-claimed,    .ps-diagram-legend .cat-claimed    { background:var(--status-claimed-bg);    border:1px solid var(--status-claimed-border);    color:var(--status-claimed-text);    --ps-sub:var(--status-claimed-sub); }
-        .ps-node.cat-analyzing,  .ps-diagram-legend .cat-analyzing  { background:var(--status-analyzing-bg);  border:1px solid var(--status-analyzing-border);  color:var(--status-analyzing-text);  --ps-sub:var(--status-analyzing-sub); }
-        .ps-node.cat-inprogress, .ps-diagram-legend .cat-inprogress { background:var(--status-inprogress-bg); border:2px solid var(--status-inprogress-border); color:var(--status-inprogress-text); --ps-sub:var(--status-inprogress-sub); }
-        .ps-node.cat-inreview,   .ps-diagram-legend .cat-inreview   { background:var(--status-inreview-bg);   border:1px solid var(--status-inreview-border);   color:var(--status-inreview-text);   --ps-sub:var(--status-inreview-sub); outline:1px solid var(--status-inreview-outline); outline-offset:2px; }
-        /* In Review MIT Reviewer (nicht in der Legende):
-           - is-reviewed        = ich selbst reviewe → lila #B18AE3/#F6F2FC
-             (Text/Unterton erben vom In-Review-Basiston)
-           - is-reviewed-other  = jemand anderes reviewt → grün #7DAD9B/#EDF7F2 */
-        .ps-node.cat-inreview.is-reviewed       { background:#F6F2FC; border-color:#B18AE3; outline-color:#B18AE3; }
-        .ps-node.cat-inreview.is-reviewed-other { background:#EDF7F2; border-color:#7DAD9B; color:#2F5D4C; --ps-sub:#4C8571; outline-color:#7DAD9B; }
-        .ps-node.cat-blocked,    .ps-diagram-legend .cat-blocked    { background:var(--status-blocked-bg);    border:1px dashed var(--status-blocked-border);   color:var(--status-blocked-text);    --ps-sub:var(--status-blocked-sub); }
-        .ps-node.cat-concern,    .ps-diagram-legend .cat-concern    { background:var(--status-concern-bg);    border:2px solid var(--status-concern-border);    color:var(--status-concern-text);    --ps-sub:var(--status-concern-sub); }
-        .ps-node.cat-done,       .ps-diagram-legend .cat-done       { background:var(--status-done-bg);       border:1px solid var(--status-done-border);       color:var(--status-done-text);       --ps-sub:var(--status-done-sub); }
+        /* ── Status-Farbtoken (bg/border/text/sub) — geteilt von Knoten und
+           Legenden-Swatch; helle Tönung analog zur Board-/Summary-Palette. Die
+           Auswahl je Status trifft die Statusverwaltung (color_token). ── */
+        .ps-node.tok-gray,    .ps-diagram-legend .tok-gray    { --n-bg:#F9FAFB; --n-border:#6B7280; --n-text:#1F2937; --n-sub:#4B5563; }
+        .ps-node.tok-slate,   .ps-diagram-legend .tok-slate   { --n-bg:#F8FAFC; --n-border:#64748B; --n-text:#1E293B; --n-sub:#475569; }
+        .ps-node.tok-indigo,  .ps-diagram-legend .tok-indigo  { --n-bg:#EEF2FF; --n-border:#6366F1; --n-text:#3730A3; --n-sub:#4F46E5; }
+        .ps-node.tok-sky,     .ps-diagram-legend .tok-sky     { --n-bg:#F0F9FF; --n-border:#0EA5E9; --n-text:#075985; --n-sub:#0284C7; }
+        .ps-node.tok-blue,    .ps-diagram-legend .tok-blue    { --n-bg:#EFF6FF; --n-border:#3B82F6; --n-text:#1E40AF; --n-sub:#2563EB; }
+        .ps-node.tok-navy,    .ps-diagram-legend .tok-navy    { --n-bg:#EFF6FF; --n-border:#1D4ED8; --n-text:#1E3A8A; --n-sub:#1D4ED8; }
+        .ps-node.tok-purple,  .ps-diagram-legend .tok-purple  { --n-bg:#FAF5FF; --n-border:#A855F7; --n-text:#6B21A8; --n-sub:#9333EA; }
+        .ps-node.tok-green,   .ps-diagram-legend .tok-green   { --n-bg:#F0FDF4; --n-border:#22C55E; --n-text:#166534; --n-sub:#16A34A; }
+        .ps-node.tok-emerald, .ps-diagram-legend .tok-emerald { --n-bg:#ECFDF5; --n-border:#10B981; --n-text:#065F46; --n-sub:#059669; }
+        .ps-node.tok-teal,    .ps-diagram-legend .tok-teal    { --n-bg:#F0FDFA; --n-border:#14B8A6; --n-text:#115E59; --n-sub:#0D9488; }
+        .ps-node.tok-rose,    .ps-diagram-legend .tok-rose    { --n-bg:#FFF1F2; --n-border:#F43F5E; --n-text:#9F1239; --n-sub:#E11D48; }
+        .ps-node.tok-red,     .ps-diagram-legend .tok-red     { --n-bg:#FEF2F2; --n-border:#EF4444; --n-text:#991B1B; --n-sub:#DC2626; }
+        .ps-node.tok-orange,  .ps-diagram-legend .tok-orange  { --n-bg:#FFF7ED; --n-border:#F97316; --n-text:#9A3412; --n-sub:#EA580C; }
+        .ps-node.tok-amber,   .ps-diagram-legend .tok-amber   { --n-bg:#FFFBEB; --n-border:#F59E0B; --n-text:#92400E; --n-sub:#D97706; }
+
+        /* Rahmen-Betonung/Stil = Aufmerksamkeit (nach Verhaltens-Kategorie);
+           die Farbe stammt aus dem Status-Token. */
+        .ps-node.cat-pickable, .ps-node.cat-inprogress, .ps-node.cat-concern { border-width: 2px; }
+        .ps-node.cat-blocked { border-style: dashed; }
+        .ps-node.cat-inreview { outline: 1px solid var(--n-border); outline-offset: 2px; }
+        /* In Review MIT Reviewer: eigene Farbe (ich selbst = lila, jemand
+           anderes = grün) — überschreibt das Status-Token. */
+        .ps-node.cat-inreview.is-reviewed       { --n-bg:#F6F2FC; --n-border:#B18AE3; --n-text:#6B21A8; }
+        .ps-node.cat-inreview.is-reviewed-other { --n-bg:#EDF7F2; --n-border:#7DAD9B; --n-text:#2F5D4C; --n-sub:#4C8571; }
 
         /* Icon links vor dem Titel, erbt die Textfarbe. */
         .ps-node .ps-ico { width: 14px; height: 14px; display: inline-block; vertical-align: -0.2em; margin-right: 4px; }
@@ -206,11 +200,11 @@
         .ps-node .rv-claim-btn {
             font-size: 10px; line-height: 1; cursor: pointer;
             padding: 2px 8px; border-radius: 9999px;
-            background: var(--status-inreview-bg);
-            border: 1px solid var(--status-inreview-border);
-            color: var(--status-inreview-text);
+            background: var(--n-bg);
+            border: 1px solid var(--n-border);
+            color: var(--n-text);
         }
-        .ps-node .rv-claim-btn:hover { background: var(--status-inreview-outline); }
+        .ps-node .rv-claim-btn:hover { filter: brightness(0.96); }
         /* Optionale Kurzbeschreibung (Checkbox in der Toolbar): mehrzeilig, in der
            Breite gedeckelt, damit der Knoten nicht auseinanderläuft. */
         .ps-node .d {
@@ -261,7 +255,7 @@
         /* Legende: Mini-Knoten im echten Knotenstil (Farbregeln oben teilen sich
            Node und Legende über die gemeinsamen cat-*-Selektoren). */
         .ps-diagram-legend .lg-item { display: inline-flex; align-items: center; gap: 5px; }
-        .ps-diagram-legend .lg-swatch { display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 17px; border-radius: 5px; }
+        .ps-diagram-legend .lg-swatch { display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 17px; border-radius: 5px; background: var(--n-bg, #fff); border: 1px solid var(--n-border, #d4d4d8); color: var(--n-text, #52525b); }
         .ps-diagram-legend .lg-swatch .ps-ico { width: 12px; height: 12px; margin: 0; }
         .ps-diagram-legend .cat-done { opacity: .45; }
     </style>
