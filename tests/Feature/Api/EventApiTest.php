@@ -34,15 +34,18 @@ class EventApiTest extends TestCase
         $organization = $project->organization;
         $target = $organization->statusForRole(StatusRole::IN_PROGRESS);
 
-        $organization->eventAutomations()->create([
-            'event' => TaskEvent::PROCESSING->value,
-            'target_status_id' => $target->id,
-            'overridable_status_ids' => null,
-            'effects' => [
-                ['field' => 'claimed_by_id', 'value' => '@actor', 'only_if_empty' => false],
-                ['field' => 'affected_files', 'value' => '7', 'only_if_empty' => false],
+        // PROCESSING ist per Default vorkonfiguriert → updateOrCreate statt create.
+        $organization->eventAutomations()->updateOrCreate(
+            ['event' => TaskEvent::PROCESSING->value],
+            [
+                'target_status_id' => $target->id,
+                'overridable_status_ids' => null,
+                'effects' => [
+                    ['field' => 'claimed_by_id', 'value' => '@actor', 'only_if_empty' => false],
+                    ['field' => 'affected_files', 'value' => '7', 'only_if_empty' => false],
+                ],
             ],
-        ]);
+        );
 
         $response = $this->postJson('/api/events', [
             'task_id' => $task->id,
@@ -72,9 +75,10 @@ class EventApiTest extends TestCase
         [, , $task] = $this->ownedTask();
         $before = $task->status_id;
 
+        // PUBLISHED hat per Default keine Automation ⇒ reine Meldung.
         $response = $this->postJson('/api/events', [
             'task_id' => $task->id,
-            'event' => 'ANALYZING',
+            'event' => 'PUBLISHED',
         ]);
 
         $response->assertOk()
@@ -82,7 +86,7 @@ class EventApiTest extends TestCase
             ->assertJsonPath('status_changed', false);
 
         $this->assertSame($before, $task->refresh()->status_id);
-        $this->assertDatabaseHas('task_events', ['task_id' => $task->id, 'event' => 'ANALYZING']);
+        $this->assertDatabaseHas('task_events', ['task_id' => $task->id, 'event' => 'PUBLISHED']);
     }
 
     public function test_status_is_kept_when_current_status_is_not_overridable(): void
@@ -94,12 +98,14 @@ class EventApiTest extends TestCase
         $inReview = $organization->statusForRole(StatusRole::IN_REVIEW);
         $before = $task->status_id;
 
-        $organization->eventAutomations()->create([
-            'event' => TaskEvent::MERGED->value,
-            'target_status_id' => $target->id,
-            'overridable_status_ids' => [$inReview->id],
-            'effects' => null,
-        ]);
+        $organization->eventAutomations()->updateOrCreate(
+            ['event' => TaskEvent::MERGED->value],
+            [
+                'target_status_id' => $target->id,
+                'overridable_status_ids' => [$inReview->id],
+                'effects' => null,
+            ],
+        );
 
         $response = $this->postJson('/api/events', [
             'task_id' => $task->id,
@@ -119,10 +125,14 @@ class EventApiTest extends TestCase
         // MERGED carries a default on-enter effect (merged_at = @now).
         $target = $organization->statusForRole(StatusRole::MERGED);
 
-        $organization->eventAutomations()->create([
-            'event' => TaskEvent::MERGED->value,
-            'target_status_id' => $target->id,
-        ]);
+        $organization->eventAutomations()->updateOrCreate(
+            ['event' => TaskEvent::MERGED->value],
+            [
+                'target_status_id' => $target->id,
+                'overridable_status_ids' => null, // immer überschreiben (Default hätte APPROVED)
+                'effects' => null,
+            ],
+        );
 
         $this->postJson('/api/events', ['task_id' => $task->id, 'event' => 'MERGED'])
             ->assertOk()

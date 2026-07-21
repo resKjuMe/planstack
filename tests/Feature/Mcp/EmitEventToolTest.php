@@ -21,10 +21,12 @@ class EmitEventToolTest extends TestCase
         $project = Project::factory()->create(['created_by_id' => $user->id]);
         $task = $project->tasks()->create(['name' => 'M1', 'summary' => 'MCP-Event']);
         $target = $project->organization->statusForRole(StatusRole::IN_PROGRESS);
-        $project->organization->eventAutomations()->create([
-            'event' => TaskEvent::PROCESSING->value,
-            'target_status_id' => $target->id,
-        ]);
+        // PROCESSING ist per Default vorkonfiguriert → updateOrCreate; overridable
+        // leeren, damit aus PICKABLE heraus immer überschrieben wird.
+        $project->organization->eventAutomations()->updateOrCreate(
+            ['event' => TaskEvent::PROCESSING->value],
+            ['target_status_id' => $target->id, 'overridable_status_ids' => null],
+        );
         $this->actingAs($user);
 
         $server = app(McpServer::class);
@@ -46,12 +48,13 @@ class EmitEventToolTest extends TestCase
         $this->actingAs($user);
 
         $server = app(McpServer::class);
-        $json = $server->callTool($project, $user, 'emit_event', ['task' => (string) $task->id, 'event' => 'ANALYZING']);
+        // PUBLISHED hat per Default keine Automation ⇒ reine Meldung.
+        $json = $server->callTool($project, $user, 'emit_event', ['task' => (string) $task->id, 'event' => 'PUBLISHED']);
         $data = json_decode($json, true);
 
         $this->assertFalse($data['configured']);
         $this->assertSame($before, $task->refresh()->status_id);
-        $this->assertDatabaseHas('task_events', ['task_id' => $task->id, 'event' => 'ANALYZING']);
+        $this->assertDatabaseHas('task_events', ['task_id' => $task->id, 'event' => 'PUBLISHED']);
     }
 
     public function test_emit_event_tool_rejects_invalid_event(): void

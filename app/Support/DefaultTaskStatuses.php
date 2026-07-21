@@ -3,40 +3,56 @@
 namespace App\Support;
 
 use App\Models\Organization;
+use App\Models\OrgEventAutomation;
 use App\Models\OrgStatus;
+use App\Models\OrgStatusAutomation;
 use App\Models\OrgStatusGroup;
 use App\Models\OrgStatusTransition;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 /**
- * Seeds an organization with the default task-status configuration — a snapshot
- * of today's fixed workflow (App\Enums\TaskStatus + App\Support\BoardWorkflow),
- * minus the retired UNKNOWN ("ausstehend"): the initial status is PICKABLE.
+ * Seeds a newly created organization with the default task-workflow
+ * configuration. This is a snapshot of the reference organization's live setup
+ * (statuses, groups, transitions, wired-action automations and event
+ * automations) — the "standard" a fresh organization starts from.
  *
- * The default keys equal the legacy TaskStatus values, so a default-seeded org
- * stays wire-compatible with existing API/MCP clients. Idempotent: does nothing
- * if the org already has statuses.
+ * Applied on organization creation (see App\Observers\OrganizationObserver).
+ * Idempotent: does nothing if the org already has statuses. Guarded so it also
+ * works when invoked from an early migration before later columns/tables exist
+ * (those are backfilled by their own migrations); at runtime everything exists.
  */
 class DefaultTaskStatuses
 {
     /**
+     * Statuses in board order. `role` is a canonical StatusRole value or null for
+     * a custom (org-defined) status. `group` references a GROUPS key.
+     *
      * @var array<int, array<string, mixed>>
      */
     private const STATUSES = [
-        // key/role, label(de), label_en, kind, color_token, icon, position,
-        // is_column, default_expanded, wip_limit, done, delivered, group
-        ['PICKABLE',    'pickbar',      'pickable',    'waiting',   'indigo',  'inbox',        0, true,  true,  null, false, false, null],
-        ['CLAIMED',     'beansprucht',  'claimed',     'active',    'sky',     'user-check',   1, true,  false, null, false, false, 'in_work'],
-        ['ANALYZING',   'in Analyse',   'analyzing',   'active',    'blue',    'search',       2, true,  false, null, false, false, 'in_work'],
-        ['IN_PROGRESS', 'in Arbeit',    'in progress', 'active',    'navy',    'hammer',       3, true,  true,  null, false, false, 'in_work'],
-        ['IN_REVIEW',   'in Review',    'in review',   'review',    'purple',  'eye',          4, true,  true,  null, false, false, null],
-        ['MERGED',      'gemerged',     'merged',      'done',      'emerald', 'git-merge',    5, true,  false, null, true,  true,  null],
-        ['COMPLETED',   'erledigt',     'completed',   'done',      'green',   'circle-check', 6, true,  false, null, true,  true,  null],
-        // Exception states: not columns, collected in the left-hand lane
-        // (default_expanded = true → the lane is open by default, as before).
-        ['BLOCKED',     'blockiert',    'blocked',     'exception', 'rose',    'octagon-x',      7, false, true,  null, false, false, null],
-        ['CONCERNED',   'problematisch','concerned',   'exception', 'red',     'triangle-alert', 8, false, true,  null, false, false, null],
+        ['key' => 'PICKABLE',    'role' => 'PICKABLE',    'label' => 'pickbar',       'label_en' => 'pickable',   'kind' => 'waiting',   'color' => 'slate',   'icon' => 'inbox',          'position' => 0,  'is_column' => true,  'expanded' => true,  'wip' => null, 'done' => false, 'delivered' => false, 'group' => null],
+        ['key' => 'CLAIMED',     'role' => 'CLAIMED',     'label' => 'beansprucht',   'label_en' => 'claimed',    'kind' => 'active',    'color' => 'sky',     'icon' => 'hand',           'position' => 1,  'is_column' => true,  'expanded' => false, 'wip' => null, 'done' => false, 'delivered' => false, 'group' => 'in_work'],
+        ['key' => 'ANALYZING',   'role' => 'ANALYZING',   'label' => 'in Analyse',    'label_en' => 'analyzing',  'kind' => 'active',    'color' => 'blue',    'icon' => 'search',         'position' => 2,  'is_column' => true,  'expanded' => false, 'wip' => null, 'done' => false, 'delivered' => false, 'group' => 'in_work'],
+        ['key' => 'IN_PROGRESS', 'role' => 'IN_PROGRESS', 'label' => 'in Arbeit',     'label_en' => 'in progress','kind' => 'active',    'color' => 'navy',    'icon' => 'hammer',         'position' => 3,  'is_column' => true,  'expanded' => true,  'wip' => null, 'done' => false, 'delivered' => false, 'group' => 'in_work'],
+        ['key' => 'REVIEWBAR',   'role' => null,          'label' => 'reviewbar',     'label_en' => 'reviewable', 'kind' => 'review',    'color' => 'indigo',  'icon' => 'user-check',     'position' => 4,  'is_column' => true,  'expanded' => false, 'wip' => null, 'done' => false, 'delivered' => false, 'group' => 'in-review'],
+        ['key' => 'IN_REVIEW',   'role' => 'IN_REVIEW',   'label' => 'in Review',     'label_en' => 'in review',  'kind' => 'review',    'color' => 'purple',  'icon' => 'eye',            'position' => 5,  'is_column' => true,  'expanded' => true,  'wip' => null, 'done' => false, 'delivered' => false, 'group' => 'in-review'],
+        ['key' => 'APPROVED',    'role' => null,          'label' => 'approved',      'label_en' => 'approved',   'kind' => 'review',    'color' => 'purple',  'icon' => 'check',          'position' => 6,  'is_column' => true,  'expanded' => false, 'wip' => null, 'done' => false, 'delivered' => false, 'group' => 'in-review'],
+        ['key' => 'MERGED',      'role' => 'MERGED',      'label' => 'gemerged',      'label_en' => 'merged',     'kind' => 'done',      'color' => 'green',   'icon' => 'git-merge',      'position' => 7,  'is_column' => true,  'expanded' => false, 'wip' => null, 'done' => true,  'delivered' => true,  'group' => 'done'],
+        ['key' => 'COMPLETED',   'role' => 'COMPLETED',   'label' => 'erledigt',      'label_en' => 'completed',  'kind' => 'done',      'color' => 'green',   'icon' => 'circle-check',   'position' => 8,  'is_column' => true,  'expanded' => false, 'wip' => null, 'done' => true,  'delivered' => true,  'group' => 'done'],
+        ['key' => 'BLOCKED',     'role' => 'BLOCKED',     'label' => 'blockiert',     'label_en' => 'blocked',    'kind' => 'exception', 'color' => 'rose',    'icon' => 'octagon-x',      'position' => 9,  'is_column' => false, 'expanded' => false, 'wip' => null, 'done' => false, 'delivered' => false, 'group' => null],
+        ['key' => 'CONCERNED',   'role' => 'CONCERNED',   'label' => 'problematisch', 'label_en' => 'concerned',  'kind' => 'exception', 'color' => 'orange',  'icon' => 'triangle-alert', 'position' => 10, 'is_column' => false, 'expanded' => false, 'wip' => null, 'done' => false, 'delivered' => false, 'group' => null],
+    ];
+
+    /**
+     * Collapse groups, in order.
+     *
+     * @var array<int, array{key: string, label: string}>
+     */
+    private const GROUPS = [
+        ['key' => 'in_work', 'label' => 'In Arbeit'],
+        ['key' => 'in-review', 'label' => 'In Review'],
+        ['key' => 'done', 'label' => 'Done'],
     ];
 
     /**
@@ -45,26 +61,24 @@ class DefaultTaskStatuses
      * @var array<string, array<int, string>>
      */
     public const TRANSITIONS = [
-        'PICKABLE' => ['CLAIMED'],
-        // CLAIMED→IN_REVIEW und IN_REVIEW→MERGED decken die verdrahteten Aktionen
-        // (done mit PR direkt aus beansprucht, merge aus Review) ab, damit die
-        // Transition-Prüfung auf API/MCP die Standard-L2L-Abläufe nicht abweist.
-        'CLAIMED' => ['ANALYZING', 'IN_PROGRESS', 'IN_REVIEW', 'PICKABLE'],
-        'ANALYZING' => ['IN_PROGRESS', 'IN_REVIEW', 'CLAIMED'],
-        'IN_PROGRESS' => ['IN_REVIEW', 'COMPLETED', 'ANALYZING'],
-        'IN_REVIEW' => ['COMPLETED', 'MERGED', 'IN_PROGRESS'],
-        'COMPLETED' => ['MERGED', 'IN_REVIEW'],
-        'MERGED' => ['COMPLETED'],
-        'BLOCKED' => ['PICKABLE', 'CLAIMED'],
-        'CONCERNED' => ['PICKABLE', 'CLAIMED'],
+        'PICKABLE' => ['CLAIMED', 'BLOCKED', 'CONCERNED'],
+        'CLAIMED' => ['PICKABLE', 'ANALYZING', 'IN_PROGRESS', 'REVIEWBAR', 'BLOCKED', 'CONCERNED'],
+        'ANALYZING' => ['CLAIMED', 'IN_PROGRESS', 'REVIEWBAR', 'BLOCKED', 'CONCERNED'],
+        'IN_PROGRESS' => ['ANALYZING', 'REVIEWBAR', 'COMPLETED', 'BLOCKED', 'CONCERNED'],
+        'REVIEWBAR' => ['IN_PROGRESS', 'IN_REVIEW', 'BLOCKED', 'CONCERNED'],
+        'IN_REVIEW' => ['IN_PROGRESS', 'REVIEWBAR', 'APPROVED', 'MERGED', 'COMPLETED', 'BLOCKED', 'CONCERNED'],
+        'APPROVED' => ['IN_PROGRESS', 'REVIEWBAR', 'IN_REVIEW', 'MERGED', 'COMPLETED', 'BLOCKED', 'CONCERNED'],
+        'MERGED' => ['COMPLETED', 'BLOCKED', 'CONCERNED'],
+        'COMPLETED' => ['IN_REVIEW', 'MERGED', 'BLOCKED', 'CONCERNED'],
+        'BLOCKED' => ['PICKABLE', 'CLAIMED', 'ANALYZING', 'IN_PROGRESS', 'REVIEWBAR', 'IN_REVIEW', 'APPROVED', 'MERGED', 'COMPLETED', 'CONCERNED'],
+        'CONCERNED' => ['PICKABLE', 'CLAIMED', 'ANALYZING', 'IN_PROGRESS', 'REVIEWBAR', 'IN_REVIEW', 'APPROVED', 'MERGED', 'COMPLETED', 'BLOCKED'],
     ];
 
     /**
      * Default on-enter field effects, keyed by status ROLE: applied when a task
-     * enters that status (e.g. via a board drop). Mirrors the side effects that
-     * were hard-coded in the controllers/MCP before. value tokens: @actor, @now,
-     * @clear. Applied via applyDefaultEffects() (not in the create() below, since
-     * the column is added in a later migration than the seed).
+     * enters that status. value tokens: @actor, @now, @clear. Applied via
+     * applyDefaultEffects() (not in create(), since the on_enter_effects column
+     * is added in a later migration than the historical seed).
      *
      * @var array<string, array<int, array<string, mixed>>>
      */
@@ -86,10 +100,54 @@ class DefaultTaskStatuses
     ];
 
     /**
-     * @var array<int, array{key: string, label: string}>
+     * Wired-action automations (table task_status_automations): target status +
+     * field effects per fixed action keyword. `target` references a status key.
+     *
+     * @var array<int, array{action: string, target: string, effects: array<int, array<string, mixed>>}>
      */
-    private const GROUPS = [
-        ['key' => 'in_work', 'label' => 'In Arbeit'],
+    private const STATUS_AUTOMATIONS = [
+        ['action' => 'claim', 'target' => 'CLAIMED', 'effects' => [
+            ['field' => 'claimed_by_id', 'value' => '@actor'],
+            ['field' => 'claimed_at', 'value' => '@now'],
+        ]],
+        ['action' => 'release', 'target' => 'PICKABLE', 'effects' => [
+            ['field' => 'claimed_by_id', 'value' => '@clear'],
+            ['field' => 'claimed_at', 'value' => '@clear'],
+        ]],
+        ['action' => 'analyze', 'target' => 'ANALYZING', 'effects' => []],
+        ['action' => 'in_progress', 'target' => 'IN_PROGRESS', 'effects' => []],
+        ['action' => 'in_review', 'target' => 'IN_REVIEW', 'effects' => []],
+        ['action' => 'done_with_pr', 'target' => 'IN_REVIEW', 'effects' => []],
+        ['action' => 'done_without_pr', 'target' => 'IN_PROGRESS', 'effects' => []],
+        ['action' => 'merge', 'target' => 'MERGED', 'effects' => [
+            ['field' => 'merged_at', 'value' => '@now', 'only_if_empty' => true],
+        ]],
+        ['action' => 'split_parent', 'target' => 'COMPLETED', 'effects' => []],
+        ['action' => 'concern', 'target' => 'CONCERNED', 'effects' => []],
+        ['action' => 'resolve_claimed', 'target' => 'CLAIMED', 'effects' => []],
+        ['action' => 'resolve_unclaimed', 'target' => 'PICKABLE', 'effects' => []],
+    ];
+
+    /**
+     * Event automations (table task_event_automations): per progress event a
+     * target status and the set of overwritable statuses. `target` and each
+     * `overridable` entry reference a status key; overridable '*' = all statuses.
+     * Only events with a target status are seeded (a null target is a no-op).
+     *
+     * @var array<int, array{event: string, target: string, overridable: string|array<int, string>}>
+     */
+    private const EVENT_AUTOMATIONS = [
+        ['event' => 'CLAIMED', 'target' => 'CLAIMED', 'overridable' => ['PICKABLE']],
+        ['event' => 'ANALYZING', 'target' => 'ANALYZING', 'overridable' => ['CLAIMED']],
+        ['event' => 'PROCESSING', 'target' => 'IN_PROGRESS', 'overridable' => ['ANALYZING']],
+        ['event' => 'POLISHED', 'target' => 'REVIEWBAR', 'overridable' => ['IN_PROGRESS']],
+        ['event' => 'REVIEWING', 'target' => 'IN_REVIEW', 'overridable' => ['REVIEWBAR']],
+        ['event' => 'APPROVED', 'target' => 'APPROVED', 'overridable' => ['IN_REVIEW']],
+        ['event' => 'CHANGES_REQUESTED', 'target' => 'IN_PROGRESS', 'overridable' => ['IN_REVIEW']],
+        ['event' => 'MERGED', 'target' => 'MERGED', 'overridable' => ['APPROVED']],
+        ['event' => 'DEPLOYED', 'target' => 'COMPLETED', 'overridable' => ['MERGED']],
+        ['event' => 'CONCERNED', 'target' => 'CONCERNED', 'overridable' => '*'],
+        ['event' => 'UNCLAIMED', 'target' => 'PICKABLE', 'overridable' => '*'],
     ];
 
     public static function seed(Organization $organization): void
@@ -110,43 +168,47 @@ class DefaultTaskStatuses
                 $groupIdByKey[$g['key']] = $group->id;
             }
 
-            // The icon column is added in a later migration than the seed; only
-            // write it when it already exists (fresh migrate runs the seed first,
-            // then a backfill migration sets icons by key — same pattern as
-            // on_enter_effects).
+            // The icon column is added in a later migration than the historical
+            // seed; only write it when it already exists (at runtime it does).
             $hasIcon = Schema::hasColumn('task_statuses', 'icon');
 
             $statusIdByKey = [];
             foreach (self::STATUSES as $s) {
-                [$key, $label, $labelEn, $kind, $color, $icon, $position, $isColumn, $expanded, $wip, $done, $delivered, $group] = $s;
-                $row = OrgStatus::create(array_filter([
+                $attrs = [
                     'organization_id' => $organization->id,
-                    'role' => $key, // default: key == role
-                    'key' => $key,
-                    'label' => $label,
-                    'label_en' => $labelEn,
-                    'kind' => $kind,
-                    'color_token' => $color,
-                    'icon' => $hasIcon ? $icon : null,
-                    'position' => $position,
-                    'is_column' => $isColumn,
-                    'default_expanded' => $expanded,
-                    'wip_limit' => $wip,
-                    'counts_as_done' => $done,
-                    'counts_as_delivered' => $delivered,
-                    'group_id' => $group ? $groupIdByKey[$group] : null,
-                ], fn ($v, $k) => $k !== 'icon' || $hasIcon, ARRAY_FILTER_USE_BOTH));
-                $statusIdByKey[$key] = $row->id;
+                    'role' => $s['role'],
+                    'key' => $s['key'],
+                    'label' => $s['label'],
+                    'label_en' => $s['label_en'],
+                    'kind' => $s['kind'],
+                    'color_token' => $s['color'],
+                    'position' => $s['position'],
+                    'is_column' => $s['is_column'],
+                    'default_expanded' => $s['expanded'],
+                    'wip_limit' => $s['wip'] ?? null,
+                    'counts_as_done' => $s['done'] ?? false,
+                    'counts_as_delivered' => $s['delivered'] ?? false,
+                    'group_id' => $s['group'] ? ($groupIdByKey[$s['group']] ?? null) : null,
+                ];
+                if ($hasIcon) {
+                    $attrs['icon'] = $s['icon'];
+                }
+                $statusIdByKey[$s['key']] = OrgStatus::create($attrs)->id;
             }
 
             foreach (self::TRANSITIONS as $from => $targets) {
                 foreach ($targets as $to) {
-                    OrgStatusTransition::create([
-                        'from_status_id' => $statusIdByKey[$from],
-                        'to_status_id' => $statusIdByKey[$to],
-                    ]);
+                    if (isset($statusIdByKey[$from], $statusIdByKey[$to])) {
+                        OrgStatusTransition::create([
+                            'from_status_id' => $statusIdByKey[$from],
+                            'to_status_id' => $statusIdByKey[$to],
+                        ]);
+                    }
                 }
             }
+
+            self::seedStatusAutomations($organization, $statusIdByKey);
+            self::seedEventAutomations($organization, $statusIdByKey);
         });
 
         // Set default on-enter effects. Guarded so the seed still works when run
@@ -156,10 +218,64 @@ class DefaultTaskStatuses
     }
 
     /**
-     * Set the default on-enter effects on an org's role-bearing statuses that
-     * don't already have effects configured (never clobbers user customizations).
-     * No-op if the on_enter_effects column does not exist yet.
+     * Seed the wired-action automations. No-op if the table doesn't exist yet
+     * (early-migration path).
+     *
+     * @param  array<string, int>  $statusIdByKey
      */
+    private static function seedStatusAutomations(Organization $organization, array $statusIdByKey): void
+    {
+        if (! Schema::hasTable('task_status_automations')) {
+            return;
+        }
+
+        foreach (self::STATUS_AUTOMATIONS as $a) {
+            OrgStatusAutomation::create([
+                'organization_id' => $organization->id,
+                'action' => $a['action'],
+                'target_status_id' => $statusIdByKey[$a['target']] ?? null,
+                'effects' => $a['effects'] ?: null,
+            ]);
+        }
+    }
+
+    /**
+     * Seed the per-event automations. No-op if the table doesn't exist yet
+     * (the table is created in a migration later than the historical seed).
+     *
+     * @param  array<string, int>  $statusIdByKey
+     */
+    private static function seedEventAutomations(Organization $organization, array $statusIdByKey): void
+    {
+        if (! Schema::hasTable('task_event_automations')) {
+            return;
+        }
+
+        $allIds = array_values($statusIdByKey);
+
+        foreach (self::EVENT_AUTOMATIONS as $e) {
+            $target = $statusIdByKey[$e['target']] ?? null;
+            if ($target === null) {
+                continue;
+            }
+
+            $overridable = $e['overridable'] === '*'
+                ? $allIds
+                : array_values(array_filter(array_map(
+                    fn ($key) => $statusIdByKey[$key] ?? null,
+                    (array) $e['overridable'],
+                )));
+
+            OrgEventAutomation::create([
+                'organization_id' => $organization->id,
+                'event' => $e['event'],
+                'target_status_id' => $target,
+                'overridable_status_ids' => $overridable ?: null,
+                'effects' => null,
+            ]);
+        }
+    }
+
     /**
      * Ensure every default transition edge exists for the org (add missing ones
      * by status key; never removes custom edges). Used to backfill the expanded
@@ -185,6 +301,11 @@ class DefaultTaskStatuses
         }
     }
 
+    /**
+     * Set the default on-enter effects on an org's role-bearing statuses that
+     * don't already have effects configured (never clobbers user customizations).
+     * No-op if the on_enter_effects column does not exist yet.
+     */
     public static function applyDefaultEffects(Organization $organization): void
     {
         if (! Schema::hasColumn('task_statuses', 'on_enter_effects')) {
