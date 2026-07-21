@@ -15,6 +15,43 @@
     .board-cell { animation: none; }
 }
 
+/* Globale Tooltips (siehe resources/js/tooltip.js): gestylter Ersatz fuer die
+   nativen title-Tooltips, theme-bewusst. `hidden` haelt es aus dem Layout, bis
+   das JS es misst und positioniert. */
+.ps-tooltip {
+    position: fixed;
+    z-index: 9999;
+    max-width: 20rem;
+    padding: 0.35rem 0.55rem;
+    border-radius: 0.375rem;
+    background: #18181b;
+    color: #fafafa;
+    font-size: 0.75rem;
+    line-height: 1.35;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    box-shadow: 0 4px 12px rgb(0 0 0 / 0.18);
+    pointer-events: none;
+    opacity: 0;
+    transform: translateY(2px);
+    transition: opacity 120ms ease, transform 120ms ease;
+}
+.ps-tooltip.is-visible {
+    opacity: 1;
+    transform: none;
+}
+.dark .ps-tooltip {
+    background: #f4f4f5;
+    color: #18181b;
+    box-shadow: 0 4px 14px rgb(0 0 0 / 0.4);
+}
+@media (prefers-reduced-motion: reduce) {
+    .ps-tooltip {
+        transition: none;
+        transform: none;
+    }
+}
+
 @layer base {
     /* Dark Mode: Standard-Rahmenfarbe. Tailwinds Preflight setzt für ALLE
        Elemente border-color = gray-200 — bloße `border`/`border-t`/`divide-y`

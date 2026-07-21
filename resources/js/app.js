@@ -1,4 +1,5 @@
 import Alpine from 'alpinejs';
+import './tooltip';
 
 // Dark Mode: globaler Theme-Store. Die Wahl (light | dark | system) liegt pro
 // Browser in localStorage; das Anti-Flash-Script im <head> (partials/theme-init)
