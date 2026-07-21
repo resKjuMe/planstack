@@ -1,7 +1,7 @@
 ---
 name: planstack
 description: Planstack-Boards über die REST-API abarbeiten — projektübergreifend. Aufruf „/planstack <PROJECT>" (ganzes Board) oder „/planstack <PROJECT> <TASK>" (ein Task). Das Projekt kommt aus dem Argument, der Zugang aus config.json. Einziger Zustandsspeicher ist die API.
-argument-hint: <PROJECT> [<TASK>] | review | fix | settings | update-config | plan
+argument-hint: [project] [task] | do [project] [task] | review | fix | settings | update-config | plan
 ---
 
 # Planstack (Remote, projektübergreifend)
@@ -12,6 +12,7 @@ Ein Planstack-Board wird über die **REST-API** abgearbeitet: Board lesen, Task 
 
 - `/planstack <PROJECT>` — das Board von `<PROJECT>` abarbeiten (besten Pick wählen, Zyklus s. u.).
 - `/planstack <PROJECT> <TASK>` — gezielt **einen** Task (`<TASK>` = Task-Name, z. B. `C27`) dieses Projekts abarbeiten.
+- `/planstack do <PROJECT> [<TASK>]` — **Alias** für die beiden Formen oben: erzwingt den Abarbeitungs-Modus (ganzes Board bzw. ein Task). Nützlich, wenn ein Projekt-Alias mit einem reservierten Sub-Kommando (`review`, `fix`, `settings`, `update-config`, `plan`) kollidiert. `<PROJECT>` = Alias **oder** id, `<TASK>` = Name **oder** id (optional).
 - `/planstack review [<PROJECT>] [<TASK>]` — in-review Task(s) mit PR reviewen (übernimmt Review, führt den Review-Skill aus, erfasst das Ergebnis; ohne Argumente projektübergreifend; siehe „Review").
 - `/planstack fix [<PROJECT>] <TASK|PR-NUMMER>` — offenen PR reparieren (Task/PR erforderlich): Merge-Konflikte auflösen, Kommentare + Review-Kommentare beantworten/fixen/resolven, rote CI korrigieren (siehe „Fix").
 - `/planstack plan [<PROJECT>]` — Projekte, Phasen und Tasks anlegen (Planung). Die Anleitung dazu ist serverseitig gepflegt und wird bei **jedem** Aufruf frisch geladen (siehe „Plan").
@@ -30,8 +31,11 @@ j(){ python3 -c "import json;print(json.load(open('$CFG')).get('$1',''))"; }
 BASE=$(j base_url); TOKEN=$(j token); SKILLREV=$(j skill_revision)
 AUTH=(-H "Authorization: Bearer $TOKEN" -H "Accept: application/json" -H "Content-Type: application/json")
 
-# Aufruf: /planstack <PROJECT> [<TASK>]  →  PROJ = erstes Argument, TASK = optionales zweites.
-read -r PROJ TASK <<<"$ARGUMENTS"
+# Aufruf: /planstack [do] <PROJECT> [<TASK>]  →  ein optionales fuehrendes "do" ist
+# ein Alias fuer den Abarbeitungs-Modus und wird verworfen; PROJ = erstes echtes
+# Argument (Alias oder id), TASK = optionales zweites (Name oder id).
+read -r A1 A2 A3 <<<"$ARGUMENTS"
+if [ "$A1" = "do" ]; then PROJ=$A2; TASK=$A3; else PROJ=$A1; TASK=$A2; fi
 ```
 
 Alle Endpunkte laufen unter `$BASE/projects/$PROJ` (siehe Betriebshandbuch). Fehler: `401` Token · `403` kein Zugriff aufs Projekt · `404` unbekannter Alias.
