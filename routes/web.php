@@ -81,8 +81,13 @@ Route::middleware('auth')->group(function () {
     // überschreibbare Status und Feld-Effekte konfigurieren. Siehe docs/event-api.md.
     Route::get('organization/events', [OrganizationEventController::class, 'index'])
         ->name('organization.events.index');
-    Route::put('organization/events/{event}', [OrganizationEventController::class, 'update'])
+    Route::put('organization/events', [OrganizationEventController::class, 'update'])
         ->name('organization.events.update');
+    // Zusätzliche Feld-Automationen: eigene Unterseite, gesammelt gespeichert.
+    Route::get('organization/events/effects', [OrganizationEventController::class, 'effects'])
+        ->name('organization.events.effects.index');
+    Route::put('organization/events/effects', [OrganizationEventController::class, 'updateEffects'])
+        ->name('organization.events.effects.update');
 
     // ---- Erfordert die Zugehörigkeit zu einer Organisation ----
     Route::middleware(EnsureUserHasOrganization::class)->group(function () {

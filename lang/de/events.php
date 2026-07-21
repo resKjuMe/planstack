@@ -6,7 +6,13 @@ return [
     'manage_link' => 'Events verwalten',
     'intro' => 'Lege je Fortschritts-Event fest, was mit der Aufgabe passiert: in welchen Status sie geschoben wird, welche aktuellen Status dabei überschrieben werden dürfen und welche Felder gesetzt werden. Der /planstack-Skill sendet diese Events während der Abarbeitung.',
     'back_to_organization' => 'Zurück zur Organisation',
+    'back_to_events' => 'Zurück zu den Event-Automationen',
     'saved' => 'Event „:event" gespeichert.',
+    'saved_all' => 'Event-Automationen gespeichert.',
+    'effects_saved' => 'Zusätzliche Feld-Automationen gespeichert.',
+    'effects_link' => 'Zusätzliche Feld-Automationen',
+    'effects_title' => 'Zusätzliche Feld-Automationen',
+    'effects_intro' => 'Lege je Fortschritts-Event fest, welche Felder zusätzlich gesetzt werden. Werte: @actor (aktueller Nutzer), @now (jetzt), @clear (leeren) oder ein fester Wert.',
 
     'target_status' => 'Zielstatus',
     'no_status_change' => '— kein Statuswechsel —',

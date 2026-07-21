@@ -33,15 +33,12 @@ class OrganizationEventController extends Controller
         $organization = $this->ownedOrganization($request);
 
         $statuses = $organization->statuses()->get();
-        $configs = $organization->eventAutomations()->get()
-            ->keyBy(fn ($config) => $config->event->value);
 
         return view('organization.events', [
             'organization' => $organization,
             'statuses' => $statuses,
-            'configs' => $configs,
+            'configs' => $this->configs($organization),
             'groups' => TaskEvent::groups(),
-            'effectFields' => StatusEffects::ALLOWED_FIELDS,
             // status_id => on-enter effects, for the read-only "column automations".
             'statusEffects' => $statuses->mapWithKeys(
                 fn ($status) => [$status->id => $status->on_enter_effects ?? []]
@@ -49,47 +46,120 @@ class OrganizationEventController extends Controller
         ]);
     }
 
-    public function update(Request $request, string $event): RedirectResponse
+    /**
+     * Bulk-save the status routing (target + overridable statuses) for every
+     * event in one request. The per-event field effects are left untouched –
+     * they live on their own sub-page (see effects()).
+     */
+    public function update(Request $request): RedirectResponse
     {
         $organization = $this->ownedOrganization($request);
-
-        $taskEvent = TaskEvent::tryFrom($event);
-        abort_unless($taskEvent !== null, 404);
 
         $statusIds = $organization->statuses()->pluck('id')->all();
 
         $validated = $request->validate([
-            'target_status_id' => ['nullable', 'integer', Rule::in($statusIds)],
-            'overridable_status_ids' => ['nullable', 'array'],
-            'overridable_status_ids.*' => ['integer', Rule::in($statusIds)],
-            'effects' => ['nullable', 'array'],
-            'effects.*.field' => ['required', Rule::in(StatusEffects::ALLOWED_FIELDS)],
-            'effects.*.value' => ['nullable', 'string', 'max:255'],
-            'effects.*.only_if_empty' => ['sometimes'],
+            'events' => ['array'],
+            'events.*.target_status_id' => ['nullable', 'integer', Rule::in($statusIds)],
+            'events.*.overridable_status_ids' => ['nullable', 'array'],
+            'events.*.overridable_status_ids.*' => ['integer', Rule::in($statusIds)],
         ]);
 
-        $effects = [];
-        foreach ($validated['effects'] ?? [] as $effect) {
-            $effects[] = [
-                'field' => $effect['field'],
-                'value' => $effect['value'] ?? '',
-                'only_if_empty' => ! empty($effect['only_if_empty']),
-            ];
+        $existing = $this->configs($organization);
+
+        foreach ($validated['events'] ?? [] as $eventValue => $data) {
+            $taskEvent = TaskEvent::tryFrom((string) $eventValue);
+            if ($taskEvent === null) {
+                continue;
+            }
+
+            $target = $data['target_status_id'] ?? null;
+            $overridable = array_values(array_map('intval', $data['overridable_status_ids'] ?? []));
+
+            // Nichts konfiguriert und keine bestehende Zeile ⇒ keine leere Zeile anlegen.
+            if ($target === null && $overridable === [] && ! $existing->has($taskEvent->value)) {
+                continue;
+            }
+
+            $organization->eventAutomations()->updateOrCreate(
+                ['event' => $taskEvent->value],
+                [
+                    'target_status_id' => $target,
+                    'overridable_status_ids' => $overridable ?: null,
+                ]
+            );
         }
-
-        $overridable = array_values(array_map('intval', $validated['overridable_status_ids'] ?? []));
-
-        $organization->eventAutomations()->updateOrCreate(
-            ['event' => $taskEvent->value],
-            [
-                'target_status_id' => $validated['target_status_id'] ?? null,
-                'overridable_status_ids' => $overridable ?: null,
-                'effects' => $effects ?: null,
-            ]
-        );
 
         $organization->increment('status_config_version');
 
-        return back()->with('status', __('events.saved', ['event' => $taskEvent->label()]));
+        return back()->with('status', __('events.saved_all'));
+    }
+
+    public function effects(Request $request): View
+    {
+        $organization = $this->ownedOrganization($request);
+
+        return view('organization.events-effects', [
+            'organization' => $organization,
+            'configs' => $this->configs($organization),
+            'groups' => TaskEvent::groups(),
+            'effectFields' => StatusEffects::ALLOWED_FIELDS,
+        ]);
+    }
+
+    /**
+     * Bulk-save the additional field effects for every event. The status
+     * routing configured on the main page is left untouched.
+     */
+    public function updateEffects(Request $request): RedirectResponse
+    {
+        $organization = $this->ownedOrganization($request);
+
+        $validated = $request->validate([
+            'events' => ['array'],
+            'events.*.effects' => ['nullable', 'array'],
+            'events.*.effects.*.field' => ['required', Rule::in(StatusEffects::ALLOWED_FIELDS)],
+            'events.*.effects.*.value' => ['nullable', 'string', 'max:255'],
+            'events.*.effects.*.only_if_empty' => ['sometimes'],
+        ]);
+
+        $existing = $this->configs($organization);
+
+        foreach ($validated['events'] ?? [] as $eventValue => $data) {
+            $taskEvent = TaskEvent::tryFrom((string) $eventValue);
+            if ($taskEvent === null) {
+                continue;
+            }
+
+            $effects = [];
+            foreach ($data['effects'] ?? [] as $effect) {
+                $effects[] = [
+                    'field' => $effect['field'],
+                    'value' => $effect['value'] ?? '',
+                    'only_if_empty' => ! empty($effect['only_if_empty']),
+                ];
+            }
+
+            if ($effects === [] && ! $existing->has($taskEvent->value)) {
+                continue;
+            }
+
+            $organization->eventAutomations()->updateOrCreate(
+                ['event' => $taskEvent->value],
+                ['effects' => $effects ?: null]
+            );
+        }
+
+        $organization->increment('status_config_version');
+
+        return back()->with('status', __('events.effects_saved'));
+    }
+
+    /**
+     * @return \Illuminate\Support\Collection<string, \App\Models\OrgEventAutomation>
+     */
+    private function configs(Organization $organization)
+    {
+        return $organization->eventAutomations()->get()
+            ->keyBy(fn ($config) => $config->event->value);
     }
 }

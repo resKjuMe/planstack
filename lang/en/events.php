@@ -6,7 +6,13 @@ return [
     'manage_link' => 'Manage events',
     'intro' => 'Define, per progress event, what happens to the task: which status it moves to, which current statuses may be overwritten, and which fields are set. The /planstack skill sends these events during processing.',
     'back_to_organization' => 'Back to organization',
+    'back_to_events' => 'Back to event automations',
     'saved' => 'Event “:event” saved.',
+    'saved_all' => 'Event automations saved.',
+    'effects_saved' => 'Additional field automations saved.',
+    'effects_link' => 'Additional field automations',
+    'effects_title' => 'Additional field automations',
+    'effects_intro' => 'Define, per progress event, which extra fields are set. Values: @actor (current user), @now (now), @clear (empty) or a literal value.',
 
     'target_status' => 'Target status',
     'no_status_change' => '— no status change —',

@@ -16,6 +16,8 @@
             <div class="flex items-center justify-between gap-4">
                 <p class="max-w-3xl text-sm text-gray-500 dark:text-gray-400">{{ __('events.intro') }}</p>
                 <div class="flex shrink-0 items-center gap-4 text-sm">
+                    <a href="{{ route('organization.events.effects.index') }}"
+                       class="text-indigo-600 dark:text-indigo-400 hover:underline">{{ __('events.effects_link') }}</a>
                     <a href="{{ route('organization.statuses.index') }}"
                        class="text-indigo-600 dark:text-indigo-400 hover:underline">{{ __('board_admin.manage_link') }}</a>
                     <a href="{{ route('organization.index') }}"
@@ -23,59 +25,59 @@
                 </div>
             </div>
 
-            @foreach ($groups as $group)
-                <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-                    <h3 class="mb-4 text-lg font-semibold text-gray-900 dark:text-gray-100">{{ __('events.group_'.$group) }}</h3>
+            <form method="POST" action="{{ route('organization.events.update') }}" class="space-y-6">
+                @csrf
+                @method('PUT')
 
-                    <div class="divide-y divide-gray-100 dark:divide-gray-700">
-                        @foreach (\App\Enums\TaskEvent::forGroup($group) as $event)
-                            @php $config = $configs->get($event->value); @endphp
-                            <div class="py-4"
-                                 x-data="{
-                                     target: '{{ $config?->target_status_id }}',
-                                     rows: @js($config?->effects ?? []),
-                                     statusEffects: @js($statusEffectsJs),
-                                     get columnEffects() { return this.target && this.statusEffects[this.target] ? this.statusEffects[this.target] : []; }
-                                 }">
-                                <div class="mb-3 flex flex-wrap items-baseline justify-between gap-2">
-                                    <div>
-                                        <span class="font-medium text-gray-900 dark:text-gray-100">{{ $event->label() }}</span>
-                                        <span class="ms-2 font-mono text-xs text-gray-400 dark:text-gray-500">{{ $event->value }}</span>
-                                        <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">{{ $event->description() }}</p>
-                                    </div>
-                                </div>
+                @foreach ($groups as $group)
+                    <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+                        <h3 class="mb-4 text-lg font-semibold text-gray-900 dark:text-gray-100">{{ __('events.group_'.$group) }}</h3>
 
-                                <form method="POST" action="{{ route('organization.events.update', $event->value) }}"
-                                      class="grid gap-4 lg:grid-cols-2">
-                                    @csrf
-                                    @method('PUT')
-
-                                    {{-- Zielstatus + überschreibbare Status --}}
-                                    <div class="space-y-3">
+                        <div class="divide-y divide-gray-100 dark:divide-gray-700">
+                            @foreach (\App\Enums\TaskEvent::forGroup($group) as $event)
+                                @php $config = $configs->get($event->value); @endphp
+                                <div class="py-4"
+                                     x-data="{
+                                         target: '{{ $config?->target_status_id }}',
+                                         statusEffects: @js($statusEffectsJs),
+                                         get columnEffects() { return this.target && this.statusEffects[this.target] ? this.statusEffects[this.target] : []; }
+                                     }">
+                                    <div class="mb-3 flex flex-wrap items-baseline justify-between gap-2">
                                         <div>
-                                            <label class="block text-xs font-medium text-gray-600 dark:text-gray-300">{{ __('events.target_status') }}</label>
-                                            <select name="target_status_id" x-model="target" class="{{ $inputClass }} mt-1 w-full">
-                                                <option value="">{{ __('events.no_status_change') }}</option>
-                                                @foreach ($statuses as $status)
-                                                    <option value="{{ $status->id }}" @selected($config?->target_status_id === $status->id)>{{ $status->label }}</option>
-                                                @endforeach
-                                            </select>
-                                            <p class="mt-1 text-xs text-gray-400 dark:text-gray-500">{{ __('events.target_status_hint') }}</p>
+                                            <span class="font-medium text-gray-900 dark:text-gray-100">{{ $event->label() }}</span>
+                                            <span class="ms-2 font-mono text-xs text-gray-400 dark:text-gray-500">{{ $event->value }}</span>
+                                            <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">{{ $event->description() }}</p>
                                         </div>
+                                    </div>
 
-                                        <div x-show="target" x-cloak>
-                                            <label class="block text-xs font-medium text-gray-600 dark:text-gray-300">{{ __('events.overridable') }}</label>
-                                            <div class="mt-1 flex flex-wrap gap-x-4 gap-y-1">
-                                                @foreach ($statuses as $status)
-                                                    <label class="flex items-center gap-1.5 text-sm text-gray-700 dark:text-gray-300">
-                                                        <input type="checkbox" name="overridable_status_ids[]" value="{{ $status->id }}"
-                                                               @checked(in_array($status->id, $config?->overridable_status_ids ?? []))
-                                                               class="rounded border-gray-300 dark:border-gray-600 text-indigo-600 focus:ring-indigo-500">
-                                                        {{ $status->label }}
-                                                    </label>
-                                                @endforeach
+                                    <div class="grid gap-4 lg:grid-cols-2">
+                                        {{-- Zielstatus + überschreibbare Status --}}
+                                        <div class="space-y-3">
+                                            <div>
+                                                <label class="block text-xs font-medium text-gray-600 dark:text-gray-300">{{ __('events.target_status') }}</label>
+                                                <select name="events[{{ $event->value }}][target_status_id]" x-model="target" class="{{ $inputClass }} mt-1 w-full">
+                                                    <option value="">{{ __('events.no_status_change') }}</option>
+                                                    @foreach ($statuses as $status)
+                                                        <option value="{{ $status->id }}" @selected($config?->target_status_id === $status->id)>{{ $status->label }}</option>
+                                                    @endforeach
+                                                </select>
+                                                <p class="mt-1 text-xs text-gray-400 dark:text-gray-500">{{ __('events.target_status_hint') }}</p>
                                             </div>
-                                            <p class="mt-1 text-xs text-gray-400 dark:text-gray-500">{{ __('events.overridable_hint') }}</p>
+
+                                            <div x-show="target" x-cloak>
+                                                <label class="block text-xs font-medium text-gray-600 dark:text-gray-300">{{ __('events.overridable') }}</label>
+                                                <div class="mt-1 flex flex-wrap gap-x-4 gap-y-1">
+                                                    @foreach ($statuses as $status)
+                                                        <label class="flex items-center gap-1.5 text-sm text-gray-700 dark:text-gray-300">
+                                                            <input type="checkbox" name="events[{{ $event->value }}][overridable_status_ids][]" value="{{ $status->id }}"
+                                                                   @checked(in_array($status->id, $config?->overridable_status_ids ?? []))
+                                                                   class="rounded border-gray-300 dark:border-gray-600 text-indigo-600 focus:ring-indigo-500">
+                                                            {{ $status->label }}
+                                                        </label>
+                                                    @endforeach
+                                                </div>
+                                                <p class="mt-1 text-xs text-gray-400 dark:text-gray-500">{{ __('events.overridable_hint') }}</p>
+                                            </div>
                                         </div>
 
                                         {{-- Automationen der gewählten Spalte (readonly) --}}
@@ -95,45 +97,16 @@
                                             <p x-show="!columnEffects.length" class="mt-1 text-xs text-gray-400 dark:text-gray-500">{{ __('events.no_column_automations') }}</p>
                                         </div>
                                     </div>
-
-                                    {{-- Zusätzliche Feld-Effekte --}}
-                                    <div class="space-y-2">
-                                        <div>
-                                            <label class="block text-xs font-medium text-gray-600 dark:text-gray-300">{{ __('events.extra_effects') }}</label>
-                                            <p class="text-xs text-gray-400 dark:text-gray-500">{{ __('events.extra_effects_hint') }}</p>
-                                        </div>
-                                        <template x-for="(row, idx) in rows" :key="idx">
-                                            <div class="flex flex-wrap items-center gap-2">
-                                                <select x-bind:name="'effects[' + idx + '][field]'" x-model="row.field" class="{{ $inputClass }}">
-                                                    <option value="">{{ __('events.effect_field') }}</option>
-                                                    @foreach ($effectFields as $f)
-                                                        <option value="{{ $f }}">{{ $f }}</option>
-                                                    @endforeach
-                                                </select>
-                                                <input type="text" x-bind:name="'effects[' + idx + '][value]'" x-model="row.value"
-                                                       placeholder="{{ __('events.effect_value_placeholder') }}" class="{{ $inputClass }} w-48">
-                                                <label class="flex items-center gap-1 text-xs text-gray-600 dark:text-gray-300">
-                                                    <input type="checkbox" value="1" x-bind:name="'effects[' + idx + '][only_if_empty]'" x-model="row.only_if_empty"
-                                                           class="rounded border-gray-300 dark:border-gray-600 text-indigo-600 focus:ring-indigo-500">
-                                                    {{ __('events.effect_only_if_empty') }}
-                                                </label>
-                                                <button type="button" x-on:click="rows.splice(idx, 1)"
-                                                        class="text-rose-600 dark:text-rose-400 hover:underline">×</button>
-                                            </div>
-                                        </template>
-                                        <p x-show="rows.length === 0" class="text-xs text-gray-400 dark:text-gray-500">{{ __('events.no_effects') }}</p>
-                                        <div class="flex items-center gap-3 pt-1">
-                                            <button type="button" x-on:click="rows.push({ field: '', value: '', only_if_empty: false })"
-                                                    class="text-xs font-medium text-indigo-600 dark:text-indigo-400 hover:underline">{{ __('events.add_effect') }}</button>
-                                            <button type="submit" class="rounded-md bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-indigo-700">{{ __('events.save') }}</button>
-                                        </div>
-                                    </div>
-                                </form>
-                            </div>
-                        @endforeach
+                                </div>
+                            @endforeach
+                        </div>
                     </div>
+                @endforeach
+
+                <div class="flex justify-end">
+                    <button type="submit" class="rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700">{{ __('events.save') }}</button>
                 </div>
-            @endforeach
+            </form>
         </div>
     </div>
 </x-app-layout>
