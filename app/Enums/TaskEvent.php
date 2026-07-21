@@ -54,6 +54,37 @@ enum TaskEvent: string
     }
 
     /**
+     * Icon-Schlüssel aus der Status-Icon-Palette (App\Support\StatusIcons) für
+     * die Darstellung in der Verwaltungs-Oberfläche.
+     */
+    public function icon(): string
+    {
+        return match ($this) {
+            self::CLAIMING => 'hand',
+            self::CLAIMED => 'user-check',
+            self::ANALYZING => 'search',
+            self::ANALYZED => 'circle-check',
+            self::PROCESSING => 'hammer',
+            self::PROCESSED => 'code',
+            self::PUBLISHING => 'git-pull-request',
+            self::PUBLISHED => 'check',
+            self::POLISHING => 'zap',
+            self::POLISHED => 'star',
+            self::CONCERNED => 'flag',
+            self::UNCLAIMING => 'ban',
+            self::UNCLAIMED => 'circle',
+            self::REVIEWING => 'eye',
+            self::REVIEWED => 'check-check',
+            self::APPROVED => 'thumbs-up',
+            self::CHANGES_REQUESTED => 'octagon-x',
+            self::MERGING_QUEUED => 'clock',
+            self::MERGING_FAILED => 'triangle-alert',
+            self::MERGED => 'git-merge',
+            self::DEPLOYED => 'rocket',
+        };
+    }
+
+    /**
      * Kurze, lokalisierte Bezeichnung (Fallback: der Enum-Wert).
      */
     public function label(): string

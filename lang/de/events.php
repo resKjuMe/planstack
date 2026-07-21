@@ -14,6 +14,7 @@ return [
     'effects_title' => 'Zusätzliche Feld-Automationen',
     'effects_intro' => 'Lege je Fortschritts-Event fest, welche Felder zusätzlich gesetzt werden. Werte: @actor (aktueller Nutzer), @now (jetzt), @clear (leeren) oder ein fester Wert.',
 
+    'col_event' => 'Event',
     'target_status' => 'Zielstatus',
     'no_status_change' => '— kein Statuswechsel —',
     'target_status_hint' => 'Bleibt leer, verändert sich der Status nicht.',

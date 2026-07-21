@@ -30,9 +30,19 @@
                         <div class="divide-y divide-gray-100 dark:divide-gray-700">
                             @foreach (\App\Enums\TaskEvent::forGroup($group) as $event)
                                 @php $config = $configs->get($event->value); @endphp
+                                @php
+                                    $target = $config?->target_status_id;
+                                    $columnEffects = $target ? ($statusEffects[$target] ?? []) : [];
+                                @endphp
                                 <div class="py-4"
                                      x-data="{ rows: @js($config?->effects ?? []) }">
-                                    <div class="mb-3 flex flex-wrap items-baseline justify-between gap-2">
+                                    <div class="mb-3 flex items-start gap-2.5">
+                                        @php $eventSvg = \App\Support\StatusIcons::svg($event->icon()); @endphp
+                                        @if ($eventSvg)
+                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                                 stroke-linecap="round" stroke-linejoin="round"
+                                                 class="mt-0.5 h-4 w-4 shrink-0 text-gray-400 dark:text-gray-500" aria-hidden="true">{!! $eventSvg !!}</svg>
+                                        @endif
                                         <div>
                                             <span class="font-medium text-gray-900 dark:text-gray-100">{{ $event->label() }}</span>
                                             <span class="ms-2 font-mono text-xs text-gray-400 dark:text-gray-500">{{ $event->value }}</span>
@@ -40,7 +50,33 @@
                                         </div>
                                     </div>
 
-                                    <div class="space-y-2">
+                                    {{-- Automationen der (auf der Hauptseite gewählten) Zielspalte, readonly. --}}
+                                    @if ($target)
+                                        <div class="mb-3">
+                                            <label class="block text-xs font-medium text-gray-600 dark:text-gray-300">
+                                                {{ __('events.column_automations') }}
+                                                <span class="font-normal text-gray-400 dark:text-gray-500">— {{ $statusLabels[$target] ?? '' }}</span>
+                                            </label>
+                                            @if (count($columnEffects))
+                                                <ul class="mt-1 space-y-0.5 text-xs text-gray-500 dark:text-gray-400">
+                                                    @foreach ($columnEffects as $fx)
+                                                        <li>
+                                                            <span class="font-mono">{{ $fx['field'] ?? '' }}</span>
+                                                            = <span class="font-mono">{{ $fx['value'] ?? '' }}</span>
+                                                            @if (! empty($fx['only_if_empty']))
+                                                                <span class="text-gray-400 dark:text-gray-500">({{ __('events.effect_only_if_empty') }})</span>
+                                                            @endif
+                                                        </li>
+                                                    @endforeach
+                                                </ul>
+                                            @else
+                                                <p class="mt-1 text-xs text-gray-400 dark:text-gray-500">{{ __('events.no_column_automations') }}</p>
+                                            @endif
+                                        </div>
+                                    @endif
+
+                                    <label class="block text-xs font-medium text-gray-600 dark:text-gray-300">{{ __('events.extra_effects') }}</label>
+                                    <div class="mt-1 space-y-2">
                                         <template x-for="(row, idx) in rows" :key="idx">
                                             <div class="flex flex-wrap items-center gap-2">
                                                 <select x-bind:name="'events[{{ $event->value }}][effects][' + idx + '][field]'" x-model="row.field" class="{{ $inputClass }}">

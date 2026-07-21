@@ -14,6 +14,7 @@ return [
     'effects_title' => 'Additional field automations',
     'effects_intro' => 'Define, per progress event, which extra fields are set. Values: @actor (current user), @now (now), @clear (empty) or a literal value.',
 
+    'col_event' => 'Event',
     'target_status' => 'Target status',
     'no_status_change' => '— no status change —',
     'target_status_hint' => 'Leave blank to keep the status unchanged.',

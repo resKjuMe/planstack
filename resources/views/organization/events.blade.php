@@ -1,7 +1,24 @@
 @php
     $inputClass = 'rounded-md border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-sm';
-    // status_id => on-enter effects (for the read-only "column automations" panel).
-    $statusEffectsJs = $statusEffects->all();
+
+    // Icon-Farbe je Status-Token (nur Textfarbe, kein Spalten-Hintergrund).
+    $headCol = [
+        'gray' => 'text-gray-500 dark:text-gray-400',
+        'slate' => 'text-slate-500 dark:text-slate-400',
+        'indigo' => 'text-indigo-600 dark:text-indigo-400',
+        'sky' => 'text-sky-600 dark:text-sky-400',
+        'blue' => 'text-blue-600 dark:text-blue-400',
+        'navy' => 'text-blue-800 dark:text-blue-300',
+        'purple' => 'text-purple-600 dark:text-purple-400',
+        'green' => 'text-green-600 dark:text-green-400',
+        'emerald' => 'text-emerald-600 dark:text-emerald-400',
+        'teal' => 'text-teal-600 dark:text-teal-400',
+        'rose' => 'text-rose-600 dark:text-rose-400',
+        'red' => 'text-red-600 dark:text-red-400',
+        'orange' => 'text-orange-600 dark:text-orange-400',
+        'amber' => 'text-amber-600 dark:text-amber-400',
+    ];
+    $headColFor = fn ($s) => $headCol[$s->color_token] ?? $headCol['gray'];
 @endphp
 
 <x-app-layout>
@@ -30,76 +47,78 @@
                 @method('PUT')
 
                 @foreach ($groups as $group)
-                    <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+                    <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6 overflow-x-auto">
                         <h3 class="mb-4 text-lg font-semibold text-gray-900 dark:text-gray-100">{{ __('events.group_'.$group) }}</h3>
 
-                        <div class="divide-y divide-gray-100 dark:divide-gray-700">
-                            @foreach (\App\Enums\TaskEvent::forGroup($group) as $event)
-                                @php $config = $configs->get($event->value); @endphp
-                                <div class="py-4"
-                                     x-data="{
-                                         target: '{{ $config?->target_status_id }}',
-                                         statusEffects: @js($statusEffectsJs),
-                                         get columnEffects() { return this.target && this.statusEffects[this.target] ? this.statusEffects[this.target] : []; }
-                                     }">
-                                    <div class="mb-3 flex flex-wrap items-baseline justify-between gap-2">
-                                        <div>
-                                            <span class="font-medium text-gray-900 dark:text-gray-100">{{ $event->label() }}</span>
-                                            <span class="ms-2 font-mono text-xs text-gray-400 dark:text-gray-500">{{ $event->value }}</span>
-                                            <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">{{ $event->description() }}</p>
-                                        </div>
-                                    </div>
-
-                                    <div class="grid gap-4 lg:grid-cols-2">
-                                        {{-- Zielstatus + überschreibbare Status --}}
-                                        <div class="space-y-3">
-                                            <div>
-                                                <label class="block text-xs font-medium text-gray-600 dark:text-gray-300">{{ __('events.target_status') }}</label>
-                                                <select name="events[{{ $event->value }}][target_status_id]" x-model="target" class="{{ $inputClass }} mt-1 w-full">
-                                                    <option value="">{{ __('events.no_status_change') }}</option>
-                                                    @foreach ($statuses as $status)
-                                                        <option value="{{ $status->id }}" @selected($config?->target_status_id === $status->id)>{{ $status->label }}</option>
-                                                    @endforeach
-                                                </select>
-                                                <p class="mt-1 text-xs text-gray-400 dark:text-gray-500">{{ __('events.target_status_hint') }}</p>
-                                            </div>
-
-                                            <div x-show="target" x-cloak>
-                                                <label class="block text-xs font-medium text-gray-600 dark:text-gray-300">{{ __('events.overridable') }}</label>
-                                                <div class="mt-1 flex flex-wrap gap-x-4 gap-y-1">
-                                                    @foreach ($statuses as $status)
-                                                        <label class="flex items-center gap-1.5 text-sm text-gray-700 dark:text-gray-300">
-                                                            <input type="checkbox" name="events[{{ $event->value }}][overridable_status_ids][]" value="{{ $status->id }}"
-                                                                   @checked(in_array($status->id, $config?->overridable_status_ids ?? []))
-                                                                   class="rounded border-gray-300 dark:border-gray-600 text-indigo-600 focus:ring-indigo-500">
-                                                            {{ $status->label }}
-                                                        </label>
-                                                    @endforeach
+                        <table class="w-full border-collapse text-sm">
+                            <thead>
+                                <tr class="text-xs uppercase tracking-wide text-gray-400 dark:text-gray-500">
+                                    <th rowspan="2" class="py-2 pe-4 text-left align-bottom font-medium">{{ __('events.col_event') }}</th>
+                                    <th rowspan="2" class="py-2 pe-4 text-left align-bottom font-medium">{{ __('events.target_status') }}</th>
+                                    <th colspan="{{ $statuses->count() }}" class="pb-1 text-center font-medium">{{ __('events.overridable') }}</th>
+                                </tr>
+                                <tr>
+                                    @foreach ($statuses as $status)
+                                        @php $svg = \App\Support\StatusIcons::svg($status->icon); @endphp
+                                        <th class="w-10 px-1 pb-2 pt-1 text-center {{ $headColFor($status) }}"
+                                            title="{{ $status->label }}">
+                                            <span class="mx-auto flex h-6 w-6 items-center justify-center">
+                                                @if ($svg)
+                                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                                         stroke-linecap="round" stroke-linejoin="round" class="h-4 w-4" aria-hidden="true">{!! $svg !!}</svg>
+                                                @else
+                                                    <span class="text-[10px] font-semibold">{{ mb_substr($status->label, 0, 2) }}</span>
+                                                @endif
+                                            </span>
+                                        </th>
+                                    @endforeach
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+                                @foreach (\App\Enums\TaskEvent::forGroup($group) as $event)
+                                    @php $config = $configs->get($event->value); @endphp
+                                    <tr x-data="{ target: '{{ $config?->target_status_id }}' }" class="align-top">
+                                        <td class="py-3 pe-4">
+                                            <div class="flex items-start gap-2.5">
+                                                @php $eventSvg = \App\Support\StatusIcons::svg($event->icon()); @endphp
+                                                @if ($eventSvg)
+                                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                                         stroke-linecap="round" stroke-linejoin="round"
+                                                         class="mt-0.5 h-4 w-4 shrink-0 text-gray-400 dark:text-gray-500" aria-hidden="true">{!! $eventSvg !!}</svg>
+                                                @endif
+                                                <div>
+                                                    <div class="flex flex-wrap items-baseline gap-x-2">
+                                                        <span class="font-medium text-gray-900 dark:text-gray-100">{{ $event->label() }}</span>
+                                                        <span class="font-mono text-xs text-gray-400 dark:text-gray-500">{{ $event->value }}</span>
+                                                    </div>
+                                                    <p class="mt-0.5 max-w-md text-xs text-gray-500 dark:text-gray-400">{{ $event->description() }}</p>
                                                 </div>
-                                                <p class="mt-1 text-xs text-gray-400 dark:text-gray-500">{{ __('events.overridable_hint') }}</p>
                                             </div>
-                                        </div>
+                                        </td>
+                                        <td class="py-3 pe-4">
+                                            <select name="events[{{ $event->value }}][target_status_id]" x-model="target" class="{{ $inputClass }} w-full min-w-[10rem]">
+                                                <option value="">{{ __('events.no_status_change') }}</option>
+                                                @foreach ($statuses as $status)
+                                                    <option value="{{ $status->id }}" @selected($config?->target_status_id === $status->id)>{{ $status->label }}</option>
+                                                @endforeach
+                                            </select>
+                                        </td>
+                                        @foreach ($statuses as $status)
+                                            <td class="px-1 py-3 text-center"
+                                                x-bind:class="!target && 'opacity-40'">
+                                                <input type="checkbox" name="events[{{ $event->value }}][overridable_status_ids][]" value="{{ $status->id }}"
+                                                       @checked(in_array($status->id, $config?->overridable_status_ids ?? []))
+                                                       x-bind:disabled="!target"
+                                                       title="{{ $status->label }}"
+                                                       class="rounded border-gray-300 dark:border-gray-600 text-indigo-600 focus:ring-indigo-500">
+                                            </td>
+                                        @endforeach
+                                    </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
 
-                                        {{-- Automationen der gewählten Spalte (readonly) --}}
-                                        <div x-show="target" x-cloak>
-                                            <label class="block text-xs font-medium text-gray-600 dark:text-gray-300">{{ __('events.column_automations') }}</label>
-                                            <template x-if="columnEffects.length">
-                                                <ul class="mt-1 space-y-0.5 text-xs text-gray-500 dark:text-gray-400">
-                                                    <template x-for="(fx, i) in columnEffects" :key="i">
-                                                        <li>
-                                                            <span class="font-mono" x-text="fx.field"></span>
-                                                            = <span class="font-mono" x-text="fx.value"></span>
-                                                            <span x-show="fx.only_if_empty" class="text-gray-400 dark:text-gray-500">({{ __('events.effect_only_if_empty') }})</span>
-                                                        </li>
-                                                    </template>
-                                                </ul>
-                                            </template>
-                                            <p x-show="!columnEffects.length" class="mt-1 text-xs text-gray-400 dark:text-gray-500">{{ __('events.no_column_automations') }}</p>
-                                        </div>
-                                    </div>
-                                </div>
-                            @endforeach
-                        </div>
+                        <p class="mt-3 text-xs text-gray-400 dark:text-gray-500">{{ __('events.overridable_hint') }}</p>
                     </div>
                 @endforeach
 

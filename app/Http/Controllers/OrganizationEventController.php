@@ -32,17 +32,11 @@ class OrganizationEventController extends Controller
     {
         $organization = $this->ownedOrganization($request);
 
-        $statuses = $organization->statuses()->get();
-
         return view('organization.events', [
             'organization' => $organization,
-            'statuses' => $statuses,
+            'statuses' => $organization->statuses()->get(),
             'configs' => $this->configs($organization),
             'groups' => TaskEvent::groups(),
-            // status_id => on-enter effects, for the read-only "column automations".
-            'statusEffects' => $statuses->mapWithKeys(
-                fn ($status) => [$status->id => $status->on_enter_effects ?? []]
-            ),
         ]);
     }
 
@@ -98,11 +92,18 @@ class OrganizationEventController extends Controller
     {
         $organization = $this->ownedOrganization($request);
 
+        $statuses = $organization->statuses()->get();
+
         return view('organization.events-effects', [
             'organization' => $organization,
             'configs' => $this->configs($organization),
             'groups' => TaskEvent::groups(),
             'effectFields' => StatusEffects::ALLOWED_FIELDS,
+            // status_id => label / on-enter effects, for the read-only "column automations".
+            'statusLabels' => $statuses->mapWithKeys(fn ($s) => [$s->id => $s->label]),
+            'statusEffects' => $statuses->mapWithKeys(
+                fn ($s) => [$s->id => $s->on_enter_effects ?? []]
+            ),
         ]);
     }
 
