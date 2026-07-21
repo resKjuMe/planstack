@@ -26,20 +26,18 @@
         <h2 class="font-semibold text-xl text-gray-800 dark:text-gray-100 leading-tight">{{ __('events.title') }}</h2>
     </x-slot>
 
+    <x-slot name="subheader">
+        <x-organization-tabs active="events" />
+    </x-slot>
+
     <div class="py-8">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
             <x-flash />
 
             <div class="flex items-center justify-between gap-4">
                 <p class="max-w-3xl text-sm text-gray-500 dark:text-gray-400">{{ __('events.intro') }}</p>
-                <div class="flex shrink-0 items-center gap-4 text-sm">
-                    <a href="{{ route('organization.events.effects.index') }}"
-                       class="text-indigo-600 dark:text-indigo-400 hover:underline">{{ __('events.effects_link') }}</a>
-                    <a href="{{ route('organization.statuses.index') }}"
-                       class="text-indigo-600 dark:text-indigo-400 hover:underline">{{ __('board_admin.manage_link') }}</a>
-                    <a href="{{ route('organization.index') }}"
-                       class="text-indigo-600 dark:text-indigo-400 hover:underline">← {{ __('events.back_to_organization') }}</a>
-                </div>
+                <a href="{{ route('organization.events.effects.index') }}"
+                   class="shrink-0 text-sm text-indigo-600 dark:text-indigo-400 hover:underline">{{ __('events.effects_link') }}</a>
             </div>
 
             <form method="POST" action="{{ route('organization.events.update') }}" class="space-y-6">

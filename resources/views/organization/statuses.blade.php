@@ -25,19 +25,15 @@
         <h2 class="font-semibold text-xl text-gray-800 dark:text-gray-100 leading-tight">{{ __('board_admin.title') }}</h2>
     </x-slot>
 
+    <x-slot name="subheader">
+        <x-organization-tabs active="statuses" />
+    </x-slot>
+
     <div class="py-8">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
             <x-flash />
 
-            <div class="flex items-center justify-between">
-                <p class="max-w-3xl text-sm text-gray-500 dark:text-gray-400">{{ __('board_admin.intro') }}</p>
-                <div class="flex shrink-0 items-center gap-4 text-sm">
-                    <a href="{{ route('organization.events.index') }}"
-                       class="text-indigo-600 dark:text-indigo-400 hover:underline">{{ __('events.manage_link') }}</a>
-                    <a href="{{ route('organization.index') }}"
-                       class="text-indigo-600 dark:text-indigo-400 hover:underline">← {{ __('board_admin.back_to_organization') }}</a>
-                </div>
-            </div>
+            <p class="max-w-3xl text-sm text-gray-500 dark:text-gray-400">{{ __('board_admin.intro') }}</p>
 
             {{-- ============ Status bearbeiten ============ --}}
             {{-- Alle Zeilen liegen in EINER Sammel-Form mit genau einem Speichern-

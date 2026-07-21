@@ -7,6 +7,10 @@
         <h2 class="font-semibold text-xl text-gray-800 dark:text-gray-100 leading-tight">{{ __('events.effects_title') }}</h2>
     </x-slot>
 
+    <x-slot name="subheader">
+        <x-organization-tabs active="events" />
+    </x-slot>
+
     <div class="py-8">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
             <x-flash />
