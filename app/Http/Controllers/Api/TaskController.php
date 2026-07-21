@@ -15,6 +15,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
@@ -58,6 +59,11 @@ class TaskController extends ApiController
         $data = $this->validateTask($request, $project);
         $gate = $this->resolveGate($project, $request->input('gate', []));
 
+        $custom = $this->customFieldValues($request, $project, null);
+        if ($custom !== false) {
+            $data['custom_fields'] = $custom;
+        }
+
         $task = $project->tasks()->create([
             ...$data,
             'created_by_id' => $request->user()->id,
@@ -85,6 +91,11 @@ class TaskController extends ApiController
         // Partielles Update: PUT/PATCH ist kein Voll-Update — nur die
         // mitgeschickten Felder werden validiert und aktualisiert.
         $data = $this->validateTask($request, $project, partial: true);
+
+        $custom = $this->customFieldValues($request, $project, $task);
+        if ($custom !== false) {
+            $data['custom_fields'] = $custom;
+        }
 
         if (($data['status'] ?? null) === TaskStatus::MERGED->value && $task->merged_at === null) {
             $data['merged_at'] = now();
@@ -560,6 +571,66 @@ class TaskController extends ApiController
         }
 
         return $data;
+    }
+
+    /**
+     * Validate and merge the posted `custom_fields` object against the org's
+     * field definitions (App\Models\CustomField). Returns:
+     *  - false when no `custom_fields` key was sent (⇒ leave the column untouched),
+     *  - the merged value map otherwise (partial update: provided keys override,
+     *    a null value clears that key; empty result ⇒ null column).
+     *
+     * Each value is validated with the field's type rule plus its optional,
+     * org-defined Laravel rule. Unknown keys raise a 422.
+     *
+     * @return array<string, mixed>|null|false
+     */
+    private function customFieldValues(Request $request, Project $project, ?Task $task): array|null|false
+    {
+        if (! $request->has('custom_fields')) {
+            return false;
+        }
+
+        $input = $request->input('custom_fields');
+        if (! is_array($input)) {
+            throw ValidationException::withMessages([
+                'custom_fields' => 'custom_fields muss ein Objekt (key ⇒ value) sein.',
+            ]);
+        }
+
+        $definitions = $project->organization
+            ? $project->organization->customFields()->get()->keyBy('key')
+            : collect();
+
+        $rules = [];
+        foreach ($input as $key => $value) {
+            $definition = $definitions->get($key);
+            if ($definition === null) {
+                throw ValidationException::withMessages([
+                    "custom_fields.$key" => "Unbekanntes benutzerdefiniertes Feld: \"$key\".",
+                ]);
+            }
+            if ($value !== null) {
+                $rules["custom_fields.$key"] = $definition->valueRules();
+            }
+        }
+
+        if ($rules !== []) {
+            Validator::make(['custom_fields' => $input], $rules)->validate();
+        }
+
+        // Partielles Update: bestehende Werte übernehmen, mitgeschickte
+        // überschreiben, null entfernt den Schlüssel.
+        $merged = $task?->custom_fields ?? [];
+        foreach ($input as $key => $value) {
+            if ($value === null) {
+                unset($merged[$key]);
+            } else {
+                $merged[$key] = $value;
+            }
+        }
+
+        return $merged ?: null;
     }
 
     /**

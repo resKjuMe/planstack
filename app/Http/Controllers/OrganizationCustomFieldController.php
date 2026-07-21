@@ -1,0 +1,121 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Models\CustomField;
+use App\Models\Organization;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
+use Illuminate\View\View;
+
+/**
+ * Org-owner administration of the organization's custom task fields. Each field
+ * has a DE/EN label, a data type and an optional Laravel validation rule; its
+ * value is filled per task via the API (stored in tasks.custom_fields).
+ */
+class OrganizationCustomFieldController extends Controller
+{
+    private function ownedOrganization(Request $request): Organization
+    {
+        $user = $request->user();
+        $organization = $user->organization;
+
+        abort_unless($organization && $organization->isOwner($user), 403);
+
+        return $organization;
+    }
+
+    public function index(Request $request): View
+    {
+        $organization = $this->ownedOrganization($request);
+
+        return view('organization.custom-fields', [
+            'organization' => $organization,
+            'fields' => $organization->customFields()->get(),
+            'types' => array_keys(CustomField::TYPES),
+        ]);
+    }
+
+    /**
+     * Create a custom field. The machine key is derived from the label (unique
+     * per org) and immutable afterwards — it is the field's API name.
+     */
+    public function store(Request $request): RedirectResponse
+    {
+        $organization = $this->ownedOrganization($request);
+
+        $data = $request->validate([
+            'label' => ['required', 'string', 'max:255'],
+            'label_en' => ['nullable', 'string', 'max:255'],
+            'type' => ['required', Rule::in(array_keys(CustomField::TYPES))],
+            'validation' => ['nullable', 'string', 'max:255'],
+        ]);
+
+        $base = Str::snake(Str::slug($data['label'], '_')) ?: 'field';
+        $key = $base;
+        $i = 1;
+        while ($organization->customFields()->where('key', $key)->exists()) {
+            $key = $base.'_'.(++$i);
+        }
+
+        $organization->customFields()->create([
+            'key' => $key,
+            'label' => $data['label'],
+            'label_en' => $data['label_en'] ?? null,
+            'type' => $data['type'],
+            'validation' => $data['validation'] ?? null,
+            'position' => (int) $organization->customFields()->max('position') + 1,
+        ]);
+
+        return back()->with('status', __('custom_fields.created', ['label' => $data['label']]));
+    }
+
+    /**
+     * Bulk-save the editable attributes of every existing field (single Save
+     * button). The key stays immutable.
+     */
+    public function updateAll(Request $request): RedirectResponse
+    {
+        $organization = $this->ownedOrganization($request);
+
+        $validated = $request->validate([
+            'fields' => ['array'],
+            'fields.*.label' => ['required', 'string', 'max:255'],
+            'fields.*.label_en' => ['nullable', 'string', 'max:255'],
+            'fields.*.type' => ['required', Rule::in(array_keys(CustomField::TYPES))],
+            'fields.*.validation' => ['nullable', 'string', 'max:255'],
+        ]);
+
+        $models = $organization->customFields()->get()->keyBy('id');
+
+        DB::transaction(function () use ($validated, $models) {
+            foreach ($validated['fields'] ?? [] as $id => $data) {
+                $field = $models->get((int) $id);
+                if ($field === null) {
+                    continue;
+                }
+                $field->update([
+                    'label' => $data['label'],
+                    'label_en' => $data['label_en'] ?? null,
+                    'type' => $data['type'],
+                    'validation' => $data['validation'] ?? null,
+                ]);
+            }
+        });
+
+        return back()->with('status', __('custom_fields.saved_all'));
+    }
+
+    public function destroy(Request $request, CustomField $customField): RedirectResponse
+    {
+        $organization = $this->ownedOrganization($request);
+        abort_unless($customField->organization_id === $organization->id, 403);
+
+        $customField->delete();
+
+        return back()->with('status', __('custom_fields.deleted'));
+    }
+}

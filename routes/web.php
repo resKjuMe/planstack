@@ -9,6 +9,7 @@ use App\Http\Controllers\ProjectClaudeController;
 use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\ProjectDiagramController;
 use App\Http\Controllers\OrganizationController;
+use App\Http\Controllers\OrganizationCustomFieldController;
 use App\Http\Controllers\OrganizationEventController;
 use App\Http\Controllers\OrganizationTaskStatusController;
 use App\Http\Controllers\ProjectMemberController;
@@ -97,6 +98,17 @@ Route::middleware('auth')->group(function () {
         ->name('organization.events.effects.index');
     Route::put('organization/events/effects', [OrganizationEventController::class, 'updateEffects'])
         ->name('organization.events.effects.update');
+
+    // Benutzerdefinierte Task-Felder (nur Gründer): Label DE/EN, Typ, Validierung.
+    // Werte werden per API an Tasks befüllt (tasks.custom_fields).
+    Route::get('organization/custom-fields', [OrganizationCustomFieldController::class, 'index'])
+        ->name('organization.custom-fields.index');
+    Route::post('organization/custom-fields', [OrganizationCustomFieldController::class, 'store'])
+        ->name('organization.custom-fields.store');
+    Route::put('organization/custom-fields', [OrganizationCustomFieldController::class, 'updateAll'])
+        ->name('organization.custom-fields.update-all');
+    Route::delete('organization/custom-fields/{customField}', [OrganizationCustomFieldController::class, 'destroy'])
+        ->name('organization.custom-fields.destroy');
 
     // ---- Erfordert die Zugehörigkeit zu einer Organisation ----
     Route::middleware(EnsureUserHasOrganization::class)->group(function () {

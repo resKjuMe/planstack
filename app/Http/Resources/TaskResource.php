@@ -40,6 +40,7 @@ class TaskResource extends JsonResource
         'claimed_by_id', 'prerequisites', 'concern', 'stacking',
         'last_reviewed_at', 'last_review_recommendation', 'last_review_summary',
         'target_actual', 'test_cases', 'criticality', 'criticality_label',
+        'custom_fields',
     ];
 
     /**
@@ -111,6 +112,7 @@ class TaskResource extends JsonResource
                 'tokens' => $this->effort_tokens,
             ],
             'affected_files' => $this->affected_files,
+            'custom_fields' => $this->custom_fields ?? null,
             'pr_number' => $this->pr_number,
             'pr_url' => $this->x_pr_url ?? null,
             'reviewed_by' => $this->reviewed_by,

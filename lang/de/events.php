@@ -3,6 +3,7 @@
 return [
     // ---- Verwaltungs-Oberfläche ----
     'title' => 'Event-Automationen',
+    'nav' => 'Events',
     'manage_link' => 'Events verwalten',
     'intro' => 'Lege je Fortschritts-Event fest, was mit der Aufgabe passiert: in welchen Status sie geschoben wird, welche aktuellen Status dabei überschrieben werden dürfen und welche Felder gesetzt werden. Der /planstack-Skill sendet diese Events während der Abarbeitung.',
     'back_to_organization' => 'Zurück zur Organisation',

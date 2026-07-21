@@ -78,6 +78,14 @@ class Organization extends Model
     }
 
     /**
+     * Organization-defined custom task fields (filled per task via the API).
+     */
+    public function customFields(): HasMany
+    {
+        return $this->hasMany(CustomField::class)->orderBy('position');
+    }
+
+    /**
      * The configured automation for a given progress event, or null if the
      * organization has not configured that event (⇒ the event is a no-op).
      */

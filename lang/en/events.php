@@ -3,6 +3,7 @@
 return [
     // ---- Management UI ----
     'title' => 'Event automations',
+    'nav' => 'Events',
     'manage_link' => 'Manage events',
     'intro' => 'Define, per progress event, what happens to the task: which status it moves to, which current statuses may be overwritten, and which fields are set. The /planstack skill sends these events during processing.',
     'back_to_organization' => 'Back to organization',

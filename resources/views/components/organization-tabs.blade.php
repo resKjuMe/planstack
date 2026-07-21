@@ -13,7 +13,8 @@
     ];
     if ($isOwner) {
         $tabs['statuses'] = ['label' => __('board_admin.statuses'), 'route' => 'organization.statuses.index'];
-        $tabs['events'] = ['label' => __('events.title'), 'route' => 'organization.events.index'];
+        $tabs['events'] = ['label' => __('events.nav'), 'route' => 'organization.events.index'];
+        $tabs['custom-fields'] = ['label' => __('custom_fields.nav'), 'route' => 'organization.custom-fields.index'];
     }
 @endphp
 
