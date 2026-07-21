@@ -66,10 +66,19 @@
                                             </div>
                                         </td>
 
-                                        {{-- Automationen der (auf der Hauptseite gewählten) Zielspalte, readonly. --}}
+                                        {{-- Automationen der (auf der Hauptseite gewählten) Zielspalte, readonly.
+                                             Das Ziel-Status-Label wird gezeigt, sobald ein Zielstatus
+                                             definiert ist; ohne eigene Automationen (auch ohne Zielstatus)
+                                             steht einheitlich „—". --}}
                                         <td class="py-3 pe-4">
                                             @if ($target)
-                                                <div class="mb-1 text-xs font-medium text-gray-600 dark:text-gray-300">{{ $statusLabels[$target] ?? '' }}</div>
+                                                <div class="mb-1 flex items-center gap-1 text-xs font-medium text-gray-600 dark:text-gray-300">
+                                                    {{-- „→"-Icon vor dem Ziel-Status-Label --}}
+                                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                                         stroke-linecap="round" stroke-linejoin="round"
+                                                         class="h-3.5 w-3.5 shrink-0 text-gray-400 dark:text-gray-500" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+                                                    <span>{{ $statusLabels[$target] ?? '' }}</span>
+                                                </div>
                                                 @if (count($columnEffects))
                                                     <ul class="space-y-0.5 text-xs text-gray-500 dark:text-gray-400">
                                                         @foreach ($columnEffects as $fx)
@@ -83,7 +92,7 @@
                                                         @endforeach
                                                     </ul>
                                                 @else
-                                                    <p class="text-xs text-gray-400 dark:text-gray-500">{{ __('events.no_column_automations') }}</p>
+                                                    <p class="text-xs text-gray-400 dark:text-gray-500">—</p>
                                                 @endif
                                             @else
                                                 <p class="text-xs text-gray-400 dark:text-gray-500">—</p>
@@ -112,7 +121,6 @@
                                                                 class="text-rose-600 dark:text-rose-400 hover:underline">×</button>
                                                     </div>
                                                 </template>
-                                                <p x-show="rows.length === 0" class="text-xs text-gray-400 dark:text-gray-500">{{ __('events.no_effects') }}</p>
                                                 <div class="pt-1">
                                                     <button type="button" x-on:click="rows.push({ field: '', value: '', only_if_empty: false })"
                                                             class="text-xs font-medium text-indigo-600 dark:text-indigo-400 hover:underline">{{ __('events.add_effect') }}</button>
