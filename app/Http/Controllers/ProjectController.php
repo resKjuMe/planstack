@@ -72,18 +72,16 @@ class ProjectController extends Controller
     }
 
     /**
-     * Nach SP gewichtete Balken-Segmente je Anzeige-Status (merged → offen),
-     * identisch zur Summary — aus den je Organisation konfigurierbaren Status
-     * (inkl. Custom-Status). Tasks ohne Story Points erscheinen nicht im Balken.
+     * Balken-Segmente je Anzeige-Status, identisch zur Summary — aus den je
+     * Organisation konfigurierbaren Status (inkl. Custom-Status). Gewichtung nach
+     * Story Points, ersatzweise nach Task-Anzahl (siehe StatusSegments), damit
+     * jeder vorhandene Status einen Balkenabschnitt und ein Badge erhält.
      *
      * @return array<int, array<string, mixed>>
      */
     private function statusSegments(Project $project): array
     {
-        return array_values(array_filter(
-            $this->segments->segments($project, $this->board->decorate($project)),
-            fn ($seg) => $seg['width'] > 0,
-        ));
+        return $this->segments->segments($project, $this->board->decorate($project));
     }
 
     public function create(): View

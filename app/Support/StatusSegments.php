@@ -42,20 +42,26 @@ class StatusSegments
             $sp[$key] = ($sp[$key] ?? 0) + (int) $task->effort_story_points;
         }
 
-        $totalSp = max(1, array_sum($sp));
+        // Segments are weighted by story points; if the set carries no story
+        // points at all, fall back to the task count so the bar still shows a
+        // meaningful breakdown instead of staying empty.
+        $totalSp = array_sum($sp);
+        $useSp = $totalSp > 0;
+        $totalWeight = max(1, $useSp ? $totalSp : array_sum($count));
 
         $segments = [];
         foreach ($this->ordered($project) as $status) {
             if (($count[$status->key] ?? 0) === 0) {
                 continue;
             }
+            $weight = $useSp ? $sp[$status->key] : $count[$status->key];
             $segments[] = [
                 'label' => $this->label($status),
                 'count' => $count[$status->key],
                 'bar' => StatusPalette::bar($status->color_token),
                 'text' => StatusPalette::text($status->color_token),
                 'badge' => StatusPalette::badge($status->color_token),
-                'width' => round($sp[$status->key] / $totalSp * 100, 1),
+                'width' => round($weight / $totalWeight * 100, 1),
             ];
         }
 

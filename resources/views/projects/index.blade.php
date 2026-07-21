@@ -153,6 +153,15 @@
                                                 @endforeach
                                             </div>
                                         </div>
+
+                                        {{-- Status-Badges wie in der Summary (nach echtem Status differenziert) --}}
+                                        @if (! empty($project->x_status_segments))
+                                            <div class="mt-2 flex flex-wrap gap-1.5 text-xs">
+                                                @foreach ($project->x_status_segments as $seg)
+                                                    <span class="inline-flex items-center rounded-full px-2 py-0.5 font-medium {{ $seg['badge'] }}">{{ $seg['count'] }} {{ $seg['label'] }}</span>
+                                                @endforeach
+                                            </div>
+                                        @endif
                                     </div>
 
                                     <div class="mt-4 flex items-center justify-between gap-2">
