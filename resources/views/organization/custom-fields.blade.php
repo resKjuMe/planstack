@@ -19,6 +19,23 @@
                 {{ __('custom_fields.intro', ['field' => __('custom_fields.field_placeholder')]) }}
             </p>
 
+            {{-- Presets: legen ein Feld mit festem Schlüssel/Typ/Validierung an. --}}
+            @if ($presets->isNotEmpty())
+                <div class="flex flex-wrap items-center gap-2">
+                    <span class="text-xs font-medium uppercase tracking-wide text-gray-400 dark:text-gray-500">{{ __('custom_fields.presets_label') }}</span>
+                    @foreach ($presets as $id => $preset)
+                        <form method="POST" action="{{ route('organization.custom-fields.preset') }}">
+                            @csrf
+                            <input type="hidden" name="preset" value="{{ $id }}">
+                            <button type="submit" title="{{ $preset['key'] }}"
+                                    class="inline-flex items-center gap-1 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-1.5 text-xs font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                                <span class="text-indigo-500">＋</span> {{ $preset['label'] }}
+                            </button>
+                        </form>
+                    @endforeach
+                </div>
+            @endif
+
             <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6 overflow-x-auto">
                 <x-input-error :messages="$errors->get('label')" class="mb-2" />
 

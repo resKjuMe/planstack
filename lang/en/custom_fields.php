@@ -17,6 +17,8 @@ return [
     'save' => 'Save',
     'saved_all' => 'Fields saved.',
     'add_field' => 'Add field',
+    'presets_label' => 'Presets:',
+    'preset_exists' => 'Field “:label” already exists.',
     'created' => 'Field “:label” created.',
     'delete' => 'Delete',
     'delete_confirm' => 'Really delete this field? Values already set on tasks remain.',

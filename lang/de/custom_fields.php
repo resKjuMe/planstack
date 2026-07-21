@@ -17,6 +17,8 @@ return [
     'save' => 'Speichern',
     'saved_all' => 'Felder gespeichert.',
     'add_field' => 'Feld anlegen',
+    'presets_label' => 'Vorlagen:',
+    'preset_exists' => 'Feld „:label" ist bereits angelegt.',
     'created' => 'Feld „:label" angelegt.',
     'delete' => 'Löschen',
     'delete_confirm' => 'Dieses Feld wirklich löschen? Bereits gesetzte Werte bleiben an den Tasks bestehen.',

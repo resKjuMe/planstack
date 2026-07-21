@@ -23,6 +23,36 @@ class CustomField extends Model
         ];
     }
 
+    /**
+     * Vordefinierte Feld-Vorlagen (Presets) für gängige externe Referenzen. Ein
+     * Klick legt das Feld mit festem Schlüssel, Typ und Validierung an.
+     *
+     * @var array<string, array{key: string, label: string, label_en: string, type: string, validation: ?string}>
+     */
+    public const PRESETS = [
+        'jira' => [
+            'key' => 'jira_issue_key',
+            'label' => 'Jira Issue Key',
+            'label_en' => 'Jira Issue Key',
+            'type' => 'string',
+            'validation' => 'regex:/^[A-Z][A-Z0-9]+-[0-9]+$/',
+        ],
+        'sentry' => [
+            'key' => 'sentry_issue',
+            'label' => 'Sentry Issue',
+            'label_en' => 'Sentry Issue',
+            'type' => 'string',
+            'validation' => 'max:255',
+        ],
+        'hubspot' => [
+            'key' => 'hubspot_ticket_id',
+            'label' => 'HubSpot Ticket ID',
+            'label_en' => 'HubSpot Ticket ID',
+            'type' => 'string',
+            'validation' => 'max:64',
+        ],
+    ];
+
     /** Erlaubte Datentypen (key => Basis-Validierungsregeln für den Wert). */
     public const TYPES = [
         'string' => ['string'],

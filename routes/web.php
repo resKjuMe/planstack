@@ -105,6 +105,8 @@ Route::middleware('auth')->group(function () {
         ->name('organization.custom-fields.index');
     Route::post('organization/custom-fields', [OrganizationCustomFieldController::class, 'store'])
         ->name('organization.custom-fields.store');
+    Route::post('organization/custom-fields/preset', [OrganizationCustomFieldController::class, 'storePreset'])
+        ->name('organization.custom-fields.preset');
     Route::put('organization/custom-fields', [OrganizationCustomFieldController::class, 'updateAll'])
         ->name('organization.custom-fields.update-all');
     Route::delete('organization/custom-fields/{customField}', [OrganizationCustomFieldController::class, 'destroy'])

@@ -32,11 +32,46 @@ class OrganizationCustomFieldController extends Controller
     {
         $organization = $this->ownedOrganization($request);
 
+        $existingKeys = $organization->customFields()->pluck('key')->all();
+
         return view('organization.custom-fields', [
             'organization' => $organization,
             'fields' => $organization->customFields()->get(),
             'types' => array_keys(CustomField::TYPES),
+            // Presets, die noch nicht (nach Schlüssel) angelegt sind.
+            'presets' => collect(CustomField::PRESETS)
+                ->reject(fn ($preset) => in_array($preset['key'], $existingKeys, true)),
         ]);
+    }
+
+    /**
+     * Create a field from a predefined preset (App\Models\CustomField::PRESETS)
+     * with its fixed key, type and validation. No-op if the key already exists.
+     */
+    public function storePreset(Request $request): RedirectResponse
+    {
+        $organization = $this->ownedOrganization($request);
+
+        $data = $request->validate([
+            'preset' => ['required', Rule::in(array_keys(CustomField::PRESETS))],
+        ]);
+
+        $preset = CustomField::PRESETS[$data['preset']];
+
+        if ($organization->customFields()->where('key', $preset['key'])->exists()) {
+            return back()->with('status', __('custom_fields.preset_exists', ['label' => $preset['label']]));
+        }
+
+        $organization->customFields()->create([
+            'key' => $preset['key'],
+            'label' => $preset['label'],
+            'label_en' => $preset['label_en'],
+            'type' => $preset['type'],
+            'validation' => $preset['validation'],
+            'position' => (int) $organization->customFields()->max('position') + 1,
+        ]);
+
+        return back()->with('status', __('custom_fields.created', ['label' => $preset['label']]));
     }
 
     /**
