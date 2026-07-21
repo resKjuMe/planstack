@@ -2,12 +2,14 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Models\OrgStatusTransition;
 use App\Models\Project;
 use App\Support\ProjectConfig;
 use App\Support\SkillTemplate;
 use App\Support\StatusRules;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Validation\Rule;
 
 /**
@@ -87,6 +89,18 @@ class ProjectConfigController extends ApiController
 
         return [
             'config_version' => $project->config_version,
+            // Org-weite Status-Config-Version (Header X-Planstack-Status-Config-Version):
+            // die coarse Drift-Marke, die ein Client auf dem Hot-Path beobachtet.
+            // Weicht sie vom lokalen Stand ab → hier die config_versions je Tabelle
+            // vergleichen und nur die betroffene Config neu übernehmen.
+            'status_config_version' => $project->organization?->status_config_version,
+            // Feingranulare Drift-Erkennung je Org-Config-Tabelle: der jüngste
+            // updated_at (ISO-8601 oder null, wenn leer). Rein additiv — die
+            // Projektconfig-Logik oben (config_version/skill_revision) bleibt
+            // unverändert. Ein Client vergleicht diese Werte mit seinem lokalen
+            // Stand und zieht bei Abweichung NUR die betroffene Config nach,
+            // statt das gesamte Skill-Dokument neu zu laden.
+            'config_versions' => $this->configVersions($project),
             'profile' => $stored['profile'] ?? null,
             'overrides' => $stored['overrides'] ?? [],
             'effective' => $effective,
@@ -115,5 +129,56 @@ class ProjectConfigController extends ApiController
                 'defaults' => ProjectConfig::DEFAULTS,
             ],
         ];
+    }
+
+    /**
+     * The latest updated_at per organisation config table (ISO-8601 or null).
+     * Lets a client detect which single config area drifted and re-adopt only
+     * that one, instead of reloading the whole skill document.
+     *
+     * @return array<string, ?string>
+     */
+    private function configVersions(Project $project): array
+    {
+        $org = $project->organization;
+
+        if ($org === null) {
+            return [
+                'statuses' => null,
+                'status_groups' => null,
+                'transitions' => null,
+                'status_automations' => null,
+                'event_automations' => null,
+                'custom_fields' => null,
+            ];
+        }
+
+        $statusIds = $org->statuses()->pluck('id');
+
+        return [
+            'statuses' => self::ts($org->statuses()->max('updated_at')),
+            'status_groups' => self::ts($org->statusGroups()->max('updated_at')),
+            'transitions' => self::ts(
+                $statusIds->isEmpty()
+                    ? null
+                    : OrgStatusTransition::query()->whereIn('from_status_id', $statusIds)->max('updated_at'),
+            ),
+            'status_automations' => self::ts($org->statusAutomations()->max('updated_at')),
+            'event_automations' => self::ts($org->eventAutomations()->max('updated_at')),
+            'custom_fields' => self::ts($org->customFields()->max('updated_at')),
+        ];
+    }
+
+    /**
+     * Normalise a raw MAX(updated_at) value (string|Carbon|null) to ISO-8601,
+     * or null when the table has no rows for this organisation.
+     */
+    private static function ts(mixed $value): ?string
+    {
+        if ($value === null || $value === '') {
+            return null;
+        }
+
+        return Carbon::parse($value)->toIso8601String();
     }
 }

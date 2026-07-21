@@ -2,7 +2,9 @@
 
 namespace Tests\Feature\Api;
 
-use App\Enums\TaskStatus;
+use App\Enums\StatusRole;
+use App\Enums\TaskEvent;
+use App\Models\OrgEventAutomation;
 use App\Models\Project;
 use App\Models\Task;
 use App\Models\User;
@@ -71,6 +73,63 @@ class ProjectConfigTest extends TestCase
         // Plan instructions are served with their own revision (self-updating source).
         $this->assertNotEmpty($response->json('plan_instructions'));
         $this->assertNotEmpty($response->json('plan_revision'));
+    }
+
+    public function test_board_exposes_status_config_version_header_and_bumps_on_change(): void
+    {
+        [, $project] = $this->ownedProject();
+        $this->pickableTask($project, 'C1');
+        $org = $project->organization;
+
+        $this->getJson("/api/projects/{$project->alias}/board")
+            ->assertOk()
+            ->assertHeader('X-Planstack-Status-Config-Version', (string) $org->status_config_version);
+
+        // A workflow change bumps the org counter ⇒ the header advances, so a
+        // client watching it re-fetches GET /config (the previous behaviour never
+        // signalled org-config drift on the hot path).
+        $org->increment('status_config_version');
+
+        $this->getJson("/api/projects/{$project->alias}/board")
+            ->assertOk()
+            ->assertHeader('X-Planstack-Status-Config-Version', (string) $org->fresh()->status_config_version);
+    }
+
+    public function test_config_exposes_per_table_config_versions(): void
+    {
+        [, $project] = $this->ownedProject();
+
+        $response = $this->getJson("/api/projects/{$project->alias}/config")->assertOk();
+
+        // Default-seeded org ⇒ the statuses table is populated ⇒ a timestamp is
+        // present; tables the org never touched stay null.
+        $this->assertNotNull($response->json('config_versions.statuses'));
+        $this->assertNull($response->json('config_versions.event_automations'));
+        $this->assertNull($response->json('config_versions.custom_fields'));
+    }
+
+    public function test_event_status_automation_surfaces_in_config_versions_and_status_rules(): void
+    {
+        [, $project] = $this->ownedProject();
+        $org = $project->organization;
+        $target = $org->statusForRole(StatusRole::IN_PROGRESS);
+
+        OrgEventAutomation::create([
+            'organization_id' => $org->id,
+            'event' => TaskEvent::PROCESSING,
+            'target_status_id' => $target->id,
+        ]);
+
+        $response = $this->getJson("/api/projects/{$project->alias}/config")->assertOk();
+
+        // The new event automation bumps its own table timestamp …
+        $this->assertNotNull($response->json('config_versions.event_automations'));
+
+        // … and is rendered into status_rules together with the directive that
+        // stops the client from clobbering it with direct status calls.
+        $statusRules = $response->json('status_rules');
+        $this->assertStringContainsString('Ereignis-gesteuerte Status-Zuweisung', $statusRules);
+        $this->assertStringContainsString('KEINE direkten', $statusRules);
     }
 
     public function test_economy_profile_bumps_version_and_returns_terse_next_only(): void

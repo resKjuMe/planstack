@@ -40,6 +40,8 @@ Zuordnung Zyklus → Event (jeweils sobald die id bekannt ist):
 
 Der `MERGED`-Event wird **nicht** vom Skill gemeldet, sondern serverseitig beim „Sync". Über MCP: Tool `emit_event {task,event}` (nimmt Task-Name **oder** id).
 
+**Ereignisgesteuerter Status (org-abhängig):** Hat die Organisation Fortschritts-Events mit einer Status-Zuweisung hinterlegt (erkennbar am Abschnitt „Ereignis-gesteuerte Status-Zuweisung" in `status_rules`), setzt der Server den Status **aus diesen Events**. In diesem Fall die verdrahteten direkten Statuswechsel `POST /tasks/{id}/status` (`analyze`/`in_progress`/`in_review`/`done`) **weglassen** — sie würden den per Event zugewiesenen Status wieder überschreiben. `claim`/`claim-next`, `pr`, `merge`, `concern` und `split` bleiben unverändert. Ohne solche Automationen gilt der normale Zyklus mit direkten Statuswechseln.
+
 **Feldumfang gezielt erzwingen:** An jeden Task-Read lässt sich `?fields=full` (oder `minimal`/`standard`) hängen — das überschreibt für **diese eine Anfrage** den Projekt-Knopf `task.fields`. So bekommt man die **vollen Details** eines Tasks (z. B. `GET /tasks/C27?fields=full`), auch wenn das Projekt sonst sparsam liefert.
 
 Beim Anlegen (`POST /tasks`) **immer** `affected_files` (geschätzte Dateianzahl) mitgeben — verbindliche Konvention, serverseitig aber **nicht** validiert (nur ein Hinweis).

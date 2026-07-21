@@ -3,6 +3,8 @@
 namespace App\Http\Middleware;
 
 use App\Models\Project;
+use App\Support\ProjectConfig;
+use App\Support\SkillTemplate;
 use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -28,6 +30,14 @@ class AttachPlanstackConfig
     /** Global revision of the shared skill content (manual + rules); drift ⇒ re-fetch. */
     public const SKILL_REVISION_HEADER = 'X-Planstack-Skill-Revision';
 
+    /**
+     * Per-organisation status-config version. Bumped on every status/transition/
+     * automation/event-automation change (org-scoped, unlike the project-scoped
+     * config version). Drift ⇒ re-fetch GET /config and re-adopt only the changed
+     * org-config areas (see config_versions there).
+     */
+    public const STATUS_CONFIG_VERSION_HEADER = 'X-Planstack-Status-Config-Version';
+
     public function handle(Request $request, Closure $next): Response
     {
         $project = $request->route('project');
@@ -40,7 +50,16 @@ class AttachPlanstackConfig
 
         if ($project instanceof Project) {
             $response->headers->set(self::VERSION_HEADER, (string) $project->config_version);
-            $response->headers->set(self::SKILL_REVISION_HEADER, \App\Support\SkillTemplate::sharedRevision());
+            $response->headers->set(self::SKILL_REVISION_HEADER, SkillTemplate::sharedRevision());
+
+            // Org-scoped status config drift (statuses/transitions/automations/
+            // event-automations). The shared skill revision above deliberately
+            // covers only the file-based content, so this is the signal that a
+            // client watches to notice an organisation changed its workflow.
+            $statusConfigVersion = $project->organization()->value('status_config_version');
+            if ($statusConfigVersion !== null) {
+                $response->headers->set(self::STATUS_CONFIG_VERSION_HEADER, (string) $statusConfigVersion);
+            }
         }
 
         return $response;
@@ -56,6 +75,6 @@ class AttachPlanstackConfig
 
         return is_array($config) && array_key_exists($key, $config)
             ? $config[$key]
-            : \App\Support\ProjectConfig::DEFAULTS[$key];
+            : ProjectConfig::DEFAULTS[$key];
     }
 }

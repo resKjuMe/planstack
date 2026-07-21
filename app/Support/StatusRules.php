@@ -81,6 +81,34 @@ class StatusRules
             }
         }
 
+        // Ereignis-gesteuerte Status-Zuweisungen: Events (POST /events), die einen
+        // Zielstatus setzen. MUSS mit in die Regeln, weil sonst eine reine
+        // Event-Automations-Änderung den Inhalt (und damit skill_revision / die
+        // Drift-Erkennung) nicht verändert — der Skill würde die neue Zuweisung
+        // nicht mitbekommen. Ist mindestens eine konfiguriert, treibt der Server
+        // den Status aus den Events: der Skill darf dann KEINE direkten
+        // status-Calls mehr senden (sie würden die Zuweisung überschreiben).
+        $eventStatus = $organization->eventAutomations()
+            ->whereNotNull('target_status_id')
+            ->get();
+        if ($eventStatus->isNotEmpty()) {
+            $lines[] = '';
+            $lines[] = 'Ereignis-gesteuerte Status-Zuweisung (Fortschritts-Events setzen den Status):';
+            foreach ($eventStatus as $a) {
+                $target = $byId->get($a->target_status_id);
+                if ($target === null) {
+                    continue;
+                }
+                $lines[] = "- Event `{$a->event->value}` → `{$target->key}` ({$target->label})";
+            }
+            $lines[] = '';
+            $lines[] = '**Der Status dieser Organisation wird ereignisgesteuert gesetzt: '
+                .'KEINE direkten `POST /tasks/{id}/status`-Calls (`analyze`/`in_progress`/`in_review`/`done`) '
+                .'senden — sie würden die per Event zugewiesenen Status überschreiben. Der Status folgt '
+                .'ausschließlich den Fortschritts-Events; nur `claim`/`claim-next`, `pr`, `merge`, `concern` '
+                .'und `split` bleiben.**';
+        }
+
         return implode("\n", $lines)."\n";
     }
 }

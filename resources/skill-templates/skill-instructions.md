@@ -4,6 +4,36 @@ Verbindliche, projektübergreifende Anweisungen für den allgemeinen `planstack`
 
 - **PR-Titel:** Beim Erstellen eines Pull Requests **immer** Projekt- **und** Task-Kürzel als Titel-Prefix setzen, in dieser Reihenfolge: `<PROJECT>-<TASK>: <Kurzbeschreibung>` (z. B. `L2L-G5: PseudoPropertyBinding-Fallback`). `<PROJECT>` ist der Projekt-Alias aus dem Aufruf (z. B. `L2L`), `<TASK>` der Kurzname des Tasks (Feld `name`), nicht die numerische id. Gilt für beide Modi.
 
+## Feingranulare Config-Aktualisierung (`config_versions`)
+
+**Drift-Marken auf dem Hot-Path (Header jeder Board-/Task-Antwort):**
+
+- `X-Planstack-Config-Version` — **Projektconfig** (Profil/Overrides). Logik **unverändert**.
+- `X-Planstack-Skill-Revision` — geteilte **Datei**-Inhalte (Betriebshandbuch + Statusregeln + skill_instructions). Abweichung → `operating_manual`/`status_rules`/`skill_instructions` neu befolgen.
+- `X-Planstack-Status-Config-Version` — **org-weite Status-Config** (Status, Spalten, Übergänge, Status-/Event-Automationen). Diese Marke — **nicht** die Skill-Revision — steigt, wenn eine Organisation ihren Workflow ändert (z. B. eine neue ereignisgesteuerte Status-Zuweisung). Weicht sie vom lokal gespeicherten Stand ab → `GET /config` lesen und über `config_versions` (unten) ermitteln, **welche** Tabelle sich geändert hat.
+
+`GET /config` liefert zusätzlich zu `config_version`/`skill_revision` (Projektconfig-Logik **unverändert**) `status_config_version` (dieselbe Marke wie der Header) und einen Block `config_versions` — je Org-Config-Tabelle den jüngsten `updated_at` (ISO-8601 oder `null`):
+
+```json
+"config_versions": {
+  "statuses": "2026-07-21T10:00:00+00:00",
+  "status_groups": null,
+  "transitions": "2026-07-21T10:00:00+00:00",
+  "status_automations": null,
+  "event_automations": "2026-07-21T11:30:00+00:00",
+  "custom_fields": null
+}
+```
+
+Diese Werte je Projekt **lokal** als Baseline in `${CLAUDE_SKILL_DIR}/config.json` unter `projects.<PROJECT>` speichern (`status_config_version` **und** `config_versions`; rein lokal, nie an den Server). Beim **Sync-at-start** genügt der Vergleich des Headers `X-Planstack-Status-Config-Version` mit der lokalen `status_config_version` — sind sie gleich, ist nichts nachzuziehen (kein `GET /config` nötig). Weichen sie ab (oder fehlt die Baseline), `GET /config` lesen und je `config_versions`-Eintrag prüfen: hat sich ein einzelner Eintrag gegenüber der lokalen Baseline geändert, **nur die betroffene Config** neu übernehmen — **nicht** das ganze Skill-Dokument. Zuordnung Eintrag → nachzuziehender Inhalt:
+
+- `statuses` · `status_groups` · `transitions` · `status_automations` · `event_automations` → den `status_rules`-Block neu übernehmen (Abschnitt „Status dieser Organisation": Spalten, Rollen, erlaubte Übergänge, Feld-Automationen **und** die ereignisgesteuerten Status-Zuweisungen).
+- `custom_fields` → nur die benutzerdefinierten Task-Felder (relevant fürs Anlegen/Befüllen von Tasks, `/planstack plan`).
+
+Nach dem Übernehmen die neue `status_config_version` **und** die `config_versions` als lokale Baseline zurückschreiben. `null` bleibt `null` (Tabelle leer → nichts nachzuziehen).
+
+**Wichtig — ereignisgesteuerter Status:** Enthält der `status_rules`-Block den Abschnitt „Ereignis-gesteuerte Status-Zuweisung", treibt der Server den Status **aus den Fortschritts-Events**. Dann **keine** direkten `POST /tasks/{id}/status`-Calls (`analyze`/`in_progress`/`in_review`/`done`) senden — sie würden die per Event zugewiesenen Status überschreiben. Nur `claim`/`claim-next`, `pr`, `merge`, `concern`, `split` bleiben; der Status folgt ausschließlich den Events.
+
 ## Lokale Einstellungen (`/planstack settings`)
 
 Der Skill kennt lokale Einstellungen, die **ausschließlich auf diesem Rechner** in `${CLAUDE_SKILL_DIR}/settings.json` (neben `config.json`) gespeichert werden — sie werden **nie** an den Server übertragen. Fehlt die Datei oder ein einzelner Schlüssel, gilt der jeweilige Default.
@@ -64,7 +94,7 @@ Reihenfolge vor dem PR (jeweils nur, wenn die Einstellung es zulässt): `local_p
 
 **Aufruf `/planstack update-config [<PROJECT>]`** (erstes Argument `update-config`): zieht die neuesten Konfigurationen aktiv nach (statt erst bei Drift) und gibt die Versionsnummern aus.
 
-- **Ohne `<PROJECT>`:** **alle** zugänglichen Projekte aktualisieren — `GET $BASE/projects` auflisten und für **jedes** `GET $BASE/projects/<alias>/config` lesen. Dabei die allgemeinen Inhalte (`operating_manual` + `status_rules` + `skill_instructions`) einmal übernehmen und je Projekt dessen Konfiguration (`effective`/`client_hints`, `instructions`, `config_version`). Anschließend das gelieferte `skill_revision` in `config.json` schreiben (Baseline aktualisieren).
+- **Ohne `<PROJECT>`:** **alle** zugänglichen Projekte aktualisieren — `GET $BASE/projects` auflisten und für **jedes** `GET $BASE/projects/<alias>/config` lesen. Dabei die allgemeinen Inhalte (`operating_manual` + `status_rules` + `skill_instructions`) einmal übernehmen und je Projekt dessen Konfiguration (`effective`/`client_hints`, `instructions`, `config_version`). Anschließend das gelieferte `skill_revision` in `config.json` schreiben (Baseline aktualisieren) **und** je Projekt die `config_versions` als lokale Baseline (`projects.<alias>.config_versions`).
 - **Mit `<PROJECT>`:** nur die allgemeine Config **und** die Config dieses einen Projekts.
 
 **Ausgabe** — immer die Versionsnummern zeigen, z. B.:
