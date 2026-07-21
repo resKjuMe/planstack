@@ -18,9 +18,27 @@ Endpunkte unter `$BASE/projects/$PROJ`, Aufruf mit `curl -s "${AUTH[@]}"`:
 | `POST /tasks/{id}/concern {summary,…}` · `DELETE …/concern` | melden · auflösen |
 | `POST /tasks/{id}/gate {gate}` · `/split {children}` | Gate setzen · splitten |
 | `POST /phases` · `POST /tasks` | anlegen |
+| `POST $BASE/events {task_id,event}` | Fortschritts-Event melden (top-level, **nicht** unter `/projects`; `task_id` numerisch) |
 | `GET /config` | Konfig + `operating_manual` + `status_rules` |
 
 In Task-Pfaden ist `{id}` **auch per Task-Name** ansprechbar (z. B. `.../tasks/C27/claim`) — kein separater name→id-Lookup nötig.
+
+**Fortschritts-Events (best-effort, nicht blockierend):** Während der Abarbeitung den Fortschritt melden — `POST $BASE/events {task_id,event}` (top-level, **nicht** unter `/projects`). Zweck: die Organisation kann je Event einen Statuswechsel und/oder Feld-Automationen hinterlegen; ohne Konfiguration ist es eine reine Meldung. **Immer fire-and-forget** — Fehler ignorieren, den Ablauf nie blockieren, nicht in Prosa berichten. `task_id` ist die **numerische** id (aus der Claim-/Task-Antwort). Bequemer Helfer (`$BASE`/`AUTH` stammen aus dem Zugang):
+
+```bash
+ev(){ curl -s "${AUTH[@]}" -X POST "$BASE/events" -d "{\"task_id\":$1,\"event\":\"$2\"}" >/dev/null 2>&1 || true; }
+```
+
+Zuordnung Zyklus → Event (jeweils sobald die id bekannt ist):
+
+- vor dem Claim `CLAIMING` (nur wenn die id schon bekannt ist, z. B. Task-Modus), nach dem Claim `CLAIMED`
+- Analyse: `ANALYZING` (Start) → `ANALYZED` (Ende)
+- Umsetzung: `PROCESSING` (Start) → `PROCESSED` (Ende)
+- PR erstellen: `PUBLISHING`
+- Politur/Fix (CI grün, Kommentare beantwortet): `POLISHING` (Start) → `POLISHED` (reviewbar)
+- Concern gemeldet: `CONCERNED`
+
+Der `MERGED`-Event wird **nicht** vom Skill gemeldet, sondern serverseitig beim „Sync". Über MCP: Tool `emit_event {task,event}` (nimmt Task-Name **oder** id).
 
 **Feldumfang gezielt erzwingen:** An jeden Task-Read lässt sich `?fields=full` (oder `minimal`/`standard`) hängen — das überschreibt für **diese eine Anfrage** den Projekt-Knopf `task.fields`. So bekommt man die **vollen Details** eines Tasks (z. B. `GET /tasks/C27?fields=full`), auch wenn das Projekt sonst sparsam liefert.
 

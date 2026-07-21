@@ -149,4 +149,5 @@ return [
     'event_send_progress_2' => 'adressiert.',
     'event_behavior_configured' => 'Was ein Event bewirkt (Statuswechsel, Feld-Befüllung), legt jede Organisation je Event selbst fest (Organisation → Event-Automationen). Ohne Konfiguration ist das Event ein reines Protokoll (keine Änderung an der Aufgabe).',
     'event_valid_values' => 'Gültige Events:',
+    'emit_event_tool' => 'Fortschritts-Event melden (Event-Automation anwenden)',
 ];

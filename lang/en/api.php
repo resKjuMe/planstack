@@ -149,4 +149,5 @@ return [
     'event_send_progress_2' => '.',
     'event_behavior_configured' => 'What an event does (status change, field population) is configured per organization and per event (Organization → Event automations). Without configuration the event is a pure log entry (no change to the task).',
     'event_valid_values' => 'Valid events:',
+    'emit_event_tool' => 'Report a progress event (apply the event automation)',
 ];

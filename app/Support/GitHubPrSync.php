@@ -3,6 +3,7 @@
 namespace App\Support;
 
 use App\Enums\StatusRole;
+use App\Enums\TaskEvent;
 use App\Models\Project;
 use App\Models\Task;
 use App\Models\TaskPullRequest;
@@ -74,6 +75,11 @@ class GitHubPrSync
         }
 
         $client = $this->client($token);
+        // Der "Sync"-Button (bzw. der Cronjob) ist die Quelle des MERGED-Events
+        // (siehe docs/event-api.md). Akteur = angemeldeter Nutzer beim Button,
+        // null beim Cron.
+        $events = app(TaskEventService::class);
+        $actor = auth()->user();
 
         foreach ($tasksByRepo as $repo => $tasks) {
             // Mehrere Tasks (ggf. aus verschiedenen Projekten) können dieselbe
@@ -114,6 +120,11 @@ class GitHubPrSync
                 $mergedAt = ! empty($data['merged_at']) ? Carbon::parse($data['merged_at']) : now();
                 foreach ($tasksForPr as $task) {
                     $task->update(['status' => StatusRole::MERGED->value, 'merged_at' => $mergedAt]);
+
+                    // MERGED-Event melden: protokolliert den Merge und wendet die
+                    // ggf. je Event konfigurierte Automation an (der Status ist
+                    // hier bereits MERGED, daher meist nur Log/Feld-Effekte).
+                    $events->record($task, TaskEvent::MERGED, $actor);
 
                     TaskPullRequest::updateOrCreate(
                         ['task_id' => $task->id, 'pull_request_id' => $prNumber],

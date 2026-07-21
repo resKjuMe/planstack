@@ -86,7 +86,7 @@ Reviewt Tasks, die **in Review** sind (Status `IN_REVIEW`, mit PR). **Eigene Tas
    - `<PROJECT> <TASK>`: gezielt dieser Task → `POST $BASE/projects/$PROJ/tasks/$TASK/review-claim`.
    - nur `<PROJECT>`: automatisch den ersten in-review Task mit PR → `POST $BASE/projects/$PROJ/review-next`.
    - **weder `<TASK>` noch `<PROJECT>`**: **projektübergreifend** — `GET $BASE/projects` auflisten und `review-next` pro Projekt aufrufen, bis eines einen Task liefert.
-   Antwort `{"reviewing": null}` bzw. leer ⇒ nichts zu reviewen (nächstes Projekt / fertig).
+   Antwort `{"reviewing": null}` bzw. leer ⇒ nichts zu reviewen (nächstes Projekt / fertig). Nach dem Übernehmen `ev <id> REVIEWING` melden (best-effort, `<id>` aus der Antwort).
 2. **Review ausführen:** den **Review-Skill** (`/review`) für den PR des Tasks laufen lassen — mit Strenge gemäß `review_strictness` und Prüftiefe gemäß `review_thoroughness`. Die Antwort aus Schritt 1 trägt **immer** `pr_number` (und `pr_url`, sofern Repo konfiguriert) — unabhängig von den Board-/`task.fields`-Einstellungen. Ergebnis = Empfehlung (`APPROVE` oder `REQUEST_CHANGES`) + die ausführliche Review-Analyse.
 3. **Empfehlung festlegen** gemäß Einstellung `review_auto_status`: bei `manual` die Empfehlung vom Nutzer bestätigen lassen, bei `auto` die aus dem Review abgeleitete Empfehlung direkt verwenden.
 4. **Ergebnis erfassen:** `POST $BASE/projects/$PROJ/tasks/$TASK/review` mit `{"recommendation":"APPROVE|REQUEST_CHANGES","summary":"…"}` — füllt `last_reviewed_at`, `last_review_recommendation`, `last_review_summary`. Das Feld `summary` ist **keine Kurzbeschreibung**, sondern die **ausführliche Review-Analyse**. Aufbau (in dieser Reihenfolge):
@@ -94,6 +94,8 @@ Reviewt Tasks, die **in Review** sind (Status `IN_REVIEW`, mit PR). **Eigene Tas
    2. **TLDR** — eine Zeile: `TLDR: <Kernaussage in 1–3 Sätzen>`.
    3. **Ausführliche Analyse** — Befunde je Datei/Aspekt, Begründungen, Risiken, Vorschläge.
 5. **Ablage gemäß `review_results`:** bei `task_only` nur den Task (Schritt 4). Bei `task_and_pr` zusätzlich am PR hinterlegen: `gh pr review <pr> --approve` bzw. `--request-changes` mit der Zusammenfassung als Kommentar.
+
+**Fortschritts-Events (best-effort, nicht blockierend):** nach Schritt 4 `ev <id> REVIEWED`, danach je nach Empfehlung `ev <id> APPROVED` bzw. `ev <id> CHANGES_REQUESTED` (siehe „Fortschritts-Events" im Betriebshandbuch).
 
 ## Fix (`/planstack fix [<PROJECT>] <TASK|PR-NUMMER>`)
 
@@ -109,5 +111,7 @@ Bringt einen offenen PR wieder in mergefähigen Zustand — alles über `gh`/`gi
    - **Review-Kommentare** (inline an Codezeilen / Review-Threads, `gh api repos/{owner}/{repo}/pulls/{pr}/comments`): jeden beantworten, den Code entsprechend fixen und den Thread **auflösen** (resolve, z. B. GraphQL `resolveReviewThread`).
    Grundsatz: alles Offene beantworten + fixen; Review-Threads zusätzlich resolven.
 4. **Fehlschlagende CI:** `gh pr checks` prüfen; rote Checks lokal reproduzieren, korrigieren, committen und pushen, bis die CI grün ist.
+
+**Fortschritts-Events (best-effort, nicht blockierend):** zu Beginn der Politur `ev <id> POLISHING`, nach grüner CI + beantworteten/aufgelösten Kommentaren `ev <id> POLISHED` (`<id>` = numerische Task-id; siehe „Fortschritts-Events" im Betriebshandbuch).
 
 Danach ggf. via `/planstack review` erneut prüfen.

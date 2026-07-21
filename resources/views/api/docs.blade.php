@@ -253,6 +253,7 @@ curl -s https://planstack.eskju.net/api/user \
                     <tr><td><code>set_task_pr</code> · <code>merge_task</code></td><td>{{ __('api.set_pr_number_merge') }}</td></tr>
                     <tr><td><code>set_task_gate</code></td><td>{{ __('api.replace_prerequisites_gate') }}</td></tr>
                     <tr><td><code>report_concern</code> · <code>resolve_concern</code></td><td>{{ __('api.report_resolve_concern') }}</td></tr>
+                    <tr><td><code>emit_event</code></td><td>{{ __('api.emit_event_tool') }}</td></tr>
                     <tr><td><code>create_task</code> · <code>update_task</code> · <code>split_task</code></td><td>{{ __('api.create_update_split_task') }}</td></tr>
                     <tr><td><code>list_phases</code> · <code>create_phase</code></td><td>{{ __('api.read_create_phases') }}</td></tr>
                 </tbody>

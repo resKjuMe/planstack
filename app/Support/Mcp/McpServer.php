@@ -3,6 +3,7 @@
 namespace App\Support\Mcp;
 
 use App\Enums\StatusRole;
+use App\Enums\TaskEvent;
 use App\Enums\TaskStatus;
 use App\Http\Resources\PhaseResource;
 use App\Http\Resources\TaskResource;
@@ -10,6 +11,7 @@ use App\Models\Project;
 use App\Models\Task;
 use App\Models\User;
 use App\Support\TaskBoardService;
+use App\Support\TaskEventService;
 use App\Support\TaskStatusService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
@@ -30,6 +32,7 @@ class McpServer
     public function __construct(
         private readonly TaskBoardService $board,
         private readonly TaskStatusService $statuses,
+        private readonly TaskEventService $events,
     ) {}
 
     /**
@@ -138,6 +141,18 @@ class McpServer
                 'inputSchema' => $this->schema($taskArg, ['task']),
             ],
             [
+                'name' => 'emit_event',
+                'description' => 'Meldet ein Fortschritts-Event zum Task (Event-API). Wendet die je Event in der Organisation konfigurierte Automation an (optionaler Statuswechsel + Feld-Effekte) und protokolliert das Event; ohne Konfiguration reine Meldung. Best-effort, nicht blockierend.',
+                'inputSchema' => $this->schema([
+                    ...$taskArg,
+                    'event' => [
+                        'type' => 'string',
+                        'enum' => array_map(fn (TaskEvent $e) => $e->value, TaskEvent::cases()),
+                        'description' => 'Event-Name, z. B. CLAIMED, ANALYZING, PROCESSING, PUBLISHING, POLISHING, POLISHED, CONCERNED, REVIEWING, REVIEWED, APPROVED, CHANGES_REQUESTED.',
+                    ],
+                ], ['task', 'event']),
+            ],
+            [
                 'name' => 'create_task',
                 'description' => 'Legt einen Task mit optionalem Gate an.',
                 'inputSchema' => $this->schema([
@@ -231,6 +246,7 @@ class McpServer
             'set_task_gate' => $this->setGate($project, $user, $args),
             'report_concern' => $this->reportConcern($project, $user, $args),
             'resolve_concern' => $this->resolveConcern($project, $user, $args),
+            'emit_event' => $this->emitEvent($project, $user, $args),
             'create_task' => $this->createTask($project, $user, $args),
             'update_task' => $this->updateTask($project, $user, $args),
             'split_task' => $this->splitTask($project, $user, $args),
@@ -460,6 +476,26 @@ class McpServer
         }
 
         return $this->json($this->taskPayload($project, $task->fresh()));
+    }
+
+    /**
+     * @param  array<string, mixed>  $args
+     */
+    private function emitEvent(Project $project, User $user, array $args): string
+    {
+        $task = $this->findTask($project, $args);
+        $this->authorize('update', $task, $project);
+
+        $event = TaskEvent::tryFrom(strtoupper(trim((string) ($args['event'] ?? ''))));
+        if ($event === null) {
+            throw new McpToolException(
+                'Ungültiges event. Erlaubt: '.implode(', ', array_map(fn (TaskEvent $e) => $e->value, TaskEvent::cases())).'.'
+            );
+        }
+
+        $result = $this->events->record($task, $event, $user);
+
+        return $this->json(['task' => $task->name, 'event' => $event->value, ...$result]);
     }
 
     /**
