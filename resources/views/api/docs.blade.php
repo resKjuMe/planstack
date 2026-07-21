@@ -114,6 +114,7 @@
 
             <div class="group">{{ __('common.general') }}</div>
             <a class="sub" href="#user">GET /user</a>
+            <a class="sub" href="#events">POST /events</a>
 
             <div class="group">{{ __('common.projects') }}</div>
             <a class="sub" href="#projects-index">GET /projects</a>
@@ -265,6 +266,24 @@ curl -s https://planstack.eskju.net/api/user \
             <div class="route"><span class="method m-get">GET</span><span class="path">/api/user</span></div>
             <p class="desc">{{ __('api.returns_token_user') }}</p>
             <span class="perm">Auth: <b>Token</b></span>
+        </section>
+
+        <section id="events" class="endpoint">
+            <div class="route"><span class="method m-post">POST</span><span class="path">/api/events</span></div>
+            <p class="desc">{{ __('api.event_send_progress') }} <code>task_id</code> {{ __('api.event_send_progress_2') }}</p>
+            <span class="perm">{{ __('api.permission') }} <b>update</b></span>
+            <table>
+                <thead><tr><th>{{ __('common.field') }}</th><th>{{ __('api.type') }}</th><th>{{ __('api.rules') }}</th></tr></thead>
+                <tbody>
+                    <tr><td><code>task_id</code></td><td>integer</td><td><span class="req">{{ __('api.required') }}</span></td></tr>
+                    <tr><td><code>event</code></td><td>string</td><td><span class="req">{{ __('api.required') }}</span> · {{ __('api.event_valid_values') }} <code>CLAIMING</code>, <code>CLAIMED</code>, <code>ANALYZING</code>, <code>ANALYZED</code>, <code>PROCESSING</code>, <code>PROCESSED</code>, <code>PUBLISHING</code>, <code>PUBLISHED</code>, <code>POLISHING</code>, <code>POLISHED</code>, <code>REVIEWING</code>, <code>REVIEWED</code>, <code>APPROVED</code>, <code>CHANGES_REQUESTED</code>, <code>MERGING_QUEUED</code>, <code>MERGING_FAILED</code>, <code>MERGED</code>, <code>DEPLOYED</code>, <code>CONCERNED</code>, <code>UNCLAIMING</code>, <code>UNCLAIMED</code></td></tr>
+                </tbody>
+            </table>
+            <p style="font-size:13.5px;color:var(--muted)">{{ __('api.event_behavior_configured') }}</p>
+            <pre>curl -s -X POST https://planstack.eskju.net/api/events \
+  -H "Authorization: Bearer $TOKEN" -H "Accept: application/json" \
+  -H "Content-Type: application/json" \
+  -d '{"task_id":123,"event":"PROCESSING"}'</pre>
         </section>
 
         <h2 id="projects-h">Projekte</h2>

@@ -31,8 +31,12 @@
 
             <div class="flex items-center justify-between">
                 <p class="max-w-3xl text-sm text-gray-500 dark:text-gray-400">{{ __('board_admin.intro') }}</p>
-                <a href="{{ route('organization.index') }}"
-                   class="shrink-0 text-sm text-indigo-600 dark:text-indigo-400 hover:underline">← {{ __('board_admin.back_to_organization') }}</a>
+                <div class="flex shrink-0 items-center gap-4 text-sm">
+                    <a href="{{ route('organization.events.index') }}"
+                       class="text-indigo-600 dark:text-indigo-400 hover:underline">{{ __('events.manage_link') }}</a>
+                    <a href="{{ route('organization.index') }}"
+                       class="text-indigo-600 dark:text-indigo-400 hover:underline">← {{ __('board_admin.back_to_organization') }}</a>
+                </div>
             </div>
 
             {{-- ============ Status bearbeiten ============ --}}

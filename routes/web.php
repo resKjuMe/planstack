@@ -9,6 +9,7 @@ use App\Http\Controllers\ProjectClaudeController;
 use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\ProjectDiagramController;
 use App\Http\Controllers\OrganizationController;
+use App\Http\Controllers\OrganizationEventController;
 use App\Http\Controllers\OrganizationTaskStatusController;
 use App\Http\Controllers\ProjectMemberController;
 use App\Http\Controllers\ProjectPhaseController;
@@ -75,6 +76,13 @@ Route::middleware('auth')->group(function () {
         ->name('organization.statuses.groups.store');
     Route::delete('organization/status-groups/{group}', [OrganizationTaskStatusController::class, 'destroyGroup'])
         ->name('organization.statuses.groups.destroy');
+
+    // Event-Automationen (nur Gründer): je Fortschritts-Event Zielstatus,
+    // überschreibbare Status und Feld-Effekte konfigurieren. Siehe docs/event-api.md.
+    Route::get('organization/events', [OrganizationEventController::class, 'index'])
+        ->name('organization.events.index');
+    Route::put('organization/events/{event}', [OrganizationEventController::class, 'update'])
+        ->name('organization.events.update');
 
     // ---- Erfordert die Zugehörigkeit zu einer Organisation ----
     Route::middleware(EnsureUserHasOrganization::class)->group(function () {

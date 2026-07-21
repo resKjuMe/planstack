@@ -90,6 +90,22 @@
                 </div>
                 @endif
 
+                {{-- Event-Automationen (nur Gründer) --}}
+                @if ($isOwner)
+                <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+                    <div class="flex flex-wrap items-center justify-between gap-3">
+                        <div>
+                            <h3 class="font-semibold text-gray-900 dark:text-gray-100">{{ __('events.title') }}</h3>
+                            <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ __('events.intro') }}</p>
+                        </div>
+                        <a href="{{ route('organization.events.index') }}"
+                           class="shrink-0 inline-flex items-center rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700">
+                            {{ __('events.manage_link') }}
+                        </a>
+                    </div>
+                </div>
+                @endif
+
                 {{-- Mitglieder per individueller Einladung einladen (nur Gründer) --}}
                 @if ($isOwner)
                 <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">

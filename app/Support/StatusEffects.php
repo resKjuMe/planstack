@@ -29,9 +29,24 @@ class StatusEffects
      */
     public static function resolve(Task $task, OrgStatus $status, ?User $actor): array
     {
+        return self::resolveEffects($task, $status->on_enter_effects ?? [], $actor);
+    }
+
+    /**
+     * Resolve an arbitrary effects list (same shape as on_enter_effects) into a
+     * task attribute array. Shared by the status on-enter effects and the
+     * per-event automation effects (see docs/event-api.md). Tokens: @actor,
+     * @now, @clear; anything else is a literal. Fields outside the allow-list are
+     * skipped.
+     *
+     * @param  iterable<int, array<string, mixed>>  $effects
+     * @return array<string, mixed>
+     */
+    public static function resolveEffects(Task $task, iterable $effects, ?User $actor): array
+    {
         $attrs = [];
 
-        foreach ($status->on_enter_effects ?? [] as $effect) {
+        foreach ($effects as $effect) {
             $field = $effect['field'] ?? null;
             if (! in_array($field, self::ALLOWED_FIELDS, true)) {
                 continue;

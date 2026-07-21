@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\EventController;
 use App\Http\Controllers\Api\McpController;
 use App\Http\Controllers\Api\PhaseController;
 use App\Http\Controllers\Api\ProjectConfigController;
@@ -22,6 +23,10 @@ use Illuminate\Support\Facades\Route;
 Route::middleware('auth:sanctum')->group(function () {
     // Wer bin ich? (Smoke-Test für Token-Auth)
     Route::get('/user', fn (Request $request) => $request->user());
+
+    // Fortschritts-Events (task_id + event); wendet die je Event konfigurierte
+    // Automation an und protokolliert das Event. Siehe docs/event-api.md.
+    Route::post('events', [EventController::class, 'store']);
 
     // Projekte
     Route::get('projects', [ProjectController::class, 'index']);

@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\StatusRole;
+use App\Enums\TaskEvent;
 use iamfarhad\LaravelAuditLog\Traits\Auditable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -66,6 +67,23 @@ class Organization extends Model
     public function statusAutomations(): HasMany
     {
         return $this->hasMany(OrgStatusAutomation::class);
+    }
+
+    /**
+     * Per-event automation configuration (see docs/event-api.md).
+     */
+    public function eventAutomations(): HasMany
+    {
+        return $this->hasMany(OrgEventAutomation::class);
+    }
+
+    /**
+     * The configured automation for a given progress event, or null if the
+     * organization has not configured that event (⇒ the event is a no-op).
+     */
+    public function eventAutomationFor(TaskEvent $event): ?OrgEventAutomation
+    {
+        return $this->eventAutomations()->where('event', $event->value)->first();
     }
 
     /**

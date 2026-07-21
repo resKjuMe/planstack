@@ -143,4 +143,10 @@ return [
     'with_all_computed_fields_response' => '(mit allen berechneten Feldern). Antwort:',
     'with_the_list_of_children' => 'mit der Kinder-Liste.',
     'you_create_a_token_in_the_application' => 'Ein Token erzeugst du in der Anwendung unter',
+
+    'events' => 'Events',
+    'event_send_progress' => 'Meldet ein Fortschritts-Event zu einer Aufgabe (z. B. vom /planstack-Skill). Nicht projekt-gebunden — die Aufgabe wird über',
+    'event_send_progress_2' => 'adressiert.',
+    'event_behavior_configured' => 'Was ein Event bewirkt (Statuswechsel, Feld-Befüllung), legt jede Organisation je Event selbst fest (Organisation → Event-Automationen). Ohne Konfiguration ist das Event ein reines Protokoll (keine Änderung an der Aufgabe).',
+    'event_valid_values' => 'Gültige Events:',
 ];

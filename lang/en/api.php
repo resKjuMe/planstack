@@ -143,4 +143,10 @@ return [
     'with_all_computed_fields_response' => '(with all computed fields). Response:',
     'with_the_list_of_children' => 'with the list of children.',
     'you_create_a_token_in_the_application' => 'You create a token in the application under',
+
+    'events' => 'Events',
+    'event_send_progress' => 'Reports a progress event for a task (e.g. from the /planstack skill). Not project-scoped — the task is addressed via',
+    'event_send_progress_2' => '.',
+    'event_behavior_configured' => 'What an event does (status change, field population) is configured per organization and per event (Organization → Event automations). Without configuration the event is a pure log entry (no change to the task).',
+    'event_valid_values' => 'Valid events:',
 ];
