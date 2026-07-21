@@ -48,8 +48,9 @@ class CustomField extends Model
             'key' => 'hubspot_ticket_id',
             'label' => 'HubSpot Ticket ID',
             'label_en' => 'HubSpot Ticket ID',
-            'type' => 'string',
-            'validation' => 'max:64',
+            // HubSpot-Record-IDs sind numerisch (positive Ganzzahl).
+            'type' => 'integer',
+            'validation' => 'min:1',
         ],
     ];
 
