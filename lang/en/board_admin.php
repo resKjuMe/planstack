@@ -18,6 +18,10 @@ return [
     'custom_badge' => 'custom',
 
     'automations' => 'Automations',
+    'automations_link' => 'Automations',
+    'automations_title' => 'Status automations',
+    'automations_intro' => 'Define, per status, which fields are set automatically on entry. Values: @actor (current user), @now, @clear (empty), or a literal value.',
+    'back_to_statuses' => 'Back to statuses',
     'automations_hint' => 'Automatically set fields when a task enters this status. Values: @actor (current user), @now, @clear (empty), or a literal value.',
     'effect_field' => 'Field',
     'effect_value' => 'Value',

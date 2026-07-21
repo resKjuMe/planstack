@@ -18,6 +18,10 @@ return [
     'custom_badge' => 'eigener',
 
     'automations' => 'Automationen',
+    'automations_link' => 'Automationen',
+    'automations_title' => 'Status-Automationen',
+    'automations_intro' => 'Lege je Status fest, welche Felder beim Eintritt automatisch gesetzt werden. Werte: @actor (aktueller Nutzer), @now (jetzt), @clear (leeren) oder ein fester Wert.',
+    'back_to_statuses' => 'Zurück zu den Status',
     'automations_hint' => 'Beim Eintritt in diesen Status automatisch Felder setzen. Werte: @actor (aktueller Nutzer), @now (jetzt), @clear (leeren) oder ein fester Wert.',
     'effect_field' => 'Feld',
     'effect_value' => 'Wert',

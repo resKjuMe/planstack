@@ -105,8 +105,9 @@ class OrganizationTaskStatusController extends Controller
 
     /**
      * Bulk-save every status row at once (single Save button): presentation,
-     * grouping, WIP, column/expanded flags, drag order (position) and the
-     * on-enter effects. Only this org's statuses are touched; unknown ids are
+     * grouping, WIP, column/expanded flags and drag order (position). The
+     * on-enter effects live on their own sub-page (see effects()) and are left
+     * untouched here. Only this org's statuses are touched; unknown ids are
      * skipped. Create/delete stay separate operations.
      */
     public function updateAll(Request $request): RedirectResponse
@@ -125,6 +126,63 @@ class OrganizationTaskStatusController extends Controller
             'statuses.*.group_id' => ['nullable', 'integer', Rule::in($groupIds)],
             'statuses.*.is_column' => ['sometimes'],
             'statuses.*.default_expanded' => ['sometimes'],
+        ]);
+
+        $models = $organization->statuses()->get()->keyBy('id');
+
+        DB::transaction(function () use ($validated, $models) {
+            foreach ($validated['statuses'] ?? [] as $id => $data) {
+                $status = $models->get((int) $id);
+                if ($status === null) {
+                    continue;
+                }
+
+                $status->update([
+                    'label' => $data['label'],
+                    'label_en' => $data['label_en'] ?? null,
+                    'color_token' => $data['color_token'],
+                    'icon' => $data['icon'] ?? null,
+                    'position' => $data['position'] ?? $status->position,
+                    'wip_limit' => $data['wip_limit'] ?? null,
+                    'group_id' => $data['group_id'] ?? null,
+                    'is_column' => ! empty($data['is_column']),
+                    'default_expanded' => ! empty($data['default_expanded']),
+                ]);
+            }
+        });
+
+        $organization->increment('status_config_version');
+
+        return back()->with('status', __('board_admin.saved_all'));
+    }
+
+    /**
+     * Sub-page: edit the on-enter effects (automatic field population) of every
+     * status in one place — the status counterpart to the event effects page.
+     */
+    public function effects(Request $request): View
+    {
+        $organization = $this->ownedOrganization($request);
+
+        return view('organization.status-effects', [
+            'organization' => $organization,
+            'statuses' => $organization->statuses()->get(),
+            'effectFields' => StatusEffects::ALLOWED_FIELDS,
+            'iconKeys' => StatusIcons::keys(),
+            'iconMarkup' => StatusIcons::all(),
+        ]);
+    }
+
+    /**
+     * Bulk-save the on-enter effects for every status (single Save button). The
+     * presentation/order configured on the main page is left untouched.
+     */
+    public function updateEffectsAll(Request $request): RedirectResponse
+    {
+        $organization = $this->ownedOrganization($request);
+
+        $validated = $request->validate([
+            'statuses' => ['array'],
             'statuses.*.effects' => ['nullable', 'array'],
             'statuses.*.effects.*.field' => ['required', Rule::in(StatusEffects::ALLOWED_FIELDS)],
             'statuses.*.effects.*.value' => ['nullable', 'string', 'max:255'],
@@ -149,24 +207,13 @@ class OrganizationTaskStatusController extends Controller
                     ];
                 }
 
-                $status->update([
-                    'label' => $data['label'],
-                    'label_en' => $data['label_en'] ?? null,
-                    'color_token' => $data['color_token'],
-                    'icon' => $data['icon'] ?? null,
-                    'position' => $data['position'] ?? $status->position,
-                    'wip_limit' => $data['wip_limit'] ?? null,
-                    'group_id' => $data['group_id'] ?? null,
-                    'is_column' => ! empty($data['is_column']),
-                    'default_expanded' => ! empty($data['default_expanded']),
-                    'on_enter_effects' => $effects ?: null,
-                ]);
+                $status->update(['on_enter_effects' => $effects ?: null]);
             }
         });
 
         $organization->increment('status_config_version');
 
-        return back()->with('status', __('board_admin.saved_all'));
+        return back()->with('status', __('board_admin.effects_saved'));
     }
 
     /**

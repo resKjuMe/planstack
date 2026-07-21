@@ -74,6 +74,11 @@ Route::middleware('auth')->group(function () {
         ->name('organization.statuses.destroy');
     Route::put('organization/statuses/{status}/effects', [OrganizationTaskStatusController::class, 'updateEffects'])
         ->name('organization.statuses.effects');
+    // Automationen (On-Enter-Effekte): eigene Unterseite, gesammelt gespeichert.
+    Route::get('organization/status-effects', [OrganizationTaskStatusController::class, 'effects'])
+        ->name('organization.statuses.effects.index');
+    Route::put('organization/status-effects', [OrganizationTaskStatusController::class, 'updateEffectsAll'])
+        ->name('organization.statuses.effects.update-all');
     Route::put('organization/status-order', [OrganizationTaskStatusController::class, 'reorder'])
         ->name('organization.statuses.reorder');
     Route::post('organization/status-groups', [OrganizationTaskStatusController::class, 'storeGroup'])

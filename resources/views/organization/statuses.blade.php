@@ -33,7 +33,11 @@
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
             <x-flash />
 
-            <p class="max-w-3xl text-sm text-gray-500 dark:text-gray-400">{{ __('board_admin.intro') }}</p>
+            <div class="flex items-center justify-between gap-4">
+                <p class="max-w-3xl text-sm text-gray-500 dark:text-gray-400">{{ __('board_admin.intro') }}</p>
+                <a href="{{ route('organization.statuses.effects.index') }}"
+                   class="shrink-0 text-sm text-indigo-600 dark:text-indigo-400 hover:underline">{{ __('board_admin.automations_link') }}</a>
+            </div>
 
             {{-- ============ Status bearbeiten ============ --}}
             {{-- Alle Zeilen liegen in EINER Sammel-Form mit genau einem Speichern-
@@ -66,7 +70,7 @@
                     <div id="status-sortable">
                         @foreach ($statuses as $status)
                             @php $p = 'statuses['.$status->id.']'; @endphp
-                            <div x-data="{ openFx: false, pickerOpen: false, color: '{{ $status->color_token }}', swatch: @js($swatch), iconOpen: false, icon: '{{ $status->icon }}', icons: @js($iconMarkup), placeholder: @js($iconPlaceholder), rows: @js($status->on_enter_effects ?? []) }"
+                            <div x-data="{ pickerOpen: false, color: '{{ $status->color_token }}', swatch: @js($swatch), iconOpen: false, icon: '{{ $status->icon }}', icons: @js($iconMarkup), placeholder: @js($iconPlaceholder) }"
                                  data-status-row data-status-id="{{ $status->id }}"
                                  class="border-b border-gray-100 dark:border-gray-700 last:border-0">
                                 <div class="{{ $grid }} py-2">
@@ -115,10 +119,6 @@
                                     </select>
 
                                     <div class="flex items-center justify-start gap-2">
-                                        <button type="button" x-on:click="openFx = !openFx" title="{{ __('board_admin.automations') }}"
-                                                class="text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300">
-                                            <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-                                        </button>
                                         @if ($status->role === null)
                                             {{-- Loeschen: submittet die separate, versteckte Loesch-Form. --}}
                                             <button type="submit" form="delete-status-{{ $status->id }}" title="{{ __('board_admin.delete') }}"
@@ -130,33 +130,6 @@
                                             <span class="block h-4 w-4" aria-hidden></span>
                                         @endif
                                     </div>
-                                </div>
-
-                                {{-- Automationen (On-Enter-Effekte) --}}
-                                <div x-show="openFx" x-cloak class="pb-3 ps-8">
-                                    <p class="mb-2 text-xs text-gray-400 dark:text-gray-500">{{ __('board_admin.automations_hint') }}</p>
-                                    <template x-for="(row, idx) in rows" :key="idx">
-                                        <div class="mb-2 flex flex-wrap items-center gap-2">
-                                            <select x-bind:name="'{{ $p }}[effects][' + idx + '][field]'" x-model="row.field" class="{{ $inputClass }}">
-                                                <option value="">{{ __('board_admin.effect_field') }}</option>
-                                                @foreach ($effectFields as $f)
-                                                    <option value="{{ $f }}">{{ $f }}</option>
-                                                @endforeach
-                                            </select>
-                                            <input type="text" x-bind:name="'{{ $p }}[effects][' + idx + '][value]'" x-model="row.value"
-                                                   placeholder="{{ __('board_admin.effect_value_placeholder') }}" class="{{ $inputClass }} w-52">
-                                            <label class="flex items-center gap-1 text-xs text-gray-600 dark:text-gray-300">
-                                                <input type="checkbox" value="1" x-bind:name="'{{ $p }}[effects][' + idx + '][only_if_empty]'" x-model="row.only_if_empty"
-                                                       class="rounded border-gray-300 dark:border-gray-600 text-indigo-600 focus:ring-indigo-500">
-                                                {{ __('board_admin.effect_only_if_empty') }}
-                                            </label>
-                                            <button type="button" x-on:click="rows.splice(idx, 1)"
-                                                    class="text-rose-600 dark:text-rose-400 hover:underline">×</button>
-                                        </div>
-                                    </template>
-                                    <p x-show="rows.length === 0" class="mb-2 text-xs text-gray-400 dark:text-gray-500">{{ __('board_admin.no_effects') }}</p>
-                                    <button type="button" x-on:click="rows.push({ field: '', value: '', only_if_empty: false })"
-                                            class="text-xs font-medium text-indigo-600 dark:text-indigo-400 hover:underline">{{ __('board_admin.add_effect') }}</button>
                                 </div>
                             </div>
                         @endforeach
