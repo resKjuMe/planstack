@@ -104,6 +104,72 @@ class OrganizationTaskStatusController extends Controller
     }
 
     /**
+     * Bulk-save every status row at once (single Save button): presentation,
+     * grouping, WIP, column/expanded flags, drag order (position) and the
+     * on-enter effects. Only this org's statuses are touched; unknown ids are
+     * skipped. Create/delete stay separate operations.
+     */
+    public function updateAll(Request $request): RedirectResponse
+    {
+        $organization = $this->ownedOrganization($request);
+        $groupIds = $organization->statusGroups()->pluck('id')->all();
+
+        $validated = $request->validate([
+            'statuses' => ['array'],
+            'statuses.*.label' => ['required', 'string', 'max:255'],
+            'statuses.*.label_en' => ['nullable', 'string', 'max:255'],
+            'statuses.*.color_token' => ['required', Rule::in(self::COLORS)],
+            'statuses.*.icon' => ['nullable', Rule::in(StatusIcons::keys())],
+            'statuses.*.position' => ['nullable', 'integer', 'min:0'],
+            'statuses.*.wip_limit' => ['nullable', 'integer', 'min:1'],
+            'statuses.*.group_id' => ['nullable', 'integer', Rule::in($groupIds)],
+            'statuses.*.is_column' => ['sometimes'],
+            'statuses.*.default_expanded' => ['sometimes'],
+            'statuses.*.effects' => ['nullable', 'array'],
+            'statuses.*.effects.*.field' => ['required', Rule::in(StatusEffects::ALLOWED_FIELDS)],
+            'statuses.*.effects.*.value' => ['nullable', 'string', 'max:255'],
+            'statuses.*.effects.*.only_if_empty' => ['sometimes'],
+        ]);
+
+        $models = $organization->statuses()->get()->keyBy('id');
+
+        DB::transaction(function () use ($validated, $models) {
+            foreach ($validated['statuses'] ?? [] as $id => $data) {
+                $status = $models->get((int) $id);
+                if ($status === null) {
+                    continue;
+                }
+
+                $effects = [];
+                foreach ($data['effects'] ?? [] as $effect) {
+                    $effects[] = [
+                        'field' => $effect['field'],
+                        'value' => $effect['value'] ?? '',
+                        'only_if_empty' => ! empty($effect['only_if_empty']),
+                    ];
+                }
+
+                $status->update([
+                    'label' => $data['label'],
+                    'label_en' => $data['label_en'] ?? null,
+                    'color_token' => $data['color_token'],
+                    'icon' => $data['icon'] ?? null,
+                    'position' => $data['position'] ?? $status->position,
+                    'wip_limit' => $data['wip_limit'] ?? null,
+                    'group_id' => $data['group_id'] ?? null,
+                    'is_column' => ! empty($data['is_column']),
+                    'default_expanded' => ! empty($data['default_expanded']),
+                    'on_enter_effects' => $effects ?: null,
+                ]);
+            }
+        });
+
+        $organization->increment('status_config_version');
+
+        return back()->with('status', __('board_admin.saved_all'));
+    }
+
+    /**
      * Rebuild the whole transitions matrix from the posted map
      * transitions[fromStatusId][] = toStatusId.
      */

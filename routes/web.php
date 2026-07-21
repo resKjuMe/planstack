@@ -62,6 +62,10 @@ Route::middleware('auth')->group(function () {
         ->name('organization.statuses.index');
     Route::put('organization/status-transitions', [OrganizationTaskStatusController::class, 'updateTransitions'])
         ->name('organization.statuses.transitions');
+    // Sammel-Speicherung aller Status-Zeilen (Darstellung, Automationen,
+    // Reihenfolge) in einem Request — ein einziger Speichern-Button.
+    Route::put('organization/statuses', [OrganizationTaskStatusController::class, 'updateAll'])
+        ->name('organization.statuses.update-all');
     Route::patch('organization/statuses/{status}', [OrganizationTaskStatusController::class, 'update'])
         ->name('organization.statuses.update');
     Route::post('organization/statuses', [OrganizationTaskStatusController::class, 'storeStatus'])

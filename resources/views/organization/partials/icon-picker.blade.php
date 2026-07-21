@@ -1,9 +1,11 @@
 {{-- Icon-Picker: zeigt das gewählte Icon, Klick öffnet ein Flyout mit allen
      Icons (analog zum Farb-Picker). Erwartet Alpine-State aus dem umgebenden
      x-data: `icon` (key), `iconOpen`, `icons` (key=>inner-svg), `placeholder`.
-     Nutzt die Blade-Variablen $iconKeys/$iconMarkup. --}}
+     Nutzt die Blade-Variablen $iconKeys/$iconMarkup. Der Feldname ist ueber
+     $iconName ueberschreibbar (Default `icon`), damit der Picker auch in einer
+     Sammel-Form (name="statuses[ID][icon]") funktioniert. --}}
 <div class="relative shrink-0">
-    <input type="hidden" name="icon" x-bind:value="icon">
+    <input type="hidden" name="{{ $iconName ?? 'icon' }}" x-bind:value="icon">
     <button type="button" x-on:click="iconOpen = !iconOpen" title="{{ __('board_admin.col_icon') }}"
             class="flex items-center rounded p-1 text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"

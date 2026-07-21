@@ -49,6 +49,7 @@ return [
     'col_actions' => '',
     'save' => 'Save',
     'status_saved' => 'Status “:label” saved.',
+    'saved_all' => 'Statuses saved.',
 
     'kind_waiting' => 'waiting',
     'kind_active' => 'in progress',

@@ -49,6 +49,7 @@ return [
     'col_actions' => '',
     'save' => 'Speichern',
     'status_saved' => 'Status „:label" gespeichert.',
+    'saved_all' => 'Status gespeichert.',
 
     'kind_waiting' => 'wartend',
     'kind_active' => 'in Arbeit',
