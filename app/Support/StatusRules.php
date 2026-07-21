@@ -104,9 +104,10 @@ class StatusRules
             $lines[] = '';
             $lines[] = '**Der Status dieser Organisation wird ereignisgesteuert gesetzt: '
                 .'KEINE direkten `POST /tasks/{id}/status`-Calls (`analyze`/`in_progress`/`in_review`/`done`) '
-                .'senden — sie würden die per Event zugewiesenen Status überschreiben. Der Status folgt '
-                .'ausschließlich den Fortschritts-Events; nur `claim`/`claim-next`, `pr`, `merge`, `concern` '
-                .'und `split` bleiben.**';
+                .'nötig — der Server ignoriert sie in diesem Modus ohnehin (sie können den per Event '
+                .'zugewiesenen Status nicht mehr überschreiben) und antwortet mit unverändertem Status. '
+                .'Der Status folgt ausschließlich den Fortschritts-Events; nur `claim`/`claim-next`, `pr`, '
+                .'`merge`, `concern` und `split` bleiben wirksam.**';
         }
 
         return implode("\n", $lines)."\n";

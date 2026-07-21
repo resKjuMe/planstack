@@ -141,6 +141,53 @@ class EventApiTest extends TestCase
         $this->assertNotNull($task->refresh()->merged_at);
     }
 
+    public function test_direct_status_call_cannot_override_event_driven_status(): void
+    {
+        [, $project, $task] = $this->ownedTask();
+        $organization = $project->organization;
+
+        // Org treibt den Status ereignisgesteuert: PROCESSING → IN_PROGRESS.
+        $inProgress = $organization->statusForRole(StatusRole::IN_PROGRESS);
+        $organization->eventAutomations()->updateOrCreate(
+            ['event' => TaskEvent::PROCESSING->value],
+            ['target_status_id' => $inProgress->id, 'overridable_status_ids' => null, 'effects' => null],
+        );
+
+        // Event setzt den Status.
+        $this->postJson('/api/events', ['task_id' => $task->id, 'event' => 'PROCESSING'])
+            ->assertOk()
+            ->assertJsonPath('status', 'IN_PROGRESS');
+        $this->assertSame($inProgress->id, $task->refresh()->status_id);
+
+        // Ein (evtl. veralteter) Client sendet trotzdem einen direkten Status-Call.
+        // Der Server ignoriert ihn: Status bleibt der per Event zugewiesene, kein 409.
+        $this->postJson("/api/projects/{$project->alias}/tasks/{$task->id}/status", ['status' => 'analyze'])
+            ->assertOk()
+            ->assertJsonPath('data.status', 'IN_PROGRESS');
+
+        $this->assertSame($inProgress->id, $task->refresh()->status_id);
+    }
+
+    public function test_direct_status_call_still_applies_without_event_driven_status(): void
+    {
+        [, $project, $task] = $this->ownedTask();
+
+        // Ereignisgesteuerte Zuweisung abschalten (Default-Seed hätte sie) ⇒ der
+        // direkte, rollenbasierte Status-Call wirkt wie zuvor.
+        $project->organization->eventAutomations()->update(['target_status_id' => null]);
+        $this->assertFalse($project->organization->hasEventDrivenStatus());
+
+        // CLAIMED → ANALYZING ist ein erlaubter Übergang (PICKABLE → ANALYZING nicht).
+        $task->update(['status_id' => $project->organization->statusForRole(StatusRole::CLAIMED)->id]);
+
+        $this->postJson("/api/projects/{$project->alias}/tasks/{$task->id}/status", ['status' => 'analyze'])
+            ->assertOk()
+            ->assertJsonPath('data.status', 'ANALYZING');
+
+        $analyzing = $project->organization->statusForRole(StatusRole::ANALYZING);
+        $this->assertSame($analyzing->id, $task->refresh()->status_id);
+    }
+
     public function test_invalid_event_is_rejected(): void
     {
         [, , $task] = $this->ownedTask();

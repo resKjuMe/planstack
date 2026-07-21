@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Concerns\OrganizationAuditMetadata;
 use App\Enums\StatusRole;
 use App\Enums\TaskEvent;
 use iamfarhad\LaravelAuditLog\Traits\Auditable;
@@ -12,8 +13,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Organization extends Model
 {
-    use Auditable, \App\Concerns\OrganizationAuditMetadata {
-        \App\Concerns\OrganizationAuditMetadata::getAuditMetadata insteadof Auditable;
+    use \App\Concerns\OrganizationAuditMetadata, Auditable {
+        OrganizationAuditMetadata::getAuditMetadata insteadof Auditable;
     }
     use HasFactory;
 
@@ -92,6 +93,19 @@ class Organization extends Model
     public function eventAutomationFor(TaskEvent $event): ?OrgEventAutomation
     {
         return $this->eventAutomations()->where('event', $event->value)->first();
+    }
+
+    /**
+     * Whether this organization drives task status from progress events (at least
+     * one event automation assigns a target status). When true, the SERVER is the
+     * authority: direct progress-status calls (analyze/in_progress/in_review/done)
+     * must not override the event-assigned status — regardless of whether a
+     * (possibly stale) client still sends them. Mirrors the condition rendered
+     * into the status rules (see App\Support\StatusRules::forOrganization).
+     */
+    public function hasEventDrivenStatus(): bool
+    {
+        return $this->eventAutomations()->whereNotNull('target_status_id')->exists();
     }
 
     /**

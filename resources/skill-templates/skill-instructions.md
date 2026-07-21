@@ -32,7 +32,7 @@ Diese Werte je Projekt **lokal** als Baseline in `${CLAUDE_SKILL_DIR}/config.jso
 
 Nach dem Übernehmen die neue `status_config_version` **und** die `config_versions` als lokale Baseline zurückschreiben. `null` bleibt `null` (Tabelle leer → nichts nachzuziehen).
 
-**Wichtig — ereignisgesteuerter Status:** Enthält der `status_rules`-Block den Abschnitt „Ereignis-gesteuerte Status-Zuweisung", treibt der Server den Status **aus den Fortschritts-Events**. Dann **keine** direkten `POST /tasks/{id}/status`-Calls (`analyze`/`in_progress`/`in_review`/`done`) senden — sie würden die per Event zugewiesenen Status überschreiben. Nur `claim`/`claim-next`, `pr`, `merge`, `concern`, `split` bleiben; der Status folgt ausschließlich den Events.
+**Wichtig — ereignisgesteuerter Status:** Enthält der `status_rules`-Block den Abschnitt „Ereignis-gesteuerte Status-Zuweisung", treibt der Server den Status **aus den Fortschritts-Events**. Direkte `POST /tasks/{id}/status`-Calls (`analyze`/`in_progress`/`in_review`/`done`) sind dann überflüssig — der **Server ignoriert sie in diesem Modus serverseitig** (sie können den per Event zugewiesenen Status nicht mehr überschreiben und lösen auch keinen Übergangs-Konflikt aus, sondern liefern den unveränderten Status zurück). Der Schutz gilt unabhängig davon, ob dieser Skill die Config-Änderung schon nachgezogen hat. Nur `claim`/`claim-next`, `pr`, `merge`, `concern`, `split` bleiben wirksam; der Status folgt ausschließlich den Events.
 
 ## Lokale Einstellungen (`/planstack settings`)
 

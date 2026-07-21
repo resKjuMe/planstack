@@ -18,9 +18,45 @@ use App\Models\User;
  * actions (claim/release/analyze/…/merge/concern/split) behave identically and
  * honour each organisation's automation config. For a default-seeded org the
  * result equals the former hard-coded behaviour.
+ *
+ * When an organisation drives status from progress events (see
+ * Organization::hasEventDrivenStatus), direct progress-status calls
+ * (analyze/in_progress/in_review/done) are suppressed here so the event
+ * automation stays the single source of truth — the enforcement is server-side
+ * and therefore independent of whether a client picked up the config change.
  */
 class TaskStatusService
 {
+    /**
+     * The "progress" roles a direct status call may target (POST .../status:
+     * analyze/in_progress/in_review/done). These — and only these — are
+     * suppressed server-side when the organisation drives status from progress
+     * events; claim/release/merge/concern/split keep working as direct actions.
+     *
+     * @var array<int, StatusRole>
+     */
+    private const PROGRESS_ROLES = [
+        StatusRole::ANALYZING,
+        StatusRole::IN_PROGRESS,
+        StatusRole::IN_REVIEW,
+    ];
+
+    /**
+     * Whether a direct move into $role must be suppressed because the org drives
+     * status from progress events. The event automation is the sole authority
+     * for progress status; a direct progress-status call would otherwise
+     * override the event-assigned status. Enforced HERE (server-side) so it holds
+     * no matter what a — possibly months-stale — client still sends.
+     */
+    public function isEventDriven(Task $task, StatusRole $role): bool
+    {
+        if (! in_array($role, self::PROGRESS_ROLES, true)) {
+            return false;
+        }
+
+        return (bool) $task->project?->organization?->hasEventDrivenStatus();
+    }
+
     /**
      * Whether moving the task into the status carrying $targetRole is an allowed
      * transition per the organisation's workflow. Returns true when there is
@@ -31,6 +67,12 @@ class TaskStatusService
     {
         $organization = $task->project?->organization;
         if ($organization === null) {
+            return true;
+        }
+
+        // Event-driven progress status is a server-side no-op (see applyRole);
+        // never reject it as an illegal transition — the call changes no status.
+        if ($this->isEventDriven($task, $targetRole)) {
             return true;
         }
 
@@ -52,6 +94,19 @@ class TaskStatusService
      */
     public function applyRole(Task $task, StatusRole $role, ?User $actor = null, array $extra = []): void
     {
+        // Server-side authority: when the org drives status from progress events,
+        // a direct progress-status call must NOT override the event-assigned
+        // status. Only the status change is suppressed — any explicit $extra
+        // field updates still apply. Holds regardless of what the client sends,
+        // so a config change is honoured even by long-lived / stale clients.
+        if ($this->isEventDriven($task, $role)) {
+            if ($extra !== []) {
+                $task->update($extra);
+            }
+
+            return;
+        }
+
         $status = $task->project?->organization?->statusForRole($role);
 
         if ($status === null) {
