@@ -132,6 +132,26 @@ class ProjectConfigTest extends TestCase
         $this->assertStringContainsString('KEINE direkten', $statusRules);
     }
 
+    public function test_config_skill_revision_matches_header_even_with_org_status_block(): void
+    {
+        [, $project] = $this->ownedProject();
+
+        // Default-seeded org ⇒ StatusRules::forOrganization renders a non-empty
+        // org status block into `status_rules`. The body `skill_revision` must
+        // still equal the X-Planstack-Skill-Revision header (shared file content
+        // only); otherwise the client writes a baseline that reads as permanent
+        // drift, because it compares the header against the stored value.
+        $response = $this->getJson("/api/projects/{$project->alias}/config")->assertOk();
+
+        $header = $response->headers->get('X-Planstack-Skill-Revision');
+        $this->assertNotEmpty($header);
+        $this->assertSame($header, $response->json('skill_revision'));
+
+        // Sanity: the org block really is present in status_rules (so this is not
+        // a vacuous match on an org without a status block).
+        $this->assertStringContainsString('Status dieser Organisation', $response->json('status_rules'));
+    }
+
     public function test_economy_profile_bumps_version_and_returns_terse_next_only(): void
     {
         [, $project] = $this->ownedProject();

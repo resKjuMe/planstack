@@ -71,16 +71,17 @@ class ProjectConfigController extends ApiController
         $effective = $project->effectiveConfig();
 
         // Status-Regeln = geteilte Basis + org-spezifischer Block (tatsächliche
-        // Status/Übergänge/Automationen dieser Organisation). Die Skill-Revision
-        // bezieht diesen Block ein, damit Clients Statusänderungen als Drift
-        // erkennen (status_config_version fliesst ueber den Inhalt mit ein).
+        // Status/Übergänge/Automationen dieser Organisation). Nur der Body-Inhalt
+        // `status_rules` trägt den Org-Block; die Skill-Revision NICHT — sie deckt
+        // (wie der Header X-Planstack-Skill-Revision) ausschliesslich die geteilten
+        // Datei-Inhalte ab. Org-Status-Drift signalisiert stattdessen
+        // status_config_version/config_versions. So sind Body-`skill_revision` und
+        // Header identisch, und der Client schreibt keine Baseline, die dauerhaft
+        // als Drift gilt.
         $statusRules = $project->organization
             ? rtrim(SkillTemplate::statusRules())."\n\n".StatusRules::forOrganization($project->organization)
             : SkillTemplate::statusRules();
-        $skillRevision = substr(hash(
-            'xxh128',
-            SkillTemplate::operatingManual().'::'.$statusRules.'::'.SkillTemplate::skillInstructions(),
-        ), 0, 12);
+        $skillRevision = SkillTemplate::sharedRevision();
 
         // Nur die projektspezifische Ergänzung (leer, wenn nichts hinterlegt).
         $notes = filled($project->skill_description)

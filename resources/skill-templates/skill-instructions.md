@@ -53,6 +53,7 @@ Der Skill kennt lokale Einstellungen, die **ausschließlich auf diesem Rechner**
 | Ausgabe-Umfang | `verbosity` | Standard→`default` · Knapp→`minimal` · Ausführlich→`maximal` | Standard |
 | Review-Strenge | `review_strictness` | Locker→`lenient` · Standard→`default` · Streng→`strict` | Standard |
 | Review-Genauigkeit | `review_thoroughness` | Lässig→`relaxed` · Standard→`default` · Akribisch→`meticulous` | Standard |
+| Metriken (Token-Verbrauch) | `metrics` | An→`on` · Aus→`off` | An |
 
 Der **Ausgabe-Umfang** (`verbosity`) steuert **verbindlich**, wie viel Fließtext Claude während der gesamten Abarbeitung (beide Modi, alle Kommandos) ausgibt. Er ist **keine Empfehlung**, sondern eine harte Vorgabe und gilt ab dem ersten Satz der Antwort:
 
@@ -66,6 +67,8 @@ Die **Review-Strenge** (`review_strictness`) steuert, wie streng `/planstack rev
 
 Die **Review-Genauigkeit** (`review_thoroughness`) steuert, wie tief/gründlich geprüft wird: `relaxed` = schneller Überblick, nur offensichtliche Stellen, `default` = normale Prüftiefe, `meticulous` = jede Datei/Zeile, Edge-Cases und Details akribisch durchgehen. (Strenge = wie hart bewertet wird; Genauigkeit = wie gründlich geschaut wird.)
 
+Die **Metriken** (`metrics`) steuern die Token-Erfassung je Planstack-Step: `on` = während der Abarbeitung je Step den Token-Verbrauch erfassen und am Ende als Tabelle ausgeben (siehe „Metriken"), `off` = keine Erfassung, keine Tabelle.
+
 `settings.json` (Beispiel mit den Defaults; gespeichert werden die Schlüssel/Werte, nicht die Labels):
 
 ```json
@@ -78,7 +81,8 @@ Die **Review-Genauigkeit** (`review_thoroughness`) steuert, wie tief/gründlich 
   "review_auto_status": "manual",
   "verbosity": "default",
   "review_strictness": "default",
-  "review_thoroughness": "default"
+  "review_thoroughness": "default",
+  "metrics": "on"
 }
 ```
 
@@ -89,6 +93,40 @@ Die **Review-Genauigkeit** (`review_thoroughness`) steuert, wie tief/gründlich 
 - `ask` → vor dem Schritt **einmal für die aktuelle Aufgabe** nachfragen und die Antwort für diese Aufgabe anwenden (nicht dauerhaft speichern).
 
 Reihenfolge vor dem PR (jeweils nur, wenn die Einstellung es zulässt): `local_phpcs` (formatieren) → `local_phpstan` (statische Analyse) → `local_tests` (Tests). Schlägt ein aktivierter Schritt fehl, erst beheben, dann PR. `babysit_prs` greift **nach** dem PR-Öffnen. Vor jeder Board-Abarbeitung die aktuellen Einstellungen aus `settings.json` lesen.
+
+## Metriken (Einstellung `metrics`)
+
+Ist `metrics` = `on` (Default), wird während der Abarbeitung **je Planstack-Step** der Token-Verbrauch erfasst und am **Ende** des Laufs als Tabelle ausgegeben. Ist `metrics` = `off`, entfällt Erfassung und Tabelle vollständig.
+
+**Steps** sind die Schritte des Arbeitszyklus, je bearbeitetem Task getrennt — typischerweise: `claim-next`/`claim`, `analyze`, `umsetzen` (die eigentliche Implementierung inkl. lokaler Checks), `PR`, `done`, `merge` (bzw. `concern`, falls statt Umsetzung ein Concern gemeldet wird). Im Board-Modus die Steps pro Task gruppieren.
+
+Je Step **zwei** Werte getrennt erfassen:
+
+- **a) Planstack-Calls** — Tokens für die Interaktion mit der Planstack-API/dem MCP-Server selbst (Request-Aufbau, Antwort-Verarbeitung), also der Steuerungs-Overhead des Steps.
+- **b) Aufgaben-Ausführung** — Tokens für die eigentliche fachliche Arbeit dieses Steps (Code lesen/schreiben, Analyse, Reasoning, Tool-Calls außerhalb von Planstack).
+
+Die Werte sind eine **Best-Effort-Schätzung** aus dem tatsächlichen Verlauf (exaktes Token-Accounting steht dem Skill zur Laufzeit nicht zur Verfügung) — als solche kennzeichnen, nicht als exakte Abrechnung ausgeben.
+
+**Ausgabe am Ende** (Beispielformat; eine Zeile je Step, Summenzeile je Task und Gesamtsumme):
+
+```
+Token-Metriken (Schätzung)
+
+Task C27
+| Step        | Planstack-Calls | Aufgaben-Ausführung | Summe  |
+|-------------|-----------------|---------------------|--------|
+| claim-next  |             420 |                   0 |    420 |
+| analyze     |             180 |               3 200 |  3 380 |
+| umsetzen    |             150 |              18 400 | 18 550 |
+| PR          |             120 |               2 100 |  2 220 |
+| done        |             110 |                   0 |    110 |
+| merge       |             110 |                   0 |    110 |
+| Summe C27   |           1 090 |              23 700 | 24 790 |
+
+Gesamt: Planstack-Calls 1 090 · Aufgaben-Ausführung 23 700 · Summe 24 790
+```
+
+Im Einzel-Task-Modus (`/planstack <PROJECT> <TASK>`) genügen die eine Task-Tabelle und die Gesamtsumme.
 
 ## Konfiguration ziehen (`/planstack update-config`)
 
