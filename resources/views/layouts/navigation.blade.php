@@ -44,7 +44,9 @@
 
             <!-- Settings Dropdown -->
             <div class="hidden sm:flex sm:items-center sm:ms-6">
-                <x-theme-toggle class="me-2" />
+                <x-theme-toggle class="me-1" />
+
+                <x-notification-bell class="me-2" />
 
                 <x-dropdown align="right" width="w-56">
                     <x-slot name="trigger">
@@ -135,7 +137,10 @@
                     <div class="font-medium text-base text-gray-800 dark:text-gray-200">{{ Auth::user()->name }}</div>
                     <div class="font-medium text-sm text-gray-500 dark:text-gray-400">{{ Auth::user()->email }}</div>
                 </div>
-                <x-theme-toggle />
+                <div class="flex items-center gap-1">
+                    <x-theme-toggle />
+                    <x-notification-bell />
+                </div>
             </div>
 
             <div class="mt-3 space-y-1">

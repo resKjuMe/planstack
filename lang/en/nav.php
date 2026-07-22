@@ -2,6 +2,8 @@
 
 return [
     'new_changes' => 'New changes',
+    'new_messages' => 'new messages',
+    'notifications' => 'Notifications',
     'planstack_skill' => 'Planstack Skill',
     'sign_out' => 'Sign out',
     'tampermonkey_script' => 'TamperMonkey Script',
