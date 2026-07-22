@@ -43,7 +43,12 @@ class EventController extends ApiController
 
         // Unter der Produktions-Domain die Antwort zusätzlich an den
         // WebSocket-Server weiterreichen (Header-Glocke). Best effort.
-        $this->socket->forward($request->getHost(), $payload);
+        // Für den Socket zusätzlich die Organisation des Nutzers mitschicken,
+        // damit der Server gezielt an deren Clients verteilen kann.
+        $this->socket->forward($request->getHost(), [
+            ...$payload,
+            'organization_id' => $request->user()->organization_id,
+        ]);
 
         return response()->json($payload);
     }
