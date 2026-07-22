@@ -21,6 +21,10 @@ return Application::configure(basePath: dirname(__DIR__))
         // Applies the authenticated user's stored locale to every web request.
         // Appended so it runs after the auth middleware and $request->user() is set.
         $middleware->appendToGroup('web', \App\Http\Middleware\SetLocale::class);
+
+        // GitHub sendet keinen CSRF-Token; der Webhook-Empfang muss davon
+        // ausgenommen werden (Authentizität via HMAC-Signatur, siehe Controller).
+        $middleware->validateCsrfTokens(except: ['hooks/git']);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(

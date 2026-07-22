@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\ApiDocsController;
 use App\Http\Controllers\ApiTokenController;
+use App\Http\Controllers\GitWebhookController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ProjectCalibrationController;
 use App\Http\Controllers\ProjectChangelogController;
@@ -31,6 +32,11 @@ Route::get('/', fn () => redirect()->route(auth()->check() ? 'projects.index' : 
 
 // Öffentliche API-Dokumentation (kein Login erforderlich)
 Route::get('/api-docs', ApiDocsController::class)->name('api.docs');
+
+// Eingehende GitHub-Webhooks (Outgoing Webhooks aus GitHub). Kein Login, kein
+// CSRF (Ausnahme in bootstrap/app.php) — Authentizität wird optional über die
+// HMAC-Signatur geprüft. Vorerst wird jeder Aufruf nur protokolliert.
+Route::post('/hooks/git', GitWebhookController::class)->name('hooks.git');
 
 Route::get('/dashboard', fn () => redirect()->route('projects.index'))
     ->middleware(['auth', 'verified'])

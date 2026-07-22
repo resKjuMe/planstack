@@ -39,5 +39,19 @@ return [
     // cacert.pem ist ebenfalls erlaubt.
     'github_verify_ssl' => env('GITHUB_VERIFY_SSL', true),
 
+    /*
+    |--------------------------------------------------------------------------
+    | GitHub-Webhooks (POST /hooks/git)
+    |--------------------------------------------------------------------------
+    |
+    | Optionales Secret zur Prüfung der HMAC-SHA256-Signatur eingehender
+    | Webhooks (Header X-Hub-Signature-256). Ist es leer, wird die Signatur
+    | nicht geprüft — sinnvoll für die reine Log-/Testphase, in Produktion
+    | jedoch setzen.
+    |
+    */
+
+    'github_webhook_secret' => env('GITHUB_WEBHOOK_SECRET'),
+
 ];
 
