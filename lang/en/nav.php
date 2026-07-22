@@ -1,8 +1,10 @@
 <?php
 
 return [
+    'clear' => 'Clear',
     'new_changes' => 'New changes',
     'new_messages' => 'new messages',
+    'no_messages' => 'No messages yet',
     'notifications' => 'Notifications',
     'planstack_skill' => 'Planstack Skill',
     'sign_out' => 'Sign out',

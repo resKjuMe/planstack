@@ -39,13 +39,17 @@ Alpine.store('theme', {
 // ausschließlich auf der Produktions-Domain planstack.eskju.net mit dem
 // WebSocket-Server und zählt eingehende Nachrichten. Die Glocke (siehe
 // components/notification-bell.blade.php) zeigt den Zähler als Pill; ein Klick
-// setzt ihn zurück. Bei Verbindungsabbruch wird mit Backoff neu verbunden.
+// öffnet ein Flyout mit den letzten Nachrichten als JSON und markiert sie als
+// gelesen. Bei Verbindungsabbruch wird mit Backoff neu verbunden.
 const NOTIFICATIONS_HOST = 'planstack.eskju.net';
 const NOTIFICATIONS_WS_URL = 'wss://websocket.eskju.net:3000/';
+const NOTIFICATIONS_MAX = 50; // so viele letzte Nachrichten im Flyout vorhalten
 
 Alpine.store('notifications', {
-    count: 0,
+    count: 0,            // ungelesene seit letztem Öffnen
     connected: false,
+    open: false,         // Flyout sichtbar?
+    messages: [],        // letzte Nachrichten, neueste zuerst
     _socket: null,
     _retryMs: 1000,
 
@@ -74,8 +78,9 @@ Alpine.store('notifications', {
             this.connected = true;
             this._retryMs = 1000;
         });
-        socket.addEventListener('message', () => {
+        socket.addEventListener('message', (event) => {
             this.count += 1;
+            this._record(event.data);
         });
         socket.addEventListener('close', (event) => {
             this.connected = false;
@@ -102,7 +107,35 @@ Alpine.store('notifications', {
         setTimeout(() => this.connect(), delay);
     },
 
+    // Rohnachricht speichern: als JSON parsen, sonst den Rohtext übernehmen.
+    _record(raw) {
+        let data;
+        try {
+            data = JSON.parse(raw);
+        } catch (e) {
+            data = raw;
+        }
+        this.messages.unshift({ at: new Date().toISOString(), data });
+        if (this.messages.length > NOTIFICATIONS_MAX) {
+            this.messages.length = NOTIFICATIONS_MAX;
+        }
+    },
+
+    // Klick auf die Glocke: Flyout auf-/zuklappen; beim Öffnen als gelesen
+    // markieren (Zähler zurücksetzen).
+    toggle() {
+        this.open = !this.open;
+        if (this.open) this.count = 0;
+    },
+
+    // Zähler zurücksetzen, ohne das Flyout zu ändern.
     reset() {
+        this.count = 0;
+    },
+
+    // Gespeicherte Nachrichten leeren.
+    clear() {
+        this.messages = [];
         this.count = 0;
     },
 });

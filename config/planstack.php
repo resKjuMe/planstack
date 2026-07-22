@@ -53,5 +53,33 @@ return [
 
     'github_webhook_secret' => env('GITHUB_WEBHOOK_SECRET'),
 
+    /*
+    |--------------------------------------------------------------------------
+    | WebSocket-Weiterleitung (POST /api/events → WebSocket-Server)
+    |--------------------------------------------------------------------------
+    |
+    | Läuft die Instanz unter der Produktions-Domain (websocket_forward_host),
+    | wird die Antwort von POST /api/events zusätzlich an den WebSocket-Server
+    | geschickt (HTTP POST auf websocket_send_url), der sie an verbundene
+    | Browser-Clients (Header-Glocke) verteilt. Auf allen anderen Domains
+    | passiert nichts. Fehler brechen die API-Antwort nie ab (nur Log).
+    |
+    | Hinweis: Der Server spricht den /send-Endpunkt per HTTP an — daher https
+    | (nicht das Browser-Schema wss); Host/Port/Pfad sind identisch.
+    |
+    */
+
+    'websocket_forward_host' => env('PLANSTACK_WEBSOCKET_HOST', 'planstack.eskju.net'),
+
+    'websocket_send_url' => env('PLANSTACK_WEBSOCKET_SEND_URL', 'https://websocket.eskju.net:3000/send'),
+
+    // Timeout (Sekunden) für die Weiterleitung — kurz halten, damit die
+    // API-Antwort nicht spürbar verzögert wird, falls der Socket-Server hängt.
+    'websocket_timeout' => env('PLANSTACK_WEBSOCKET_TIMEOUT', 3),
+
+    // TLS-Verifikation der Weiterleitung (analog github_verify_ssl). Für einen
+    // selbstsignierten Socket-Server ggf. auf false setzen.
+    'websocket_verify_ssl' => env('PLANSTACK_WEBSOCKET_VERIFY_SSL', true),
+
 ];
 
