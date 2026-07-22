@@ -5,6 +5,7 @@ return [
     'new_changes' => 'Neue Änderungen',
     'new_messages' => 'neue Nachrichten',
     'no_messages' => 'Noch keine Nachrichten',
+    'not_connected' => 'WebSocket nicht verbunden',
     'notifications' => 'Benachrichtigungen',
     'planstack_skill' => 'Planstack-Skill',
     'sign_out' => 'Abmelden',
