@@ -98,8 +98,8 @@ class TaskResource extends JsonResource
             // key/label (status_id is the authority).
             'status' => $this->status?->value ?? $this->orgStatus?->key,
             'status_label' => $this->status?->label() ?? $this->orgStatus?->label,
-            'display_status' => ($this->x_display_status ?? $this->status)?->value ?? $this->orgStatus?->key,
-            'display_status_label' => ($this->x_display_status ?? $this->status)?->label() ?? $this->orgStatus?->label,
+            'display_status' => $this->displayStatusKey(),
+            'display_status_label' => $this->displayStatusLabel(),
             'phase_id' => $this->phase_id,
             'phase' => $this->whenLoaded('phase', fn () => [
                 'id' => $this->phase?->id,

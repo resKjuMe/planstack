@@ -193,7 +193,7 @@ class ProjectController extends ApiController
             'unlocks' => $task->x_unlocks ?? 0,
             'sp' => (int) $task->effort_story_points,
             'gate' => ($task->x_gate ?? '—') === '—' ? null : $task->x_gate,
-            'status' => $task->x_display_status?->value ?? $task->status?->value ?? $task->orgStatus?->key,
+            'status' => $task->displayStatusKey(),
         ], fn ($v) => $v !== null);
     }
 

@@ -93,13 +93,27 @@ class StatusRules
             ->get();
         if ($eventStatus->isNotEmpty()) {
             $lines[] = '';
-            $lines[] = 'Ereignis-gesteuerte Status-Zuweisung (Fortschritts-Events setzen den Status):';
+            $lines[] = 'Ereignis-gesteuerte Status-Zuweisung (Fortschritts-Events setzen den Status). '
+                .'Dies ist eine **geschützte Zustandsmaschine**: ein Event setzt seinen Zielstatus **nur**, '
+                .'wenn der aktuelle Status in der jeweils angegebenen Guard-Menge liegt (fehlt die Angabe, '
+                .'greift das Event aus jedem Status). Passt der Guard nicht (z. B. Events in falscher '
+                .'Reihenfolge oder ein vorheriges Event ist nicht gelandet), ist der Wechsel ein **stiller '
+                .'No-op** — der Status bleibt unverändert; das ist erwartetes Verhalten, **kein Fehler**.';
             foreach ($eventStatus as $a) {
                 $target = $byId->get($a->target_status_id);
                 if ($target === null) {
                     continue;
                 }
-                $lines[] = "- Event `{$a->event->value}` → `{$target->key}` ({$target->label})";
+                $guard = '';
+                $overridable = collect($a->overridable_status_ids ?? [])
+                    ->map(fn ($id) => $byId->get((int) $id)?->key)
+                    ->filter()
+                    ->map(fn ($k) => "`{$k}`")
+                    ->values();
+                if ($overridable->isNotEmpty()) {
+                    $guard = ' — nur wenn aktueller Status '.$overridable->implode(', ');
+                }
+                $lines[] = "- Event `{$a->event->value}` → `{$target->key}` ({$target->label}){$guard}";
             }
             $lines[] = '';
             $lines[] = '**Der Status dieser Organisation wird ereignisgesteuert gesetzt: '
@@ -107,7 +121,9 @@ class StatusRules
                 .'nötig — der Server ignoriert sie in diesem Modus ohnehin (sie können den per Event '
                 .'zugewiesenen Status nicht mehr überschreiben) und antwortet mit unverändertem Status. '
                 .'Der Status folgt ausschließlich den Fortschritts-Events; nur `claim`/`claim-next`, `pr`, '
-                .'`merge`, `concern` und `split` bleiben wirksam.**';
+                .'`merge`, `concern` und `split` bleiben wirksam.** Als maßgeblichen Status nach einem Event '
+                .'stets die `POST /events`-Antwort (`status_changed`, `status`) verwenden — den Status nie '
+                .'selbst aus dem Event-Namen herleiten.';
         }
 
         return implode("\n", $lines)."\n";

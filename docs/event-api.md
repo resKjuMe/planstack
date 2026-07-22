@@ -63,11 +63,51 @@ Der /planstack Skill sendet während der Abarbeitung Events an Planstack, um den
 * APPROVED (später)
 * CHANGES_REQUESTED (später)
 
+## Antwort
+
+`POST /api/events` liefert zurück, was das Event bewirkt hat — die Antwort ist maßgeblich, ein Client soll den Status **nie** aus dem Event-Namen herleiten:
+
+```json
+{
+    "task_id": 123,
+    "event": "POLISHED",
+    "configured": true,
+    "status_changed": true,
+    "applied_fields": ["reviewed_by"],
+    "status": "REVIEWBAR"
+}
+```
+
+* `configured` — für das Event ist in der Org eine Automation hinterlegt (sonst reine Meldung/Log).
+* `status_changed` — der Status wurde durch dieses Event geändert.
+* `status` — der Status-Key **nach** dem Event (der tatsächliche aktuelle Status).
+* `applied_fields` — welche Felder das Event zusätzlich befüllt hat.
+
+`status_changed:false` bei einem statustreibenden Event ist **kein Fehler**, sondern heißt: der Guard (Override-Menge) passte nicht — der aktuelle Status stand nicht in der erlaubten Menge (typisch bei Events in falscher Reihenfolge oder fehlendem Vor-Event).
+
+## Standard-Konfiguration (Guarded State Machine)
+
+Eine neue Organisation startet mit dieser Event→Status-Zuordnung (`App\Support\DefaultTaskStatuses::EVENT_AUTOMATIONS`). Ein Event setzt seinen Zielstatus **nur**, wenn der aktuelle Status in der Guard-Menge liegt (`*` = aus jedem Status). Alle nicht aufgeführten Events (`CLAIMING`, `ANALYZED`, `PROCESSED`, `PUBLISHING`, `PUBLISHED`, `POLISHING`, `UNCLAIMING`, `REVIEWED`) haben **keinen** Zielstatus — sie sind reine Meldungen (No-op außer Log).
+
+| Event | Zielstatus | Guard (nur wenn aktueller Status …) |
+|---|---|---|
+| `CLAIMED` | `CLAIMED` | `PICKABLE` |
+| `ANALYZING` | `ANALYZING` | `CLAIMED` |
+| `PROCESSING` | `IN_PROGRESS` | `ANALYZING` |
+| `POLISHED` | `REVIEWBAR` | `IN_PROGRESS` |
+| `REVIEWING` | `IN_REVIEW` | `REVIEWBAR` |
+| `APPROVED` | `APPROVED` | `IN_REVIEW` |
+| `CHANGES_REQUESTED` | `IN_PROGRESS` | `IN_REVIEW` |
+| `MERGED` | `MERGED` | `APPROVED` |
+| `DEPLOYED` | `COMPLETED` | `MERGED` |
+| `CONCERNED` | `CONCERNED` | `*` |
+| `UNCLAIMED` | `PICKABLE` | `*` |
+
 ## Organisations-Verwaltung
 
 Je Event kann ein Status definiert werden, in den die Aufgabe geschoben wird. 
 Bleibt die Auswahl leer, verändert sich der Status nicht.
-Zusätzlich gibt es eine Auswahl, welche Status, die die Aufgabe gerade hat, überschrieben werden können.
+Zusätzlich gibt es eine Auswahl, welche Status, die die Aufgabe gerade hat, überschrieben werden können (die Guard-Menge; leer = aus jedem Status).
 
 Außerdem können je Event beliebig viele Felder der Aufgabe befüllt werden.
 Die Automatisierungen der gewählten Spalte werden hier als readonly angezeigt.

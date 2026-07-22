@@ -150,6 +150,36 @@ class Task extends Model
     }
 
     /**
+     * The board display-status KEY. `status_id` is the authority: a task in a
+     * real (non-waiting) org status shows THAT status' key — including custom
+     * statuses like REVIEWBAR/APPROVED that have no canonical TaskStatus enum.
+     * Only a *waiting* task is reduced to the gate-derived PICKABLE/BLOCKED
+     * placeholder (x_display_status). This mirrors {@see BoardPresenter} and
+     * prevents the placeholder from leaking out as "PICKABLE" for a task that
+     * is neither pickable nor waiting.
+     */
+    public function displayStatusKey(): ?string
+    {
+        if ($this->orgStatus !== null && $this->orgStatus->kind !== 'waiting') {
+            return $this->orgStatus->key;
+        }
+
+        return ($this->x_display_status ?? $this->status)?->value ?? $this->orgStatus?->key;
+    }
+
+    /**
+     * The localized label matching {@see displayStatusKey()}.
+     */
+    public function displayStatusLabel(): ?string
+    {
+        if ($this->orgStatus !== null && $this->orgStatus->kind !== 'waiting') {
+            return $this->orgStatus->label;
+        }
+
+        return ($this->x_display_status ?? $this->status)?->label() ?? $this->orgStatus?->label;
+    }
+
+    /**
      * Route-model binding by id *or* name: a numeric segment resolves by primary
      * key, anything else by the task's `name` (e.g. "C27"). Scoped bindings keep
      * this constrained to the parent project, so names only need to be unique per
