@@ -50,7 +50,10 @@ Alpine.store('notifications', {
     _retryMs: 1000,
 
     init() {
-        if (window.location.hostname !== NOTIFICATIONS_HOST) return;
+        if (window.location.hostname !== NOTIFICATIONS_HOST) {
+            console.info('[notifications] WebSocket-Verbindung deaktiviert: Nur auf ' + NOTIFICATIONS_HOST + ' verfügbar');
+            return;
+        }
         this.connect();
     },
 
