@@ -1,7 +1,7 @@
 ---
 name: planstack
 description: Planstack-Boards über die REST-API abarbeiten — projektübergreifend. Aufruf „/planstack <PROJECT>" (ganzes Board) oder „/planstack <PROJECT> <TASK>" (ein Task). Das Projekt kommt aus dem Argument, der Zugang aus config.json. Einziger Zustandsspeicher ist die API.
-argument-hint: [project] [task] | do [project] [task] | review | fix | settings | update-config | plan
+argument-hint: <project> [task] · do <project> [task] · review [project] [task] · fix [project] <task|pr> · plan [project] · settings · update-config [project]
 ---
 
 # Planstack (Remote, projektübergreifend)
