@@ -115,6 +115,7 @@ Alpine.store('notifications', {
         } catch (e) {
             data = raw;
         }
+        console.info('[notifications] Payload empfangen:', data);
         this.messages.unshift({ at: new Date().toISOString(), data });
         if (this.messages.length > NOTIFICATIONS_MAX) {
             this.messages.length = NOTIFICATIONS_MAX;
