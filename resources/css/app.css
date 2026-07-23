@@ -15,6 +15,18 @@
     .board-cell { animation: none; }
 }
 
+/* Projekt-Unterseiten (ProjectWorkspace): dezentes Ein-Blenden beim Tab-Wechsel.
+   Der Wrapper wird per key={tab} bei jedem Umschalten neu gemountet, dadurch
+   laeuft die Animation genau einmal beim Erscheinen des neuen Views. */
+@keyframes ps-view-in {
+    from { opacity: 0; transform: translateY(6px); }
+    to   { opacity: 1; transform: none; }
+}
+.ps-view-enter { animation: ps-view-in 200ms ease-out; }
+@media (prefers-reduced-motion: reduce) {
+    .ps-view-enter { animation: none; }
+}
+
 /* Board: Hervorheben einer Kachel nach einem per Pusher gelieferten Ereignis.
    Zwei Phasen: „hold" = statisch (bleibt, bis der Nutzer wieder fokussiert/
    interagiert), danach „fade" = über 10 s nach transparent ausblenden. Rot bei

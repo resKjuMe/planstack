@@ -107,19 +107,23 @@ export default function ProjectWorkspace({ activeTab, currentUserId, project, ca
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
                     <Flash status={flash?.status} error={flash?.error} errors={errors} />
 
-                    {tab === 'summary' ? (
-                        <SummaryView project={project} strings={summary.strings} />
-                    ) : tab === 'diagram' ? (
-                        <DiagramView project={project} currentUserId={currentUserId} strings={diagram.strings} />
-                    ) : tab === 'pr-sequence' ? (
-                        <PrSequenceView project={project} strings={sequence.strings} />
-                    ) : tab === 'calibration' ? (
-                        <CalibrationView project={project} strings={calibration.strings} />
-                    ) : tab === 'changelog' ? (
-                        <ChangelogView project={project} strings={changelog.strings} />
-                    ) : (
-                        <BoardView meta={board.meta} strings={board.strings} />
-                    )}
+                    {/* key={tab} → beim Umschalten neu gemountet, sodass die
+                        Einblend-Animation (.ps-view-enter) je View einmal laeuft. */}
+                    <div key={tab} className="ps-view-enter">
+                        {tab === 'summary' ? (
+                            <SummaryView project={project} strings={summary.strings} />
+                        ) : tab === 'diagram' ? (
+                            <DiagramView project={project} currentUserId={currentUserId} strings={diagram.strings} />
+                        ) : tab === 'pr-sequence' ? (
+                            <PrSequenceView project={project} strings={sequence.strings} />
+                        ) : tab === 'calibration' ? (
+                            <CalibrationView project={project} strings={calibration.strings} />
+                        ) : tab === 'changelog' ? (
+                            <ChangelogView project={project} strings={changelog.strings} />
+                        ) : (
+                            <BoardView meta={board.meta} strings={board.strings} />
+                        )}
+                    </div>
                 </div>
             </div>
         </>
