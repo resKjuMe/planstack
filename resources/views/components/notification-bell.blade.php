@@ -15,12 +15,12 @@
      {{ $attributes->merge(['class' => 'relative']) }}>
     <button type="button"
             @click="$store.notifications.toggle()"
-            :title="($store.notifications.enabled && !$store.notifications.connected)
+            :title="($store.notifications.enabled && $store.notifications.failed)
                 ? '{{ $labelOffline }}'
                 : ($store.notifications.count > 0
                     ? $store.notifications.count + ' {{ $labelNew }}'
                     : '{{ $labelBase }}')"
-            :aria-label="($store.notifications.enabled && !$store.notifications.connected)
+            :aria-label="($store.notifications.enabled && $store.notifications.failed)
                 ? '{{ $labelOffline }}'
                 : ($store.notifications.count > 0
                     ? $store.notifications.count + ' {{ $labelNew }}'
@@ -31,12 +31,12 @@
             <path d="M10.268 21a2 2 0 0 0 3.464 0"/>
             <path d="M3.262 15.326A1 1 0 0 0 4 17h16a1 1 0 0 0 .74-1.673C19.41 13.956 18 12.499 18 8A6 6 0 0 0 6 8c0 4.499-1.411 5.956-2.738 7.326"/>
         </svg>
-        {{-- Pill im Logo-Rot: bei aktiver, aber getrennter Verbindung ein „✕",
-             sonst die Anzahl neuer Nachrichten (nur wenn > 0). Ohne aktivierte
-             Glocke (kein Pusher/Org) bleibt sie leer. --}}
+        {{-- Pill im Logo-Rot: bei fehlgeschlagener Verbindung ein „✕" (NICHT
+             während des initialen Verbindens), sonst die Anzahl neuer
+             Nachrichten (nur wenn > 0). Ohne aktivierte Glocke bleibt sie leer. --}}
         <span x-cloak
-              x-show="($store.notifications.enabled && !$store.notifications.connected) || $store.notifications.count > 0"
-              x-text="($store.notifications.enabled && !$store.notifications.connected) ? '✕' : ($store.notifications.count > 99 ? '99+' : $store.notifications.count)"
+              x-show="($store.notifications.enabled && $store.notifications.failed) || $store.notifications.count > 0"
+              x-text="($store.notifications.enabled && $store.notifications.failed) ? '✕' : ($store.notifications.count > 99 ? '99+' : $store.notifications.count)"
               class="absolute -top-0.5 -end-0.5 inline-flex items-center justify-center min-w-[1.15rem] h-[1.15rem] px-1 rounded-full text-[10px] font-semibold leading-none text-white ring-2 ring-white dark:ring-gray-800"
               style="background-color:#FF4B3E">
         </span>

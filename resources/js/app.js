@@ -63,6 +63,7 @@ Alpine.store('notifications', {
     count: 0,            // ungelesene seit letztem Öffnen
     enabled: false,      // Pusher konfiguriert (Key + Organisation vorhanden)?
     connected: false,    // Verbindung steht (eigene ODER die des Leaders)?
+    failed: false,       // Verbindung fehlgeschlagen/unavailable (≠ „verbindet gerade")
     open: false,         // Flyout sichtbar?
     messages: [],        // letzte Nachrichten, neueste zuerst
     _pusher: null,       // nur im Leader-Tab gesetzt
@@ -118,12 +119,15 @@ Alpine.store('notifications', {
         this._pusher = pusher;
 
         // Verbindungsstatus → steuert das „✕" an der Glocke (und wird an die
-        // anderen Tabs verteilt).
-        pusher.connection.bind('connected', () => this._setConnected(true));
-        pusher.connection.bind('disconnected', () => this._setConnected(false));
-        pusher.connection.bind('unavailable', () => this._setConnected(false));
+        // anderen Tabs verteilt). Das „✕" erscheint NUR bei tatsächlich
+        // fehlgeschlagener Verbindung (unavailable/failed/disconnected), nicht
+        // während des initialen Verbindens (connecting/initialized).
+        pusher.connection.bind('state_change', ({ current }) => {
+            const connected = current === 'connected';
+            const failed = current === 'unavailable' || current === 'failed' || current === 'disconnected';
+            this._setState(connected, failed);
+        });
         pusher.connection.bind('error', (err) => {
-            this._setConnected(false);
             console.error('[notifications] Pusher-Verbindungsfehler:', err);
         });
 
@@ -138,9 +142,10 @@ Alpine.store('notifications', {
     },
 
     // Verbindungsstatus setzen und (als Leader) an die anderen Tabs verteilen.
-    _setConnected(value) {
-        this.connected = value;
-        if (this._bc) this._bc.postMessage({ type: 'state', connected: value });
+    _setState(connected, failed) {
+        this.connected = connected;
+        this.failed = failed;
+        if (this._bc) this._bc.postMessage({ type: 'state', connected, failed });
     },
 
     // Eine Nachricht verarbeiten (zählen, merken, ans Board weiterreichen).
@@ -158,9 +163,10 @@ Alpine.store('notifications', {
             this._ingest(msg.data, false); // nicht zurück-broadcasten
         } else if (msg.type === 'state') {
             this.connected = msg.connected;
+            this.failed = msg.failed;
         } else if (msg.type === 'state-request' && this._isLeader) {
             // Als Leader dem neu geöffneten Tab den aktuellen Status mitteilen.
-            if (this._bc) this._bc.postMessage({ type: 'state', connected: this.connected });
+            if (this._bc) this._bc.postMessage({ type: 'state', connected: this.connected, failed: this.failed });
         }
     },
 
