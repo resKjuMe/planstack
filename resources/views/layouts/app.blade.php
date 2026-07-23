@@ -39,24 +39,31 @@
         <div class="min-h-screen bg-gray-100 dark:bg-gray-900">
             @include('layouts.navigation')
 
-            <!-- Page Heading -->
-            @isset($header)
-                <header class="bg-white shadow dark:bg-gray-800 dark:shadow-black/30">
-                    <div class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
-                        {{ $header }}
-                    </div>
-                </header>
-            @endisset
+            {{-- Sticky page-header band (heading + optional sub-nav). position: sticky
+                 keeps it in the normal flow, so pinning it on scroll does NOT shift the
+                 rest of the page (unlike position: fixed). --}}
+            @if (isset($header) || isset($subheader))
+                <div class="sticky top-0 z-30">
+                    <!-- Page Heading -->
+                    @isset($header)
+                        <header class="bg-white shadow dark:bg-gray-800 dark:shadow-black/30">
+                            <div class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
+                                {{ $header }}
+                            </div>
+                        </header>
+                    @endisset
 
-            <!-- Optional sub-navigation directly under the page heading (e.g. the
-                 project tabs), spanning the full width in its own light band. -->
-            @isset($subheader)
-                <div class="bg-gray-50 border-b border-gray-200 dark:bg-gray-800/50 dark:border-gray-700">
-                    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                        {{ $subheader }}
-                    </div>
+                    <!-- Optional sub-navigation directly under the page heading (e.g. the
+                         project tabs), spanning the full width in its own light band. -->
+                    @isset($subheader)
+                        <div class="bg-gray-50 border-b border-gray-200 dark:bg-gray-800/50 dark:border-gray-700">
+                            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                                {{ $subheader }}
+                            </div>
+                        </div>
+                    @endisset
                 </div>
-            @endisset
+            @endif
 
             <!-- Page Content -->
             <main>
