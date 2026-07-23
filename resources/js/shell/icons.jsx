@@ -4,29 +4,22 @@ import React from 'react';
 // (layouts/navigation.blade.php, components/application-logo.blade.php), damit
 // das React-Grundgerüst optisch identisch bleibt. `className` wird durchgereicht.
 
+// Planstack-Logo: Bildmarke (public/images/planstack-logo.png) + Wortmarke.
+// Der Schriftzug ist hell/dunkel-adaptiv; das Bild wird als quadratische Kachel
+// gezeigt (der dunkle Glow-Hintergrund ist Teil der Marke).
 export function LogoIcon({ className = '' }) {
     return (
-        <svg viewBox="34 36 455.5 90" xmlns="http://www.w3.org/2000/svg" className={className}>
-            <g stroke="#FF4B3E" strokeWidth="4" strokeLinejoin="round" strokeLinecap="round" fill="none">
-                <path d="M106 81 L124 90 L80 112 L36 90 L54 81" />
-                <path d="M36 90 L36 102 L80 124 L124 102 L124 90" />
-                <path d="M80 112 L80 124" />
-                <path d="M80 38 L124 60 L80 82 L36 60 Z" />
-                <path d="M36 60 L36 72 L80 94 L80 82" />
-                <path d="M124 60 L124 72 L80 94" />
-            </g>
-            <text
-                x="160"
-                y="102"
-                fontFamily="'Inter', 'Segoe UI', 'DejaVu Sans', Arial, Helvetica, sans-serif"
-                fontSize="60"
-                fontWeight="600"
-                fill="#2B2B33"
-                className="dark:fill-gray-100"
-            >
+        <span className={`inline-flex items-center gap-2 ${className}`}>
+            <img
+                src="/images/planstack-logo.png"
+                alt=""
+                aria-hidden="true"
+                className="h-8 w-8 shrink-0 rounded-md"
+            />
+            <span className="text-xl font-semibold tracking-tight text-gray-800 dark:text-gray-100">
                 Planstack
-            </text>
-        </svg>
+            </span>
+        </span>
     );
 }
 

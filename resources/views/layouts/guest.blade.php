@@ -23,8 +23,9 @@
     <body class="font-sans text-gray-900 antialiased dark:text-gray-100">
         <div class="min-h-screen flex flex-col sm:justify-center items-center pt-6 sm:pt-0 bg-gray-100 dark:bg-gray-900">
             <div class="w-full flex justify-center">
-                <a href="/">
-                    <x-application-logo class="h-16 w-auto max-w-full" />
+                <a href="/" class="inline-flex items-center gap-3">
+                    <x-application-logo class="h-16 w-16 max-w-full" />
+                    <span class="text-3xl font-semibold tracking-tight text-gray-800 dark:text-gray-100">Planstack</span>
                 </a>
             </div>
 

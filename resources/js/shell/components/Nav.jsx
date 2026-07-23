@@ -40,7 +40,7 @@ export default function Nav({ shell }) {
                         {/* Logo */}
                         <div className="shrink-0 flex items-center">
                             <a href={shell.logoHref}>
-                                <LogoIcon className="block h-8 w-auto fill-current text-gray-800 dark:text-gray-200" />
+                                <LogoIcon />
                             </a>
                         </div>
 
