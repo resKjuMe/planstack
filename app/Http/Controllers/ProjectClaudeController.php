@@ -3,11 +3,14 @@
 namespace App\Http\Controllers;
 
 use App\Models\Project;
+use App\Support\ClaudeConfigPresenter;
 use App\Support\ProjectConfig;
+use App\Support\ProjectEditTabs;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
-use Illuminate\View\View;
+use Inertia\Inertia;
+use Inertia\Response as InertiaResponse;
 
 /**
  * The "Claude" sub-page of project editing: a web UI over the same board-protocol
@@ -16,20 +19,52 @@ use Illuminate\View\View;
  */
 class ProjectClaudeController extends Controller
 {
-    public function edit(Project $project): View
+    public function edit(Project $project, ClaudeConfigPresenter $presenter): InertiaResponse
     {
         $this->authorize('update', $project);
 
-        $stored = is_array($project->config) ? $project->config : [];
-
-        return view('projects.claude', [
-            'project' => $project,
-            'profile' => $stored['profile'] ?? \App\Support\ProjectConfig::DEFAULT_PROFILE,
-            'overrides' => $stored['overrides'] ?? [],
-            'effective' => $project->effectiveConfig(),
-            'clientHints' => $project->clientHints(),
-            'skillText' => $project->skill_description ?? '',
-        ]);
+        return Inertia::render('ProjectClaude', array_merge($presenter->props($project), [
+            'editTabs' => ProjectEditTabs::for($project, 'claude'),
+            'updateUrl' => route('projects.claude.update', $project),
+            'cancelUrl' => route('projects.show', $project),
+            'flash' => ['status' => session('status'), 'error' => session('error')],
+            'strings' => [
+                'editTitle' => __('projects.edit_project'),
+                'configuration' => __('claude.claude_configuration'),
+                'tokenSavingText' => __('claude.token_saving_switches_for_the_board'),
+                'headerText' => __('claude.header'),
+                'withoutExtraCall' => __('claude.without_an_extra_call'),
+                'tokenLoadPerOption' => __('claude.token_load_per_option'),
+                'low' => __('claude.low'),
+                'medium' => __('claude.medium'),
+                'high' => __('claude.high'),
+                'neutral' => __('claude.neutral'),
+                'profilePreset' => __('claude.profile_preset'),
+                'showHideExplanation' => __('common.show_hide_explanation'),
+                'presetIntro' => __('claude.a_preset_sets_the_base_values_of_all'),
+                'estimatedTokenUsage' => __('claude.estimated_token_usage_compared_to_the'),
+                'minimal10' => __('claude.minimal_1_0'),
+                'maximal' => __('claude.maximal'),
+                'roughEstimatePre' => __('claude.rough_estimate_of_the_board_task'),
+                'executionModel' => __('claude.execution_model'),
+                'and' => __('claude.and'),
+                'contextBetweenTasks' => __('claude.context_between_tasks'),
+                'defaultWord' => __('claude.default'),
+                'tokenLoad' => __('claude.token_load'),
+                'pro' => __('claude.pro'),
+                'con' => __('claude.con'),
+                'activeClientHints' => __('claude.active_client_hints'),
+                'serverTransmits' => __('claude.the_server_transmits_these_deviations'),
+                'noneBuiltIn' => __('claude.none_the_client_uses_its_built_in'),
+                'skillLabel' => __('claude.skill_instructions_skill_md'),
+                'skillHintPre' => __('claude.the_skill_receives_these_instructions'),
+                'skillHintMid' => __('claude.and_are_reloaded_automatically_by_the'),
+                'skillHintReplace' => __('claude.are_replaced_by_the_key_and_name'),
+                'skillPlaceholder' => __('claude.skill_instructions_for_this_project'),
+                'cancel' => __('common.cancel'),
+                'save' => __('common.save'),
+            ],
+        ]));
     }
 
     public function update(Request $request, Project $project): RedirectResponse
