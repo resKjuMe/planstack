@@ -16,14 +16,14 @@
 }
 
 /* Board: kurzzeitiges Hervorheben einer Kachel nach einem per WebSocket/Pusher
-   ausgelösten Statuswechsel. Startet im Logo-Rot (#FF4B3E) und blendet über 3 s
+   ausgelösten Statuswechsel. Startet im Logo-Rot (#FF4B3E) und blendet über 10 s
    nach transparent aus (Ring + zarter Hintergrund). Läuft einmalig beim
    (Re-)Mount der Karte in der Zielspalte. */
 @keyframes ps-highlight-fade {
     0%   { box-shadow: 0 0 0 3px rgb(255 75 62 / 0.9); background-color: rgb(255 75 62 / 0.14); }
     100% { box-shadow: 0 0 0 0 rgb(255 75 62 / 0); background-color: transparent; }
 }
-.ps-highlight { animation: ps-highlight-fade 3s ease-out; }
+.ps-highlight { animation: ps-highlight-fade 10s ease-out; }
 @media (prefers-reduced-motion: reduce) {
     .ps-highlight { animation: none; }
 }

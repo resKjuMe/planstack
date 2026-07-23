@@ -126,7 +126,7 @@ export default function Board({ data }) {
     // DOM-Event 'planstack:notification' weiter) ---
     // Bei { task_id, status_changed: true, status } wird die betroffene Kachel
     // – sofern auf diesem Board vorhanden und der Zielstatus bekannt ist – in
-    // die Statusspalte verschoben und kurz hervorgehoben (3 s Fade-out, CSS).
+    // die Statusspalte verschoben und kurz hervorgehoben (10 s Fade-out, CSS).
     const [highlightedIds, setHighlightedIds] = useState(() => new Set());
     // Refs, damit der Listener einmalig registriert wird und trotzdem stets die
     // aktuellen tasks/collapse sieht (kein Re-Subscribe pro Render).
@@ -163,7 +163,7 @@ export default function Board({ data }) {
                     return n;
                 });
                 highlightTimers.current.delete(d.task_id);
-            }, 3000);
+            }, 10000);
             highlightTimers.current.set(d.task_id, timer);
         };
 
