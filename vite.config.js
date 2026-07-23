@@ -9,7 +9,6 @@ export default defineConfig({
                 'resources/css/app.css',
                 'resources/js/app.js',
                 'resources/js/diagram.js',
-                'resources/js/board/index.jsx',
                 'resources/js/app.jsx',
             ],
             refresh: true,

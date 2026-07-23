@@ -7,12 +7,15 @@ use App\Enums\StatusRole;
 use App\Http\Requests\StoreProjectRequest;
 use App\Http\Requests\UpdateProjectRequest;
 use App\Models\Project;
+use App\Support\BoardPresenter;
 use App\Support\StatusSegments;
 use App\Support\TaskBoardService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\View\View;
+use Inertia\Inertia;
+use Inertia\Response as InertiaResponse;
 
 class ProjectController extends Controller
 {
@@ -112,18 +115,63 @@ class ProjectController extends Controller
             ->with('status', __('flash.project_created', ['alias' => $project->alias]));
     }
 
-    public function show(Project $project, \App\Support\BoardPresenter $presenter): View
+    public function show(Project $project, BoardPresenter $presenter): InertiaResponse
     {
         $this->authorize('view', $project);
 
         $project->load(['owner', 'phases']);
+        $user = Auth::user();
 
-        // The board itself is a React app hydrated from this payload (tasks +
-        // workflow config + view context). TaskBoardService/BoardPresenter build
-        // the same shape the drag-and-drop move endpoint returns.
-        return view('projects.show', [
-            'project' => $project,
-            'boardData' => $presenter->payload($project),
+        // Vollständig als React-Inertia-Seite (ProjectBoard): Kopfzeile, Tabs,
+        // Seitenkopf und das Kanban-Board sind React. Der Board-Zustand kommt aus
+        // BoardPresenter::payload() — dieselbe Form wie der board-move-Endpunkt.
+        $tabs = collect([
+            'diagram' => ['label' => __('common.diagram'), 'route' => 'projects.diagram'],
+            'pr-sequence' => ['label' => __('common.pr_sequence'), 'route' => 'projects.pr-sequence'],
+            'summary' => ['label' => __('common.summary'), 'route' => 'projects.summary'],
+            'board' => ['label' => __('common.board'), 'route' => 'projects.show'],
+            'changelog' => ['label' => __('common.changelog'), 'route' => 'projects.changelog'],
+            'calibration' => ['label' => __('common.calibration'), 'route' => 'projects.calibration'],
+        ])->map(fn (array $t, string $key) => [
+            'key' => $key,
+            'label' => $t['label'],
+            'href' => route($t['route'], $project),
+            'active' => $key === 'board',
+        ])->values()->all();
+
+        return Inertia::render('ProjectBoard', [
+            'project' => [
+                'alias' => $project->alias,
+                'name' => $project->name,
+                'showUrl' => route('projects.show', $project),
+                'editUrl' => route('projects.edit', $project),
+                'syncUrl' => route('projects.sync-prs', $project),
+                'taskCreateUrl' => route('projects.tasks.create', $project),
+            ],
+            'can' => [
+                'update' => $user->can('update', $project),
+                'contribute' => $user->can('contribute', $project),
+            ],
+            'tabs' => $tabs,
+            'board' => $presenter->payload($project),
+            'flash' => [
+                'status' => session('status'),
+                'error' => session('error'),
+            ],
+            'strings' => [
+                'boardTitle' => __('common.board'),
+                'showHideExplanation' => __('common.show_hide_explanation'),
+                'sync' => __('components.sync'),
+                'settings' => __('components.settings'),
+                'task' => __('components.task'),
+                'syncConfirm' => __('components.fetch_the_merge_status_of_all_open_prs'),
+                'helpBullets' => [
+                    ['strong' => __('common.board'), 'text' => __('projects.all_tasks_of_the_project_by_status_in')],
+                    ['text' => __('projects.each_card_shows_the_task_key_summary')],
+                    ['strong' => __('projects.claim_release'), 'text' => __('projects.claim_a_task_or_release_it_again')],
+                    ['text' => __('projects.who_has_access_and_which_role_applies')],
+                ],
+            ],
         ]);
     }
 

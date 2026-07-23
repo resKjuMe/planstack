@@ -2,12 +2,18 @@ import React from 'react';
 import { createRoot } from 'react-dom/client';
 import { createInertiaApp, router } from '@inertiajs/react';
 import BladePage from './shell/pages/BladePage.jsx';
+import ProjectBoard from './shell/pages/ProjectBoard.jsx';
 
-// „Inertia über Blade": Es gibt genau EINE Seitenkomponente (BladePage), die den
-// server-gerenderten Blade-Inhalt einbettet. Der Server liefert bei jeder
-// Navigation nur die Fragmente (Header/Subheader/Main) als Props.
+// Seiten-Registry: „BladePage" bettet noch nicht migrierte Blade-Seiten ein,
+// echte React-Seiten (z. B. ProjectBoard) werden namentlich aufgelöst. Unbekannte
+// Namen fallen auf BladePage zurück.
+const pages = {
+    BladePage,
+    ProjectBoard,
+};
+
 createInertiaApp({
-    resolve: () => BladePage,
+    resolve: (name) => pages[name] ?? BladePage,
     setup({ el, App, props }) {
         createRoot(el).render(<App {...props} />);
     },
