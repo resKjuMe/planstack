@@ -32,7 +32,7 @@ export function TaskCardView({
                 overlay ? 'cursor-grabbing shadow-lg rotate-1' : 'cursor-grab active:cursor-grabbing',
                 dragging ? 'opacity-40' : '',
                 dimmed ? 'opacity-40' : '',
-                highlight ? 'ps-highlight' : '',
+                highlight === 'update' ? 'ps-highlight-blue' : (highlight ? 'ps-highlight' : ''),
             ].join(' ')}
         >
             <div className="flex items-center justify-between gap-2">

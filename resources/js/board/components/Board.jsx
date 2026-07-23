@@ -122,12 +122,14 @@ export default function Board({ data }) {
 
     const collapse = useBoardCollapseState(data.projectId, defaultExpandedKeys);
 
-    // --- Live-Statuswechsel via Pusher (app.js reicht die Nutzlast als
-    // DOM-Event 'planstack:notification' weiter) ---
-    // Bei { task_id, status_changed: true, status } wird die betroffene Kachel
-    // – sofern auf diesem Board vorhanden und der Zielstatus bekannt ist – in
-    // die Statusspalte verschoben und kurz hervorgehoben (10 s Fade-out, CSS).
-    const [highlightedIds, setHighlightedIds] = useState(() => new Set());
+    // --- Live-Ereignisse via Pusher (app.js reicht die Nutzlast als DOM-Event
+    // 'planstack:notification' weiter) ---
+    // Für eine auf diesem Board vorhandene task_id:
+    //  • status_changed=true  → Kachel in die Zielspalte verschieben + ROT
+    //    hervorheben (10 s Fade-out).
+    //  • status_changed=false → nur BLAU hervorheben (kein Verschieben, 10 s).
+    // highlightedIds: Map task_id → Variante ('move' = rot, 'update' = blau).
+    const [highlightedIds, setHighlightedIds] = useState(() => new Map());
     // Refs, damit der Listener einmalig registriert wird und trotzdem stets die
     // aktuellen tasks/collapse sieht (kein Re-Subscribe pro Render).
     const tasksRef = useRef(tasks);
@@ -140,31 +142,38 @@ export default function Board({ data }) {
         const knownStatus = (s) =>
             workflow.columnOrder.includes(s) || workflow.exceptionStatuses.includes(s);
 
-        const onNotification = (e) => {
-            const d = e.detail;
-            if (! d || d.status_changed !== true || d.task_id == null || ! d.status) return;
-            if (! knownStatus(d.status)) return; // unbekannte Spalte → Kachel nicht „verschwinden" lassen
-            if (! tasksRef.current.some((tk) => tk.id === d.task_id)) return; // nicht auf diesem Board
-
-            setTasks((prev) =>
-                prev.map((tk) =>
-                    tk.id === d.task_id ? { ...tk, status: d.status, displayStatus: d.status } : tk,
-                ),
-            );
-            collapseRef.current.setCollapsed(d.status, false); // Zielspalte sichtbar halten
-
-            setHighlightedIds((prev) => new Set(prev).add(d.task_id));
-            const existing = highlightTimers.current.get(d.task_id);
+        const highlight = (taskId, variant) => {
+            setHighlightedIds((prev) => new Map(prev).set(taskId, variant));
+            const existing = highlightTimers.current.get(taskId);
             if (existing) clearTimeout(existing);
             const timer = setTimeout(() => {
                 setHighlightedIds((prev) => {
-                    const n = new Set(prev);
-                    n.delete(d.task_id);
+                    const n = new Map(prev);
+                    n.delete(taskId);
                     return n;
                 });
-                highlightTimers.current.delete(d.task_id);
+                highlightTimers.current.delete(taskId);
             }, 10000);
-            highlightTimers.current.set(d.task_id, timer);
+            highlightTimers.current.set(taskId, timer);
+        };
+
+        const onNotification = (e) => {
+            const d = e.detail;
+            if (! d || d.task_id == null) return;
+            if (! tasksRef.current.some((tk) => tk.id === d.task_id)) return; // nicht auf diesem Board
+
+            if (d.status_changed === true) {
+                if (! d.status || ! knownStatus(d.status)) return; // unbekannte Spalte → nicht „verschwinden" lassen
+                setTasks((prev) =>
+                    prev.map((tk) =>
+                        tk.id === d.task_id ? { ...tk, status: d.status, displayStatus: d.status } : tk,
+                    ),
+                );
+                collapseRef.current.setCollapsed(d.status, false); // Zielspalte sichtbar halten
+                highlight(d.task_id, 'move'); // rot
+            } else if (d.status_changed === false) {
+                highlight(d.task_id, 'update'); // blau, ohne Verschieben
+            }
         };
 
         window.addEventListener('planstack:notification', onNotification);
@@ -254,7 +263,7 @@ export default function Board({ data }) {
                 csrf={csrf}
                 endpoints={endpoints}
                 dimmed={filters.highlightBlocked && ! task.isBlocked}
-                highlight={highlightedIds.has(task.id)}
+                highlight={highlightedIds.get(task.id) ?? null}
                 transitions={workflow.transitions}
                 labels={workflow.labels}
                 columnOrder={workflow.columnOrder}

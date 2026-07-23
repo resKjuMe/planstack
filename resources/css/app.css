@@ -24,8 +24,17 @@
     100% { box-shadow: 0 0 0 0 rgb(255 75 62 / 0); background-color: transparent; }
 }
 .ps-highlight { animation: ps-highlight-fade 10s ease-out; }
+
+/* Board: Hervorheben ohne Statuswechsel (status_changed=false) — blau statt rot,
+   ebenfalls 10 s Fade-out. */
+@keyframes ps-highlight-fade-blue {
+    0%   { box-shadow: 0 0 0 3px rgb(59 130 246 / 0.9); background-color: rgb(59 130 246 / 0.14); }
+    100% { box-shadow: 0 0 0 0 rgb(59 130 246 / 0); background-color: transparent; }
+}
+.ps-highlight-blue { animation: ps-highlight-fade-blue 10s ease-out; }
 @media (prefers-reduced-motion: reduce) {
-    .ps-highlight { animation: none; }
+    .ps-highlight,
+    .ps-highlight-blue { animation: none; }
 }
 
 /* Globale Tooltips (siehe resources/js/tooltip.js): gestylter Ersatz fuer die
