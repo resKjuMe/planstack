@@ -14,6 +14,27 @@ import { fetchProjectTasks, fetchTask, fetchPhases, fetchStatusConfig } from './
 /** @type {Map<string, object>} alias → slice */
 const slices = new Map();
 
+// ORG-weite Status-Konfiguration: einmal laden, über alle Projekte/Unterseiten
+// UND die Projektübersicht teilen (Punkt 3: in Unterseiten nicht neu laden, wenn
+// bereits gesetzt).
+let sharedStatusConfig = null;
+let statusConfigPromise = null;
+
+export function getStatusConfig() {
+    return sharedStatusConfig;
+}
+
+export function ensureStatusConfig() {
+    if (sharedStatusConfig) return Promise.resolve(sharedStatusConfig);
+    if (!statusConfigPromise) {
+        statusConfigPromise = fetchStatusConfig().then((cfg) => {
+            sharedStatusConfig = cfg;
+            return cfg;
+        });
+    }
+    return statusConfigPromise;
+}
+
 function createSlice(alias) {
     return {
         alias,
@@ -85,7 +106,7 @@ export async function ensureLoaded(alias) {
         const [tasks, phases, statusConfig] = await Promise.all([
             fetchProjectTasks(alias),
             fetchPhases(alias),
-            fetchStatusConfig(alias),
+            ensureStatusConfig(),
         ]);
         s.tasks = new Map(tasks.map((t) => [t.id, t]));
         s.phases = phases;

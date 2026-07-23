@@ -17,10 +17,12 @@ class ProjectController extends Controller
 {
     public function index(): InertiaResponse
     {
-        // Die Projektliste lädt ihre Karten clientseitig über
-        // GET /api/projects?view=cards (ProjectCardPresenter) und aktualisiert sich
-        // live per entity-changed. Diese Seite liefert nur die statischen Props.
+        // Die Projektliste lädt Projekte über GET /api/projects und die restlichen
+        // Infos (Tasks je Projekt → Zähler/SP/Segmente) über GET /api/tasks; die
+        // Karten werden clientseitig abgeleitet und per entity-changed live
+        // aktualisiert. Diese Seite liefert nur statische Props + i18n-Templates.
         return Inertia::render('ProjectsIndex', [
+            'currentUserId' => Auth::id(),
             'filters' => [
                 ['key' => 'all', 'label' => __('common.all')],
                 ['key' => 'mine', 'label' => __('projects.my_projects')],
@@ -39,6 +41,17 @@ class ProjectController extends Controller
                 'progress' => __('common.progress'),
                 'tasks' => __('common.tasks'),
                 'loading' => __('status.loading'),
+                // Kategorie-Labels (Karten-Badge)
+                'notStarted' => __('projects.not_started'),
+                'inProgress' => __('projects.in_progress'),
+                'almostDone' => __('projects.almost_done'),
+                'completed' => __('projects.completed'),
+                // Kopfzeile + Karte (Roh-Templates / Singular-Plural)
+                'projectSingular' => __('projects.project'),
+                'projectsPlural' => __('common.projects'),
+                'countOpenTasks' => __('projects.count_open_tasks'),
+                'countStoryPoints' => __('projects.count_story_points'),
+                'countTasks' => __('projects.count_tasks'),
             ],
         ]);
     }

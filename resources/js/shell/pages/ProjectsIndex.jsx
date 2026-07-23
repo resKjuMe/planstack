@@ -4,22 +4,36 @@ import AppShell from '../AppShell.jsx';
 import PageBands from '../components/PageBands.jsx';
 import Flash from '../components/Flash.jsx';
 import { useProjectsList } from '../../projects/useProjectsList.js';
+import { deriveProjectCards } from '../../projects/derive.js';
 
 // Projektliste (ehemals projects/index.blade.php) als React-Inertia-Seite:
-// Kopfzeile, Suche und Filter-Pills sind React-State. Die Projektkarten werden
-// clientseitig über GET /api/projects?view=cards geladen (gecacht) und
-// aktualisieren sich live per entity-changed (Project insert/update/delete sowie
-// Task-/Phasen-Änderungen). Diese Seite liefert nur statische Props.
-export default function ProjectsIndex({ filters, flash, strings }) {
+// Kopfzeile, Suche und Filter-Pills sind React-State. Die Projekte kommen über
+// GET /api/projects, die restlichen Infos (Tasks) über GET /api/tasks; die Karten
+// werden clientseitig abgeleitet und per entity-changed live aktualisiert
+// (Project insert/update/delete sowie Task-/Phasen-Änderungen). Diese Seite liefert
+// nur statische Props + i18n-Templates.
+export default function ProjectsIndex({ currentUserId, filters, flash, strings }) {
     const { errors } = usePage().props;
-    const { projects, summaryLine, status, error } = useProjectsList();
+    const { projects, tasks, statusConfig, status, error } = useProjectsList();
     const [q, setQ] = useState('');
     const [filter, setFilter] = useState('all');
+
+    const { cards, summaryLine } = useMemo(() => {
+        if (status !== 'ready' || !statusConfig) return { cards: [], summaryLine: '' };
+        return deriveProjectCards({
+            projects,
+            tasks,
+            statusConfig,
+            currentUserId,
+            strings,
+            locale: (typeof document !== 'undefined' && document.documentElement.getAttribute('lang')) || 'de-DE',
+        });
+    }, [projects, tasks, statusConfig, status, currentUserId, strings]);
 
     const query = q.trim().toLowerCase();
     const visible = useMemo(
         () =>
-            projects.filter((c) => {
+            cards.filter((c) => {
                 if ((filter === 'archived') !== c.archived) return false;
                 const catMatch =
                     filter === 'archived' ||
@@ -29,7 +43,7 @@ export default function ProjectsIndex({ filters, flash, strings }) {
                 if (!catMatch) return false;
                 return query === '' || c.searchText.includes(query);
             }),
-        [projects, filter, query],
+        [cards, filter, query],
     );
 
     return (
@@ -88,18 +102,18 @@ export default function ProjectsIndex({ filters, flash, strings }) {
                         ))}
                     </div>
 
-                    {status === 'loading' && projects.length === 0 && (
+                    {status === 'loading' && cards.length === 0 && (
                         <p className="mt-6 text-sm text-gray-400 dark:text-gray-500">{strings.loading}</p>
                     )}
                     {status === 'error' && (
                         <p className="mt-6 text-sm text-red-600 dark:text-red-400">{error || 'Fehler'}</p>
                     )}
-                    {status === 'ready' && projects.length === 0 && (
+                    {status === 'ready' && cards.length === 0 && (
                         <div className="mt-6 bg-white dark:bg-gray-800 rounded-lg shadow p-8 text-center text-gray-500 dark:text-gray-400">
                             {strings.noProjects}
                         </div>
                     )}
-                    {projects.length > 0 && (
+                    {cards.length > 0 && (
                         <div className="mt-6 grid items-stretch gap-4 sm:grid-cols-2 lg:grid-cols-3">
                             {visible.map((card) => (
                                 <ProjectCard key={card.alias} card={card} strings={strings} />
@@ -133,11 +147,8 @@ function ProjectCard({ card, strings }) {
                 <h3 className="mt-3 text-lg font-semibold text-gray-900 dark:text-gray-100">
                     <a href={card.diagramUrl} className="hover:underline">{card.name}</a>
                 </h3>
-                {card.descriptionHtml && (
-                    <div
-                        className="md-content mt-1 text-sm text-gray-500 dark:text-gray-400 line-clamp-2"
-                        dangerouslySetInnerHTML={{ __html: card.descriptionHtml }}
-                    />
+                {card.description && (
+                    <p className="mt-1 text-sm text-gray-500 dark:text-gray-400 line-clamp-2 whitespace-pre-line">{card.description}</p>
                 )}
 
                 <div className="mt-auto pt-5">

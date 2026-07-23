@@ -40,6 +40,36 @@ class TaskController extends ApiController
     }
 
     /**
+     * GET /api/tasks — alle Tasks der zugänglichen Projekte (org-weit), dekoriert
+     * und mit vollem Feldumfang (dieselben Relationen wie der Board-Read), sodass
+     * der geteilte Client-Store daraus sowohl die Projektübersicht (Aggregate/
+     * Segmente je Projekt) als auch die Projekt-Unterseiten speisen kann.
+     */
+    public function all(Request $request): JsonResource
+    {
+        $user = $request->user();
+        $userId = $user->id;
+        $isOrgOwner = $user->organization?->isOwner($user) === true;
+
+        $projects = Project::query()
+            ->where('organization_id', $user->organization_id)
+            ->when(! $isOrgOwner, fn ($q) => $q
+                ->where(fn ($inner) => $inner
+                    ->where('created_by_id', $userId)
+                    ->orWhereHas('teams.members', fn ($m) => $m->where('users.id', $userId))))
+            ->get();
+
+        $tasks = collect();
+        foreach ($projects as $project) {
+            $decorated = $this->board->board($project);
+            $decorated->loadMissing(['phase', 'claimer', 'reviewer', 'concern', 'prerequisites.orgStatus', 'pullRequests']);
+            $tasks = $tasks->merge($decorated);
+        }
+
+        return TaskResource::collection($tasks->values());
+    }
+
+    /**
      * GET /api/projects/{project}/tasks/{task} — one task, decorated.
      */
     public function show(Project $project, Task $task): JsonResource

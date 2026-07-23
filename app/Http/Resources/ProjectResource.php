@@ -21,10 +21,17 @@ class ProjectResource extends JsonResource
             'alias' => $this->alias,
             'name' => $this->name,
             'description' => $this->description,
+            'created_by_id' => $this->created_by_id,
+            'archived_at' => $this->archived_at,
+            'completed_at' => $this->completed_at,
             'owner' => $this->whenLoaded('owner', fn () => [
                 'id' => $this->owner?->id,
                 'name' => $this->owner?->name,
             ]),
+            'teams' => $this->whenLoaded('teams', fn () => $this->teams->map(fn ($t) => [
+                'id' => $t->id,
+                'name' => $t->name,
+            ])->values()),
             'is_owner' => $this->when(
                 $request->user() !== null,
                 fn () => $this->isOwner($request->user()),

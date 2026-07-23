@@ -79,9 +79,34 @@ class StatusSegments
      */
     public function config(Project $project): array
     {
-        $ordered = $this->ordered($project);
+        return $this->configForStatuses($project->organization->statuses()->get());
+    }
 
-        $statuses = $ordered->map(fn (OrgStatus $s) => [
+    /**
+     * Org-weite Variante (unabhängig vom einzelnen Projekt) — genutzt vom
+     * org-weiten Endpunkt GET /api/status-config, den der Client EINMAL lädt und
+     * über alle Projekte/Unterseiten wiederverwendet.
+     *
+     * @return array{statuses: array<int, array<string, mixed>>, roleKey: array<string, string>}
+     */
+    public function configForOrganization(\App\Models\Organization $organization): array
+    {
+        return $this->configForStatuses($organization->statuses()->get());
+    }
+
+    /**
+     * @param  Collection<int, OrgStatus>  $statuses
+     * @return array{statuses: array<int, array<string, mixed>>, roleKey: array<string, string>}
+     */
+    private function configForStatuses(Collection $statuses): array
+    {
+        $ordered = $statuses->sort(function (OrgStatus $a, OrgStatus $b) {
+            $rank = self::kindRank($a->kind) <=> self::kindRank($b->kind);
+
+            return $rank !== 0 ? $rank : $b->position <=> $a->position;
+        })->values();
+
+        $mapped = $ordered->map(fn (OrgStatus $s) => [
             'key' => $s->key,
             'label' => $this->label($s),
             'kind' => $s->kind,
@@ -101,7 +126,7 @@ class StatusSegments
             ->mapWithKeys(fn (OrgStatus $s) => [$s->role->value => $s->key])
             ->all();
 
-        return ['statuses' => $statuses, 'roleKey' => $roleKey];
+        return ['statuses' => $mapped, 'roleKey' => $roleKey];
     }
 
     /**

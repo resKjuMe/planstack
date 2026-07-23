@@ -8,7 +8,6 @@ use App\Http\Resources\ProjectResource;
 use App\Http\Resources\TaskResource;
 use App\Models\Project;
 use App\Models\Task;
-use App\Support\ProjectCardPresenter;
 use App\Support\ProjectConfig;
 use App\Support\TaskBoardService;
 use Illuminate\Http\JsonResponse;
@@ -24,19 +23,10 @@ class ProjectController extends ApiController
 
     /**
      * GET /api/projects — projects the token user can access.
-     *
-     * `?view=cards` liefert stattdessen das aufbereitete Karten-Payload für die
-     * React-Projektübersicht (Fortschritt, Status-Segmente, Kategorie/Besitzer) —
-     * additiv, der Standard (ProjectResource) bleibt unverändert.
      */
-    public function index(Request $request, ProjectCardPresenter $cards): JsonResource|JsonResponse
+    public function index(Request $request): JsonResource
     {
         $user = $request->user();
-
-        if ($request->query('view') === 'cards') {
-            return response()->json($cards->webPayload($user));
-        }
-
         $userId = $user->id;
         $isOrgOwner = $user->organization?->isOwner($user) === true;
 
@@ -47,7 +37,7 @@ class ProjectController extends ApiController
                     ->where('created_by_id', $userId)
                     ->orWhereHas('teams.members', fn ($m) => $m->where('users.id', $userId))))
             ->withCount('tasks')
-            ->with('owner')
+            ->with(['owner', 'teams:id,name'])
             ->latest()
             ->get();
 

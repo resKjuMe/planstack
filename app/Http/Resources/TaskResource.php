@@ -100,6 +100,7 @@ class TaskResource extends JsonResource
             'status_label' => $this->status?->label() ?? $this->orgStatus?->label,
             'display_status' => $this->displayStatusKey(),
             'display_status_label' => $this->displayStatusLabel(),
+            'project_id' => $this->project_id,
             'phase_id' => $this->phase_id,
             'phase' => $this->whenLoaded('phase', fn () => [
                 'id' => $this->phase?->id,

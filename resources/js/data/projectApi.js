@@ -37,10 +37,21 @@ export async function fetchPhases(alias) {
 }
 
 /**
- * Org-Status-Konfiguration für die clientseitige Summary-Ableitung
- * ({ statuses, roleKey }). Kein Resource-Wrapper — der Controller liefert das
- * Objekt direkt.
+ * ORG-weite Status-Konfiguration ({ statuses, roleKey }) — einmal laden, über alle
+ * Projekte/Unterseiten wiederverwenden. Kein Resource-Wrapper (Objekt direkt).
  */
-export async function fetchStatusConfig(alias) {
-    return getJson(`/api/projects/${encodeURIComponent(alias)}/status-config`);
+export async function fetchStatusConfig() {
+    return getJson('/api/status-config');
+}
+
+/** Alle zugänglichen Projekte (org-weit) — schlanke ProjectResource-Collection. */
+export async function fetchProjects() {
+    const body = await getJson('/api/projects');
+    return body.data ?? [];
+}
+
+/** Alle Tasks der zugänglichen Projekte (org-weit), voller Feldumfang. */
+export async function fetchAllTasks() {
+    const body = await getJson('/api/tasks?fields=full');
+    return body.data ?? [];
 }

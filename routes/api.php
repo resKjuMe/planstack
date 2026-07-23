@@ -47,8 +47,13 @@ Route::middleware('auth:sanctum')->group(function () {
     // Review: nächsten in-review Task mit PR zum Review übernehmen (Auto-Pick).
     Route::post('projects/{project}/review-next', [TaskController::class, 'reviewNext']);
 
-    // Org-Status-Konfiguration für den geteilten React-Store (Summary-Ableitung).
-    Route::get('projects/{project}/status-config', [StatusConfigController::class, 'show']);
+    // Org-weite Status-Konfiguration für den geteilten React-Store (einmal laden,
+    // über alle Projekte/Unterseiten wiederverwenden).
+    Route::get('status-config', [StatusConfigController::class, 'show']);
+
+    // Alle Tasks der zugänglichen Projekte (org-weit) — Datenbasis für die
+    // Projektübersicht und (potenziell) die Unterseiten.
+    Route::get('tasks', [TaskController::class, 'all']);
 
     // Paginierter Changelog-Feed für die React-Changelog-Seite.
     Route::get('projects/{project}/changelog', [ChangelogController::class, 'show']);

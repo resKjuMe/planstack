@@ -1,14 +1,18 @@
 import { useCallback, useEffect, useSyncExternalStore } from 'react';
+import { fetchProjects, fetchAllTasks } from '../data/projectApi';
+import { ensureStatusConfig } from '../data/projectStore';
 
-// Gecachter Loader für die Projektübersicht: lädt die Karten einmalig über
-// GET /api/projects?view=cards und aktualisiert sich live, wenn irgendein Projekt
-// (oder ein Task/eine Phase darin) sich ändert — die entity-changed-Events lösen
-// einen entprellten Refetch aus (neue/gelöschte Projekte, Fortschritt, Segmente).
-// Eine einzige org-weite Liste → ein Slice ohne Alias-Key.
+// Gecachter Loader für die Projektübersicht: lädt die Projekte (GET /api/projects),
+// alle Tasks org-weit (GET /api/tasks) und die org-weite Status-Konfiguration
+// (einmalig, geteilt mit den Unterseiten). Die Karten leitet die View clientseitig
+// daraus ab. Bei jeder Entity-Änderung (Project insert/update/delete sowie
+// Task-/Phasen-Änderungen) wird entprellt neu geladen. Eine org-weite Liste → ein
+// Slice ohne Key.
 
 const slice = {
     projects: [],
-    summaryLine: '',
+    tasks: [],
+    statusConfig: null,
     status: 'idle', // idle | loading | ready | error
     error: null,
     listeners: new Set(),
@@ -20,7 +24,8 @@ const slice = {
 function rebuild() {
     slice.snapshot = {
         projects: slice.projects,
-        summaryLine: slice.summaryLine,
+        tasks: slice.tasks,
+        statusConfig: slice.statusConfig,
         status: slice.status,
         error: slice.error,
     };
@@ -40,15 +45,15 @@ async function load() {
     }
 
     try {
-        const res = await fetch('/api/projects?view=cards', {
-            headers: { Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
-            credentials: 'same-origin',
-        });
-        const body = await res.json().catch(() => ({}));
+        const [projects, tasks, statusConfig] = await Promise.all([
+            fetchProjects(),
+            fetchAllTasks(),
+            ensureStatusConfig(),
+        ]);
         if (token !== slice.seq) return; // veraltet
-        if (!res.ok) throw new Error(body.message || `HTTP ${res.status}`);
-        slice.projects = body.projects ?? [];
-        slice.summaryLine = body.summaryLine ?? '';
+        slice.projects = projects;
+        slice.tasks = tasks;
+        slice.statusConfig = statusConfig;
         slice.status = 'ready';
         slice.error = null;
         notify();
@@ -65,7 +70,7 @@ export function ensureProjectsList() {
 }
 
 // entity-changed feuert je Änderung (auch in Bursts) — entprellt sammeln und still
-// nachladen. Nur, wenn die Liste schon einmal geladen wurde (sonst kein Bedarf).
+// nachladen. Nur, wenn die Liste schon einmal geladen wurde.
 if (typeof window !== 'undefined') {
     window.addEventListener('planstack:entity-changed', () => {
         if (slice.status === 'idle') return;

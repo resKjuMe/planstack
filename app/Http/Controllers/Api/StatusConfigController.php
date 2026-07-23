@@ -2,24 +2,27 @@
 
 namespace App\Http\Controllers\Api;
 
-use App\Models\Project;
 use App\Support\StatusSegments;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 
 /**
- * GET /api/projects/{project}/status-config — die Org-Status-Konfiguration
- * (geordnete Statuses inkl. Styling + done/delivered-Flags + role→key-Map), die
- * der geteilte React-Store einmalig lädt, um Summary-Balken, -KPIs und -Blocker
- * clientseitig aus den Tasks abzuleiten. Pro Org/Locale konstant → einmalig.
+ * GET /api/status-config — die ORG-weite Status-Konfiguration (geordnete Statuses
+ * inkl. Styling + done/delivered-Flags + Icon + role→key-Map). Der geteilte
+ * React-Store lädt sie EINMAL und verwendet sie über die Projektübersicht UND alle
+ * Projekt-Unterseiten hinweg (kein erneutes Laden pro Projekt). Pro Org/Locale
+ * konstant.
  */
 class StatusConfigController extends ApiController
 {
     public function __construct(private readonly StatusSegments $segments) {}
 
-    public function show(Project $project): JsonResponse
+    public function show(Request $request): JsonResponse
     {
-        $this->authorize('view', $project);
+        $organization = $request->user()?->organization;
 
-        return response()->json($this->segments->config($project));
+        abort_if($organization === null, 403);
+
+        return response()->json($this->segments->configForOrganization($organization));
     }
 }
