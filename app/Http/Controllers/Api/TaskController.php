@@ -171,6 +171,11 @@ class TaskController extends ApiController
             $task->prerequisites()->sync(
                 $this->resolveGate($project, $request->input('gate', []), excludeTaskId: $task->id)
             );
+            // Pivot-Sync feuert kein Task-Event; nur wenn oben KEINE Felder
+            // aktualisiert wurden (sonst hat $task->update bereits gebroadcastet).
+            if ($data === []) {
+                $task->emitEntityChange('update');
+            }
         }
 
         return new TaskResource($this->decorateOne($project, $task));
@@ -259,6 +264,11 @@ class TaskController extends ApiController
                 ->update($attrs);
 
             if ($claimed === 1) {
+                // Query-Builder-Update umgeht Eloquent-Events → entity-changed
+                // (Socket) explizit anstoßen, damit offene Boards nachladen.
+                $candidate->setRelation('project', $project);
+                $candidate->emitEntityChange('update');
+
                 return new TaskResource($this->decorateOne($project, $candidate));
             }
         }
@@ -297,6 +307,10 @@ class TaskController extends ApiController
                 ->update(['reviewed_by' => $request->user()->id]);
 
             if ($claimed === 1) {
+                // Query-Builder-Update umgeht Eloquent-Events → Socket explizit anstoßen.
+                $candidate->setRelation('project', $project);
+                $candidate->emitEntityChange('update');
+
                 return $this->reviewResource($project, $candidate);
             }
         }
@@ -493,6 +507,10 @@ class TaskController extends ApiController
 
         $gate = $this->resolveGate($project, $request->input('gate', []), excludeTaskId: $task->id);
         $task->prerequisites()->sync($gate);
+
+        // Gate-Änderung ist ein Pivot-Sync (keine Task-Spalte) → kein Eloquent-
+        // Event. Socket explizit anstoßen, da sich blocked/pickable ändern kann.
+        $task->emitEntityChange('update');
 
         return new TaskResource($this->decorateOne($project, $task));
     }
