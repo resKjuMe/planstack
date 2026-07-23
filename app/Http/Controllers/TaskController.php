@@ -11,10 +11,13 @@ use App\Support\BoardPresenter;
 use App\Support\OrgBoardWorkflow;
 use App\Support\StatusEffects;
 use App\Support\TaskBoardService;
+use App\Support\TaskFormPresenter;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
+use Inertia\Inertia;
+use Inertia\Response as InertiaResponse;
 
 class TaskController extends Controller
 {
@@ -24,14 +27,24 @@ class TaskController extends Controller
         private readonly \App\Support\TaskStatusService $statuses,
     ) {}
 
-    public function create(Project $project): View
+    public function create(Project $project, TaskFormPresenter $formPresenter): InertiaResponse
     {
         $this->authorize('contribute', $project);
 
         $project->load('phases');
         $candidates = $project->tasks()->orderBy('name')->get(['id', 'name', 'summary']);
 
-        return view('tasks.create', compact('project', 'candidates'));
+        $props = $formPresenter->shared($project);
+        $props['strings']['title'] = __('tasks.new_task');
+        $props['strings']['submit'] = __('tasks.create_task');
+
+        return Inertia::render('TaskCreate', array_merge($props, [
+            'project' => ['alias' => $project->alias, 'showUrl' => route('projects.show', $project)],
+            'candidates' => $candidates->map(fn ($c) => ['id' => $c->id, 'name' => $c->name, 'summary' => $c->summary])->values(),
+            'showReview' => false,
+            'storeUrl' => route('projects.tasks.store', $project),
+            'flash' => ['status' => session('status'), 'error' => session('error')],
+        ]));
     }
 
     public function store(StoreTaskRequest $request, Project $project): RedirectResponse
@@ -65,7 +78,7 @@ class TaskController extends Controller
         return view('tasks.show', compact('project', 'task'));
     }
 
-    public function edit(Project $project, Task $task): View
+    public function edit(Project $project, Task $task, TaskFormPresenter $formPresenter): InertiaResponse
     {
         $this->authorize('update', $task);
 
@@ -73,7 +86,47 @@ class TaskController extends Controller
         $candidates = $project->tasks()->whereKeyNot($task->id)->orderBy('name')->get(['id', 'name', 'summary']);
         $selected = $task->prerequisites()->pluck('tasks.id')->all();
 
-        return view('tasks.edit', compact('project', 'task', 'candidates', 'selected'));
+        $props = $formPresenter->shared($project);
+        $props['strings']['title'] = __('tasks.edit_task');
+        $props['strings']['submit'] = __('common.save');
+        $props['strings']['deleteTitle'] = __('tasks.delete_task');
+        $props['strings']['deleteConfirm'] = __('tasks.really_delete_this_task');
+        $props['strings']['delete'] = __('common.delete');
+
+        return Inertia::render('TaskEdit', array_merge($props, [
+            'project' => ['alias' => $project->alias],
+            'candidates' => $candidates->map(fn ($c) => ['id' => $c->id, 'name' => $c->name, 'summary' => $c->summary])->values(),
+            'showReview' => $task->status === TaskStatus::IN_REVIEW,
+            'canDelete' => auth()->user()->can('delete', $task),
+            'updateUrl' => route('projects.tasks.update', [$project, $task]),
+            'destroyUrl' => route('projects.tasks.destroy', [$project, $task]),
+            'showUrl' => route('projects.tasks.show', [$project, $task]),
+            'flash' => ['status' => session('status'), 'error' => session('error')],
+            'task' => [
+                'name' => $task->name,
+                'values' => [
+                    'name' => $task->name,
+                    'status' => $task->status?->value ?? 'UNKNOWN',
+                    'summary' => $task->summary ?? '',
+                    'criticality' => $task->criticality?->value ?? '',
+                    'description' => $task->description ?? '',
+                    'description_acceptance_criteria' => $task->description_acceptance_criteria ?? '',
+                    'description_target_actual' => $task->description_target_actual ?? '',
+                    'description_test_cases' => $task->description_test_cases ?? '',
+                    'phase_id' => $task->phase_id ?? '',
+                    'effort_man_days' => $task->effort_man_days ?? '',
+                    'effort_story_points' => $task->effort_story_points ?? '',
+                    'effort_tokens' => $task->effort_tokens ?? '',
+                    'affected_files' => $task->affected_files ?? '',
+                    'pr_number' => $task->pr_number ?? '',
+                    'reviewed_by' => $task->reviewed_by ?? '',
+                    'last_review_recommendation' => $task->last_review_recommendation?->value ?? '',
+                    'last_reviewed_at' => $task->last_reviewed_at?->format('Y-m-d\TH:i') ?? '',
+                    'last_review_summary' => $task->last_review_summary ?? '',
+                    'prerequisites' => $selected,
+                ],
+            ],
+        ]));
     }
 
     public function update(UpdateTaskRequest $request, Project $project, Task $task): RedirectResponse
