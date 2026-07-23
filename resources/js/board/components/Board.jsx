@@ -126,35 +126,63 @@ export default function Board({ data }) {
     // 'planstack:notification' weiter) ---
     // Für eine auf diesem Board vorhandene task_id:
     //  • status_changed=true  → Kachel in die Zielspalte verschieben + ROT
-    //    hervorheben (10 s Fade-out).
-    //  • status_changed=false → nur BLAU hervorheben (kein Verschieben, 10 s).
-    // highlightedIds: Map task_id → Variante ('move' = rot, 'update' = blau).
+    //    hervorheben.
+    //  • status_changed=false → nur BLAU hervorheben (kein Verschieben).
+    // Das Highlight bleibt zunächst statisch bestehen („hold") und beginnt erst
+    // beim nächsten Fensterfokus bzw. bei Maus-/Tastatur-Interaktion über 10 s
+    // auszublenden — so verpasst man es nicht, wenn das Ereignis eintrifft,
+    // während man gerade woanders ist.
+    // highlightedIds: Map task_id → { variant: 'move'|'update', fading: bool }.
     const [highlightedIds, setHighlightedIds] = useState(() => new Map());
     // Refs, damit der Listener einmalig registriert wird und trotzdem stets die
-    // aktuellen tasks/collapse sieht (kein Re-Subscribe pro Render).
+    // aktuellen tasks/collapse/Highlights sieht (kein Re-Subscribe pro Render).
     const tasksRef = useRef(tasks);
     const collapseRef = useRef(collapse);
+    const highlightsRef = useRef(highlightedIds);
     const highlightTimers = useRef(new Map());
     useEffect(() => { tasksRef.current = tasks; }, [tasks]);
     useEffect(() => { collapseRef.current = collapse; }, [collapse]);
+    useEffect(() => { highlightsRef.current = highlightedIds; }, [highlightedIds]);
 
     useEffect(() => {
         const knownStatus = (s) =>
             workflow.columnOrder.includes(s) || workflow.exceptionStatuses.includes(s);
 
-        const highlight = (taskId, variant) => {
-            setHighlightedIds((prev) => new Map(prev).set(taskId, variant));
-            const existing = highlightTimers.current.get(taskId);
-            if (existing) clearTimeout(existing);
-            const timer = setTimeout(() => {
-                setHighlightedIds((prev) => {
-                    const n = new Map(prev);
-                    n.delete(taskId);
-                    return n;
-                });
-                highlightTimers.current.delete(taskId);
-            }, 10000);
-            highlightTimers.current.set(taskId, timer);
+        // Highlight setzen (Phase „hold": statisch, kein Fade). Ein evtl. laufender
+        // Entfern-Timer wird gestoppt — das Highlight bleibt, bis der Nutzer
+        // wieder fokussiert/interagiert.
+        const hold = (taskId, variant) => {
+            const running = highlightTimers.current.get(taskId);
+            if (running) { clearTimeout(running); highlightTimers.current.delete(taskId); }
+            setHighlightedIds((prev) => new Map(prev).set(taskId, { variant, fading: false }));
+        };
+
+        // Alle „hold"-Highlights ins Ausblenden überführen (10 s), ausgelöst durch
+        // Fokus/Interaktion. No-op, wenn nichts wartet — hält häufige
+        // pointermove-Events billig (kein Re-Render).
+        const startFade = () => {
+            let any = false;
+            for (const v of highlightsRef.current.values()) { if (! v.fading) { any = true; break; } }
+            if (! any) return;
+
+            setHighlightedIds((prev) => {
+                const n = new Map();
+                for (const [id, v] of prev) n.set(id, v.fading ? v : { ...v, fading: true });
+                return n;
+            });
+
+            for (const [id, v] of highlightsRef.current) {
+                if (v.fading || highlightTimers.current.has(id)) continue;
+                const timer = setTimeout(() => {
+                    setHighlightedIds((prev) => {
+                        const n = new Map(prev);
+                        n.delete(id);
+                        return n;
+                    });
+                    highlightTimers.current.delete(id);
+                }, 10000);
+                highlightTimers.current.set(id, timer);
+            }
         };
 
         const onNotification = (e) => {
@@ -170,16 +198,26 @@ export default function Board({ data }) {
                     ),
                 );
                 collapseRef.current.setCollapsed(d.status, false); // Zielspalte sichtbar halten
-                highlight(d.task_id, 'move'); // rot
+                hold(d.task_id, 'move'); // rot
             } else if (d.status_changed === false) {
-                highlight(d.task_id, 'update'); // blau, ohne Verschieben
+                hold(d.task_id, 'update'); // blau, ohne Verschieben
             }
         };
 
         window.addEventListener('planstack:notification', onNotification);
+        // Fokus/Interaktion → wartende Highlights ausblenden.
+        window.addEventListener('focus', startFade);
+        window.addEventListener('pointerdown', startFade);
+        window.addEventListener('pointermove', startFade);
+        window.addEventListener('keydown', startFade);
+
         const timers = highlightTimers.current;
         return () => {
             window.removeEventListener('planstack:notification', onNotification);
+            window.removeEventListener('focus', startFade);
+            window.removeEventListener('pointerdown', startFade);
+            window.removeEventListener('pointermove', startFade);
+            window.removeEventListener('keydown', startFade);
             for (const timer of timers.values()) clearTimeout(timer);
             timers.clear();
         };
@@ -251,6 +289,12 @@ export default function Board({ data }) {
         [performMove],
     );
 
+    const highlightClassFor = (entry) => {
+        if (! entry) return '';
+        if (entry.variant === 'update') return entry.fading ? 'ps-highlight-blue' : 'ps-hold-blue';
+        return entry.fading ? 'ps-highlight' : 'ps-hold';
+    };
+
     const renderCard = useCallback(
         (task) => (
             // Key includes displayStatus so a card force-remounts when its status
@@ -263,7 +307,7 @@ export default function Board({ data }) {
                 csrf={csrf}
                 endpoints={endpoints}
                 dimmed={filters.highlightBlocked && ! task.isBlocked}
-                highlight={highlightedIds.get(task.id) ?? null}
+                highlightClass={highlightClassFor(highlightedIds.get(task.id))}
                 transitions={workflow.transitions}
                 labels={workflow.labels}
                 columnOrder={workflow.columnOrder}

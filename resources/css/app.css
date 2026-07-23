@@ -15,18 +15,19 @@
     .board-cell { animation: none; }
 }
 
-/* Board: kurzzeitiges Hervorheben einer Kachel nach einem per WebSocket/Pusher
-   ausgelösten Statuswechsel. Startet im Logo-Rot (#FF4B3E) und blendet über 10 s
-   nach transparent aus (Ring + zarter Hintergrund). Läuft einmalig beim
-   (Re-)Mount der Karte in der Zielspalte. */
+/* Board: Hervorheben einer Kachel nach einem per Pusher gelieferten Ereignis.
+   Zwei Phasen: „hold" = statisch (bleibt, bis der Nutzer wieder fokussiert/
+   interagiert), danach „fade" = über 10 s nach transparent ausblenden. Rot bei
+   Statuswechsel (#FF4B3E), blau ohne Statuswechsel (#3B82F6). */
+.ps-hold      { box-shadow: 0 0 0 3px rgb(255 75 62 / 0.9);  background-color: rgb(255 75 62 / 0.14); }
+.ps-hold-blue { box-shadow: 0 0 0 3px rgb(59 130 246 / 0.9); background-color: rgb(59 130 246 / 0.14); }
+
 @keyframes ps-highlight-fade {
     0%   { box-shadow: 0 0 0 3px rgb(255 75 62 / 0.9); background-color: rgb(255 75 62 / 0.14); }
     100% { box-shadow: 0 0 0 0 rgb(255 75 62 / 0); background-color: transparent; }
 }
 .ps-highlight { animation: ps-highlight-fade 10s ease-out; }
 
-/* Board: Hervorheben ohne Statuswechsel (status_changed=false) — blau statt rot,
-   ebenfalls 10 s Fade-out. */
 @keyframes ps-highlight-fade-blue {
     0%   { box-shadow: 0 0 0 3px rgb(59 130 246 / 0.9); background-color: rgb(59 130 246 / 0.14); }
     100% { box-shadow: 0 0 0 0 rgb(59 130 246 / 0); background-color: transparent; }
