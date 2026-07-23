@@ -11,6 +11,7 @@ import ProjectPhases from './shell/pages/ProjectPhases.jsx';
 import ProjectClaude from './shell/pages/ProjectClaude.jsx';
 import TaskCreate from './shell/pages/TaskCreate.jsx';
 import TaskEdit from './shell/pages/TaskEdit.jsx';
+import TaskShow from './shell/pages/TaskShow.jsx';
 
 // Seiten-Registry: „BladePage" bettet noch nicht migrierte Blade-Seiten ein,
 // echte React-Seiten werden namentlich aufgelöst. Unbekannte Namen fallen auf
@@ -27,6 +28,7 @@ const pages = {
     ProjectClaude,
     TaskCreate,
     TaskEdit,
+    TaskShow,
 };
 
 createInertiaApp({

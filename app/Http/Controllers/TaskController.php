@@ -12,10 +12,10 @@ use App\Support\OrgBoardWorkflow;
 use App\Support\StatusEffects;
 use App\Support\TaskBoardService;
 use App\Support\TaskFormPresenter;
+use App\Support\TaskShowPresenter;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\View\View;
 use Inertia\Inertia;
 use Inertia\Response as InertiaResponse;
 
@@ -66,7 +66,7 @@ class TaskController extends Controller
             ->with('status', __('flash.task_created', ['name' => $task->name]));
     }
 
-    public function show(Project $project, Task $task): View
+    public function show(Project $project, Task $task, TaskShowPresenter $presenter): InertiaResponse
     {
         $this->authorize('view', $task);
 
@@ -75,7 +75,9 @@ class TaskController extends Controller
             'prerequisites', 'dependents', 'checklistItems.checker',
         ]);
 
-        return view('tasks.show', compact('project', 'task'));
+        return Inertia::render('TaskShow', array_merge($presenter->props($project, $task), [
+            'flash' => ['status' => session('status'), 'error' => session('error')],
+        ]));
     }
 
     public function edit(Project $project, Task $task, TaskFormPresenter $formPresenter): InertiaResponse
