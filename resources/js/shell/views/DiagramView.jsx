@@ -137,6 +137,7 @@ export default function DiagramView({ project, currentUserId, strings }) {
                 bullets={strings.helpBullets}
             />
 
+            <div className="bg-white rounded-lg shadow p-6 overflow-x-auto space-y-4 dark:bg-gray-800 dark:shadow-black/30">
             {status !== 'ready' && status !== 'error' && (
                 <p className="text-sm text-gray-400 dark:text-gray-500">{strings.loading || '…'}</p>
             )}
@@ -236,6 +237,7 @@ export default function DiagramView({ project, currentUserId, strings }) {
             )}
 
             <GraphCanvas ref={rootRef} emptyLabel={strings.noOpenPrs} name={project.alias} />
+            </div>
         </div>
     );
 }
