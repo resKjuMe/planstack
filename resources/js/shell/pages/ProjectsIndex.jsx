@@ -3,13 +3,16 @@ import { Head, router, usePage } from '@inertiajs/react';
 import AppShell from '../AppShell.jsx';
 import PageBands from '../components/PageBands.jsx';
 import Flash from '../components/Flash.jsx';
+import { useProjectsList } from '../../projects/useProjectsList.js';
 
 // Projektliste (ehemals projects/index.blade.php) als React-Inertia-Seite:
-// Kopfzeile, Suche und Filter-Pills sind React-State; die Projektkarten kommen
-// als bereits aufbereitete Props (inkl. gerenderter Beschreibung + Status-
-// Segmenten) aus ProjectController@index.
-export default function ProjectsIndex({ projects, summaryLine, filters, flash, strings }) {
+// Kopfzeile, Suche und Filter-Pills sind React-State. Die Projektkarten werden
+// clientseitig über GET /api/projects?view=cards geladen (gecacht) und
+// aktualisieren sich live per entity-changed (Project insert/update/delete sowie
+// Task-/Phasen-Änderungen). Diese Seite liefert nur statische Props.
+export default function ProjectsIndex({ filters, flash, strings }) {
     const { errors } = usePage().props;
+    const { projects, summaryLine, status, error } = useProjectsList();
     const [q, setQ] = useState('');
     const [filter, setFilter] = useState('all');
 
@@ -85,11 +88,18 @@ export default function ProjectsIndex({ projects, summaryLine, filters, flash, s
                         ))}
                     </div>
 
-                    {projects.length === 0 ? (
+                    {status === 'loading' && projects.length === 0 && (
+                        <p className="mt-6 text-sm text-gray-400 dark:text-gray-500">{strings.loading}</p>
+                    )}
+                    {status === 'error' && (
+                        <p className="mt-6 text-sm text-red-600 dark:text-red-400">{error || 'Fehler'}</p>
+                    )}
+                    {status === 'ready' && projects.length === 0 && (
                         <div className="mt-6 bg-white dark:bg-gray-800 rounded-lg shadow p-8 text-center text-gray-500 dark:text-gray-400">
                             {strings.noProjects}
                         </div>
-                    ) : (
+                    )}
+                    {projects.length > 0 && (
                         <div className="mt-6 grid items-stretch gap-4 sm:grid-cols-2 lg:grid-cols-3">
                             {visible.map((card) => (
                                 <ProjectCard key={card.alias} card={card} strings={strings} />
