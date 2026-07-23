@@ -7,6 +7,7 @@ import ProjectTabs from '../components/ProjectTabs.jsx';
 import Flash from '../components/Flash.jsx';
 import BoardView from '../views/BoardView.jsx';
 import SummaryView from '../views/SummaryView.jsx';
+import DiagramView from '../views/DiagramView.jsx';
 
 // EINE Inertia-Seite für die Projekt-Unterseiten. Board und Summary werden rein
 // clientseitig umgeschaltet — 0 Server-Calls beim Tab-Wechsel: die statischen
@@ -16,7 +17,7 @@ import SummaryView from '../views/SummaryView.jsx';
 //
 // Weitere Unterseiten (Diagramm, PR-Sequence, …) laufen bis zu ihrer Migration
 // weiter über den normalen Inertia-Visit (globaler Klick-Interceptor in app.jsx).
-const CLIENT_TABS = ['board', 'summary'];
+const CLIENT_TABS = ['board', 'summary', 'diagram'];
 
 function tabForPath(pathname, tabs) {
     for (const t of tabs) {
@@ -29,7 +30,7 @@ function tabForPath(pathname, tabs) {
     return null;
 }
 
-export default function ProjectWorkspace({ activeTab, project, can, tabs, flash, board, summary }) {
+export default function ProjectWorkspace({ activeTab, currentUserId, project, can, tabs, flash, board, summary, diagram }) {
     const { errors } = usePage().props;
     const [tab, setTab] = useState(activeTab);
 
@@ -74,18 +75,22 @@ export default function ProjectWorkspace({ activeTab, project, can, tabs, flash,
         return true;
     };
 
-    const strings = tab === 'summary' ? summary.strings : board.strings;
+    // Die Kopfzeile (Sync/Einstellungen/+Task) ist projektweit identisch — immer
+    // board.strings (enthält diese Labels), unabhängig vom aktiven Tab.
+    const headerStrings = board.strings;
     const title =
         tab === 'summary'
             ? `${project.name} · ${summary.strings.title}`
-            : `${project.name} · ${board.strings.boardTitle}`;
+            : tab === 'diagram'
+                ? `${project.name} · ${diagram.strings.title}`
+                : `${project.name} · ${board.strings.boardTitle}`;
 
     return (
         <>
             <Head><title>{title}</title></Head>
 
             <PageBands
-                header={<ProjectHeaderBar project={project} can={can} strings={strings} />}
+                header={<ProjectHeaderBar project={project} can={can} strings={headerStrings} />}
                 subnav={<ProjectTabs tabs={tabs} activeKey={tab} onNavigate={navigate} />}
             />
 
@@ -95,6 +100,8 @@ export default function ProjectWorkspace({ activeTab, project, can, tabs, flash,
 
                     {tab === 'summary' ? (
                         <SummaryView project={project} strings={summary.strings} />
+                    ) : tab === 'diagram' ? (
+                        <DiagramView project={project} currentUserId={currentUserId} strings={diagram.strings} />
                     ) : (
                         <BoardView meta={board.meta} strings={board.strings} />
                     )}

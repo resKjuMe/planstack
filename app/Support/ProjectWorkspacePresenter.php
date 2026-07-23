@@ -28,6 +28,7 @@ class ProjectWorkspacePresenter
 
         return [
             'activeTab' => $activeTab,
+            'currentUserId' => $user?->id,
             'project' => [
                 'alias' => $project->alias,
                 'name' => $project->name,
@@ -35,8 +36,10 @@ class ProjectWorkspacePresenter
                 'editUrl' => route('projects.edit', $project),
                 'syncUrl' => route('projects.sync-prs', $project),
                 'taskCreateUrl' => route('projects.tasks.create', $project),
-                // URL-Template für Task-Detaillinks (Summary); Client ersetzt __ID__.
+                // URL-Templates für den Client (er ersetzt __ID__): Task-Detaillink
+                // (Summary/Diagramm) und „claim review" (Diagramm).
                 'taskUrlTemplate' => route('projects.tasks.show', [$project, '__ID__']),
+                'reviewClaimUrlTemplate' => route('projects.tasks.review-claim', [$project, '__ID__']),
             ],
             'can' => [
                 'update' => $user->can('update', $project),
@@ -53,6 +56,9 @@ class ProjectWorkspacePresenter
             ],
             'summary' => [
                 'strings' => $this->summaryStrings(),
+            ],
+            'diagram' => [
+                'strings' => $this->diagramStrings(),
             ],
         ];
     }
@@ -143,6 +149,32 @@ class ProjectWorkspacePresenter
             'blockedByBlocker' => __('status.blocked_by_blocker'),
             'unlocksFollowupPrs' => __('status.unlocks_followup_prs'),
             'pickablePrsCount' => __('status.pickable_prs_count'),
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function diagramStrings(): array
+    {
+        return [
+            'title' => __('common.diagram'),
+            'showHideExplanation' => __('common.show_hide_explanation'),
+            'helpBullets' => [
+                ['strong' => __('status.dependency_diagram'), 'text' => __('status.arrows_point_from_a_prerequisite_to_the')],
+                ['text' => __('status.node_color_icon_status_see_legend_thick')],
+                ['text' => __('status.edges_solid_open_dependency_light')],
+                ['text' => __('status.clicking_a_node_highlights_its_chain')],
+            ],
+            'clickToFilter' => __('status.click_to_filter'),
+            'clearSelection' => __('status.clear_selection'),
+            'shortDescriptions' => __('status.short_descriptions'),
+            'hideDone' => __('status.hide_done'),
+            'asPng' => __('status.as_png'),
+            'openDependency' => __('status.open_dependency'),
+            'satisfied' => __('status.satisfied'),
+            'bottleneck' => __('status.bottleneck'),
+            'noOpenPrs' => __('status.no_open_prs'),
         ];
     }
 }

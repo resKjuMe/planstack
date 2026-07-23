@@ -93,6 +93,8 @@ class StatusSegments
             'bar' => StatusPalette::bar($s->color_token),
             'text' => StatusPalette::text($s->color_token),
             'badge' => StatusPalette::badge($s->color_token),
+            // Inneres SVG-Markup des Status-Icons (für das Diagramm) — kann null sein.
+            'icon' => StatusIcons::svg($s->icon),
         ])->values()->all();
 
         $roleKey = $ordered->whereNotNull('role')
