@@ -17,13 +17,45 @@ use Pusher\Pusher;
  */
 class NotificationBroadcaster
 {
-    /** Event-Name, auf den die Clients lauschen. */
+    /** Event-Name für menschenlesbare Fortschritts-Meldungen (Header-Glocke). */
     public const EVENT = 'task-event';
 
     /**
+     * Event-Name für generische Entity-Änderungen (Task/Phase created/updated/
+     * deleted). Die React-Clients laden die betroffene Entity daraufhin partiell
+     * nach; die Header-Glocke ignoriert dieses Event bewusst (kein Zähler).
+     */
+    public const EVENT_ENTITY = 'entity-changed';
+
+    /**
+     * Menschenlesbares Fortschritts-Event senden (Header-Glocke).
+     *
      * @param  array<string, mixed>  $payload
      */
     public function broadcast(?int $organizationId, array $payload): void
+    {
+        $this->trigger($organizationId, self::EVENT, $payload);
+    }
+
+    /**
+     * Generische Entity-Änderung senden — Auslöser für das partielle Nachladen
+     * im geteilten Client-Store (resources/js/data/projectStore.js).
+     *
+     * @param  array<string, mixed>  $payload
+     */
+    public function broadcastEntity(?int $organizationId, array $payload): void
+    {
+        $this->trigger($organizationId, self::EVENT_ENTITY, $payload);
+    }
+
+    /**
+     * Ein Ereignis an den Organisations-Channel triggern. "Best effort": Fehler
+     * brechen die eigentliche Antwort nie ab, sie werden nur geloggt. Ohne
+     * Pusher-Credentials oder Organisation passiert nichts.
+     *
+     * @param  array<string, mixed>  $payload
+     */
+    private function trigger(?int $organizationId, string $event, array $payload): void
     {
         if (! $organizationId) {
             return;
@@ -36,10 +68,11 @@ class NotificationBroadcaster
         }
 
         try {
-            $pusher->trigger("organization-{$organizationId}", self::EVENT, $payload);
+            $pusher->trigger("organization-{$organizationId}", $event, $payload);
         } catch (\Throwable $e) {
             Log::warning('Pusher-Broadcast fehlgeschlagen', [
                 'organization_id' => $organizationId,
+                'event' => $event,
                 'error' => $e->getMessage(),
             ]);
         }

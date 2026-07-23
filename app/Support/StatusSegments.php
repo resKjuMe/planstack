@@ -69,6 +69,40 @@ class StatusSegments
     }
 
     /**
+     * Client-Konfiguration für die Summary-Ableitung im Browser: die Org-Statuses
+     * in derselben Balken-Reihenfolge wie {@see segments()} (fertig → … → Ausnahme),
+     * je Status inkl. Styling-Klassen (bar/text/badge) und der done/delivered-
+     * Flags, plus die role→key-Map. Damit kann der React-Store die Phasen-Balken,
+     * Fortschritts-KPIs und Blocker rein clientseitig aus den Tasks berechnen.
+     *
+     * @return array{statuses: array<int, array<string, mixed>>, roleKey: array<string, string>}
+     */
+    public function config(Project $project): array
+    {
+        $ordered = $this->ordered($project);
+
+        $statuses = $ordered->map(fn (OrgStatus $s) => [
+            'key' => $s->key,
+            'label' => $this->label($s),
+            'kind' => $s->kind,
+            'role' => $s->role?->value,
+            'color_token' => $s->color_token,
+            'position' => $s->position,
+            'counts_as_done' => (bool) $s->counts_as_done,
+            'counts_as_delivered' => (bool) $s->counts_as_delivered,
+            'bar' => StatusPalette::bar($s->color_token),
+            'text' => StatusPalette::text($s->color_token),
+            'badge' => StatusPalette::badge($s->color_token),
+        ])->values()->all();
+
+        $roleKey = $ordered->whereNotNull('role')
+            ->mapWithKeys(fn (OrgStatus $s) => [$s->role->value => $s->key])
+            ->all();
+
+        return ['statuses' => $statuses, 'roleKey' => $roleKey];
+    }
+
+    /**
      * Attach per-task display presentation (x_display_key, x_status_label,
      * x_status_badge) so lists can show the configured status — including custom
      * ones — instead of the enum fallback.

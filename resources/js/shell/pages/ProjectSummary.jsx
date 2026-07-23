@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Head, usePage } from '@inertiajs/react';
 import AppShell from '../AppShell.jsx';
 import PageBands from '../components/PageBands.jsx';
@@ -6,13 +6,37 @@ import ProjectHeaderBar from '../components/ProjectHeaderBar.jsx';
 import ProjectTabs from '../components/ProjectTabs.jsx';
 import PageHead from '../components/PageHead.jsx';
 import Flash from '../components/Flash.jsx';
+import { useProjectData } from '../../data/useProjectData';
+import { deriveSummary } from '../../summary/derive.js';
+import { interpolate } from '../../summary/i18n.js';
 
-// Vollständig als React umgesetzte Summary-Seite (ehemals status/summary.blade.php).
-// KPI-Kacheln, Phasen-Fortschritt (mit Hover-Readout + aufklappbaren Details) und
-// die pickbaren PRs als Karten sind alle React; die Daten kommen bereits aufbereitet
-// als Inertia-Props aus ProjectSummaryController.
-export default function ProjectSummary({ project, can, tabs, kpis, rows, pickable, flash, strings }) {
+// Summary-Seite als React (ehemals status/summary.blade.php). KPI-Kacheln,
+// Phasen-Fortschritt (mit Hover-Readout + aufklappbaren Details) und die pickbaren
+// PRs sind React. Die Daten kommen NICHT mehr als Server-Props, sondern aus dem
+// geteilten Projekt-Store (Tasks + Phasen, einmalig geladen, per Socket partiell
+// nachgeladen) und werden clientseitig in summary/derive.js aggregiert. So teilen
+// sich Board und Summary dieselbe Datenbasis ohne erneutes Laden bei Navigation.
+export default function ProjectSummary({ project, can, tabs, flash, strings }) {
     const { errors } = usePage().props;
+    const { tasks, phases, statusConfig, status, error } = useProjectData(project.alias);
+
+    const summary = useMemo(() => {
+        if (status !== 'ready' || !statusConfig) return null;
+        return deriveSummary({
+            tasks,
+            phases,
+            statusConfig,
+            strings,
+            taskUrlTemplate: project.taskUrlTemplate,
+            locale:
+                (typeof document !== 'undefined' && document.documentElement.getAttribute('lang')) ||
+                'de',
+        });
+    }, [tasks, phases, statusConfig, status, strings, project.taskUrlTemplate]);
+
+    const pickableTitle = summary
+        ? interpolate(strings.pickablePrsCount, { count: summary.pickableCount })
+        : strings.phasesTitle;
 
     return (
         <>
@@ -33,9 +57,20 @@ export default function ProjectSummary({ project, can, tabs, kpis, rows, pickabl
                         bullets={strings.helpBullets}
                     />
 
+                    {status !== 'ready' && status !== 'error' && (
+                        <p className="text-sm text-gray-400 dark:text-gray-500">{strings.loading}</p>
+                    )}
+                    {status === 'error' && (
+                        <p className="text-sm text-red-600 dark:text-red-400">
+                            {interpolate(strings.loadError, { message: error || '' })}
+                        </p>
+                    )}
+
+                    {summary && (
+                        <>
                     {/* 1. KPI-Kacheln */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                        {kpis.tiles.map((tile) => (
+                        {summary.kpis.tiles.map((tile) => (
                             <div key={tile.title} className="bg-white dark:bg-gray-800 rounded-lg shadow p-5">
                                 <div className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide">{tile.title}</div>
                                 <div className="mt-1 text-3xl font-bold text-gray-900 dark:text-gray-100">{tile.pct} %</div>
@@ -46,23 +81,23 @@ export default function ProjectSummary({ project, can, tabs, kpis, rows, pickabl
                             </div>
                         ))}
 
-                        {kpis.velocity && (
+                        {summary.kpis.velocity && (
                             <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-5">
-                                <div className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide">{kpis.velocity.title}</div>
+                                <div className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide">{summary.kpis.velocity.title}</div>
                                 <div className="mt-1 text-3xl font-bold text-gray-900 dark:text-gray-100">
-                                    {kpis.velocity.rate} <span className="text-lg font-semibold text-gray-500 dark:text-gray-400">{kpis.velocity.unit}</span>
+                                    {summary.kpis.velocity.rate} <span className="text-lg font-semibold text-gray-500 dark:text-gray-400">{summary.kpis.velocity.unit}</span>
                                 </div>
-                                {kpis.velocity.sub && (
-                                    <div className="mt-1 text-sm text-gray-500 dark:text-gray-400">{kpis.velocity.sub}</div>
+                                {summary.kpis.velocity.sub && (
+                                    <div className="mt-1 text-sm text-gray-500 dark:text-gray-400">{summary.kpis.velocity.sub}</div>
                                 )}
                             </div>
                         )}
 
-                        {kpis.lastMerge && (
+                        {summary.kpis.lastMerge && (
                             <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-5">
-                                <div className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide">{kpis.lastMerge.title}</div>
-                                <div className="mt-1 text-2xl font-bold text-gray-900 dark:text-gray-100">{kpis.lastMerge.when}</div>
-                                <div className="mt-1 text-sm font-mono text-gray-500 dark:text-gray-400">{kpis.lastMerge.pr}</div>
+                                <div className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide">{summary.kpis.lastMerge.title}</div>
+                                <div className="mt-1 text-2xl font-bold text-gray-900 dark:text-gray-100">{summary.kpis.lastMerge.when}</div>
+                                <div className="mt-1 text-sm font-mono text-gray-500 dark:text-gray-400">{summary.kpis.lastMerge.pr}</div>
                             </div>
                         )}
                     </div>
@@ -71,7 +106,7 @@ export default function ProjectSummary({ project, can, tabs, kpis, rows, pickabl
                     <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
                         <h2 className="text-sm font-semibold text-gray-600 dark:text-gray-400 mb-4">{strings.phasesTitle}</h2>
                         <div className="space-y-3">
-                            {rows.map((row, i) => (
+                            {summary.rows.map((row, i) => (
                                 <PhaseRow key={i} row={row} strings={strings} />
                             ))}
                         </div>
@@ -79,12 +114,12 @@ export default function ProjectSummary({ project, can, tabs, kpis, rows, pickabl
 
                     {/* 3. Pickbare PRs als Karten */}
                     <div>
-                        <h2 className="text-sm font-semibold text-gray-600 dark:text-gray-400 mb-4">{strings.pickableTitle}</h2>
-                        {pickable.length === 0 ? (
+                        <h2 className="text-sm font-semibold text-gray-600 dark:text-gray-400 mb-4">{pickableTitle}</h2>
+                        {summary.pickable.length === 0 ? (
                             <p className="text-sm text-gray-400 dark:text-gray-500">{strings.nothingPickable}</p>
                         ) : (
                             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                                {pickable.map((task) => (
+                                {summary.pickable.map((task) => (
                                     <div
                                         key={task.name}
                                         className={
@@ -121,6 +156,8 @@ export default function ProjectSummary({ project, can, tabs, kpis, rows, pickabl
                             </div>
                         )}
                     </div>
+                        </>
+                    )}
                 </div>
             </div>
         </>

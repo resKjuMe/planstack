@@ -5,6 +5,7 @@ use App\Http\Controllers\Api\McpController;
 use App\Http\Controllers\Api\PhaseController;
 use App\Http\Controllers\Api\ProjectConfigController;
 use App\Http\Controllers\Api\ProjectController;
+use App\Http\Controllers\Api\StatusConfigController;
 use App\Http\Controllers\Api\TaskController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -44,6 +45,9 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Review: nächsten in-review Task mit PR zum Review übernehmen (Auto-Pick).
     Route::post('projects/{project}/review-next', [TaskController::class, 'reviewNext']);
+
+    // Org-Status-Konfiguration für den geteilten React-Store (Summary-Ableitung).
+    Route::get('projects/{project}/status-config', [StatusConfigController::class, 'show']);
 
     // Board-Protokoll-Konfiguration (token-sparende Schalter)
     Route::get('projects/{project}/config', [ProjectConfigController::class, 'show']);

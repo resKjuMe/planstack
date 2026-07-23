@@ -51,6 +51,10 @@ Alpine.store('theme', {
 // Ohne Web-Locks-Unterstützung (alte Browser) verbindet jeder Tab einzeln.
 const NOTIFICATIONS_MAX = 50; // so viele letzte Nachrichten im Flyout vorhalten
 const NOTIFICATIONS_EVENT = 'task-event'; // Event-Name (siehe NotificationBroadcaster)
+// Generische Entity-Änderungen (Task/Phase). Steuern NUR das partielle Nachladen
+// im geteilten React-Store (resources/js/data/projectStore.js) — bewusst NICHT an
+// der Glocke gezählt/gemerkt. Siehe NotificationBroadcaster::EVENT_ENTITY.
+const NOTIFICATIONS_ENTITY_EVENT = 'entity-changed';
 const NOTIFICATIONS_LOCK = 'planstack-notifications-leader';
 const NOTIFICATIONS_CHANNEL = 'planstack-notifications';
 
@@ -137,7 +141,7 @@ Alpine.store('notifications', {
         // anderen Tabs weiterreichen.
         channel.bind_global((eventName, data) => {
             if (typeof eventName === 'string' && eventName.indexOf('pusher:') === 0) return;
-            this._ingest(data, true);
+            this._ingest(eventName, data, true);
         });
     },
 
@@ -148,9 +152,20 @@ Alpine.store('notifications', {
         if (this._bc) this._bc.postMessage({ type: 'state', connected, failed });
     },
 
-    // Eine Nachricht verarbeiten (zählen, merken, ans Board weiterreichen).
-    // broadcast=true (nur Leader) verteilt sie zusätzlich an die anderen Tabs.
-    _ingest(data, broadcast) {
+    // Eine Nachricht verarbeiten. broadcast=true (nur Leader) verteilt sie
+    // zusätzlich an die anderen Tabs.
+    //
+    // Zwei Klassen von Ereignissen werden getrennt:
+    //  • entity-changed → NICHT an der Glocke zählen/merken; nur als DOM-Event
+    //    'planstack:entity-changed' fürs partielle Nachladen im Store weiterreichen.
+    //  • alles andere (task-event) → wie bisher zählen, merken, als
+    //    'planstack:notification' weiterreichen (Glocke + Board-Highlight).
+    _ingest(eventName, data, broadcast) {
+        if (eventName === NOTIFICATIONS_ENTITY_EVENT || (data && data.type === 'entity-changed')) {
+            window.dispatchEvent(new CustomEvent('planstack:entity-changed', { detail: data }));
+            if (broadcast && this._bc) this._bc.postMessage({ type: 'entity', data });
+            return;
+        }
         this.count += 1;
         this._record(data);
         if (broadcast && this._bc) this._bc.postMessage({ type: 'message', data });
@@ -160,7 +175,9 @@ Alpine.store('notifications', {
     _onBroadcast(msg) {
         if (!msg) return;
         if (msg.type === 'message') {
-            this._ingest(msg.data, false); // nicht zurück-broadcasten
+            this._ingest(NOTIFICATIONS_EVENT, msg.data, false); // nicht zurück-broadcasten
+        } else if (msg.type === 'entity') {
+            window.dispatchEvent(new CustomEvent('planstack:entity-changed', { detail: msg.data }));
         } else if (msg.type === 'state') {
             this.connected = msg.connected;
             this.failed = msg.failed;

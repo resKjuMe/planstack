@@ -79,7 +79,9 @@ class ProjectController extends ApiController
 
         $project->load('owner', 'phases');
         $tasks = $this->board->board($project);
-        $tasks->each->load('phase', 'claimer', 'concern');
+        // prerequisites(.orgStatus) fürs Summary (Phasen-Blocker) mitladen; der
+        // geteilte React-Store leitet Board UND Summary aus dieser einen Antwort ab.
+        $tasks->loadMissing(['phase', 'claimer', 'concern', 'prerequisites.orgStatus']);
         $project->setRelation('tasks', $tasks);
 
         return new ProjectResource($project);

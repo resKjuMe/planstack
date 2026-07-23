@@ -16,7 +16,9 @@ import QuickFilterBar from './QuickFilterBar';
 import TaskCard, { TaskCardView } from './TaskCard';
 import Toast from './Toast';
 import { makeT } from '../i18n';
-import { fetchBoardTasks, mapApiTask, moveTask } from '../api';
+import { mapApiTask, moveTask } from '../api';
+import { useProjectData } from '../../data/useProjectData';
+import { patchTask } from '../../data/projectStore';
 import { useBoardCollapseState } from '../useBoardCollapseState';
 import { colorForToken } from '../statusColors';
 import { allowedTargets, canTransition, groupStartingAt } from '../workflowConfig';
@@ -29,32 +31,16 @@ export default function Board({ meta }) {
     const { workflow, currentUserId, endpoints, csrf } = meta;
     const t = useMemo(() => makeT(meta.strings), [meta.strings]);
 
-    // Die Board-Tasks kommen jetzt über die REST-API (GET /api/projects/{alias}),
-    // nicht mehr als Server-Prop. Die statische Render-Metadaten (workflow,
-    // strings, endpoints, csrf, roleKeys) bleiben Prop (meta). loadStatus steuert
-    // Lade-/Fehleranzeige, ohne die Hook-Reihenfolge zu verändern (tasks bleibt
-    // während des Ladens ein leeres Array, alle Hooks laufen unverändert).
-    const [tasks, setTasks] = useState([]);
-    const [loadStatus, setLoadStatus] = useState('loading'); // 'loading' | 'ready' | 'error'
-    const [loadError, setLoadError] = useState(null);
-
-    useEffect(() => {
-        let alive = true;
-        setLoadStatus('loading');
-        setLoadError(null);
-        fetchBoardTasks(meta.projectAlias).then((res) => {
-            if (!alive) return;
-            if (res.ok) {
-                setTasks(res.tasks.map((tk) => mapApiTask(tk, meta)));
-                setLoadStatus('ready');
-            } else {
-                setLoadError(res.message);
-                setLoadStatus('error');
-            }
-        });
-        return () => { alive = false; };
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [meta.projectAlias]);
+    // Die Board-Tasks kommen aus dem geteilten Projekt-Store (resources/js/data),
+    // der Tasks + Phasen einmalig lädt und über Socket-Events (entity-changed)
+    // partiell nachlädt — so wird bei der Navigation Board↔Summary nicht neu
+    // geladen. Die statischen Render-Metadaten (workflow, strings, endpoints,
+    // csrf, roleKeys) bleiben Prop (meta). Der Store hält die rohen API-Tasks
+    // (snake_case); hier werden sie auf die flache Board-Form gemappt.
+    const { tasks: apiTasks, status: dataStatus, error: dataError } = useProjectData(meta.projectAlias);
+    const tasks = useMemo(() => apiTasks.map((tk) => mapApiTask(tk, meta)), [apiTasks, meta]);
+    const loadStatus = dataStatus === 'ready' ? 'ready' : dataStatus === 'error' ? 'error' : 'loading';
+    const loadError = dataError;
 
     // Zuständigen-Liste für den Filter aus den (jetzt per API geladenen) Tasks
     // ableiten — früher server-seitig als data.assignees mitgeliefert.
@@ -229,18 +215,18 @@ export default function Board({ meta }) {
             }
         };
 
+        // Dieses task-event (Header-Glocke) dient nur noch der ANIMATION: Die
+        // eigentliche Statusänderung fließt über den geteilten Store (das parallel
+        // gesendete entity-changed-Event lädt die Aufgabe partiell nach und der
+        // Store schiebt die Karte in die Zielspalte). Hier wird nur hervorgehoben
+        // und die Zielspalte offen gehalten.
         const onNotification = (e) => {
             const d = e.detail;
             if (! d || d.task_id == null) return;
             if (! tasksRef.current.some((tk) => tk.id === d.task_id)) return; // nicht auf diesem Board
 
             if (d.status_changed === true) {
-                if (! d.status || ! knownStatus(d.status)) return; // unbekannte Spalte → nicht „verschwinden" lassen
-                setTasks((prev) =>
-                    prev.map((tk) =>
-                        tk.id === d.task_id ? { ...tk, status: d.status, displayStatus: d.status } : tk,
-                    ),
-                );
+                if (! d.status || ! knownStatus(d.status)) return; // unbekannte Spalte → kein „Verschieben"-Highlight
                 collapseRef.current.setCollapsed(d.status, false); // Zielspalte sichtbar halten
                 apply(d.task_id, 'move'); // rot
             } else if (d.status_changed === false) {
@@ -283,23 +269,23 @@ export default function Board({ meta }) {
                 return;
             }
 
-            const before = tasks;
-            setTasks((prev) =>
-                prev.map((tk) =>
-                    tk.id === taskId ? { ...tk, status: targetStatus, displayStatus: targetStatus } : tk,
-                ),
-            );
+            // Optimistisch im Store patchen (display_status ist der Board-Schlüssel);
+            // prev = Task-Zustand VOR dem Patch, für den Rollback.
+            const prev = patchTask(meta.projectAlias, taskId, { display_status: targetStatus });
 
             const res = await moveTask({ endpoints, csrf }, taskId, targetStatus);
             if (res.ok) {
-                setTasks((prev) => prev.map((tk) => (tk.id === taskId ? res.task : tk)));
+                // Bestätigung fließt über entity-changed (partielles Nachladen) zurück;
+                // der optimistische Wert entspricht bereits dem Ziel.
                 collapse.setCollapsed(targetStatus, false); // keep the now-populated target visible
+            } else if (prev) {
+                patchTask(meta.projectAlias, taskId, { display_status: prev.display_status }); // snap back
+                setToast(t('move_error', { message: res.message }));
             } else {
-                setTasks(before); // snap back
                 setToast(t('move_error', { message: res.message }));
             }
         },
-        [tasks, workflow, endpoints, csrf, t, collapse],
+        [meta.projectAlias, workflow, endpoints, csrf, t, collapse],
     );
 
     // Last droppable the pointer was over during the drag — used as a fallback

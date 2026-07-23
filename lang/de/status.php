@@ -74,6 +74,8 @@ return [
     'largest_pr' => 'größter PR',
     'last_merge' => 'Letzter Merge',
     'last_synced_time' => 'zuletzt synchronisiert :time',
+    'load_error' => 'Daten konnten nicht geladen werden: :message',
+    'loading' => 'Daten werden geladen …',
     'lines' => 'Zeilen',
     'median_deviation' => 'Median-Abweichung',
     'merged_date' => 'gemerged :date',
