@@ -1,23 +1,14 @@
 import React, { useMemo, useState } from 'react';
-import { Head, usePage } from '@inertiajs/react';
-import AppShell from '../AppShell.jsx';
-import PageBands from '../components/PageBands.jsx';
-import ProjectHeaderBar from '../components/ProjectHeaderBar.jsx';
-import ProjectTabs from '../components/ProjectTabs.jsx';
 import PageHead from '../components/PageHead.jsx';
-import Flash from '../components/Flash.jsx';
 import { useProjectData } from '../../data/useProjectData';
 import { deriveSummary } from '../../summary/derive.js';
 import { interpolate } from '../../summary/i18n.js';
 
-// Summary-Seite als React (ehemals status/summary.blade.php). KPI-Kacheln,
-// Phasen-Fortschritt (mit Hover-Readout + aufklappbaren Details) und die pickbaren
-// PRs sind React. Die Daten kommen NICHT mehr als Server-Props, sondern aus dem
-// geteilten Projekt-Store (Tasks + Phasen, einmalig geladen, per Socket partiell
-// nachgeladen) und werden clientseitig in summary/derive.js aggregiert. So teilen
-// sich Board und Summary dieselbe Datenbasis ohne erneutes Laden bei Navigation.
-export default function ProjectSummary({ project, can, tabs, flash, strings }) {
-    const { errors } = usePage().props;
+// Summary-Unterseite als Teilansicht des ProjectWorkspace. Die Daten kommen aus
+// dem geteilten Store (Tasks + Phasen, einmalig geladen, per Socket partiell
+// nachgeladen) und werden clientseitig in summary/derive.js aggregiert — Board und
+// Summary teilen sich dieselbe Datenbasis ohne erneutes Laden beim Tab-Wechsel.
+export default function SummaryView({ project, strings }) {
     const { tasks, phases, statusConfig, status, error } = useProjectData(project.alias);
 
     const summary = useMemo(() => {
@@ -39,35 +30,24 @@ export default function ProjectSummary({ project, can, tabs, flash, strings }) {
         : strings.phasesTitle;
 
     return (
-        <>
-            <Head><title>{`${project.name} · ${strings.title}`}</title></Head>
-
-            <PageBands
-                header={<ProjectHeaderBar project={project} can={can} strings={strings} />}
-                subnav={<ProjectTabs tabs={tabs} />}
+        <div className="space-y-8">
+            <PageHead
+                title={strings.title}
+                toggleLabel={strings.showHideExplanation}
+                bullets={strings.helpBullets}
             />
 
-            <div className="py-8">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
-                    <Flash status={flash?.status} error={flash?.error} errors={errors} />
+            {status !== 'ready' && status !== 'error' && (
+                <p className="text-sm text-gray-400 dark:text-gray-500">{strings.loading}</p>
+            )}
+            {status === 'error' && (
+                <p className="text-sm text-red-600 dark:text-red-400">
+                    {interpolate(strings.loadError, { message: error || '' })}
+                </p>
+            )}
 
-                    <PageHead
-                        title={strings.title}
-                        toggleLabel={strings.showHideExplanation}
-                        bullets={strings.helpBullets}
-                    />
-
-                    {status !== 'ready' && status !== 'error' && (
-                        <p className="text-sm text-gray-400 dark:text-gray-500">{strings.loading}</p>
-                    )}
-                    {status === 'error' && (
-                        <p className="text-sm text-red-600 dark:text-red-400">
-                            {interpolate(strings.loadError, { message: error || '' })}
-                        </p>
-                    )}
-
-                    {summary && (
-                        <>
+            {summary && (
+                <>
                     {/* 1. KPI-Kacheln */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                         {summary.kpis.tiles.map((tile) => (
@@ -156,16 +136,14 @@ export default function ProjectSummary({ project, can, tabs, flash, strings }) {
                             </div>
                         )}
                     </div>
-                        </>
-                    )}
-                </div>
-            </div>
-        </>
+                </>
+            )}
+        </div>
     );
 }
 
 // Eine Phasen-Zeile mit Hover-Readout auf dem gestapelten Status-Balken und
-// aufklappbaren Sekundär-Metriken (früher Alpine „{ open, hover }").
+// aufklappbaren Sekundär-Metriken.
 function PhaseRow({ row, strings }) {
     const [open, setOpen] = useState(false);
     const [hover, setHover] = useState(null);
@@ -261,6 +239,3 @@ function PhaseRow({ row, strings }) {
         </div>
     );
 }
-
-// Persistentes Layout (Wrapper + Navi bleiben über Navigationen erhalten).
-ProjectSummary.layout = AppShell;

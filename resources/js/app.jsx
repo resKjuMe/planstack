@@ -2,16 +2,15 @@ import React from 'react';
 import { createRoot } from 'react-dom/client';
 import { createInertiaApp, router } from '@inertiajs/react';
 import BladePage from './shell/pages/BladePage.jsx';
-import ProjectBoard from './shell/pages/ProjectBoard.jsx';
-import ProjectSummary from './shell/pages/ProjectSummary.jsx';
+import ProjectWorkspace from './shell/pages/ProjectWorkspace.jsx';
 
 // Seiten-Registry: „BladePage" bettet noch nicht migrierte Blade-Seiten ein,
-// echte React-Seiten (z. B. ProjectBoard) werden namentlich aufgelöst. Unbekannte
-// Namen fallen auf BladePage zurück.
+// echte React-Seiten werden namentlich aufgelöst. Unbekannte Namen fallen auf
+// BladePage zurück. ProjectWorkspace hostet Board + Summary (clientseitig
+// umgeschaltet, 0 Server-Calls beim Tab-Wechsel).
 const pages = {
     BladePage,
-    ProjectBoard,
-    ProjectSummary,
+    ProjectWorkspace,
 };
 
 createInertiaApp({
