@@ -76,6 +76,15 @@
 }
 
 @layer base {
+    /* Scrollbar-Platz dauerhaft reservieren, damit kurze Seiten (ohne
+       vertikale Scrollbar) den zentrierten Inhalt nicht um die Scrollbar-Breite
+       verschieben — beim Seitenwechsel „springt" sonst das Layout horizontal.
+       `stable` haelt nur den Platz frei (keine tote Scrollbar-Rinne wie bei
+       overflow-y: scroll). */
+    html {
+        scrollbar-gutter: stable;
+    }
+
     /* Dark Mode: Standard-Rahmenfarbe. Tailwinds Preflight setzt für ALLE
        Elemente border-color = gray-200 — bloße `border`/`border-t`/`divide-y`
        ohne eigene Farbklasse blieben dadurch im Dark Mode hell ("weiße"
