@@ -27,6 +27,21 @@
     .ps-view-enter { animation: none; }
 }
 
+/* Seiten-Ebene (AppShell): jede echte Inertia-Navigation (Uebersicht,
+   Bearbeiten, alle Projekt-Unterseiten, Task-Seiten) blendet einheitlich ein.
+   Bewusst nur Opacity — der Slide bleibt der View-Transition (.ps-view-enter)
+   vorbehalten, damit sich beide beim ersten Workspace-Aufbau nicht ueberlagern.
+   Client-seitige Tab-Wechsel im Workspace aendern Inertias URL nicht und loesen
+   diese Animation daher nicht aus. */
+@keyframes ps-page-in {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+}
+.ps-page-enter { animation: ps-page-in 180ms ease-out; }
+@media (prefers-reduced-motion: reduce) {
+    .ps-page-enter { animation: none; }
+}
+
 /* Board: Hervorheben einer Kachel nach einem per Pusher gelieferten Ereignis.
    Zwei Phasen: „hold" = statisch (bleibt, bis der Nutzer wieder fokussiert/
    interagiert), danach „fade" = über 10 s nach transparent ausblenden. Rot bei
