@@ -3,14 +3,16 @@ import { createRoot } from 'react-dom/client';
 import { createInertiaApp, router } from '@inertiajs/react';
 import BladePage from './shell/pages/BladePage.jsx';
 import ProjectWorkspace from './shell/pages/ProjectWorkspace.jsx';
+import ProjectsIndex from './shell/pages/ProjectsIndex.jsx';
 
 // Seiten-Registry: „BladePage" bettet noch nicht migrierte Blade-Seiten ein,
 // echte React-Seiten werden namentlich aufgelöst. Unbekannte Namen fallen auf
-// BladePage zurück. ProjectWorkspace hostet Board + Summary (clientseitig
-// umgeschaltet, 0 Server-Calls beim Tab-Wechsel).
+// BladePage zurück. ProjectWorkspace hostet die Projekt-Unterseiten (clientseitig
+// umgeschaltet, 0 Server-Calls beim Tab-Wechsel); ProjectsIndex ist die Liste.
 const pages = {
     BladePage,
     ProjectWorkspace,
+    ProjectsIndex,
 };
 
 createInertiaApp({

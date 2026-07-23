@@ -13,6 +13,7 @@ use App\Support\TaskBoardService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Str;
 use Illuminate\View\View;
 use Inertia\Inertia;
 use Inertia\Response as InertiaResponse;
@@ -24,7 +25,7 @@ class ProjectController extends Controller
         private readonly StatusSegments $segments,
     ) {}
 
-    public function index(): View
+    public function index(): InertiaResponse
     {
         $userId = Auth::id();
         $user = Auth::user();
@@ -57,21 +58,113 @@ class ProjectController extends Controller
             ->latest()
             ->get();
 
-        // Pro Projekt die Status-Segmente für den gestapelten Fortschrittsbalken
-        // (gleiche Logik/Farben wie die Phasen-Balken der Summary).
-        foreach ($projects as $project) {
-            $project->x_status_segments = $this->statusSegments($project);
-        }
-
         // Kopfzeilen-Statistiken beziehen sich auf die aktiven (nicht archivierten)
         // Projekte — archivierte sind standardmäßig ausgeblendet und zählen erst
         // über die Filter-Pill „Archiviert" wieder mit.
         $activeProjects = $projects->whereNull('archived_at');
         $activeCount = $activeProjects->count();
-        $openTasks = $activeProjects->sum(fn (Project $p) => $p->tasks_count - $p->closed_tasks_count);
+        $openTasks = (int) $activeProjects->sum(fn (Project $p) => $p->tasks_count - $p->closed_tasks_count);
         $totalSp = (int) $activeProjects->sum('total_sp');
 
-        return view('projects.index', compact('projects', 'userId', 'activeCount', 'openTasks', 'totalSp'));
+        $summaryLine = ($activeCount === 1 ? '1 '.__('projects.project') : $activeCount.' '.__('common.projects'))
+            .' · '.__('projects.count_open_tasks', ['count' => number_format($openTasks, 0, ',', '.')])
+            .' · '.__('projects.count_story_points', ['count' => number_format($totalSp, 0, ',', '.')]);
+
+        return Inertia::render('ProjectsIndex', [
+            'projects' => $projects->map(fn (Project $p) => $this->card($p, $userId))->all(),
+            'summaryLine' => $summaryLine,
+            'filters' => [
+                ['key' => 'all', 'label' => __('common.all')],
+                ['key' => 'mine', 'label' => __('projects.my_projects')],
+                ['key' => 'in_arbeit', 'label' => __('projects.in_progress')],
+                ['key' => 'fast_fertig', 'label' => __('projects.almost_done')],
+                ['key' => 'completed', 'label' => __('projects.completed')],
+                ['key' => 'archived', 'label' => __('projects.archived')],
+            ],
+            'flash' => ['status' => session('status'), 'error' => session('error')],
+            'strings' => [
+                'title' => __('common.projects'),
+                'newProject' => __('projects.new_project'),
+                'createUrl' => route('projects.create'),
+                'searchProjects' => __('projects.search_projects'),
+                'noProjects' => __('projects.no_projects_yet_create_your_first'),
+                'progress' => __('common.progress'),
+                'tasks' => __('common.tasks'),
+            ],
+        ]);
+    }
+
+    /**
+     * Eine Projektkarte für die React-Projektliste (ProjectsIndex) — Fortschritt,
+     * Status-Segmente (wie Summary), Kategorie/Badge und Besitzer/Teams.
+     *
+     * @return array<string, mixed>
+     */
+    private function card(Project $project, ?int $userId): array
+    {
+        $sp = (int) $project->total_sp;
+        $pct = $sp > 0 ? (int) $project->done_sp / $sp * 100 : 0;
+        $isCompleted = $project->completed_at !== null;
+        // Abgeschlossene Projekte tragen die Kategorie „completed" und überschreiben
+        // die berechnete Kategorie.
+        $category = $isCompleted
+            ? 'completed'
+            : ($pct <= 0 ? 'nicht_gestartet' : ($pct >= 80 ? 'fast_fertig' : 'in_arbeit'));
+
+        $categoryLabel = [
+            'nicht_gestartet' => __('projects.not_started'),
+            'in_arbeit' => __('projects.in_progress'),
+            'fast_fertig' => __('projects.almost_done'),
+            'completed' => __('projects.completed'),
+        ][$category];
+        $badgeClass = [
+            'nicht_gestartet' => 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400',
+            'in_arbeit' => 'bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300',
+            'fast_fertig' => 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300',
+            'completed' => 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300',
+        ][$category];
+        $barClass = [
+            'nicht_gestartet' => 'bg-gray-300',
+            'in_arbeit' => 'bg-indigo-600',
+            'fast_fertig' => 'bg-green-500',
+            'completed' => 'bg-blue-500',
+        ][$category];
+
+        $initials = collect(preg_split('/\s+/', trim($project->owner?->name ?? '?')))
+            ->filter()->take(2)->map(fn ($w) => mb_strtoupper(mb_substr($w, 0, 1)))->implode('');
+        $avatarPalette = ['bg-emerald-600', 'bg-indigo-600', 'bg-rose-600', 'bg-amber-600', 'bg-sky-600', 'bg-fuchsia-600'];
+
+        $segments = collect($this->statusSegments($project))
+            ->map(fn (array $s) => array_merge($s, ['pctLabel' => number_format((float) $s['width'], 1, ',', '')]))
+            ->all();
+
+        return [
+            'alias' => $project->alias,
+            'name' => $project->name,
+            'descriptionHtml' => filled($project->description) ? Str::markdown($project->description, [
+                'html_input' => 'strip',
+                'allow_unsafe_links' => false,
+                'renderer' => ['soft_break' => "<br>\n"],
+            ]) : null,
+            'diagramUrl' => route('projects.diagram', $project),
+            'category' => $category,
+            'categoryLabel' => $categoryLabel,
+            'badgeClass' => $badgeClass,
+            'barClass' => $barClass,
+            'pct' => round($pct, 1),
+            'pctLabel' => number_format($pct, 1, ',', ''),
+            'segments' => $segments,
+            'ownerName' => $project->owner?->name,
+            'initials' => $initials,
+            'avatarClass' => $avatarPalette[($project->created_by_id ?? 0) % count($avatarPalette)],
+            'teams' => $project->teams->pluck('name')->all(),
+            'tasksCount' => $project->tasks_count,
+            'tasksLabel' => __('projects.count_tasks', ['count' => $project->tasks_count]),
+            'sp' => $sp,
+            'mine' => $project->created_by_id === $userId,
+            'archived' => $project->archived_at !== null,
+            'searchText' => Str::lower($project->alias.' '.$project->name),
+        ];
     }
 
     /**

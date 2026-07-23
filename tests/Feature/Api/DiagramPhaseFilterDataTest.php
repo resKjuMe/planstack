@@ -7,42 +7,48 @@ use App\Models\Project;
 use App\Models\Task;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
 /**
- * The header-chip phase filter in diagram.js needs each graph node to carry its
- * phase and each header entry to carry the phase id. This locks that contract.
+ * Das Diagramm (resources/js/diagram/derive.js) leitet Knoten + Phasen-Kopfzeile
+ * clientseitig aus dem geteilten Store ab. Dafür muss die API pro Task die
+ * `phase_id` mitliefern und der Phasen-Endpunkt die Phasen-id — dieser Vertrag
+ * wird hier festgehalten (früher gegen die serverseitig gebaute Graph-Struktur).
  */
 class DiagramPhaseFilterDataTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_diagram_graph_nodes_carry_their_phase_and_header_carries_the_id(): void
+    public function test_api_delivers_phase_id_per_task_and_phase_list(): void
     {
         $user = User::factory()->create();
         $project = Project::factory()->create(['created_by_id' => $user->id]);
         $phase = Phase::factory()->create(['project_id' => $project->id]);
-        $task = Task::factory()->create([
+        Task::factory()->create([
             'project_id' => $project->id,
             'created_by_id' => $user->id,
             'phase_id' => $phase->id,
             'name' => 'T1',
         ]);
 
-        $response = $this->actingAs($user)
-            ->get(route('projects.diagram', $project));
+        Sanctum::actingAs($user);
 
-        $response->assertOk();
+        // Board-Read (Datenbasis aller Unterseiten): Task trägt seine phase_id.
+        $tasks = $this->getJson("/api/projects/{$project->alias}?fields=full")
+            ->assertOk()
+            ->json('data.tasks');
 
-        $graph = $response->viewData('graph');
-        $this->assertNotEmpty($graph['nodes']);
-        foreach ($graph['nodes'] as $node) {
-            $this->assertArrayHasKey('phase', $node);
-        }
-        $ours = collect($graph['nodes'])->firstWhere('name', 'T1');
-        $this->assertSame($phase->id, $ours['phase']);
+        $this->assertNotEmpty($tasks);
+        $ours = collect($tasks)->firstWhere('name', 'T1');
+        $this->assertNotNull($ours);
+        $this->assertSame($phase->id, $ours['phase_id']);
 
-        $header = $response->viewData('phases');
-        $this->assertSame($phase->id, $header[0]['id']);
+        // Phasen-Endpunkt: die Kopfzeile filtert nach dieser id.
+        $phases = $this->getJson("/api/projects/{$project->alias}/phases")
+            ->assertOk()
+            ->json('data');
+
+        $this->assertSame($phase->id, $phases[0]['id']);
     }
 }
