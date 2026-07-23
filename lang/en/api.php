@@ -44,6 +44,8 @@ return [
     'e_g' => 'e.g.',
     'either_a' => 'Either a',
     'error_codes' => 'Error codes',
+    'find_a_task_by_its_exact_name' => 'Find a task by its exact name within the project (e.g. C27); a numeric value is not treated as an id. 404 if unknown. Response:',
+    'find_the_task_carrying_a_given_pr' => 'Find the task carrying a given pull-request number (server-side PR→task resolution for the review/fix flow); pr_number/pr_url are always included. 404 if no task references it. Response:',
     'header_without_a_valid_token_the_api' => 'header. Without a valid token, the API responds with',
     'idempotent' => '(idempotent;',
     'if_already_claimed_choose_a_different' => 'if already claimed → choose a different Task.',

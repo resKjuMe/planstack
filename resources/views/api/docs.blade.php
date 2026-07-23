@@ -133,6 +133,8 @@
             <a class="sub" href="#tasks-index">GET .../tasks</a>
             <a class="sub" href="#tasks-store">POST .../tasks</a>
             <a class="sub" href="#tasks-show">GET .../tasks/{id}</a>
+            <a class="sub" href="#tasks-by-name">GET .../tasks/by-name/{name}</a>
+            <a class="sub" href="#tasks-by-pr">GET .../tasks/by-pr/{pr}</a>
             <a class="sub" href="#tasks-update">PUT .../tasks/{id}</a>
             <a class="sub" href="#tasks-destroy">DELETE .../tasks/{id}</a>
 
@@ -418,6 +420,18 @@ curl -s https://planstack.eskju.net/api/user \
         <section id="tasks-show" class="endpoint">
             <div class="route"><span class="method m-get">GET</span><span class="path">/api/projects/<b>{alias}</b>/tasks/<b>{id}</b></span></div>
             <p class="desc">{{ __('api.a_single_task_decorated_including') }} <code>prerequisites</code>, <code>concern</code>{{ __('api.board_fields_response') }} <a href="#schema-task">Task</a>.</p>
+        </section>
+
+        <section id="tasks-by-name" class="endpoint">
+            <div class="route"><span class="method m-get">GET</span><span class="path">/api/projects/<b>{alias}</b>/tasks/by-name/<b>{name}</b></span></div>
+            <p class="desc">{{ __('api.find_a_task_by_its_exact_name') }} <a href="#schema-task">Task</a>.</p>
+            <span class="perm">{{ __('api.permission') }} <b>view</b></span>
+        </section>
+
+        <section id="tasks-by-pr" class="endpoint">
+            <div class="route"><span class="method m-get">GET</span><span class="path">/api/projects/<b>{alias}</b>/tasks/by-pr/<b>{pr}</b></span></div>
+            <p class="desc">{{ __('api.find_the_task_carrying_a_given_pr') }} <a href="#schema-task">Task</a>.</p>
+            <span class="perm">{{ __('api.permission') }} <b>view</b></span>
         </section>
 
         <section id="tasks-update" class="endpoint">

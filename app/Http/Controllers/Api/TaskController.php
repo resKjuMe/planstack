@@ -50,6 +50,40 @@ class TaskController extends ApiController
     }
 
     /**
+     * GET /api/projects/{project}/tasks/by-name/{name} — find a task by its exact
+     * name within the project (e.g. "C27"), decorated. Unlike the {task} segment
+     * (which treats a numeric value as an id), this always matches the `name`
+     * column, so it disambiguates the rare numeric task name. 404 when unknown.
+     */
+    public function showByName(Project $project, string $name): JsonResource
+    {
+        $this->authorize('view', $project);
+
+        $task = $project->tasks()->where('name', $name)->firstOrFail();
+
+        return new TaskResource($this->decorateOne($project, $task));
+    }
+
+    /**
+     * GET /api/projects/{project}/tasks/by-pr/{pr} — find the task carrying a given
+     * pull-request number within the project, decorated (pr_number/pr_url always
+     * included, so the review/fix flow can resolve a PR → task server-side instead
+     * of scanning all tasks). 404 when no task references that PR.
+     */
+    public function showByPr(Project $project, int $pr): JsonResource|JsonResponse
+    {
+        $this->authorize('view', $project);
+
+        if ($pr < 1) {
+            return $this->conflict('Ungültige PR-Nummer.', 422);
+        }
+
+        $task = $project->tasks()->where('pr_number', $pr)->firstOrFail();
+
+        return $this->reviewResource($project, $task);
+    }
+
+    /**
      * POST /api/projects/{project}/tasks — create a task with an optional gate.
      */
     public function store(Request $request, Project $project): JsonResponse

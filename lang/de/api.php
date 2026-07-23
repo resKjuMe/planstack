@@ -44,6 +44,8 @@ return [
     'e_g' => 'z. B.',
     'either_a' => 'Entweder eine',
     'error_codes' => 'Fehlercodes',
+    'find_a_task_by_its_exact_name' => 'Findet einen Task anhand seines exakten Namens im Projekt (z. B. C27); ein numerischer Wert wird nicht als id interpretiert. 404, falls unbekannt. Antwort:',
+    'find_the_task_carrying_a_given_pr' => 'Findet den Task mit der angegebenen Pull-Request-Nummer (serverseitige PR→Task-Auflösung für den review/fix-Flow); pr_number/pr_url sind immer enthalten. 404, falls kein Task diese PR referenziert. Antwort:',
     'header_without_a_valid_token_the_api' => '-Header. Ohne gültiges Token antwortet die API mit',
     'idempotent' => '(idempotent;',
     'if_already_claimed_choose_a_different' => 'wenn bereits beansprucht → anderen Task wählen.',

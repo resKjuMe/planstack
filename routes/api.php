@@ -61,6 +61,11 @@ Route::middleware('auth:sanctum')->group(function () {
     // Tasks (CRUD)
     Route::get('projects/{project}/tasks', [TaskController::class, 'index']);
     Route::post('projects/{project}/tasks', [TaskController::class, 'store']);
+    // Gezielte Lookups (vor der {task}-Wildcard): Task per exaktem Namen bzw. per
+    // PR-Nummer finden. Serverseitige PR→Task-Auflösung für den review/fix-Flow.
+    Route::get('projects/{project}/tasks/by-name/{name}', [TaskController::class, 'showByName']);
+    Route::get('projects/{project}/tasks/by-pr/{pr}', [TaskController::class, 'showByPr'])
+        ->whereNumber('pr');
     Route::get('projects/{project}/tasks/{task}', [TaskController::class, 'show'])->scopeBindings();
     Route::match(['put', 'patch'], 'projects/{project}/tasks/{task}', [TaskController::class, 'update'])->scopeBindings();
     Route::delete('projects/{project}/tasks/{task}', [TaskController::class, 'destroy'])->scopeBindings();
