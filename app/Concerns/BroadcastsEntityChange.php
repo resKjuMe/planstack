@@ -2,7 +2,7 @@
 
 namespace App\Concerns;
 
-use App\Support\NotificationBroadcaster;
+use App\Jobs\BroadcastEntityChange;
 
 /**
  * Generisches Entity-Broadcasting: jedes Modell, das diesen Trait nutzt, meldet
@@ -20,6 +20,15 @@ use App\Support\NotificationBroadcaster;
  */
 trait BroadcastsEntityChange
 {
+    /**
+     * Innerhalb eines Requests bereits verschickte Broadcasts (Coalescing):
+     * dieselbe Entity-Änderung wird nur EINMAL gesendet, auch wenn ein Model in
+     * einem Request mehrfach gespeichert wird.
+     *
+     * @var array<string, bool>
+     */
+    protected static array $broadcastCoalesce = [];
+
     public static function bootBroadcastsEntityChange(): void
     {
         static::created(fn ($model) => $model->emitEntityChange('insert'));
@@ -35,7 +44,14 @@ trait BroadcastsEntityChange
             return;
         }
 
-        app(NotificationBroadcaster::class)->broadcastEntity($scope['organization_id'], [
+        $key = "{$scope['organization_id']}:{$scope['entity']}:{$scope['id']}:{$action}";
+        if (isset(static::$broadcastCoalesce[$key])) {
+            return;
+        }
+        static::$broadcastCoalesce[$key] = true;
+
+        // Gequeuet → aus der Request-Latenz genommen (siehe BroadcastEntityChange).
+        BroadcastEntityChange::dispatch($scope['organization_id'], [
             'type' => 'entity-changed',
             'entity' => $scope['entity'],
             'id' => $scope['id'],

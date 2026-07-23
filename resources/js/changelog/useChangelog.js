@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useSyncExternalStore } from 'react';
+import { onEntityChanged, onReconnected } from '../data/liveRefresh';
 
 // Gecachter, paginierter Loader für den Changelog-Feed (serverseitig aufbereitet,
 // Audit-Log-basiert — nicht aus dem Tasks-Store ableitbar). Seite 1 wird beim ersten
 // Öffnen geladen und über die Navigation gecacht (0 Calls beim Tab-Wechsel);
-// „Mehr laden" hängt weitere Seiten an. Ein entity-changed-Event des Projekts setzt
-// still auf die (neueste) Seite 1 zurück, da neue Einträge oben erscheinen.
+// „Mehr laden" hängt weitere Seiten an. Ein entity-changed-Event (oder Reconnect)
+// setzt auf die neueste Seite 1 zurück — aber nur, wenn der Feed gerade sichtbar
+// ist; sonst wird er als stale markiert und beim nächsten Öffnen neu geladen.
 
 const slices = new Map();
 
@@ -19,6 +21,7 @@ function getSlice(alias) {
             status: 'idle', // idle | loading | ready | error
             loadingMore: false,
             error: null,
+            stale: false,
             listeners: new Set(),
             snapshot: null,
             seq: 0,
@@ -85,7 +88,12 @@ async function fetchPage(alias, page, { reset }) {
 
 export function ensureChangelog(alias) {
     const s = getSlice(alias);
-    if (s.status === 'idle') fetchPage(alias, 1, { reset: true });
+    if (s.status === 'idle') {
+        fetchPage(alias, 1, { reset: true });
+    } else if (s.stale && s.listeners.size > 0) {
+        s.stale = false;
+        fetchPage(alias, 1, { reset: true });
+    }
 }
 
 export function loadMoreChangelog(alias) {
@@ -95,14 +103,26 @@ export function loadMoreChangelog(alias) {
     }
 }
 
-if (typeof window !== 'undefined') {
-    window.addEventListener('planstack:entity-changed', (e) => {
-        const d = e.detail;
-        if (!d || !d.project_alias) return;
-        const s = slices.get(d.project_alias);
-        if (s && s.status === 'ready') fetchPage(d.project_alias, 1, { reset: true });
-    });
+// Sichtbar → auf die neueste Seite 1 zurücksetzen; sonst nur als stale markieren
+// und beim nächsten Öffnen laden (kein Hintergrund-Refetch).
+function refreshSlice(s) {
+    if (s.status === 'idle') return;
+    if (s.listeners.size > 0) {
+        s.stale = false;
+        fetchPage(s.alias, 1, { reset: true });
+    } else {
+        s.stale = true;
+    }
 }
+
+onEntityChanged((d) => {
+    if (!d || !d.project_alias) return;
+    const s = slices.get(d.project_alias);
+    if (s) refreshSlice(s);
+});
+onReconnected(() => {
+    for (const s of slices.values()) refreshSlice(s);
+});
 
 export function useChangelog(alias) {
     useEffect(() => {

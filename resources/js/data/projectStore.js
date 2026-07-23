@@ -10,6 +10,7 @@
 // Board und Summary konsumieren denselben Store über useProjectData(alias).
 
 import { fetchProjectTasks, fetchTask, fetchPhases, fetchStatusConfig } from './projectApi';
+import { onEntityChanged, onReconnected } from './liveRefresh';
 
 /** @type {Map<string, object>} alias → slice */
 const slices = new Map();
@@ -136,7 +137,7 @@ export function patchTask(alias, id, partial) {
 
 // --- Socket-getriebenes partielles Nachladen -----------------------------------
 
-async function onEntityChanged(detail) {
+async function applyEntityChange(detail) {
     if (!detail || !detail.project_alias) return;
     const s = slices.get(detail.project_alias);
     // Nichts geladen → nichts nachzuladen (die Seite lädt beim nächsten Besuch frisch).
@@ -175,6 +176,23 @@ async function onEntityChanged(detail) {
     // Projekt-Stammdaten.
 }
 
-if (typeof window !== 'undefined') {
-    window.addEventListener('planstack:entity-changed', (e) => onEntityChanged(e.detail));
+// Nach einem Reconnect können Socket-Events verpasst worden sein → geladene Slices
+// still voll nachladen (Tasks + Phasen; die org-weite statusConfig ändert sich
+// praktisch nie und bleibt gecacht).
+async function reloadSlice(s) {
+    try {
+        const [tasks, phases] = await Promise.all([fetchProjectTasks(s.alias), fetchPhases(s.alias)]);
+        s.tasks = new Map(tasks.map((t) => [t.id, t]));
+        s.phases = phases;
+        notify(s);
+    } catch {
+        /* best effort */
+    }
 }
+
+onEntityChanged((detail) => applyEntityChange(detail));
+onReconnected(() => {
+    for (const s of slices.values()) {
+        if (s.status === 'ready') reloadSlice(s);
+    }
+});

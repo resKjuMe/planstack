@@ -73,6 +73,7 @@ Alpine.store('notifications', {
     _pusher: null,       // nur im Leader-Tab gesetzt
     _bc: null,           // BroadcastChannel zu den anderen Tabs
     _isLeader: false,
+    _sawFailure: false,  // seit dem letzten „connected" gab es eine getrennte Phase?
 
     init() {
         const key = metaContent('pusher-key');
@@ -149,7 +150,21 @@ Alpine.store('notifications', {
     _setState(connected, failed) {
         this.connected = connected;
         this.failed = failed;
+        this._signalReconnectIfNeeded(connected, failed);
         if (this._bc) this._bc.postMessage({ type: 'state', connected, failed });
+    },
+
+    // Nach einer getrennten Phase (failed/unavailable/disconnected) einen erneuten
+    // „connected"-Übergang als DOM-Event `planstack:reconnected` melden — die
+    // Daten-Loader laden dann verpasste Änderungen nach (resources/js/data). Der
+    // erste Verbindungsaufbau zählt NICHT als Reconnect.
+    _signalReconnectIfNeeded(connected, failed) {
+        if (failed) {
+            this._sawFailure = true;
+        } else if (connected && this._sawFailure) {
+            this._sawFailure = false;
+            window.dispatchEvent(new CustomEvent('planstack:reconnected'));
+        }
     },
 
     // Eine Nachricht verarbeiten. broadcast=true (nur Leader) verteilt sie
@@ -182,6 +197,7 @@ Alpine.store('notifications', {
         } else if (msg.type === 'state') {
             this.connected = msg.connected;
             this.failed = msg.failed;
+            this._signalReconnectIfNeeded(msg.connected, msg.failed);
         } else if (msg.type === 'state-request' && this._isLeader) {
             // Als Leader dem neu geöffneten Tab den aktuellen Status mitteilen.
             if (this._bc) this._bc.postMessage({ type: 'state', connected: this.connected, failed: this.failed });
