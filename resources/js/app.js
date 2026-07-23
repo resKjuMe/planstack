@@ -42,7 +42,7 @@ Alpine.store('theme', {
 // öffnet ein Flyout mit den letzten Nachrichten als JSON und markiert sie als
 // gelesen. Bei Verbindungsabbruch wird mit Backoff neu verbunden.
 const NOTIFICATIONS_HOST = 'planstack.eskju.net';
-const NOTIFICATIONS_WS_URL = 'wss://websocket.eskju.net:3000/';
+const NOTIFICATIONS_WS_URL = 'wss://websocket.eskju.net:8443/';
 const NOTIFICATIONS_MAX = 50; // so viele letzte Nachrichten im Flyout vorhalten
 
 Alpine.store('notifications', {

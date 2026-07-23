@@ -71,7 +71,7 @@ return [
 
     'websocket_forward_host' => env('PLANSTACK_WEBSOCKET_HOST', 'planstack.eskju.net'),
 
-    'websocket_send_url' => env('PLANSTACK_WEBSOCKET_SEND_URL', 'https://websocket.eskju.net:3000/send'),
+    'websocket_send_url' => env('PLANSTACK_WEBSOCKET_SEND_URL', 'https://websocket.eskju.net:8443/send'),
 
     // Timeout (Sekunden) für die Weiterleitung — kurz halten, damit die
     // API-Antwort nicht spürbar verzögert wird, falls der Socket-Server hängt.
