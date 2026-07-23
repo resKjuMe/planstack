@@ -1,17 +1,16 @@
 import { useCallback, useEffect, useSyncExternalStore } from 'react';
-import { fetchProjects, fetchAllTasks } from '../data/projectApi';
+import { fetchProjectsOverview } from '../data/projectApi';
 import { ensureStatusConfig } from '../data/projectStore';
 
-// Gecachter Loader für die Projektübersicht: lädt die Projekte (GET /api/projects),
-// alle Tasks org-weit (GET /api/tasks) und die org-weite Status-Konfiguration
-// (einmalig, geteilt mit den Unterseiten). Die Karten leitet die View clientseitig
-// daraus ab. Bei jeder Entity-Änderung (Project insert/update/delete sowie
+// Gecachter Loader für die Projektübersicht: lädt die kompakte Aggregat-Übersicht
+// (GET /api/projects/overview) + die org-weite Status-Konfiguration (einmalig,
+// geteilt mit den Unterseiten). Die Karten leitet die View clientseitig aus den
+// Aggregaten ab. Bei jeder Entity-Änderung (Project insert/update/delete sowie
 // Task-/Phasen-Änderungen) wird entprellt neu geladen. Eine org-weite Liste → ein
 // Slice ohne Key.
 
 const slice = {
     projects: [],
-    tasks: [],
     statusConfig: null,
     status: 'idle', // idle | loading | ready | error
     error: null,
@@ -24,7 +23,6 @@ const slice = {
 function rebuild() {
     slice.snapshot = {
         projects: slice.projects,
-        tasks: slice.tasks,
         statusConfig: slice.statusConfig,
         status: slice.status,
         error: slice.error,
@@ -45,14 +43,12 @@ async function load() {
     }
 
     try {
-        const [projects, tasks, statusConfig] = await Promise.all([
-            fetchProjects(),
-            fetchAllTasks(),
+        const [overview, statusConfig] = await Promise.all([
+            fetchProjectsOverview(),
             ensureStatusConfig(),
         ]);
         if (token !== slice.seq) return; // veraltet
-        slice.projects = projects;
-        slice.tasks = tasks;
+        slice.projects = overview.projects ?? [];
         slice.statusConfig = statusConfig;
         slice.status = 'ready';
         slice.error = null;

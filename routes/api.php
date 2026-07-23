@@ -32,6 +32,10 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Projekte
     Route::get('projects', [ProjectController::class, 'index']);
+    // Kompakte Aggregat-Übersicht für die Projektliste (Zähler/SP/Segment-Buckets
+    // je Projekt per DB-Gruppierung, ohne alle Task-Rows zu laden). VOR der
+    // {project}-Wildcard, damit „overview" nicht als Alias gebunden wird.
+    Route::get('projects/overview', [ProjectController::class, 'overview']);
     Route::post('projects', [ProjectController::class, 'store']);
     Route::get('projects/{project}', [ProjectController::class, 'show']);
     Route::patch('projects/{project}', [ProjectController::class, 'update']);

@@ -9,6 +9,7 @@ use App\Http\Resources\TaskResource;
 use App\Models\Project;
 use App\Models\Task;
 use App\Support\ProjectConfig;
+use App\Support\ProjectOverviewPresenter;
 use App\Support\TaskBoardService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -37,11 +38,22 @@ class ProjectController extends ApiController
                     ->where('created_by_id', $userId)
                     ->orWhereHas('teams.members', fn ($m) => $m->where('users.id', $userId))))
             ->withCount('tasks')
-            ->with(['owner', 'teams:id,name'])
+            ->with('owner')
             ->latest()
             ->get();
 
         return ProjectResource::collection($projects);
+    }
+
+    /**
+     * GET /api/projects/overview — kompakte Aggregat-Übersicht für die Projektliste
+     * (Zähler/SP/Segment-Buckets je Projekt per DB-Gruppierung). Der Client leitet
+     * daraus die Karten ab (Kategorie, Styling, Balken). Deutlich leichter als das
+     * Laden aller Tasks.
+     */
+    public function overview(Request $request, ProjectOverviewPresenter $overview): JsonResponse
+    {
+        return response()->json($overview->payload($request->user()));
     }
 
     /**

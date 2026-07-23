@@ -44,14 +44,10 @@ export async function fetchStatusConfig() {
     return getJson('/api/status-config');
 }
 
-/** Alle zugänglichen Projekte (org-weit) — schlanke ProjectResource-Collection. */
-export async function fetchProjects() {
-    const body = await getJson('/api/projects');
-    return body.data ?? [];
-}
-
-/** Alle Tasks der zugänglichen Projekte (org-weit), voller Feldumfang. */
-export async function fetchAllTasks() {
-    const body = await getJson('/api/tasks?fields=full');
-    return body.data ?? [];
+/**
+ * Kompakte Projekt-Übersicht: pro Projekt Zähler/SP + Segment-Buckets (server-
+ * seitig per DB-Aggregat, ohne alle Task-Rows). Liefert { projects: [...] }.
+ */
+export async function fetchProjectsOverview() {
+    return getJson('/api/projects/overview');
 }

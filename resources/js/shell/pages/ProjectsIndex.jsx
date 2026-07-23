@@ -14,7 +14,7 @@ import { deriveProjectCards } from '../../projects/derive.js';
 // nur statische Props + i18n-Templates.
 export default function ProjectsIndex({ currentUserId, filters, flash, strings }) {
     const { errors } = usePage().props;
-    const { projects, tasks, statusConfig, status, error } = useProjectsList();
+    const { projects, statusConfig, status, error } = useProjectsList();
     const [q, setQ] = useState('');
     const [filter, setFilter] = useState('all');
 
@@ -22,13 +22,12 @@ export default function ProjectsIndex({ currentUserId, filters, flash, strings }
         if (status !== 'ready' || !statusConfig) return { cards: [], summaryLine: '' };
         return deriveProjectCards({
             projects,
-            tasks,
             statusConfig,
             currentUserId,
             strings,
             locale: (typeof document !== 'undefined' && document.documentElement.getAttribute('lang')) || 'de-DE',
         });
-    }, [projects, tasks, statusConfig, status, currentUserId, strings]);
+    }, [projects, statusConfig, status, currentUserId, strings]);
 
     const query = q.trim().toLowerCase();
     const visible = useMemo(
