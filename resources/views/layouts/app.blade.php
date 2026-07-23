@@ -32,43 +32,112 @@
         @vite(['resources/css/app.css', 'resources/js/app.js'])
 
         {{-- Alpine: Elemente mit x-cloak bis zur Initialisierung verbergen
-             (die Detailseite nutzt x-app-layout, nicht die status-shell). --}}
+             (die Glocke im React-Grundgerüst bleibt Alpine-gesteuert). --}}
         <style>[x-cloak]{display:none !important;}</style>
     </head>
     <body class="font-sans antialiased">
-        <div class="min-h-screen bg-gray-100 dark:bg-gray-900">
-            @include('layouts.navigation')
+        @php
+            // Nutzlast für das React-Grundgerüst (resources/js/shell). Alle
+            // request-abhängigen Werte (Auth, aktive Route, Config, Übersetzungen)
+            // werden hier server-seitig berechnet und als JSON an die Shell übergeben.
+            $ciVersion = config('planstack_ci.version');
+            $changelogVersion = config('changelog.releases.0.version');
+            $shellUser = Auth::user();
+            $shell = [
+                'hasOrg' => $shellUser?->organization_id !== null,
+                'user' => [
+                    'name' => $shellUser?->name ?? '',
+                    'email' => $shellUser?->email ?? '',
+                ],
+                'logoHref' => route('dashboard'),
+                'logoutHref' => route('logout'),
+                'csrf' => csrf_token(),
+                'ciVersion' => $ciVersion,
+                'changelogVersion' => $changelogVersion,
+                'onChangelog' => request()->routeIs('changelog'),
+                'links' => [
+                    [
+                        'label' => __('common.projects'),
+                        'href' => route('projects.index'),
+                        'active' => request()->routeIs('projects.*'),
+                    ],
+                    [
+                        'label' => __('common.teams'),
+                        'href' => route('teams.index'),
+                        'active' => request()->routeIs('teams.*'),
+                    ],
+                    [
+                        'label' => __('nav.planstack_skill'),
+                        'href' => route('skill.setup'),
+                        'active' => request()->routeIs('skill.*'),
+                        'icon' => 'skill',
+                    ],
+                    [
+                        'label' => 'v' . $changelogVersion,
+                        'href' => route('changelog'),
+                        'active' => request()->routeIs('changelog'),
+                        'icon' => 'changelog',
+                        'mono' => true,
+                    ],
+                ],
+                'menu' => [
+                    [
+                        'label' => __('common.organization'),
+                        'href' => route('organization.index'),
+                        'icon' => 'org',
+                    ],
+                    [
+                        'label' => __('common.profile'),
+                        'href' => route('profile.edit'),
+                        'icon' => 'profile',
+                    ],
+                    [
+                        'label' => __('nav.tampermonkey_script'),
+                        'href' => url('/planstack-ci/setup'),
+                        'icon' => 'ci',
+                        'orgOnly' => true,
+                        'badge' => 'v' . $ciVersion,
+                    ],
+                ],
+                'labels' => [
+                    'signOut' => __('nav.sign_out'),
+                    'newChanges' => __('nav.new_changes'),
+                    'ciUpdate' => __('common.update_available_for_the_ci_status'),
+                    'theme' => [
+                        'light' => __('nav.theme_light'),
+                        'dark' => __('nav.theme_dark'),
+                        'system' => __('nav.theme_system'),
+                    ],
+                ],
+            ];
+        @endphp
 
-            {{-- Sticky page-header band (heading + optional sub-nav). position: sticky
-                 keeps it in the normal flow, so pinning it on scroll does NOT shift the
-                 rest of the page (unlike position: fixed). --}}
-            @if (isset($header) || isset($subheader))
-                <div class="sticky top-0 z-30">
-                    <!-- Page Heading -->
-                    @isset($header)
-                        <header class="bg-white shadow dark:bg-gray-800 dark:shadow-black/30">
-                            <div class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
-                                {{ $header }}
-                            </div>
-                        </header>
-                    @endisset
+        {{-- Mount-Punkt des React-Grundgerüsts (Wrapper, Header, Navi, Subnavi). --}}
+        <div id="app-shell"></div>
+        <script>
+            window.__PLANSTACK_SHELL__ = @json($shell);
+        </script>
 
-                    <!-- Optional sub-navigation directly under the page heading (e.g. the
-                         project tabs), spanning the full width in its own light band. -->
-                    @isset($subheader)
-                        <div class="bg-gray-50 border-b border-gray-200 dark:bg-gray-800/50 dark:border-gray-700">
-                            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                                {{ $subheader }}
-                            </div>
-                        </div>
-                    @endisset
-                </div>
-            @endif
+        {{-- Server-gerenderte, seitenspezifische Blade-Inhalte. Die Shell hängt
+             diese Knoten nach dem Mount an ihren Platz (echter DOM-Umzug, damit
+             Alpine, Inline-Skripte und verschachtelte Islands weiterlaufen).
+             Bis dahin unsichtbar, um ein Aufblitzen ohne Rahmen zu vermeiden. --}}
+        <div id="shell-nodes" hidden>
+            {{-- Benachrichtigungs-Glocke (Alpine/Pusher) – Desktop und Mobile. --}}
+            <div id="shell-bell" class="relative"><x-notification-bell /></div>
+            <div id="shell-bell-mobile" class="relative"><x-notification-bell /></div>
 
-            <!-- Page Content -->
-            <main>
-                {{ $slot }}
-            </main>
+            @isset($header)
+                <div id="shell-header">{{ $header }}</div>
+            @endisset
+
+            @isset($subheader)
+                <div id="shell-subheader">{{ $subheader }}</div>
+            @endisset
+
+            <div id="shell-main">{{ $slot }}</div>
         </div>
+
+        @vite('resources/js/shell/index.jsx')
     </body>
 </html>
