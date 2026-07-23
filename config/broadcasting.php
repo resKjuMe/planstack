@@ -32,6 +32,12 @@ return [
                 'cluster' => env('PUSHER_APP_CLUSTER', 'eu'),
                 'useTLS' => true,
             ],
+            // TLS-Verifikation der ausgehenden Pusher-Requests (via Guzzle-Client
+            // in NotificationBroadcaster). Default true (sicher). Auf Windows
+            // scheitert cURL ohne CA-Bundle mit "SSL certificate problem"
+            // (Fehler 60) — korrekter Fix: curl.cainfo in php.ini setzen.
+            // Notausgang für rein lokale Nutzung: PUSHER_VERIFY_SSL=false.
+            'verify_ssl' => env('PUSHER_VERIFY_SSL', true),
         ],
 
         'log' => [
