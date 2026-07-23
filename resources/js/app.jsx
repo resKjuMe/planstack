@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client';
 import { createInertiaApp, router } from '@inertiajs/react';
 import BladePage from './shell/pages/BladePage.jsx';
 import ProjectBoard from './shell/pages/ProjectBoard.jsx';
+import ProjectSummary from './shell/pages/ProjectSummary.jsx';
 
 // Seiten-Registry: „BladePage" bettet noch nicht migrierte Blade-Seiten ein,
 // echte React-Seiten (z. B. ProjectBoard) werden namentlich aufgelöst. Unbekannte
@@ -10,6 +11,7 @@ import ProjectBoard from './shell/pages/ProjectBoard.jsx';
 const pages = {
     BladePage,
     ProjectBoard,
+    ProjectSummary,
 };
 
 createInertiaApp({
