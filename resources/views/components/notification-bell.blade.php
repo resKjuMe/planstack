@@ -106,10 +106,11 @@
                         <template x-if="structured(msg.data)">
                             <div class="flex items-start gap-2">
                                 <div class="flex min-w-0 flex-1 items-start gap-1.5">
-                                    <template x-if="statusIcon(msg.data)">
-                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-                                             class="mt-0.5 h-4 w-4 flex-none text-gray-500 dark:text-gray-400" aria-hidden="true" x-html="statusIcon(msg.data)"></svg>
-                                    </template>
+                                    {{-- Icon-Spalte immer reservieren, damit der Text ohne
+                                         Statuswechsel identisch eingerückt bleibt. --}}
+                                    <svg x-show="statusIcon(msg.data)" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                                         class="mt-0.5 h-4 w-4 flex-none text-gray-500 dark:text-gray-400" aria-hidden="true" x-html="statusIcon(msg.data)"></svg>
+                                    <span x-show="!statusIcon(msg.data)" class="mt-0.5 h-4 w-4 flex-none" aria-hidden="true"></span>
                                     <div class="min-w-0 text-sm leading-snug text-gray-800 dark:text-gray-200">
                                         <template x-if="msg.data.project_name">
                                             <span class="text-gray-500 dark:text-gray-400"><span x-text="msg.data.project_name"></span> <span class="text-gray-300 dark:text-gray-600">›</span> </span>
