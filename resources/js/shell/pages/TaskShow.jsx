@@ -495,15 +495,13 @@ function ChecklistItems({ list, strings }) {
 }
 
 function ChecklistProse({ list, strings }) {
-    const convert = () => router.post(list.convertUrl, { kind: list.kind });
-
+    // Die Checkliste ist immer eine Liste — kein „In Checkliste umwandeln"-Button
+    // mehr (bewusst ausgeblendet); erkennbare Punkte werden direkt als Liste
+    // gezeigt, sonst der Rohtext als Fallback.
     return (
         <>
             <div className="mb-3 flex items-center justify-between gap-3">
                 <h3 className="font-semibold text-gray-900 dark:text-gray-100">{list.title}</h3>
-                {list.canUpdate && list.parsed.length > 0 && (
-                    <button type="button" onClick={convert} className="rounded-md bg-white dark:bg-gray-800 px-2.5 py-1 text-xs font-semibold text-indigo-600 dark:text-indigo-400 ring-1 ring-indigo-200 dark:ring-indigo-900/50 hover:bg-indigo-50 dark:hover:bg-indigo-900/30">{strings.convertToChecklist}</button>
-                )}
             </div>
             {list.parsed.length > 0 ? (
                 <ul className="space-y-1.5">

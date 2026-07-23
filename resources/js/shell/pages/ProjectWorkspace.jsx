@@ -35,18 +35,28 @@ function tabForPath(pathname, tabs) {
 
 export default function ProjectWorkspace({ activeTab, currentUserId, project, can, tabs, flash, board, summary, diagram, sequence, calibration, changelog }) {
     const { errors } = usePage().props;
-    const [tab, setTab] = useState(activeTab);
 
-    // Back/Forward: aktiven Tab aus der URL ableiten. Inertia stellt dieselbe
-    // Workspace-Seite aus dem History-State wieder her (ohne Server-Call), diese
-    // Komponente bleibt gemountet — wir schalten nur den sichtbaren View um.
+    // Aktiven Tab autoritativ aus der BROWSER-URL ableiten (nicht aus dem
+    // Server-activeTab-Prop): Beim Zurueck-Navigieren remountet die Seite ggf.
+    // (AppShell key={url}) und das Prop traegt noch den Tab des ersten Renders —
+    // die URL ist die verlaessliche Quelle. Server-activeTab nur als Fallback.
+    const resolveTab = () => {
+        const key = tabForPath(window.location.pathname, tabs);
+        return key && CLIENT_TABS.includes(key) ? key : activeTab;
+    };
+    const [tab, setTab] = useState(resolveTab);
+
+    // Back/Forward: bevorzugt der im History-State hinterlegte Tab-Marker,
+    // sonst aus der URL. Deckt sowohl den Remount- als auch den
+    // Komponente-bleibt-gemountet-Fall ab.
     useEffect(() => {
-        const onPop = () => {
-            const key = tabForPath(window.location.pathname, tabs);
-            if (key && CLIENT_TABS.includes(key)) setTab(key);
+        const onPop = (e) => {
+            const stored = e.state?.psTab;
+            setTab(stored && CLIENT_TABS.includes(stored) ? stored : resolveTab());
         };
         window.addEventListener('popstate', onPop);
         return () => window.removeEventListener('popstate', onPop);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [tabs]);
 
     // Projekt-Stammdaten (Name/Alias in der Kopfzeile) liegen nicht im Store,
@@ -72,7 +82,9 @@ export default function ProjectWorkspace({ activeTab, currentUserId, project, ca
             setTab(key);
             // URL wechseln, aber Inertias History-State (die Workspace-Seite)
             // beibehalten → kein Server-Call, back/forward bleibt reload-frei.
-            window.history.pushState(window.history.state, '', href);
+            // Zusaetzlich den Tab-Marker hinterlegen, damit back/forward den
+            // richtigen Tab wiederherstellt (siehe onPop).
+            window.history.pushState({ ...window.history.state, psTab: key }, '', href);
             window.scrollTo(0, 0);
         }
         return true;

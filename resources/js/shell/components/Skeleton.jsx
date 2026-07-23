@@ -49,8 +49,10 @@ export function LinesCardSkeleton({ rows = 3 }) {
 }
 
 // Karten-Grid (Summary pickbare PRs, PR-Sequenz-Liste, Changelog-Eintraege,
-// Kalibrierung-Charts). cols steuert die Spaltenzahl ab sm/lg.
-export function CardsSkeleton({ count = 3, cols = 3, bodyClass = '' }) {
+// Kalibrierung-Charts). cols steuert die Spaltenzahl ab sm/lg; `lines` die Zahl
+// der Textzeilen im Kartenkoerper (0 = nur die einzeilige Kopfzeile, passend fuer
+// eingeklappte Changelog-Eintraege).
+export function CardsSkeleton({ count = 3, cols = 3, bodyClass = '', lines = 2 }) {
     const grid =
         { 1: '', 2: 'sm:grid-cols-2', 3: 'sm:grid-cols-2 lg:grid-cols-3' }[cols] ??
         'sm:grid-cols-2 lg:grid-cols-3';
@@ -58,12 +60,14 @@ export function CardsSkeleton({ count = 3, cols = 3, bodyClass = '' }) {
         <div className={`grid grid-cols-1 gap-4 ${grid} animate-pulse`} aria-hidden="true">
             {Array.from({ length: count }).map((_, i) => (
                 <div key={i} className={`rounded-lg bg-white dark:bg-gray-800 shadow p-4 ${bodyClass}`}>
-                    <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
                         <div className={`h-4 w-24 ${bar}`} />
+                        <div className={`h-4 flex-1 ${bar}`} />
                         <div className={`h-4 w-12 ${bar}`} />
                     </div>
-                    <div className={`mt-3 h-3 w-full ${bar}`} />
-                    <div className={`mt-2 h-3 w-4/5 ${bar}`} />
+                    {Array.from({ length: Math.max(0, lines) }).map((_, j) => (
+                        <div key={j} className={`mt-2 h-3 ${j === lines - 1 ? 'w-4/5' : 'w-full'} ${bar}`} />
+                    ))}
                 </div>
             ))}
         </div>

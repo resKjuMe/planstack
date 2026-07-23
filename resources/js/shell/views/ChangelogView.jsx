@@ -93,7 +93,7 @@ export default function ChangelogView({ project, strings }) {
         <div className="space-y-4">
             <PageHead title={strings.title} toggleLabel={strings.showHideExplanation} bullets={strings.helpBullets} />
 
-            {status === 'loading' && <CardsSkeleton count={8} cols={1} />}
+            {status === 'loading' && <CardsSkeleton count={8} cols={1} lines={0} />}
             {status === 'error' && <p className="text-sm text-red-600 dark:text-red-400">{error || 'Fehler'}</p>}
 
             {status === 'ready' && items.length === 0 && (
