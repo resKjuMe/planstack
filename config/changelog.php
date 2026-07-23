@@ -6,6 +6,36 @@
 return [
     'releases' => [
         [
+            'version' => '2.2.0',
+            'date' => '2026-07-23',
+            'tldr' => [
+                'de' => ['Live-Benachrichtigungen', 'Board reagiert live', 'Neues Kanban-Board', 'Eigene Status & Automationen', 'Eigene Task-Felder'],
+                'en' => ['Live notifications', 'Live-updating board', 'New Kanban board', 'Custom statuses & automations', 'Custom task fields'],
+            ],
+            'changes' => [
+                'de' => [
+                    'Neu: Live-Benachrichtigungen über die Glocke oben rechts. Fortschritte an Tasks (beansprucht, in Review, gemerged …) erscheinen sofort — mit Ungelesen-Zähler in der Pill und einer lesbaren Darstellung „Projekt › Task: Ereignis" samt Status-Icon und relativer Uhrzeit („vor 2min"), die im geöffneten Flyout live mitzählt. Ein rotes ✕ signalisiert eine unterbrochene Verbindung. Die Verbindung wird über alle offenen Tabs geteilt.',
+                    'Neu: Das Board reagiert jetzt live — wird ein Task-Status an anderer Stelle geändert, wandert die Karte automatisch in die richtige Spalte und wird kurz hervorgehoben, ganz ohne die Seite neu zu laden. Auch ein Merge, der über den „Sync"-Button oder den automatischen Abgleich erkannt wird, löst nun eine Benachrichtigung aus.',
+                    'Neu: Komplett überarbeitetes Board als Kanban — Spalten je Status, ein- und ausklappbare Statusgruppen, WIP-Limits, eine eigene „gemerged"-Spalte (neueste zuerst, ältere ausblendbar) sowie Filter. Tasks lassen sich per Drag-and-drop zwischen den Status verschieben.',
+                    'Neu: Frei konfigurierbare Task-Status je Organisation — unter „Organisation → Status" legst du eigene Status an, benennst, sortierst (per Ziehen) und färbst sie, wählst ein Icon und fasst sie zu Gruppen zusammen. Erlaubte Statuswechsel (Übergänge) werden dabei durchgesetzt.',
+                    'Neu: Automatiken für Status — je Fortschritts-Ereignis (z. B. „in Review", „gemerged") lässt sich ein Zielstatus samt automatisch befüllter Felder (etwa Reviewer oder Merge-Zeitpunkt) hinterlegen. Diese Automationen greifen einheitlich über Skill, API und den PR-Abgleich.',
+                    'Neu: Benutzerdefinierte Task-Felder — eigene Felder für deine Tasks, mit fertigen Vorlagen für Jira, Sentry und HubSpot.',
+                    'Das Diagramm übernimmt jetzt Farbe und Icon jedes Status aus deiner Status-Konfiguration; auch PR-Sequenz und Fortschrittsbalken zeigen die tatsächlichen (inklusive eigener) Status.',
+                    'Kleinere Verbesserungen: einheitliche, gestylte Tooltips auf der ganzen Oberfläche, ein beim Scrollen mitlaufender Seitenkopf sowie das Ansprechen eines Tasks direkt über seinen Namen oder seine PR-Nummer.',
+                ],
+                'en' => [
+                    'New: Live notifications via the bell in the top right. Task progress (claimed, in review, merged …) appears instantly — with an unread counter in the pill and a readable "Project › Task: event" format including the status icon and a relative timestamp ("2min ago") that ticks along live while the flyout is open. A red ✕ signals a dropped connection. The connection is shared across all open tabs.',
+                    'New: The board now updates live — when a task\'s status is changed elsewhere, its card automatically moves to the right column and is briefly highlighted, without reloading the page. A merge detected via the "Sync" button or the automatic reconciliation now triggers a notification as well.',
+                    'New: A completely reworked board as a Kanban — columns per status, collapsible status groups, WIP limits, a dedicated "merged" column (newest first, older ones hideable) and filters. Tasks can be moved between statuses via drag and drop.',
+                    'New: Freely configurable task statuses per organization — under "Organization → Statuses" you create your own statuses, rename, reorder (by dragging) and color them, pick an icon and group them together. Allowed status changes (transitions) are enforced.',
+                    'New: Status automations — for each progress event (e.g. "in review", "merged") you can define a target status along with automatically filled fields (such as reviewer or merge time). These automations apply consistently across the skill, the API and the PR reconciliation.',
+                    'New: Custom task fields — your own fields for tasks, with ready-made presets for Jira, Sentry and HubSpot.',
+                    'The diagram now takes each status\'s color and icon from your status configuration; the PR sequence and progress bars likewise show the actual (including custom) statuses.',
+                    'Smaller improvements: consistent, styled tooltips across the whole interface, a page header that stays with you while scrolling, and addressing a task directly by its name or PR number.',
+                ],
+            ],
+        ],
+        [
             'version' => '2.1.0',
             'date' => '2026-07-20',
             'tldr' => [
