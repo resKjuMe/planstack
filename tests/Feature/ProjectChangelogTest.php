@@ -7,18 +7,35 @@ use App\Models\Phase;
 use App\Models\Project;
 use App\Models\Task;
 use App\Models\User;
+use App\Support\ChangelogPresenter;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Collection;
 use Tests\TestCase;
 
 /**
- * The changelog page combines audit rows from several per-entity audit
- * tables (project, task, phase, ...) into one paginated, sorted feed. This
- * locks that the route renders and that both created- and updated-actions
- * show up with a resolved headline and causer.
+ * The changelog combines audit rows from several per-entity audit tables
+ * (project, task, phase, ...) into one paginated, sorted feed. The heavy
+ * aggregation lives in {@see ChangelogPresenter} (the React changelog page reads
+ * its payload over a paginated API endpoint); these tests lock that logic —
+ * created/updated actions with a resolved headline + causer, and the folding of
+ * concern/PR status flips.
  */
 class ProjectChangelogTest extends TestCase
 {
     use RefreshDatabase;
+
+    /**
+     * @return array{items: Collection<int, array<string, mixed>>, total: int}
+     */
+    private function feed(Project $project): array
+    {
+        $payload = app(ChangelogPresenter::class)->payload($project);
+
+        return [
+            'items' => collect($payload['items']),
+            'total' => $payload['pagination']['total'],
+        ];
+    }
 
     private function headlineText(array $row): string
     {
@@ -50,14 +67,9 @@ class ProjectChangelogTest extends TestCase
         ]);
         $task->update(['summary' => 'Updated summary']);
 
-        $response = $this->get(route('projects.changelog', $project));
+        ['items' => $rows, 'total' => $total] = $this->feed($project);
 
-        $response->assertOk();
-
-        $changes = $response->viewData('changes');
-        $this->assertGreaterThanOrEqual(3, $changes->total()); // project created + task created + task updated
-
-        $rows = collect($changes->items());
+        $this->assertGreaterThanOrEqual(3, $total); // project created + task created + task updated
         $this->assertTrue($rows->contains(fn ($row) => str_contains($this->headlineText($row), $project->alias)));
 
         $taskRow = $rows->first(fn ($row) => str_contains($this->headlineText($row), 'T1') && str_contains($this->headlineText($row), 'aktualisiert'));
@@ -91,10 +103,7 @@ class ProjectChangelogTest extends TestCase
             'summary' => 'Etwas blockiert',
         ])->assertRedirect();
 
-        $response = $this->get(route('projects.changelog', $project));
-        $response->assertOk();
-
-        $rows = collect($response->viewData('changes')->items());
+        ['items' => $rows] = $this->feed($project);
 
         // No standalone task status-arrow row — it should be folded away.
         $standalone = $rows->first(fn ($row) => $this->isTaskStatusArrow($row));
@@ -131,10 +140,7 @@ class ProjectChangelogTest extends TestCase
 
         $task->update(['status' => TaskStatus::MERGED->value, 'merged_at' => now()]);
 
-        $response = $this->get(route('projects.changelog', $project));
-        $response->assertOk();
-
-        $rows = collect($response->viewData('changes')->items());
+        ['items' => $rows] = $this->feed($project);
         $mergeRow = $rows->first(fn ($row) => $this->isTaskStatusArrow($row));
 
         $this->assertNotNull($mergeRow);
@@ -164,10 +170,7 @@ class ProjectChangelogTest extends TestCase
         $task->update(['pr_number' => 8076]);
         $task->update(['status' => TaskStatus::IN_REVIEW->value]);
 
-        $response = $this->get(route('projects.changelog', $project));
-        $response->assertOk();
-
-        $rows = collect($response->viewData('changes')->items());
+        ['items' => $rows] = $this->feed($project);
 
         // No standalone "T1 · aktualisiert" row just for the PR number.
         $standalone = $rows->first(fn ($row) => $this->headlineText($row) === 'T1 · aktualisiert');
@@ -207,10 +210,7 @@ class ProjectChangelogTest extends TestCase
             'status' => TaskStatus::CLAIMED->value,
         ]);
 
-        $response = $this->get(route('projects.changelog', $project));
-        $response->assertOk();
-
-        $rows = collect($response->viewData('changes')->items());
+        ['items' => $rows] = $this->feed($project);
         $claimRow = $rows->first(fn ($row) => $this->isTaskStatusArrow($row));
 
         $this->assertNotNull($claimRow);
@@ -236,10 +236,7 @@ class ProjectChangelogTest extends TestCase
         ]);
         $task->delete();
 
-        $response = $this->get(route('projects.changelog', $project));
-        $response->assertOk();
-
-        $rows = collect($response->viewData('changes')->items());
+        ['items' => $rows] = $this->feed($project);
         $deletedRow = $rows->first(fn ($row) => $this->headlineText($row) === 'T1 gelöscht');
         $this->assertNotNull($deletedRow);
     }

@@ -33,6 +33,7 @@ return [
     'field_task' => 'Task',
     'field_tokens' => 'Tokens',
     'field_user' => 'User',
+    'load_more' => 'Load more',
     'membership_prefix' => 'Membership: ',
     'new' => 'New',
     'no_entries_yet' => 'No entries yet.',

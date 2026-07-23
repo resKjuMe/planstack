@@ -10,6 +10,7 @@ import SummaryView from '../views/SummaryView.jsx';
 import DiagramView from '../views/DiagramView.jsx';
 import PrSequenceView from '../views/PrSequenceView.jsx';
 import CalibrationView from '../views/CalibrationView.jsx';
+import ChangelogView from '../views/ChangelogView.jsx';
 
 // EINE Inertia-Seite für die Projekt-Unterseiten. Board und Summary werden rein
 // clientseitig umgeschaltet — 0 Server-Calls beim Tab-Wechsel: die statischen
@@ -19,7 +20,7 @@ import CalibrationView from '../views/CalibrationView.jsx';
 //
 // Weitere Unterseiten (Diagramm, PR-Sequence, …) laufen bis zu ihrer Migration
 // weiter über den normalen Inertia-Visit (globaler Klick-Interceptor in app.jsx).
-const CLIENT_TABS = ['board', 'summary', 'diagram', 'pr-sequence', 'calibration'];
+const CLIENT_TABS = ['board', 'summary', 'diagram', 'pr-sequence', 'calibration', 'changelog'];
 
 function tabForPath(pathname, tabs) {
     for (const t of tabs) {
@@ -32,7 +33,7 @@ function tabForPath(pathname, tabs) {
     return null;
 }
 
-export default function ProjectWorkspace({ activeTab, currentUserId, project, can, tabs, flash, board, summary, diagram, sequence, calibration }) {
+export default function ProjectWorkspace({ activeTab, currentUserId, project, can, tabs, flash, board, summary, diagram, sequence, calibration, changelog }) {
     const { errors } = usePage().props;
     const [tab, setTab] = useState(activeTab);
 
@@ -89,7 +90,9 @@ export default function ProjectWorkspace({ activeTab, currentUserId, project, ca
                     ? `${project.name} · ${sequence.strings.title}`
                     : tab === 'calibration'
                         ? `${project.name} · ${calibration.strings.title}`
-                        : `${project.name} · ${board.strings.boardTitle}`;
+                        : tab === 'changelog'
+                            ? `${project.name} · ${changelog.strings.title}`
+                            : `${project.name} · ${board.strings.boardTitle}`;
 
     return (
         <>
@@ -112,6 +115,8 @@ export default function ProjectWorkspace({ activeTab, currentUserId, project, ca
                         <PrSequenceView project={project} strings={sequence.strings} />
                     ) : tab === 'calibration' ? (
                         <CalibrationView project={project} strings={calibration.strings} />
+                    ) : tab === 'changelog' ? (
+                        <ChangelogView project={project} strings={changelog.strings} />
                     ) : (
                         <BoardView meta={board.meta} strings={board.strings} />
                     )}

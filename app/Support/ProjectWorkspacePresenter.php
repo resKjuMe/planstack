@@ -66,6 +66,9 @@ class ProjectWorkspacePresenter
             'calibration' => [
                 'strings' => $this->calibrationStrings(),
             ],
+            'changelog' => [
+                'strings' => $this->changelogStrings(),
+            ],
         ];
     }
 
@@ -306,6 +309,30 @@ class ProjectWorkspacePresenter
             'unitMin' => __('calibration.unit_min'),
             'unitHours' => __('calibration.unit_hours'),
             'unitDays' => __('calibration.unit_days'),
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function changelogStrings(): array
+    {
+        return [
+            'title' => __('common.changelog'),
+            'showHideExplanation' => __('common.show_hide_explanation'),
+            'loading' => __('status.loading'),
+            'helpBullets' => [
+                ['strong' => __('common.changelog'), 'text' => __('status.change_log_of_all_tasks_in_this_project')],
+                ['text' => __('status.each_row_shows_the_time_the_changed')],
+                ['text' => __('status.n_more_fields_reveals_additional')],
+            ],
+            'field' => __('common.field'),
+            'before' => __('status.before'),
+            'after' => __('status.after'),
+            'countMoreFields' => __('status.count_more_fields'),
+            'showLess' => __('status.show_less'),
+            'noChanges' => __('status.no_changes_logged_yet'),
+            'loadMore' => __('changelog.load_more'),
         ];
     }
 }
