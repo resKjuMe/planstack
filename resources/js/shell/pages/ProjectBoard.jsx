@@ -11,7 +11,7 @@ import Board from '../../board/components/Board.jsx';
 // Vollständig als React umgesetzte Board-Seite (ehemals projects/show.blade.php).
 // Kopfzeile, Tabs, Seitenkopf, Flash und das Kanban-Board sind alle React; die
 // Daten kommen als Inertia-Props aus ProjectController@show.
-export default function ProjectBoard({ project, can, tabs, board, flash, strings }) {
+export default function ProjectBoard({ project, can, tabs, boardMeta, flash, strings }) {
     const { errors } = usePage().props;
 
     return (
@@ -33,7 +33,7 @@ export default function ProjectBoard({ project, can, tabs, board, flash, strings
                         bullets={strings.helpBullets}
                     />
 
-                    <Board data={board} />
+                    <Board meta={boardMeta} />
                 </div>
             </div>
         </>

@@ -16,7 +16,7 @@ import QuickFilterBar from './QuickFilterBar';
 import TaskCard, { TaskCardView } from './TaskCard';
 import Toast from './Toast';
 import { makeT } from '../i18n';
-import { moveTask } from '../api';
+import { fetchBoardTasks, mapApiTask, moveTask } from '../api';
 import { useBoardCollapseState } from '../useBoardCollapseState';
 import { colorForToken } from '../statusColors';
 import { allowedTargets, canTransition, groupStartingAt } from '../workflowConfig';
@@ -25,16 +25,53 @@ import { allowedTargets, canTransition, groupStartingAt } from '../workflowConfi
 // persists through the same per-board localStorage mechanism as the columns.
 const EXCEPTIONS_KEY = '__exceptions__';
 
-export default function Board({ data }) {
-    const { workflow, currentUserId, endpoints, csrf } = data;
-    const t = useMemo(() => makeT(data.strings), [data.strings]);
+export default function Board({ meta }) {
+    const { workflow, currentUserId, endpoints, csrf } = meta;
+    const t = useMemo(() => makeT(meta.strings), [meta.strings]);
 
-    const [tasks, setTasks] = useState(data.tasks);
+    // Die Board-Tasks kommen jetzt über die REST-API (GET /api/projects/{alias}),
+    // nicht mehr als Server-Prop. Die statische Render-Metadaten (workflow,
+    // strings, endpoints, csrf, roleKeys) bleiben Prop (meta). loadStatus steuert
+    // Lade-/Fehleranzeige, ohne die Hook-Reihenfolge zu verändern (tasks bleibt
+    // während des Ladens ein leeres Array, alle Hooks laufen unverändert).
+    const [tasks, setTasks] = useState([]);
+    const [loadStatus, setLoadStatus] = useState('loading'); // 'loading' | 'ready' | 'error'
+    const [loadError, setLoadError] = useState(null);
+
+    useEffect(() => {
+        let alive = true;
+        setLoadStatus('loading');
+        setLoadError(null);
+        fetchBoardTasks(meta.projectAlias).then((res) => {
+            if (!alive) return;
+            if (res.ok) {
+                setTasks(res.tasks.map((tk) => mapApiTask(tk, meta)));
+                setLoadStatus('ready');
+            } else {
+                setLoadError(res.message);
+                setLoadStatus('error');
+            }
+        });
+        return () => { alive = false; };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [meta.projectAlias]);
+
+    // Zuständigen-Liste für den Filter aus den (jetzt per API geladenen) Tasks
+    // ableiten — früher server-seitig als data.assignees mitgeliefert.
+    const assignees = useMemo(() => {
+        const byId = new Map();
+        for (const tk of tasks) {
+            if (tk.claimerId != null && !byId.has(tk.claimerId)) {
+                byId.set(tk.claimerId, { id: tk.claimerId, name: tk.claimerName });
+            }
+        }
+        return [...byId.values()].sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+    }, [tasks]);
     const [dragging, setDragging] = useState(null); // { taskId, from }
     const [toast, setToast] = useState(null);
     const [showAllMerged, setShowAllMerged] = useState(false);
     // Persisted per board: show configured groups as individual status columns.
-    const ungroupKey = `board:${data.projectId}:ungrouped`;
+    const ungroupKey = `board:${meta.projectId}:ungrouped`;
     const [ungrouped, setUngrouped] = useState(() => {
         try {
             return localStorage.getItem(ungroupKey) === '1';
@@ -120,7 +157,7 @@ export default function Board({ data }) {
         return s;
     }, [workflow.defaultExpanded, workflow.exceptionsDefaultExpanded]);
 
-    const collapse = useBoardCollapseState(data.projectId, defaultExpandedKeys);
+    const collapse = useBoardCollapseState(meta.projectId, defaultExpandedKeys);
 
     // --- Live-Ereignisse via Pusher (app.js reicht die Nutzlast als DOM-Event
     // 'planstack:notification' weiter) ---
@@ -478,7 +515,7 @@ export default function Board({ data }) {
                     t={t}
                     filters={filters}
                     setFilters={setFilters}
-                    assignees={data.assignees}
+                    assignees={assignees}
                     currentUserId={currentUserId}
                     staleDays={workflow.mergedStaleDays}
                     staleCount={staleCount}
@@ -488,35 +525,47 @@ export default function Board({ data }) {
                 />
             </div>
 
+            {loadStatus === 'loading' && (
+                <div className="py-16 text-center text-sm text-gray-400 dark:text-gray-500">{t('loading')}</div>
+            )}
+
+            {loadStatus === 'error' && (
+                <div className="py-16 text-center text-sm text-rose-600 dark:text-rose-400">
+                    {t('load_error', { message: loadError })}
+                </div>
+            )}
+
             {/* CSS grid: collapsed bars = fixed narrow track, expanded columns
                 share the rest (1fr); the fixed row (1fr) + min-height makes every
                 column fill the full board height. Collapse/expand is animated per
                 cell (.board-cell) on mount — cheaper than morphing track widths. */}
-            <DndContext
-                sensors={sensors}
-                collisionDetection={pointerWithin}
-                measuring={{ droppable: { strategy: MeasuringStrategy.Always } }}
-                onDragStart={onDragStart}
-                onDragOver={onDragOver}
-                onDragEnd={onDragEnd}
-                onDragCancel={() => { lastOverStatus.current = null; setDragging(null); }}
-            >
-                <div
-                    className="grid gap-3 pb-4 min-h-[65vh] overflow-x-auto"
-                    style={{
-                        gridTemplateColumns: cells.map((c) => c.track).join(' '),
-                        gridTemplateRows: '1fr',
-                    }}
+            {loadStatus === 'ready' && (
+                <DndContext
+                    sensors={sensors}
+                    collisionDetection={pointerWithin}
+                    measuring={{ droppable: { strategy: MeasuringStrategy.Always } }}
+                    onDragStart={onDragStart}
+                    onDragOver={onDragOver}
+                    onDragEnd={onDragEnd}
+                    onDragCancel={() => { lastOverStatus.current = null; setDragging(null); }}
                 >
-                    {cells.map((c) => c.node)}
-                </div>
+                    <div
+                        className="grid gap-3 pb-4 min-h-[65vh] overflow-x-auto"
+                        style={{
+                            gridTemplateColumns: cells.map((c) => c.track).join(' '),
+                            gridTemplateRows: '1fr',
+                        }}
+                    >
+                        {cells.map((c) => c.node)}
+                    </div>
 
-                <DragOverlay>
-                    {draggingTask ? (
-                        <TaskCardView task={draggingTask} t={t} csrf={csrf} endpoints={endpoints} overlay />
-                    ) : null}
-                </DragOverlay>
-            </DndContext>
+                    <DragOverlay>
+                        {draggingTask ? (
+                            <TaskCardView task={draggingTask} t={t} csrf={csrf} endpoints={endpoints} overlay />
+                        ) : null}
+                    </DragOverlay>
+                </DndContext>
+            )}
 
             <Toast message={toast} onDismiss={() => setToast(null)} />
         </div>

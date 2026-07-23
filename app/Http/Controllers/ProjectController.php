@@ -123,8 +123,9 @@ class ProjectController extends Controller
         $user = Auth::user();
 
         // Vollständig als React-Inertia-Seite (ProjectBoard): Kopfzeile, Tabs,
-        // Seitenkopf und das Kanban-Board sind React. Der Board-Zustand kommt aus
-        // BoardPresenter::payload() — dieselbe Form wie der board-move-Endpunkt.
+        // Seitenkopf und das Kanban-Board sind React. Die Board-Tasks lädt das
+        // React-Board separat über die REST-API (GET /api/projects/{alias});
+        // hier kommt nur noch die statische Render-Metadaten (BoardPresenter::meta).
         $tabs = collect([
             'diagram' => ['label' => __('common.diagram'), 'route' => 'projects.diagram'],
             'pr-sequence' => ['label' => __('common.pr_sequence'), 'route' => 'projects.pr-sequence'],
@@ -153,7 +154,7 @@ class ProjectController extends Controller
                 'contribute' => $user->can('contribute', $project),
             ],
             'tabs' => $tabs,
-            'board' => $presenter->payload($project),
+            'boardMeta' => $presenter->meta($project),
             'flash' => [
                 'status' => session('status'),
                 'error' => session('error'),

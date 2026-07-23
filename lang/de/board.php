@@ -43,4 +43,8 @@ return [
     'move_error' => 'Statuswechsel abgelehnt: :message',
     'move_forbidden' => 'Übergang von :from nach :to ist nicht erlaubt.',
     'empty_column' => 'Keine Aufgaben',
+
+    // Laden der Board-Tasks über die API
+    'loading' => 'Board wird geladen …',
+    'load_error' => 'Board konnte nicht geladen werden: :message',
 ];

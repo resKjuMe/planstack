@@ -43,4 +43,8 @@ return [
     'move_error' => 'Status change rejected: :message',
     'move_forbidden' => 'Transition from :from to :to is not allowed.',
     'empty_column' => 'No tasks',
+
+    // Loading the board tasks over the API
+    'loading' => 'Loading board …',
+    'load_error' => 'Could not load the board: :message',
 ];

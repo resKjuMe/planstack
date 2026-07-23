@@ -13,6 +13,15 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        // Sanctum-Stateful-Auth für gleich-Origin-Aufrufe aus dem Browser: erlaubt
+        // dem React-Board, /api-Routen (z. B. GET /api/projects/{alias}) mit der
+        // bestehenden Web-Session/Cookie statt einem Bearer-Token aufzurufen.
+        // Muss der Group vorangestellt werden, damit Session/Cookies vor der
+        // Auth laufen. Bearer-Token-Clients (Agenten/CLI/MCP) bleiben unberührt.
+        $middleware->api(prepend: [
+            \Laravel\Sanctum\Http\Middleware\EnsureFrontendRequestsAreStateful::class,
+        ]);
+
         // Runs after SubstituteBindings so {project} is a resolved model. Resolves
         // the per-project board config and stamps X-Planstack-Config-Version on
         // every API response (drift detection without an extra round-trip).

@@ -1,6 +1,67 @@
-// Board API calls. Only the drag-and-drop status change is done via fetch (it
-// returns JSON); the claim/release buttons stay plain HTML form POSTs that
-// reload the page (see TaskCard), matching the pre-React behaviour.
+// Board API calls. The initial task list is READ from the REST API
+// (GET /api/projects/{alias}); the drag-and-drop status change is still a
+// same-origin fetch against the web move endpoint (it returns JSON). The
+// claim/release buttons stay plain HTML form POSTs that reload the page (see
+// TaskCard), matching the pre-React behaviour.
+
+/**
+ * Read the board's tasks over the REST API. Same-origin, so the browser's
+ * session cookie authenticates it (Sanctum stateful) — no bearer token.
+ * `?fields=full` forces the full task field set regardless of the project's
+ * token-saving `task.fields` knob. Resolves to { ok, tasks } or { ok:false,
+ * message }. The API wraps a resource in `data`, hence data.data.tasks.
+ */
+export async function fetchBoardTasks(projectAlias) {
+    try {
+        const res = await fetch(`/api/projects/${encodeURIComponent(projectAlias)}?fields=full`, {
+            headers: {
+                Accept: 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+            },
+            credentials: 'same-origin',
+        });
+
+        const body = await res.json().catch(() => ({}));
+
+        if (!res.ok) {
+            return { ok: false, message: body.message || `HTTP ${res.status}` };
+        }
+        return { ok: true, tasks: body.data?.tasks ?? [] };
+    } catch (e) {
+        return { ok: false, message: e?.message || 'Network error' };
+    }
+}
+
+/**
+ * Map an API task (TaskResource, fields=full, snake_case) to the flat shape the
+ * React board/TaskCard consume. isBlocked/isConcerned are derived from the
+ * task's display status and the org's role→key map (meta.roleKeys); the card
+ * link is built from the templated task endpoint (the API shape omits it).
+ */
+export function mapApiTask(apiTask, meta) {
+    const roleKeys = meta.roleKeys ?? {};
+    const displayStatus = apiTask.display_status;
+    const url = meta.endpoints?.task
+        ? meta.endpoints.task.replace('__TASK__', String(apiTask.id))
+        : '#';
+
+    return {
+        id: apiTask.id,
+        name: apiTask.name,
+        summary: apiTask.summary,
+        displayStatus,
+        claimerId: apiTask.claimed_by_id ?? null,
+        claimerName: apiTask.claimed_by ?? null,
+        storyPoints: Number(apiTask.effort?.story_points ?? 0),
+        prNumber: apiTask.pr_number ?? null,
+        prUrl: apiTask.pr_url ?? null,
+        mergedAt: apiTask.merged_at ?? null,
+        url,
+        isBlocked: displayStatus === roleKeys.BLOCKED,
+        isConcerned: displayStatus === roleKeys.CONCERNED,
+        concernSummary: apiTask.concern?.summary || apiTask.concern?.blocker || null,
+    };
+}
 
 /**
  * POST a status change for a task. Resolves to { ok, task } on success or

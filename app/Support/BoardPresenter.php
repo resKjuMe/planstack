@@ -18,8 +18,42 @@ class BoardPresenter
     public function __construct(private readonly TaskBoardService $board) {}
 
     /**
-     * Full board payload: decorated tasks + the workflow config + view context
-     * (current user, assignee list, i18n strings, endpoints).
+     * The board's static render metadata — everything the React board needs
+     * EXCEPT the tasks themselves (those are read separately over the REST API,
+     * GET /api/projects/{alias}). This is per-org/locale/session constant, so it
+     * is served once as a page prop rather than re-fetched.
+     *
+     * @return array<string, mixed>
+     */
+    public function meta(Project $project): array
+    {
+        return [
+            'projectId' => $project->id,
+            // Alias is the route key — the client builds the board read URL from it.
+            'projectAlias' => $project->alias,
+            'currentUserId' => auth()->id(),
+            // Workflow comes from the organization's configurable statuses; for a
+            // default-seeded org this equals the former static definition.
+            'workflow' => OrgBoardWorkflow::forOrganization($project->organization)->toArray(),
+            // role => status key, so the client can derive isBlocked/isConcerned
+            // from a task's displayStatus without a per-task server flag.
+            'roleKeys' => $this->orgStatusMaps($project)['roleKey'],
+            'endpoints' => [
+                // {task} is replaced client-side with the task id. `task` lets the
+                // client build the per-card detail link (the API task shape omits it).
+                'move' => route('projects.tasks.board-move', [$project, '__TASK__']),
+                'claim' => route('projects.tasks.claim', [$project, '__TASK__']),
+                'task' => route('projects.tasks.show', [$project, '__TASK__']),
+            ],
+            'csrf' => csrf_token(),
+            'strings' => $this->strings(),
+        ];
+    }
+
+    /**
+     * Full board payload: static metadata (see meta()) + decorated tasks and the
+     * assignee list. Kept for non-API consumers; the board page now ships only
+     * meta() and reads tasks over the API.
      *
      * @return array<string, mixed>
      */
@@ -31,22 +65,10 @@ class BoardPresenter
         $userId = auth()->id();
         $maps = $this->orgStatusMaps($project);
 
-        return [
-            'projectId' => $project->id,
-            'currentUserId' => $userId,
+        return array_merge($this->meta($project), [
             'tasks' => $tasks->map(fn (Task $t) => $this->task($t, $project, $userId, $maps))->values()->all(),
             'assignees' => $this->assignees($tasks),
-            // Workflow comes from the organization's configurable statuses; for a
-            // default-seeded org this equals the former static definition.
-            'workflow' => OrgBoardWorkflow::forOrganization($project->organization)->toArray(),
-            'endpoints' => [
-                // {task} is replaced client-side with the task id.
-                'move' => route('projects.tasks.board-move', [$project, '__TASK__']),
-                'claim' => route('projects.tasks.claim', [$project, '__TASK__']),
-            ],
-            'csrf' => csrf_token(),
-            'strings' => $this->strings(),
-        ];
+        ]);
     }
 
     /**
