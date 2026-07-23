@@ -43,8 +43,16 @@ Alpine.store('theme', {
 // die Glocke inaktiv. Die Glocke (components/notification-bell.blade.php) zeigt
 // den Zähler als Pill bzw. bei getrennter Verbindung ein „✕"; ein Klick öffnet
 // ein Flyout mit den letzten Nachrichten als JSON und markiert sie als gelesen.
+//
+// Geteilte Verbindung über Tabs: Statt je Tab eine Pusher-Verbindung zu öffnen,
+// hält genau EIN Tab die Verbindung (Leader, per Web-Locks-Election) und verteilt
+// eingehende Nachrichten + den Verbindungsstatus über einen BroadcastChannel an
+// die übrigen Tabs. Schließt der Leader, übernimmt automatisch ein wartender Tab.
+// Ohne Web-Locks-Unterstützung (alte Browser) verbindet jeder Tab einzeln.
 const NOTIFICATIONS_MAX = 50; // so viele letzte Nachrichten im Flyout vorhalten
 const NOTIFICATIONS_EVENT = 'task-event'; // Event-Name (siehe NotificationBroadcaster)
+const NOTIFICATIONS_LOCK = 'planstack-notifications-leader';
+const NOTIFICATIONS_CHANNEL = 'planstack-notifications';
 
 function metaContent(name) {
     const el = document.querySelector(`meta[name="${name}"]`);
@@ -54,10 +62,12 @@ function metaContent(name) {
 Alpine.store('notifications', {
     count: 0,            // ungelesene seit letztem Öffnen
     enabled: false,      // Pusher konfiguriert (Key + Organisation vorhanden)?
-    connected: false,    // Pusher-Verbindung steht?
+    connected: false,    // Verbindung steht (eigene ODER die des Leaders)?
     open: false,         // Flyout sichtbar?
     messages: [],        // letzte Nachrichten, neueste zuerst
-    _pusher: null,
+    _pusher: null,       // nur im Leader-Tab gesetzt
+    _bc: null,           // BroadcastChannel zu den anderen Tabs
+    _isLeader: false,
 
     init() {
         const key = metaContent('pusher-key');
@@ -70,7 +80,31 @@ Alpine.store('notifications', {
         }
 
         this.enabled = true;
-        this.connect(key, cluster, orgId);
+
+        // BroadcastChannel für die Tab-übergreifende Verteilung aufsetzen.
+        if ('BroadcastChannel' in window) {
+            this._bc = new BroadcastChannel(NOTIFICATIONS_CHANNEL);
+            this._bc.onmessage = (ev) => this._onBroadcast(ev.data);
+            // Falls bereits ein Leader verbunden ist, dessen aktuellen Status erfragen
+            // (BroadcastChannel spielt keine früheren Nachrichten erneut ein).
+            this._bc.postMessage({ type: 'state-request' });
+        }
+
+        // Genau einen Leader wählen. Der Gewinner hält den Lock (nie-auflösende
+        // Promise) bis zum Tab-Ende; erst dann rückt ein wartender Tab nach.
+        if (navigator.locks && typeof navigator.locks.request === 'function') {
+            navigator.locks.request(NOTIFICATIONS_LOCK, { mode: 'exclusive' }, () => {
+                this._isLeader = true;
+                this.connect(key, cluster, orgId);
+                return new Promise(() => {}); // Lock halten, bis der Tab schließt
+            }).catch((e) => {
+                console.error('[notifications] Leader-Election fehlgeschlagen:', e);
+            });
+        } else {
+            // Kein Web-Locks-Support → Fallback: dieser Tab verbindet selbst.
+            this._isLeader = true;
+            this.connect(key, cluster, orgId);
+        }
     },
 
     connect(key, cluster, orgId) {
@@ -83,23 +117,51 @@ Alpine.store('notifications', {
         }
         this._pusher = pusher;
 
-        // Verbindungsstatus → steuert das „✕" an der Glocke.
-        pusher.connection.bind('connected', () => { this.connected = true; });
-        pusher.connection.bind('disconnected', () => { this.connected = false; });
-        pusher.connection.bind('unavailable', () => { this.connected = false; });
+        // Verbindungsstatus → steuert das „✕" an der Glocke (und wird an die
+        // anderen Tabs verteilt).
+        pusher.connection.bind('connected', () => this._setConnected(true));
+        pusher.connection.bind('disconnected', () => this._setConnected(false));
+        pusher.connection.bind('unavailable', () => this._setConnected(false));
         pusher.connection.bind('error', (err) => {
-            this.connected = false;
+            this._setConnected(false);
             console.error('[notifications] Pusher-Verbindungsfehler:', err);
         });
 
         const channel = pusher.subscribe(`organization-${orgId}`);
         // Alle fachlichen Events des Channels entgegennehmen; Pusher-interne
-        // Events (Präfix „pusher:") ignorieren.
+        // Events (Präfix „pusher:") ignorieren. Als Leader zusätzlich an die
+        // anderen Tabs weiterreichen.
         channel.bind_global((eventName, data) => {
             if (typeof eventName === 'string' && eventName.indexOf('pusher:') === 0) return;
-            this.count += 1;
-            this._record(data);
+            this._ingest(data, true);
         });
+    },
+
+    // Verbindungsstatus setzen und (als Leader) an die anderen Tabs verteilen.
+    _setConnected(value) {
+        this.connected = value;
+        if (this._bc) this._bc.postMessage({ type: 'state', connected: value });
+    },
+
+    // Eine Nachricht verarbeiten (zählen, merken, ans Board weiterreichen).
+    // broadcast=true (nur Leader) verteilt sie zusätzlich an die anderen Tabs.
+    _ingest(data, broadcast) {
+        this.count += 1;
+        this._record(data);
+        if (broadcast && this._bc) this._bc.postMessage({ type: 'message', data });
+    },
+
+    // Nachricht eines anderen Tabs (des Leaders) über den BroadcastChannel.
+    _onBroadcast(msg) {
+        if (!msg) return;
+        if (msg.type === 'message') {
+            this._ingest(msg.data, false); // nicht zurück-broadcasten
+        } else if (msg.type === 'state') {
+            this.connected = msg.connected;
+        } else if (msg.type === 'state-request' && this._isLeader) {
+            // Als Leader dem neu geöffneten Tab den aktuellen Status mitteilen.
+            if (this._bc) this._bc.postMessage({ type: 'state', connected: this.connected });
+        }
     },
 
     // Empfangene Nutzlast merken und in der Konsole ausgeben. pusher-js liefert
@@ -111,7 +173,7 @@ Alpine.store('notifications', {
             this.messages.length = NOTIFICATIONS_MAX;
         }
         // Als DOM-Event weiterreichen, damit andere Views (z. B. das React-Board)
-        // reagieren können, ohne eine zweite Pusher-Verbindung zu öffnen.
+        // reagieren können.
         window.dispatchEvent(new CustomEvent('planstack:notification', { detail: data }));
     },
 
