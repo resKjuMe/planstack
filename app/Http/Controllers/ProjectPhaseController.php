@@ -22,18 +22,18 @@ class ProjectPhaseController extends Controller
     {
         $this->authorize('view', $project);
 
-        $phases = $project->phases()->withCount('tasks')->get();
-
         return Inertia::render('ProjectPhases', [
             'project' => ['alias' => $project->alias],
             'flash' => ['status' => session('status'), 'error' => session('error')],
             'editTabs' => ProjectEditTabs::for($project, 'phases'),
             'canContribute' => auth()->user()->can('contribute', $project),
-            'phases' => $phases->map(fn (Phase $p) => [
-                'id' => $p->id,
-                'name' => $p->name,
-                'tasksCount' => $p->tasks_count,
-            ])->values(),
+            // Phasenliste asynchron nachladen (Skeleton währenddessen).
+            'phases' => Inertia::defer(fn () => $project->phases()->withCount('tasks')->get()
+                ->map(fn (Phase $p) => [
+                    'id' => $p->id,
+                    'name' => $p->name,
+                    'tasksCount' => $p->tasks_count,
+                ])->values()),
             'urls' => [
                 'store' => route('projects.phases.store', $project),
                 'update' => route('projects.phases.update', [$project, '__ID__']),

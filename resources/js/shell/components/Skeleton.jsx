@@ -110,6 +110,50 @@ export function ChipsSkeleton({ count = 5 }) {
     );
 }
 
+// Changelog: datumsgruppierte Platzhalter (Datums-Kopfzeile + einzeilige
+// Eintrags-Karten), passend zum eingeklappten Feed.
+export function ChangelogSkeleton({ groups = 2, perGroup = 4 }) {
+    return (
+        <div className="space-y-2 animate-pulse" aria-hidden="true">
+            {Array.from({ length: groups }).map((_, g) => (
+                <React.Fragment key={g}>
+                    <div className={`${g > 0 ? 'pt-4' : ''} h-3 w-24 ${bar}`} />
+                    {Array.from({ length: perGroup }).map((_, i) => (
+                        <div key={i} className="rounded-xl bg-white dark:bg-gray-800 p-3 ring-1 ring-gray-200 dark:ring-gray-700">
+                            <div className="flex items-center gap-3">
+                                <div className={`h-3 w-10 ${bar}`} />
+                                <div className={`h-3 flex-1 ${bar}`} />
+                                <div className={`h-3 w-10 ${bar}`} />
+                            </div>
+                        </div>
+                    ))}
+                </React.Fragment>
+            ))}
+        </div>
+    );
+}
+
+// Formular: Karte mit mehreren Label+Feld-Zeilen und Aktions-Buttons unten.
+// Fallback fuer die per Deferred-Props nachgeladenen Formularseiten.
+export function FormSkeleton({ rows = 6 }) {
+    return (
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 animate-pulse" aria-hidden="true">
+            <div className="space-y-5">
+                {Array.from({ length: rows }).map((_, i) => (
+                    <div key={i}>
+                        <div className={`h-3 w-32 ${bar}`} />
+                        <div className={`mt-2 h-9 w-full rounded-md ${bar}`} />
+                    </div>
+                ))}
+                <div className="flex justify-end gap-3 pt-2">
+                    <div className={`h-9 w-20 rounded-md ${bar}`} />
+                    <div className={`h-9 w-24 rounded-md ${bar}`} />
+                </div>
+            </div>
+        </div>
+    );
+}
+
 // Kanban-Board: mehrere Spalten mit Kartenplatzhaltern.
 export function BoardSkeleton({ columns = 5 }) {
     const cols = Math.max(1, Math.min(columns, 8));

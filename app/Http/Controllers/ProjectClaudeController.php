@@ -23,11 +23,15 @@ class ProjectClaudeController extends Controller
     {
         $this->authorize('update', $project);
 
-        return Inertia::render('ProjectClaude', array_merge($presenter->props($project), [
+        return Inertia::render('ProjectClaude', [
+            'configVersion' => $project->config_version,
             'editTabs' => ProjectEditTabs::for($project, 'claude'),
             'updateUrl' => route('projects.claude.update', $project),
             'cancelUrl' => route('projects.show', $project),
             'flash' => ['status' => session('status'), 'error' => session('error')],
+            // Gesamte Claude-Konfiguration (Profile/Optionen/Kosten/Werte)
+            // asynchron nachladen — Skeleton während des Ladens.
+            'config' => Inertia::defer(fn () => $presenter->props($project)),
             'strings' => [
                 'editTitle' => __('projects.edit_project'),
                 'configuration' => __('claude.claude_configuration'),
@@ -64,7 +68,7 @@ class ProjectClaudeController extends Controller
                 'cancel' => __('common.cancel'),
                 'save' => __('common.save'),
             ],
-        ]));
+        ]);
     }
 
     public function update(Request $request, Project $project): RedirectResponse

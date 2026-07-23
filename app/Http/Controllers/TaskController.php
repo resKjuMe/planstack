@@ -31,20 +31,29 @@ class TaskController extends Controller
     {
         $this->authorize('contribute', $project);
 
-        $project->load('phases');
-        $candidates = $project->tasks()->orderBy('name')->get(['id', 'name', 'summary']);
+        // Statische Hülle (Titel/URLs/Strings) sofort; die Formular-Daten
+        // (Options-Listen + Kandidaten) werden per Deferred-Prop nachgeladen, damit
+        // die Seite sofort mit Skeleton erscheint (einheitliches Ladeverhalten).
+        $strings = $formPresenter->shared($project)['strings'];
+        $strings['title'] = __('tasks.new_task');
+        $strings['submit'] = __('tasks.create_task');
 
-        $props = $formPresenter->shared($project);
-        $props['strings']['title'] = __('tasks.new_task');
-        $props['strings']['submit'] = __('tasks.create_task');
-
-        return Inertia::render('TaskCreate', array_merge($props, [
+        return Inertia::render('TaskCreate', [
             'project' => ['alias' => $project->alias, 'showUrl' => route('projects.show', $project)],
-            'candidates' => $candidates->map(fn ($c) => ['id' => $c->id, 'name' => $c->name, 'summary' => $c->summary])->values(),
             'showReview' => false,
             'storeUrl' => route('projects.tasks.store', $project),
+            'strings' => $strings,
             'flash' => ['status' => session('status'), 'error' => session('error')],
-        ]));
+            'formData' => Inertia::defer(function () use ($project, $formPresenter) {
+                $shared = $formPresenter->shared($project);
+                unset($shared['strings']);
+                $shared['candidates'] = $project->tasks()->orderBy('name')
+                    ->get(['id', 'name', 'summary'])
+                    ->map(fn ($c) => ['id' => $c->id, 'name' => $c->name, 'summary' => $c->summary])->values();
+
+                return $shared;
+            }),
+        ]);
     }
 
     public function store(StoreTaskRequest $request, Project $project): RedirectResponse
@@ -84,29 +93,32 @@ class TaskController extends Controller
     {
         $this->authorize('update', $task);
 
-        $project->load('phases');
-        $candidates = $project->tasks()->whereKeyNot($task->id)->orderBy('name')->get(['id', 'name', 'summary']);
-        $selected = $task->prerequisites()->pluck('tasks.id')->all();
+        $strings = $formPresenter->shared($project)['strings'];
+        $strings['title'] = __('tasks.edit_task');
+        $strings['submit'] = __('common.save');
+        $strings['deleteTitle'] = __('tasks.delete_task');
+        $strings['deleteConfirm'] = __('tasks.really_delete_this_task');
+        $strings['delete'] = __('common.delete');
 
-        $props = $formPresenter->shared($project);
-        $props['strings']['title'] = __('tasks.edit_task');
-        $props['strings']['submit'] = __('common.save');
-        $props['strings']['deleteTitle'] = __('tasks.delete_task');
-        $props['strings']['deleteConfirm'] = __('tasks.really_delete_this_task');
-        $props['strings']['delete'] = __('common.delete');
-
-        return Inertia::render('TaskEdit', array_merge($props, [
+        // Hülle (Kopf/URLs/Strings) sofort; Options-Listen, Kandidaten, Werte und
+        // Löschrecht per Deferred-Prop nachladen (Skeleton während des Ladens).
+        return Inertia::render('TaskEdit', [
             'project' => ['alias' => $project->alias],
-            'candidates' => $candidates->map(fn ($c) => ['id' => $c->id, 'name' => $c->name, 'summary' => $c->summary])->values(),
+            'task' => ['name' => $task->name],
             'showReview' => $task->status === TaskStatus::IN_REVIEW,
-            'canDelete' => auth()->user()->can('delete', $task),
             'updateUrl' => route('projects.tasks.update', [$project, $task]),
             'destroyUrl' => route('projects.tasks.destroy', [$project, $task]),
             'showUrl' => route('projects.tasks.show', [$project, $task]),
+            'strings' => $strings,
             'flash' => ['status' => session('status'), 'error' => session('error')],
-            'task' => [
-                'name' => $task->name,
-                'values' => [
+            'formData' => Inertia::defer(function () use ($project, $task, $formPresenter) {
+                $shared = $formPresenter->shared($project);
+                unset($shared['strings']);
+                $shared['candidates'] = $project->tasks()->whereKeyNot($task->id)->orderBy('name')
+                    ->get(['id', 'name', 'summary'])
+                    ->map(fn ($c) => ['id' => $c->id, 'name' => $c->name, 'summary' => $c->summary])->values();
+                $shared['canDelete'] = auth()->user()->can('delete', $task);
+                $shared['values'] = [
                     'name' => $task->name,
                     'status' => $task->status?->value ?? 'UNKNOWN',
                     'summary' => $task->summary ?? '',
@@ -125,10 +137,12 @@ class TaskController extends Controller
                     'last_review_recommendation' => $task->last_review_recommendation?->value ?? '',
                     'last_reviewed_at' => $task->last_reviewed_at?->format('Y-m-d\TH:i') ?? '',
                     'last_review_summary' => $task->last_review_summary ?? '',
-                    'prerequisites' => $selected,
-                ],
-            ],
-        ]));
+                    'prerequisites' => $task->prerequisites()->pluck('tasks.id')->all(),
+                ];
+
+                return $shared;
+            }),
+        ]);
     }
 
     public function update(UpdateTaskRequest $request, Project $project, Task $task): RedirectResponse

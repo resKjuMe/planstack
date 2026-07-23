@@ -118,45 +118,50 @@ class ProjectController extends Controller
     {
         $this->authorize('view', $project);
 
-        $project->load(['owner', 'teams.members', 'memberships']);
-
-        $accessUsers = $project->accessUsers();
-        $roleByUser = $project->memberships->keyBy('user_id');
-
-        $assignedTeamIds = $project->teams->pluck('id');
-        $assignableTeams = Auth::user()->teams()
-            ->whereNotIn('teams.id', $assignedTeamIds)
-            ->orderBy('name')
-            ->get();
-
         return Inertia::render('ProjectAccess', [
             'project' => ['alias' => $project->alias, 'name' => $project->name],
             'flash' => ['status' => session('status'), 'error' => session('error')],
             'editTabs' => \App\Support\ProjectEditTabs::for($project, 'access'),
-            'canManage' => Auth::user()->can('manageMembers', $project),
-            'teams' => $project->teams->map(fn ($t) => [
-                'id' => $t->id,
-                'name' => $t->name,
-                'memberCount' => $t->members->count(),
-            ])->values(),
-            'assignableTeams' => $assignableTeams->map(fn ($t) => ['id' => $t->id, 'name' => $t->name])->values(),
-            'users' => $accessUsers->map(function ($user) use ($project, $roleByUser) {
-                $isOwner = $project->isOwner($user);
-                $role = $isOwner
-                    ? ProjectRole::ADMIN
-                    : ($roleByUser->get($user->id)?->role ?? ProjectRole::WORKER);
+            // Teams/Nutzer/Rollen asynchron nachladen (Skeleton währenddessen).
+            'accessData' => Inertia::defer(function () use ($project) {
+                $project->load(['owner', 'teams.members', 'memberships']);
+
+                $accessUsers = $project->accessUsers();
+                $roleByUser = $project->memberships->keyBy('user_id');
+
+                $assignedTeamIds = $project->teams->pluck('id');
+                $assignableTeams = Auth::user()->teams()
+                    ->whereNotIn('teams.id', $assignedTeamIds)
+                    ->orderBy('name')
+                    ->get();
 
                 return [
-                    'id' => $user->id,
-                    'name' => $user->name,
-                    'email' => $user->email,
-                    'isOwner' => $isOwner,
-                    'role' => $role->value,
-                    'roleLabel' => $role->label(),
-                    'hasMembership' => $roleByUser->has($user->id),
+                    'canManage' => Auth::user()->can('manageMembers', $project),
+                    'teams' => $project->teams->map(fn ($t) => [
+                        'id' => $t->id,
+                        'name' => $t->name,
+                        'memberCount' => $t->members->count(),
+                    ])->values(),
+                    'assignableTeams' => $assignableTeams->map(fn ($t) => ['id' => $t->id, 'name' => $t->name])->values(),
+                    'users' => $accessUsers->map(function ($user) use ($project, $roleByUser) {
+                        $isOwner = $project->isOwner($user);
+                        $role = $isOwner
+                            ? ProjectRole::ADMIN
+                            : ($roleByUser->get($user->id)?->role ?? ProjectRole::WORKER);
+
+                        return [
+                            'id' => $user->id,
+                            'name' => $user->name,
+                            'email' => $user->email,
+                            'isOwner' => $isOwner,
+                            'role' => $role->value,
+                            'roleLabel' => $role->label(),
+                            'hasMembership' => $roleByUser->has($user->id),
+                        ];
+                    })->values(),
+                    'roles' => collect(ProjectRole::cases())->map(fn ($r) => ['value' => $r->value, 'label' => $r->label()])->values(),
                 ];
-            })->values(),
-            'roles' => collect(ProjectRole::cases())->map(fn ($r) => ['value' => $r->value, 'label' => $r->label()])->values(),
+            }),
             'urls' => [
                 'teamStore' => route('projects.teams.store', $project),
                 'teamDestroy' => route('projects.teams.destroy', [$project, '__ID__']),
@@ -206,17 +211,23 @@ class ProjectController extends Controller
         return Inertia::render('ProjectEdit', [
             'project' => [
                 'alias' => $project->alias,
-                'name' => $project->name,
-                'description' => $project->description,
-                'github_repo' => $project->github_repo,
-                'completed' => $project->completed_at !== null,
-                'archived' => $project->archived_at !== null,
                 'showUrl' => route('projects.show', $project),
             ],
             'editTabs' => \App\Support\ProjectEditTabs::for($project, 'general'),
-            'canDelete' => Auth::user()->can('delete', $project),
             'updateUrl' => route('projects.update', $project),
             'destroyUrl' => route('projects.destroy', $project),
+            // Formularwerte + Löschrecht asynchron nachladen (Skeleton währenddessen).
+            'formData' => Inertia::defer(fn () => [
+                'values' => [
+                    'alias' => $project->alias,
+                    'name' => $project->name,
+                    'description' => $project->description,
+                    'github_repo' => $project->github_repo,
+                    'completed' => $project->completed_at !== null,
+                    'archived' => $project->archived_at !== null,
+                ],
+                'canDelete' => Auth::user()->can('delete', $project),
+            ]),
             'strings' => [
                 'title' => __('projects.edit_project'),
                 'keyUnique' => __('projects.key_unique'),
