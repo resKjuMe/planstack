@@ -79,6 +79,15 @@ class TaskController extends Controller
     {
         $this->authorize('view', $task);
 
+        // Akzeptanzkriterien/Testanleitung sind IMMER abhakbare Checklisten:
+        // vorhandene Freitext-Prosa wird beim Anzeigen einmalig automatisch in
+        // Items konvertiert (idempotent, nur mit Update-Recht — read-only Betrachter
+        // lösen keine Schreibvorgänge aus).
+        if (auth()->user()?->can('update', $task)) {
+            \App\Support\ChecklistConverter::ensure($task, 'acceptance');
+            \App\Support\ChecklistConverter::ensure($task, 'test');
+        }
+
         $task->load([
             'creator', 'claimer', 'phase', 'reviewer', 'concern.creator',
             'prerequisites', 'dependents', 'checklistItems.checker',

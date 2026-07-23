@@ -70,23 +70,8 @@ class TaskChecklistController extends Controller
             return back()->with('status', __('flash.checklist_exists'));
         }
 
-        $source = $kind === 'acceptance'
-            ? $task->description_acceptance_criteria
-            : $task->description_test_cases;
-
-        $items = TaskContentParser::checklist((string) $source, $kind);
-
-        if ($items === []) {
+        if (! \App\Support\ChecklistConverter::ensure($task, $kind)) {
             return back()->with('error', __('flash.no_text_to_convert'));
-        }
-
-        foreach ($items as $i => $parsed) {
-            $task->checklistItems()->create([
-                'kind' => $kind,
-                'role' => $parsed['role'],
-                'position' => $i,
-                'text' => $parsed['text'],
-            ]);
         }
 
         $label = $kind === 'acceptance'
