@@ -640,6 +640,16 @@ class DependencyGraph {
     }
 }
 
-document.querySelectorAll('[data-diagram]').forEach((root) => {
-    new DependencyGraph(root).init();
-});
+// „Inertia über Blade": Der Seiteninhalt wird pro Navigation neu eingebettet.
+// Bei jeder Einbettung (Event `planstack:content-ready`) noch nicht initialisierte
+// Diagramm-Wurzeln aufsetzen; das data-Flag verhindert Doppel-Init derselben.
+function initDiagrams() {
+    document.querySelectorAll('[data-diagram]').forEach((root) => {
+        if (root.dataset.psInit === '1') return;
+        root.dataset.psInit = '1';
+        new DependencyGraph(root).init();
+    });
+}
+
+initDiagrams();
+window.addEventListener('planstack:content-ready', initDiagrams);

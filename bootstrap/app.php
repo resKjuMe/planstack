@@ -22,6 +22,14 @@ return Application::configure(basePath: dirname(__DIR__))
         // Appended so it runs after the auth middleware and $request->user() is set.
         $middleware->appendToGroup('web', \App\Http\Middleware\SetLocale::class);
 
+        // „Inertia über Blade": HandleInertiaRequests richtet Inertia ein (Root-
+        // View, Shared-Data, Versions-/Redirect-Handling); BladeToInertia läuft
+        // darin und verwandelt die Blade-Seiten-Hülle (PageEnvelope) in eine
+        // Inertia-Antwort. Reihenfolge: erst Inertia-Setup (außen), dann die
+        // Umwandlung (innen), damit deren Antwort noch das Inertia-Handling durchläuft.
+        $middleware->appendToGroup('web', \App\Http\Middleware\HandleInertiaRequests::class);
+        $middleware->appendToGroup('web', \App\Http\Middleware\BladeToInertia::class);
+
         // GitHub sendet keinen CSRF-Token; der Webhook-Empfang muss davon
         // ausgenommen werden (Authentizität via HMAC-Signatur, siehe Controller).
         $middleware->validateCsrfTokens(except: ['hooks/git']);
