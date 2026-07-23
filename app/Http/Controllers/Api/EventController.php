@@ -4,7 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Enums\TaskEvent;
 use App\Models\Task;
-use App\Support\NotificationSocketForwarder;
+use App\Support\NotificationBroadcaster;
 use App\Support\TaskEventService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -19,7 +19,7 @@ class EventController extends ApiController
 {
     public function __construct(
         private readonly TaskEventService $events,
-        private readonly NotificationSocketForwarder $socket,
+        private readonly NotificationBroadcaster $broadcaster,
     ) {}
 
     public function store(Request $request): JsonResponse
@@ -41,11 +41,10 @@ class EventController extends ApiController
             ...$result,
         ];
 
-        // Unter der Produktions-Domain die Antwort zusätzlich an den
-        // WebSocket-Server weiterreichen (Header-Glocke). Best effort.
-        // Für den Socket zusätzlich die Organisation des Nutzers mitschicken,
-        // damit der Server gezielt an deren Clients verteilen kann.
-        $this->socket->forward($request->getHost(), [
+        // Ereignis via Pusher an den Organisations-Channel senden (Header-Glocke).
+        // Best effort — Fehler brechen die Antwort nicht ab. organization_id
+        // fährt zusätzlich in der Nutzlast mit (der Channel ist ohnehin je Org).
+        $this->broadcaster->broadcast($request->user()->organization_id, [
             ...$payload,
             'organization_id' => $request->user()->organization_id,
         ]);

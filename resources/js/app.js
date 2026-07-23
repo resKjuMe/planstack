@@ -1,4 +1,5 @@
 import Alpine from 'alpinejs';
+import Pusher from 'pusher-js';
 import './tooltip';
 
 // Dark Mode: globaler Theme-Store. Die Wahl (light | dark | system) liegt pro
@@ -35,86 +36,75 @@ Alpine.store('theme', {
     },
 });
 
-// Benachrichtigungen: globaler Store für die Header-Glocke. Verbindet sich
-// ausschließlich auf der Produktions-Domain planstack.eskju.net mit dem
-// WebSocket-Server und zählt eingehende Nachrichten. Die Glocke (siehe
-// components/notification-bell.blade.php) zeigt den Zähler als Pill; ein Klick
-// öffnet ein Flyout mit den letzten Nachrichten als JSON und markiert sie als
-// gelesen. Bei Verbindungsabbruch wird mit Backoff neu verbunden.
-const NOTIFICATIONS_HOST = 'planstack.eskju.net';
-const NOTIFICATIONS_WS_URL = 'wss://websocket.eskju.net:8443/';
+// Benachrichtigungen: globaler Store für die Header-Glocke. Abonniert über
+// Pusher den Organisations-Channel `organization-{id}` und zählt eingehende
+// Ereignisse. Key/Cluster/Organisation kommen aus <meta>-Tags im Layout
+// (nur für eingeloggte Nutzer mit Organisation gesetzt) — fehlen sie, bleibt
+// die Glocke inaktiv. Die Glocke (components/notification-bell.blade.php) zeigt
+// den Zähler als Pill bzw. bei getrennter Verbindung ein „✕"; ein Klick öffnet
+// ein Flyout mit den letzten Nachrichten als JSON und markiert sie als gelesen.
 const NOTIFICATIONS_MAX = 50; // so viele letzte Nachrichten im Flyout vorhalten
+const NOTIFICATIONS_EVENT = 'task-event'; // Event-Name (siehe NotificationBroadcaster)
+
+function metaContent(name) {
+    const el = document.querySelector(`meta[name="${name}"]`);
+    return el ? el.getAttribute('content') : null;
+}
 
 Alpine.store('notifications', {
     count: 0,            // ungelesene seit letztem Öffnen
-    connected: false,
+    enabled: false,      // Pusher konfiguriert (Key + Organisation vorhanden)?
+    connected: false,    // Pusher-Verbindung steht?
     open: false,         // Flyout sichtbar?
     messages: [],        // letzte Nachrichten, neueste zuerst
-    _socket: null,
-    _retryMs: 1000,
+    _pusher: null,
 
     init() {
-        if (window.location.hostname !== NOTIFICATIONS_HOST) {
-            console.info('[notifications] WebSocket-Verbindung deaktiviert: Nur auf ' + NOTIFICATIONS_HOST + ' verfügbar');
+        const key = metaContent('pusher-key');
+        const cluster = metaContent('pusher-cluster') || 'eu';
+        const orgId = metaContent('organization-id');
+
+        if (!key || !orgId) {
+            console.info('[notifications] Pusher deaktiviert: kein Key oder keine Organisation');
             return;
         }
-        this.connect();
+
+        this.enabled = true;
+        this.connect(key, cluster, orgId);
     },
 
-    connect() {
-        let socket;
+    connect(key, cluster, orgId) {
+        let pusher;
         try {
-            socket = new WebSocket(NOTIFICATIONS_WS_URL);
+            pusher = new Pusher(key, { cluster, forceTLS: true });
         } catch (e) {
-            // WebSocket nicht verfügbar/blockiert → in die Konsole loggen und
-            // später erneut versuchen.
-            console.error('[notifications] WebSocket-Verbindung fehlgeschlagen:', NOTIFICATIONS_WS_URL, e);
-            this._scheduleReconnect();
+            console.error('[notifications] Pusher-Initialisierung fehlgeschlagen:', e);
             return;
         }
-        this._socket = socket;
+        this._pusher = pusher;
 
-        socket.addEventListener('open', () => {
-            this.connected = true;
-            this._retryMs = 1000;
-        });
-        socket.addEventListener('message', (event) => {
-            this.count += 1;
-            this._record(event.data);
-        });
-        socket.addEventListener('close', (event) => {
+        // Verbindungsstatus → steuert das „✕" an der Glocke.
+        pusher.connection.bind('connected', () => { this.connected = true; });
+        pusher.connection.bind('disconnected', () => { this.connected = false; });
+        pusher.connection.bind('unavailable', () => { this.connected = false; });
+        pusher.connection.bind('error', (err) => {
             this.connected = false;
-            this._socket = null;
-            // Nur unsaubere Schließungen als Fehler melden (wasClean=false bzw.
-            // Code ≠ 1000), damit ein normales Schließen die Konsole nicht spamt.
-            if (!event.wasClean) {
-                console.error('[notifications] WebSocket-Verbindung getrennt:', NOTIFICATIONS_WS_URL, 'Code', event.code, event.reason || '');
-            }
-            this._scheduleReconnect();
+            console.error('[notifications] Pusher-Verbindungsfehler:', err);
         });
-        // Der 'error'-Event des WebSocket trägt aus Sicherheitsgründen keine
-        // Detailinfos; wir loggen ihn dennoch und lassen den Browser 'close'
-        // auslösen (dort steht der Code).
-        socket.addEventListener('error', (event) => {
-            console.error('[notifications] WebSocket-Fehler:', NOTIFICATIONS_WS_URL, event);
-            socket.close();
+
+        const channel = pusher.subscribe(`organization-${orgId}`);
+        // Alle fachlichen Events des Channels entgegennehmen; Pusher-interne
+        // Events (Präfix „pusher:") ignorieren.
+        channel.bind_global((eventName, data) => {
+            if (typeof eventName === 'string' && eventName.indexOf('pusher:') === 0) return;
+            this.count += 1;
+            this._record(data);
         });
     },
 
-    _scheduleReconnect() {
-        const delay = this._retryMs;
-        this._retryMs = Math.min(this._retryMs * 2, 30000); // Backoff bis 30 s
-        setTimeout(() => this.connect(), delay);
-    },
-
-    // Rohnachricht speichern: als JSON parsen, sonst den Rohtext übernehmen.
-    _record(raw) {
-        let data;
-        try {
-            data = JSON.parse(raw);
-        } catch (e) {
-            data = raw;
-        }
+    // Empfangene Nutzlast merken und in der Konsole ausgeben. pusher-js liefert
+    // JSON bereits geparst; Rohtext wird unverändert übernommen.
+    _record(data) {
         console.info('[notifications] Payload empfangen:', data);
         this.messages.unshift({ at: new Date().toISOString(), data });
         if (this.messages.length > NOTIFICATIONS_MAX) {
@@ -140,6 +130,10 @@ Alpine.store('notifications', {
         this.count = 0;
     },
 });
+
+// NOTIFICATIONS_EVENT wird bewusst nicht direkt gebunden (bind_global fängt
+// alle fachlichen Events ab), bleibt aber als dokumentierter Vertrag erhalten.
+void NOTIFICATIONS_EVENT;
 
 window.Alpine = Alpine;
 

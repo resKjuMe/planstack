@@ -5,6 +5,17 @@
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta name="csrf-token" content="{{ csrf_token() }}">
 
+        {{-- Pusher-Konfiguration für die Header-Glocke (nur für eingeloggte
+             Nutzer mit Organisation; der Key ist öffentlich). Ohne diese Tags
+             verbindet sich die Glocke nicht. --}}
+        @auth
+            @if (Auth::user()->organization_id && config('broadcasting.connections.pusher.key'))
+                <meta name="pusher-key" content="{{ config('broadcasting.connections.pusher.key') }}">
+                <meta name="pusher-cluster" content="{{ config('broadcasting.connections.pusher.options.cluster') }}">
+                <meta name="organization-id" content="{{ Auth::user()->organization_id }}">
+            @endif
+        @endauth
+
         @include('partials.theme-init')
 
         <link rel="icon" href="{{ asset('favicon.ico') }}" sizes="48x48">
