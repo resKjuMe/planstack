@@ -55,7 +55,7 @@ class GitHubPrSync
             ->whereNotNull('pr_number')
             ->whereDoesntHave('orgStatus', fn ($q) => $q->where('role', StatusRole::MERGED->value))
             ->whereHas('project', fn ($q) => $q->whereNotNull('github_repo'))
-            ->with('project:id,github_repo')
+            ->with('project:id,name,github_repo,organization_id')
             ->get();
 
         return $this->syncGrouped($tasks->groupBy(fn (Task $t) => $t->project->github_repo));
@@ -79,6 +79,10 @@ class GitHubPrSync
         // (siehe docs/event-api.md). Akteur = angemeldeter Nutzer beim Button,
         // null beim Cron.
         $events = app(TaskEventService::class);
+        // Wie POST /api/events das MERGED-Event zusätzlich per Pusher an den
+        // Organisations-Channel senden — sonst bekäme die Header-Glocke bei einem
+        // Merge über den Sync (Button/Cron) nie eine Live-Nachricht.
+        $broadcaster = app(NotificationBroadcaster::class);
         $actor = auth()->user();
 
         foreach ($tasksByRepo as $repo => $tasks) {
@@ -124,7 +128,22 @@ class GitHubPrSync
                     // MERGED-Event melden: protokolliert den Merge und wendet die
                     // ggf. je Event konfigurierte Automation an (der Status ist
                     // hier bereits MERGED, daher meist nur Log/Feld-Effekte).
-                    $events->record($task, TaskEvent::MERGED, $actor);
+                    $recorded = $events->record($task, TaskEvent::MERGED, $actor);
+
+                    // Live-Benachrichtigung an die Header-Glocke — gleiche Nutzlast
+                    // wie EventController, damit die Glocke „Projekt › Task: gemerged"
+                    // lesbar anzeigt. Best effort; $task->orgStatus spiegelt nach
+                    // record() den (jetzt MERGED-)Status inkl. Icon.
+                    $organizationId = $task->project?->organization_id;
+                    $broadcaster->broadcast($organizationId, [
+                        'task_id' => $task->id,
+                        'task_name' => $task->name,
+                        'project_name' => $task->project?->name,
+                        'event' => TaskEvent::MERGED->value,
+                        ...$recorded,
+                        'status_icon' => $task->orgStatus?->icon,
+                        'organization_id' => $organizationId,
+                    ]);
 
                     TaskPullRequest::updateOrCreate(
                         ['task_id' => $task->id, 'pull_request_id' => $prNumber],
