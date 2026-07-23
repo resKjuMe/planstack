@@ -56,11 +56,26 @@ class ProjectController extends Controller
         ]);
     }
 
-    public function create(): View
+    public function create(): InertiaResponse
     {
         $this->authorize('create', Project::class);
 
-        return view('projects.create');
+        return Inertia::render('ProjectCreate', [
+            'storeUrl' => route('projects.store'),
+            'cancelUrl' => route('projects.index'),
+            'strings' => [
+                'title' => __('projects.new_project'),
+                'keyUnique' => __('projects.key_unique'),
+                'keyHint' => __('projects.e_g_demo_letters_numbers_and'),
+                'name' => __('common.name'),
+                'description' => __('common.description'),
+                'githubRepo' => __('projects.github_repository'),
+                'githubHintPre' => __('projects.optional_format'),
+                'githubHintPost' => __('projects.for_pr_linking_and_pr_status_sync'),
+                'cancel' => __('common.cancel'),
+                'create' => __('common.create'),
+            ],
+        ]);
     }
 
     public function store(StoreProjectRequest $request): RedirectResponse
@@ -119,11 +134,44 @@ class ProjectController extends Controller
         return view('projects.access', compact('project', 'accessUsers', 'roleByUser', 'assignableTeams'));
     }
 
-    public function edit(Project $project): View
+    public function edit(Project $project): InertiaResponse
     {
         $this->authorize('update', $project);
 
-        return view('projects.edit', compact('project'));
+        return Inertia::render('ProjectEdit', [
+            'project' => [
+                'alias' => $project->alias,
+                'name' => $project->name,
+                'description' => $project->description,
+                'github_repo' => $project->github_repo,
+                'completed' => $project->completed_at !== null,
+                'archived' => $project->archived_at !== null,
+                'showUrl' => route('projects.show', $project),
+            ],
+            'editTabs' => \App\Support\ProjectEditTabs::for($project, 'general'),
+            'canDelete' => Auth::user()->can('delete', $project),
+            'updateUrl' => route('projects.update', $project),
+            'destroyUrl' => route('projects.destroy', $project),
+            'strings' => [
+                'title' => __('projects.edit_project'),
+                'keyUnique' => __('projects.key_unique'),
+                'name' => __('common.name'),
+                'description' => __('common.description'),
+                'githubRepo' => __('projects.github_repository'),
+                'githubHintPre' => __('projects.format'),
+                'githubHintPost' => __('projects.for_pr_linking_and_the_sync_prs_button'),
+                'completedLabel' => __('projects.project_completed'),
+                'completedHint' => __('projects.shows_the_completed_badge_in_the'),
+                'archivedLabel' => __('projects.archive_project'),
+                'archivedHint' => __('projects.hides_the_project_from_the_project_list'),
+                'cancel' => __('common.cancel'),
+                'save' => __('common.save'),
+                'deleteTitle' => __('projects.delete_project'),
+                'deleteHint' => __('projects.removes_the_project_including_all_tasks'),
+                'deleteConfirm' => __('projects.really_delete_this_project'),
+                'delete' => __('common.delete'),
+            ],
+        ]);
     }
 
     public function update(UpdateProjectRequest $request, Project $project): RedirectResponse
