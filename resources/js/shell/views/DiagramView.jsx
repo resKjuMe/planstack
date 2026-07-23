@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import PageHead from '../components/PageHead.jsx';
 import { useProjectData } from '../../data/useProjectData';
 import { deriveDiagram } from '../../diagram/derive.js';
+import { ChipsSkeleton, BlockSkeleton } from '../components/Skeleton.jsx';
 
 // Inneres SVG-Icon-Markup (aus dem Status) in ein <svg> hüllen.
 function Ico({ paths, className = 'ps-ico' }) {
@@ -139,7 +140,10 @@ export default function DiagramView({ project, currentUserId, strings }) {
 
             <div className="bg-white rounded-lg shadow p-6 overflow-x-auto space-y-4 dark:bg-gray-800 dark:shadow-black/30">
             {status !== 'ready' && status !== 'error' && (
-                <p className="text-sm text-gray-400 dark:text-gray-500">{strings.loading || '…'}</p>
+                <>
+                    <ChipsSkeleton count={5} />
+                    <BlockSkeleton className="h-72" />
+                </>
             )}
             {status === 'error' && (
                 <p className="text-sm text-red-600 dark:text-red-400">{error || 'Fehler'}</p>

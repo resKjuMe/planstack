@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import PageHead from '../components/PageHead.jsx';
 import { useChangelog } from '../../changelog/useChangelog.js';
 import { interpolate } from '../../summary/i18n.js';
+import { CardsSkeleton } from '../components/Skeleton.jsx';
 
 // Ein Headline-Segment (text / tag / status-Badge / Zitat).
 function Segment({ seg }) {
@@ -92,7 +93,7 @@ export default function ChangelogView({ project, strings }) {
         <div className="space-y-4">
             <PageHead title={strings.title} toggleLabel={strings.showHideExplanation} bullets={strings.helpBullets} />
 
-            {status === 'loading' && <p className="text-sm text-gray-400 dark:text-gray-500">{strings.loading}</p>}
+            {status === 'loading' && <CardsSkeleton count={8} cols={1} />}
             {status === 'error' && <p className="text-sm text-red-600 dark:text-red-400">{error || 'Fehler'}</p>}
 
             {status === 'ready' && items.length === 0 && (

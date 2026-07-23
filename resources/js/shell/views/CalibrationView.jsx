@@ -3,6 +3,7 @@ import PageHead from '../components/PageHead.jsx';
 import { useProjectData } from '../../data/useProjectData';
 import { deriveCalibration } from '../../calibration/derive.js';
 import { interpolate, transChoice } from '../../summary/i18n.js';
+import { KpiTilesSkeleton, CardsSkeleton, TableSkeleton } from '../components/Skeleton.jsx';
 
 const tileText = (c) =>
     ({
@@ -121,7 +122,11 @@ export default function CalibrationView({ project, strings }) {
             </PageHead>
 
             {status !== 'ready' && status !== 'error' && (
-                <p className="text-sm text-gray-400 dark:text-gray-500">{strings.loading}</p>
+                <>
+                    <KpiTilesSkeleton count={4} />
+                    <CardsSkeleton count={2} cols={2} bodyClass="h-64" />
+                    <TableSkeleton rows={6} cols={5} />
+                </>
             )}
             {status === 'error' && <p className="text-sm text-red-600 dark:text-red-400">{error || 'Fehler'}</p>}
 

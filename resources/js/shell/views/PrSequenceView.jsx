@@ -3,6 +3,7 @@ import PageHead from '../components/PageHead.jsx';
 import { useProjectData } from '../../data/useProjectData';
 import { deriveSequence } from '../../prsequence/derive.js';
 import { interpolate, transChoice } from '../../summary/i18n.js';
+import { KpiTilesSkeleton, ChipsSkeleton, CardsSkeleton } from '../components/Skeleton.jsx';
 
 // Inline-Icons (Tabler Outline, 24er-ViewBox), Spiegel des $ic-Helfers der Blade.
 const ICONS = {
@@ -180,7 +181,11 @@ export default function PrSequenceView({ project, strings }) {
             <PageHead title={strings.title} toggleLabel={strings.showHideExplanation} bullets={strings.helpBullets} />
 
             {status !== 'ready' && status !== 'error' && (
-                <p className="text-sm text-gray-400 dark:text-gray-500">{strings.loading || '…'}</p>
+                <>
+                    <KpiTilesSkeleton count={4} />
+                    <ChipsSkeleton count={5} />
+                    <CardsSkeleton count={5} cols={1} />
+                </>
             )}
             {status === 'error' && <p className="text-sm text-red-600 dark:text-red-400">{error || 'Fehler'}</p>}
 

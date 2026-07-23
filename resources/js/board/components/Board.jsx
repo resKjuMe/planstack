@@ -20,6 +20,7 @@ import { mapApiTask, moveTask } from '../api';
 import { useProjectData } from '../../data/useProjectData';
 import { patchTask } from '../../data/projectStore';
 import { useBoardCollapseState } from '../useBoardCollapseState';
+import { BoardSkeleton } from '../../shell/components/Skeleton.jsx';
 import { colorForToken } from '../statusColors';
 import { allowedTargets, canTransition, groupStartingAt } from '../workflowConfig';
 
@@ -512,7 +513,7 @@ export default function Board({ meta }) {
             </div>
 
             {loadStatus === 'loading' && (
-                <div className="py-16 text-center text-sm text-gray-400 dark:text-gray-500">{t('loading')}</div>
+                <BoardSkeleton columns={workflow.columnOrder?.length || 5} />
             )}
 
             {loadStatus === 'error' && (

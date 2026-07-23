@@ -3,6 +3,7 @@ import PageHead from '../components/PageHead.jsx';
 import { useProjectData } from '../../data/useProjectData';
 import { deriveSummary } from '../../summary/derive.js';
 import { interpolate } from '../../summary/i18n.js';
+import { KpiTilesSkeleton, LinesCardSkeleton, CardsSkeleton } from '../components/Skeleton.jsx';
 
 // Summary-Unterseite als Teilansicht des ProjectWorkspace. Die Daten kommen aus
 // dem geteilten Store (Tasks + Phasen, einmalig geladen, per Socket partiell
@@ -38,7 +39,11 @@ export default function SummaryView({ project, strings }) {
             />
 
             {status !== 'ready' && status !== 'error' && (
-                <p className="text-sm text-gray-400 dark:text-gray-500">{strings.loading}</p>
+                <>
+                    <KpiTilesSkeleton count={4} />
+                    <LinesCardSkeleton rows={4} />
+                    <CardsSkeleton count={3} cols={3} />
+                </>
             )}
             {status === 'error' && (
                 <p className="text-sm text-red-600 dark:text-red-400">
