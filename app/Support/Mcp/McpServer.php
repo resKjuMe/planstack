@@ -83,7 +83,7 @@ class McpServer
             ],
             [
                 'name' => 'claim_task',
-                'description' => 'Beansprucht einen freien Task für den Token-Benutzer (atomar). Fehler, wenn bereits beansprucht.',
+                'description' => 'Beansprucht einen freien Task für den Token-Benutzer (atomar). Bereits vom eigenen Benutzer beansprucht → idempotent (kein Fehler); Fehler nur bei fremdem Claim.',
                 'inputSchema' => $this->schema($taskArg, ['task']),
             ],
             [
@@ -322,9 +322,13 @@ class McpServer
         $this->authorize('claim', $task, $project);
 
         if ($task->claimed_by_id !== null) {
-            throw new McpToolException($task->claimed_by_id === $user->id
-                ? 'Du hast diesen Task bereits beansprucht.'
-                : 'Task ist bereits beansprucht.');
+            // Bereits vom eigenen Nutzer beansprucht → idempotent bestätigen
+            // (Status nicht zurücksetzen); nur ein fremder Claim ist ein Fehler.
+            if ($task->claimed_by_id === $user->id) {
+                return $this->json($this->taskPayload($project, $task));
+            }
+
+            throw new McpToolException('Task ist bereits beansprucht.');
         }
 
         if (! $this->statuses->allowsTransition($task, StatusRole::CLAIMED)) {

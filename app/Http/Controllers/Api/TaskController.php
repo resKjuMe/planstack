@@ -132,9 +132,14 @@ class TaskController extends ApiController
         $this->authorize('claim', $task);
 
         if ($task->claimed_by_id !== null) {
-            return $this->conflict($task->claimed_by_id === $request->user()->id
-                ? 'Du hast diesen Task bereits beansprucht.'
-                : 'Task ist bereits beansprucht.');
+            // Bereits vom eigenen Nutzer beansprucht → idempotent bestätigen
+            // (kein erneutes Anwenden der CLAIMED-Rolle, um einen bereits
+            // fortgeschrittenen Status nicht zurückzusetzen).
+            if ($task->claimed_by_id === $request->user()->id) {
+                return $this->ack($project, $task);
+            }
+
+            return $this->conflict('Task ist bereits beansprucht.');
         }
 
         if (! $this->statuses->allowsTransition($task, StatusRole::CLAIMED)) {
