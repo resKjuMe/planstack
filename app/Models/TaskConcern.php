@@ -11,6 +11,27 @@ class TaskConcern extends Model
     use Auditable, \App\Concerns\OrganizationAuditMetadata {
         \App\Concerns\OrganizationAuditMetadata::getAuditMetadata insteadof Auditable;
     }
+    use \App\Concerns\BroadcastsEntityChange;
+
+    /**
+     * Ein Concern wird als sein Eltern-Task gemeldet: der Client lädt den Task neu
+     * (der die Concern-Relation trägt) statt einen eigenen Concern-Typ zu kennen.
+     *
+     * @return array{entity: string, id: int, organization_id: int|null, project_id: int|null, project_alias: string|null}|null
+     */
+    public function entityChangeScope(): ?array
+    {
+        $project = $this->task?->project;
+
+        return [
+            'entity' => 'task',
+            'id' => $this->task_id,
+            'organization_id' => $project?->organization_id,
+            'project_id' => $project?->id,
+            'project_alias' => $project?->alias,
+        ];
+    }
+
     protected $fillable = [
         'task_id',
         'created_by_id',

@@ -69,6 +69,14 @@ class NotificationBroadcaster
 
         try {
             $pusher->trigger("organization-{$organizationId}", $event, $payload);
+            // Diagnose: bestätigt, dass (und an welchen Channel) gesendet wurde.
+            Log::debug('Pusher-Broadcast gesendet', [
+                'channel' => "organization-{$organizationId}",
+                'event' => $event,
+                'entity' => $payload['entity'] ?? null,
+                'id' => $payload['id'] ?? null,
+                'action' => $payload['action'] ?? null,
+            ]);
         } catch (\Throwable $e) {
             Log::warning('Pusher-Broadcast fehlgeschlagen', [
                 'organization_id' => $organizationId,

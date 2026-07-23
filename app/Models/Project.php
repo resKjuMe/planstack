@@ -16,8 +16,23 @@ class Project extends Model
     use Auditable, \App\Concerns\OrganizationAuditMetadata {
         \App\Concerns\OrganizationAuditMetadata::getAuditMetadata insteadof Auditable;
     }
+    use \App\Concerns\BroadcastsEntityChange;
     /** @use HasFactory<\Database\Factories\ProjectFactory> */
     use HasFactory;
+
+    /**
+     * @return array{entity: string, id: int, organization_id: int|null, project_id: int, project_alias: string}
+     */
+    public function entityChangeScope(): ?array
+    {
+        return [
+            'entity' => 'project',
+            'id' => $this->id,
+            'organization_id' => $this->organization_id,
+            'project_id' => $this->id,
+            'project_alias' => $this->alias,
+        ];
+    }
 
     protected $fillable = [
         // organization_id ist bewusst NICHT fillable — es wird serverseitig aus

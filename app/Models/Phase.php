@@ -13,8 +13,25 @@ class Phase extends Model
     use Auditable, \App\Concerns\OrganizationAuditMetadata {
         \App\Concerns\OrganizationAuditMetadata::getAuditMetadata insteadof Auditable;
     }
+    use \App\Concerns\BroadcastsEntityChange;
     /** @use HasFactory<\Database\Factories\PhaseFactory> */
     use HasFactory;
+
+    /**
+     * @return array{entity: string, id: int, organization_id: int|null, project_id: int|null, project_alias: string|null}|null
+     */
+    public function entityChangeScope(): ?array
+    {
+        $project = $this->project;
+
+        return [
+            'entity' => 'phase',
+            'id' => $this->id,
+            'organization_id' => $project?->organization_id,
+            'project_id' => $project?->id,
+            'project_alias' => $project?->alias,
+        ];
+    }
 
     protected $fillable = [
         'project_id',

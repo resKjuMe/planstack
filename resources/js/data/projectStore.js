@@ -121,8 +121,11 @@ async function onEntityChanged(detail) {
     // Nichts geladen → nichts nachzuladen (die Seite lädt beim nächsten Besuch frisch).
     if (!s || s.status !== 'ready') return;
 
+    console.debug('[store] entity-changed → partielles Nachladen:', detail);
+
     if (detail.entity === 'task') {
-        if (detail.action === 'deleted') {
+        // 'delete' (Server) bzw. Legacy 'deleted' → aus dem Store entfernen.
+        if (detail.action === 'delete' || detail.action === 'deleted') {
             if (s.tasks.has(detail.id)) {
                 s.tasks.delete(detail.id);
                 notify(s);
@@ -146,6 +149,9 @@ async function onEntityChanged(detail) {
             /* best effort */
         }
     }
+    // 'project' (und künftige projektweite Typen) behandelt die Seite selbst
+    // (z. B. ProjectWorkspace via Inertia-Partial-Reload) — der Store hält keine
+    // Projekt-Stammdaten.
 }
 
 if (typeof window !== 'undefined') {

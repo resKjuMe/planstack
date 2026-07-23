@@ -162,6 +162,7 @@ Alpine.store('notifications', {
     //    'planstack:notification' weiterreichen (Glocke + Board-Highlight).
     _ingest(eventName, data, broadcast) {
         if (eventName === NOTIFICATIONS_ENTITY_EVENT || (data && data.type === 'entity-changed')) {
+            console.debug('[notifications] entity-changed empfangen:', data);
             window.dispatchEvent(new CustomEvent('planstack:entity-changed', { detail: data }));
             if (broadcast && this._bc) this._bc.postMessage({ type: 'entity', data });
             return;

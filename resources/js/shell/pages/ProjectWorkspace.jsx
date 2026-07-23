@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Head, usePage } from '@inertiajs/react';
+import { Head, router, usePage } from '@inertiajs/react';
 import AppShell from '../AppShell.jsx';
 import PageBands from '../components/PageBands.jsx';
 import ProjectHeaderBar from '../components/ProjectHeaderBar.jsx';
@@ -44,6 +44,20 @@ export default function ProjectWorkspace({ activeTab, project, can, tabs, flash,
         window.addEventListener('popstate', onPop);
         return () => window.removeEventListener('popstate', onPop);
     }, [tabs]);
+
+    // Projekt-Stammdaten (Name/Alias in der Kopfzeile) liegen nicht im Store,
+    // sondern in den Inertia-Props. Ändert sich das Projekt selbst, die betroffene
+    // Prop gezielt nachladen (selten → ein Partial-Request ist vertretbar).
+    useEffect(() => {
+        const onEntity = (e) => {
+            const d = e.detail;
+            if (d && d.entity === 'project' && d.project_alias === project.alias) {
+                router.reload({ only: ['project'] });
+            }
+        };
+        window.addEventListener('planstack:entity-changed', onEntity);
+        return () => window.removeEventListener('planstack:entity-changed', onEntity);
+    }, [project.alias]);
 
     // Tab-Klick: board/summary clientseitig; andere (noch nicht migrierte) Tabs
     // gibt false zurück → der globale Interceptor macht den normalen Inertia-Visit.
