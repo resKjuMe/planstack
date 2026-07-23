@@ -102,7 +102,11 @@ export default function ProjectsIndex({ currentUserId, filters, flash, strings }
                     </div>
 
                     {status === 'loading' && cards.length === 0 && (
-                        <p className="mt-6 text-sm text-gray-400 dark:text-gray-500">{strings.loading}</p>
+                        <div className="mt-6 grid items-stretch gap-4 sm:grid-cols-2 lg:grid-cols-3" aria-hidden="true">
+                            {Array.from({ length: 6 }).map((_, i) => (
+                                <ProjectCardSkeleton key={i} />
+                            ))}
+                        </div>
                     )}
                     {status === 'error' && (
                         <p className="mt-6 text-sm text-red-600 dark:text-red-400">{error || 'Fehler'}</p>
@@ -122,6 +126,48 @@ export default function ProjectsIndex({ currentUserId, filters, flash, strings }
                 </div>
             </div>
         </>
+    );
+}
+
+// Platzhalter-Karte waehrend die Projekte aus /api/projects + /api/tasks laden.
+// Spiegelt das Grundgeruest von ProjectCard (Badges, Titel, Beschreibung,
+// Fortschrittsbalken, Fusszeile), damit beim Erscheinen der echten Karten kein
+// Layout-Sprung entsteht. Rein dekorativ (aria-hidden am Grid).
+function ProjectCardSkeleton() {
+    const bar = 'rounded bg-gray-200 dark:bg-gray-700';
+    return (
+        <div className="h-full">
+            <div className="flex h-full animate-pulse flex-col rounded-lg bg-white dark:bg-gray-800 p-6 shadow">
+                <div className="flex items-center justify-between">
+                    <div className={`h-5 w-14 ${bar}`}></div>
+                    <div className={`h-5 w-20 rounded-full ${bar}`}></div>
+                </div>
+
+                <div className={`mt-3 h-6 w-2/3 ${bar}`}></div>
+                <div className={`mt-2 h-4 w-full ${bar}`}></div>
+                <div className={`mt-1.5 h-4 w-4/5 ${bar}`}></div>
+
+                <div className="mt-auto pt-5">
+                    <div className="flex items-center justify-between">
+                        <div className={`h-4 w-24 ${bar}`}></div>
+                        <div className={`h-4 w-12 ${bar}`}></div>
+                    </div>
+                    <div className={`mt-1.5 h-1.5 w-full rounded-full ${bar}`}></div>
+                    <div className="mt-2 flex gap-1.5">
+                        <div className={`h-5 w-16 rounded-full ${bar}`}></div>
+                        <div className={`h-5 w-16 rounded-full ${bar}`}></div>
+                    </div>
+
+                    <div className="mt-4 flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                            <div className={`h-7 w-7 rounded-full ${bar}`}></div>
+                            <div className={`h-4 w-24 ${bar}`}></div>
+                        </div>
+                        <div className={`h-3 w-16 ${bar}`}></div>
+                    </div>
+                </div>
+            </div>
+        </div>
     );
 }
 
