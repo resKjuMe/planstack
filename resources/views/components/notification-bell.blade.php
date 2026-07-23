@@ -24,8 +24,12 @@
         structured(d) { return d && typeof d === 'object' && typeof d.event !== 'undefined'; },
         eventLabel(d) { return this.eventLabels[d.event] ?? d.event; },
         statusIcon(d) { return d.status_changed && d.status_icon ? (this.statusIcons[d.status_icon] ?? null) : null; },
+        nowTick: 0,
         when(iso) { try { return new Date(iso).toLocaleString(); } catch (e) { return iso; } },
         relative(iso) {
+            // nowTick lesen, damit Alpine diese Ausgabe an den Sekunden-Tick
+            // koppelt und die relative Zeit im offenen Flyout live mitzählt.
+            void this.nowTick;
             try {
                 const t = new Date(iso).getTime();
                 if (isNaN(t)) return iso;
@@ -43,6 +47,7 @@
         },
         raw(d) { return typeof d === 'string' ? d : JSON.stringify(d, null, 2); },
      }"
+     x-init="setInterval(() => { if ($store.notifications.open) nowTick++ }, 1000)"
      @keydown.escape.window="$store.notifications.open = false"
      @click.outside="$store.notifications.open = false"
      {{ $attributes->merge(['class' => 'relative']) }}>
