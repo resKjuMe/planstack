@@ -3,7 +3,6 @@
 use App\Http\Controllers\Api\EventController;
 use App\Http\Controllers\Api\McpController;
 use App\Http\Controllers\Api\PhaseController;
-use App\Http\Controllers\Api\CalibrationController;
 use App\Http\Controllers\Api\ProjectConfigController;
 use App\Http\Controllers\Api\ProjectController;
 use App\Http\Controllers\Api\StatusConfigController;
@@ -49,9 +48,6 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Org-Status-Konfiguration für den geteilten React-Store (Summary-Ableitung).
     Route::get('projects/{project}/status-config', [StatusConfigController::class, 'show']);
-
-    // Kalibrierungs-Daten (Schätzung vs. Ist) für die React-Kalibrierungsseite.
-    Route::get('projects/{project}/calibration', [CalibrationController::class, 'show']);
 
     // Board-Protokoll-Konfiguration (token-sparende Schalter)
     Route::get('projects/{project}/config', [ProjectConfigController::class, 'show']);

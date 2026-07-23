@@ -1,6 +1,7 @@
 import React, { useMemo, useRef, useState } from 'react';
 import PageHead from '../components/PageHead.jsx';
-import { useCalibration } from '../../calibration/useCalibration.js';
+import { useProjectData } from '../../data/useProjectData';
+import { deriveCalibration } from '../../calibration/derive.js';
 import { interpolate, transChoice } from '../../summary/i18n.js';
 
 const tileText = (c) =>
@@ -73,7 +74,18 @@ function Scatter({ scatter, strings }) {
 // GET /api/projects/{alias}/calibration (useCalibration) und aktualisieren sich
 // live per entity-changed. Tabs/Sortierung sind clientseitiger React-State.
 export default function CalibrationView({ project, strings }) {
-    const { data, status, error } = useCalibration(project.alias);
+    const { tasks, statusConfig, status, error } = useProjectData(project.alias);
+
+    const data = useMemo(() => {
+        if (status !== 'ready' || !statusConfig) return null;
+        return deriveCalibration({
+            tasks,
+            statusConfig,
+            strings,
+            taskUrlTemplate: project.taskUrlTemplate,
+            locale: (typeof document !== 'undefined' && document.documentElement.getAttribute('lang')) || 'de',
+        });
+    }, [tasks, statusConfig, status, strings, project.taskUrlTemplate]);
 
     const [tab, setTab] = useState('all');
     const [sort, setSort] = useState('dev');

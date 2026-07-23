@@ -79,10 +79,11 @@ class ProjectController extends ApiController
 
         $project->load('owner', 'phases');
         $tasks = $this->board->board($project);
-        // prerequisites(.orgStatus) fürs Summary (Phasen-Blocker) und reviewer fürs
-        // Diagramm mitladen; der geteilte React-Store leitet Board, Summary UND
-        // Diagramm aus dieser einen Antwort ab.
-        $tasks->loadMissing(['phase', 'claimer', 'reviewer', 'concern', 'prerequisites.orgStatus']);
+        // Relationen für die abgeleiteten Unterseiten mitladen: prerequisites fürs
+        // Summary (Phasen-Blocker), reviewer fürs Diagramm, pullRequests für die
+        // Kalibrierung (Ist-Kennzahlen). Der geteilte React-Store leitet ALLE
+        // Unterseiten aus dieser einen Antwort ab.
+        $tasks->loadMissing(['phase', 'claimer', 'reviewer', 'concern', 'prerequisites.orgStatus', 'pullRequests']);
         $project->setRelation('tasks', $tasks);
 
         return new ProjectResource($project);

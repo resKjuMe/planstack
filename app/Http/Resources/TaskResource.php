@@ -115,6 +115,24 @@ class TaskResource extends JsonResource
             'custom_fields' => $this->custom_fields ?? null,
             'pr_number' => $this->pr_number,
             'pr_url' => $this->x_pr_url ?? null,
+            // Aggregierte Ist-Kennzahlen der (gesyncten) Pull-Requests — Grundlage
+            // der Kalibrierung (Ist-Dateien vs. Schätzung affected_files). Nur wenn
+            // die Relation geladen ist; null, wenn die Task keine PRs hat.
+            'pr_stats' => $this->whenLoaded('pullRequests', function () {
+                $prs = $this->pullRequests;
+                if ($prs->isEmpty()) {
+                    return null;
+                }
+
+                return [
+                    'changed_files' => (int) $prs->sum('changed_files'),
+                    'additions' => (int) $prs->sum('additions'),
+                    'deletions' => (int) $prs->sum('deletions'),
+                    'commits' => (int) $prs->sum('commits'),
+                    'merged_at' => $prs->pluck('merged_at')->filter()->max(),
+                    'updated_at' => $prs->pluck('updated_at')->filter()->max(),
+                ];
+            }),
             'reviewed_by' => $this->reviewed_by,
             'reviewed_by_name' => $this->whenLoaded('reviewer', fn () => $this->reviewer?->name),
             'claimed_by_id' => $this->claimed_by_id,

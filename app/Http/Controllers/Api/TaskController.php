@@ -759,9 +759,10 @@ class TaskController extends ApiController
     {
         $tasks = $this->board->board($project);
         $decorated = $tasks->firstWhere('id', $task->id) ?? $task;
-        // prerequisites(.orgStatus) mitladen, damit ein partiell nachgeladener Task
-        // im React-Store dieselbe Form wie in der Board-Liste hat (Summary-Blocker).
-        $decorated->loadMissing(['phase', 'claimer', 'concern', 'reviewer', 'prerequisites.orgStatus']);
+        // Relationen mitladen, damit ein partiell nachgeladener Task im React-Store
+        // dieselbe Form wie in der Board-Liste hat (Summary-Blocker, Diagramm,
+        // Kalibrierungs-Ist-Kennzahlen).
+        $decorated->loadMissing(['phase', 'claimer', 'concern', 'reviewer', 'prerequisites.orgStatus', 'pullRequests']);
 
         return $decorated;
     }

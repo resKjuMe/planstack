@@ -297,6 +297,15 @@ class ProjectWorkspacePresenter
             'avgToMerge' => __('status.avg_to_merge'),
             'tasks' => __('common.tasks'),
             'days' => __('status.days'),
+            // Vom Client berechnete Kennzahlen (früher serverseitig):
+            'medianHintNoEstimates' => __('calibration.median_hint_no_estimates'),
+            'medianHintTooSmall' => __('calibration.median_hint_too_small'),
+            'medianHintTooLarge' => __('calibration.median_hint_too_large'),
+            'medianHintOk' => __('calibration.median_hint_ok'),
+            'accuracyTip' => __('calibration.accuracy_tip'),
+            'unitMin' => __('calibration.unit_min'),
+            'unitHours' => __('calibration.unit_hours'),
+            'unitDays' => __('calibration.unit_days'),
         ];
     }
 }
