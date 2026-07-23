@@ -24,14 +24,8 @@ export default function ProjectEdit({ project, editTabs, updateUrl, destroyUrl, 
 
             <div className="py-8">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
-                    <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-                        <Deferred data="formData" fallback={<FormSkeleton rows={5} />}>
-                            <EditForm project={project} updateUrl={updateUrl} strings={strings} />
-                        </Deferred>
-                    </div>
-
-                    <Deferred data="formData" fallback={null}>
-                        <DeleteCard destroyUrl={destroyUrl} strings={strings} />
+                    <Deferred data="formData" fallback={<FormSkeleton rows={5} />}>
+                        <EditBody project={project} updateUrl={updateUrl} destroyUrl={destroyUrl} strings={strings} />
                     </Deferred>
                 </div>
             </div>
@@ -39,7 +33,7 @@ export default function ProjectEdit({ project, editTabs, updateUrl, destroyUrl, 
     );
 }
 
-function EditForm({ project, updateUrl, strings }) {
+function EditBody({ project, updateUrl, destroyUrl, strings }) {
     const { formData } = usePage().props;
     const form = useForm({ ...formData.values });
 
@@ -47,13 +41,18 @@ function EditForm({ project, updateUrl, strings }) {
         e.preventDefault();
         form.put(updateUrl);
     };
+    const destroy = () => {
+        if (window.confirm(strings.deleteConfirm)) router.delete(destroyUrl);
+    };
 
     const field = 'mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-900 shadow-sm focus:border-indigo-500 focus:ring-indigo-500';
     const label = 'block text-sm font-medium text-gray-700 dark:text-gray-300';
     const err = (k) => form.errors[k] && <p className="mt-2 text-sm text-red-600 dark:text-red-400">{form.errors[k]}</p>;
 
     return (
-        <form onSubmit={submit} className="space-y-5">
+        <>
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+                <form onSubmit={submit} className="space-y-5">
             <div>
                 <label htmlFor="alias" className={label}>{strings.keyUnique}</label>
                 <input id="alias" type="text" value={form.data.alias} onChange={(e) => form.setData('alias', e.target.value)} required maxLength={20} className={field} />
@@ -96,28 +95,21 @@ function EditForm({ project, updateUrl, strings }) {
                 </label>
             </div>
 
-            <div className="flex items-center justify-end gap-3">
-                <a href={project.showUrl} className="text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200">{strings.cancel}</a>
-                <button type="submit" disabled={form.processing} className="inline-flex items-center rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500 disabled:opacity-50">{strings.save}</button>
+                    <div className="flex items-center justify-end gap-3">
+                        <a href={project.showUrl} className="text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200">{strings.cancel}</a>
+                        <button type="submit" disabled={form.processing} className="inline-flex items-center rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500 disabled:opacity-50">{strings.save}</button>
+                    </div>
+                </form>
             </div>
-        </form>
-    );
-}
 
-function DeleteCard({ destroyUrl, strings }) {
-    const { formData } = usePage().props;
-    if (!formData.canDelete) return null;
-
-    const destroy = () => {
-        if (window.confirm(strings.deleteConfirm)) router.delete(destroyUrl);
-    };
-
-    return (
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 border border-red-100 dark:border-red-900/50">
-            <h3 className="font-semibold text-red-700 dark:text-red-300">{strings.deleteTitle}</h3>
-            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{strings.deleteHint}</p>
-            <button type="button" onClick={destroy} className="mt-4 inline-flex items-center rounded-md bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-500">{strings.delete}</button>
-        </div>
+            {formData.canDelete && (
+                <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 border border-red-100 dark:border-red-900/50">
+                    <h3 className="font-semibold text-red-700 dark:text-red-300">{strings.deleteTitle}</h3>
+                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{strings.deleteHint}</p>
+                    <button type="button" onClick={destroy} className="mt-4 inline-flex items-center rounded-md bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-500">{strings.delete}</button>
+                </div>
+            )}
+        </>
     );
 }
 
