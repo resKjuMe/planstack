@@ -182,15 +182,15 @@ class TaskShowPresenter
 
         $details = [];
         foreach ([
-            'context' => $c->description_context,
-            'blocker' => $c->description_blocker,
-            'misconception' => $c->description_misconception,
-        ] as $key => $value) {
-            if (filled($value)) {
+            'context' => ['value' => $c->description_context, 'label' => 'concerns.context_collected_background'],
+            'blocker' => ['value' => $c->description_blocker, 'label' => 'concerns.blocker_why_it_is_blocked'],
+            'misconception' => ['value' => $c->description_misconception, 'label' => 'concerns.misconception_why_the_planning_was_wrong'],
+        ] as $key => $def) {
+            if (filled($def['value'])) {
                 $details[] = [
                     'key' => $key,
-                    'label' => __('tasks.'.$key),
-                    'html' => $this->md((string) $value),
+                    'label' => __($def['label']),
+                    'html' => $this->md((string) $def['value']),
                     'wide' => $key === 'blocker',
                 ];
             }
