@@ -10,6 +10,7 @@ export function TaskCardView({
     dimmed,
     dragging,
     overlay,
+    highlight,
     listeners,
     attributes,
     setNodeRef,
@@ -31,6 +32,7 @@ export function TaskCardView({
                 overlay ? 'cursor-grabbing shadow-lg rotate-1' : 'cursor-grab active:cursor-grabbing',
                 dragging ? 'opacity-40' : '',
                 dimmed ? 'opacity-40' : '',
+                highlight ? 'ps-highlight' : '',
             ].join(' ')}
         >
             <div className="flex items-center justify-between gap-2">
@@ -114,7 +116,7 @@ export function TaskCardView({
 
 // Draggable wrapper (@dnd-kit). The whole card is the drag source; interactive
 // children stop pointer propagation so links/buttons stay usable.
-export default function TaskCard({ task, t, csrf, endpoints, dimmed, transitions = {}, labels = {}, columnOrder = [], exceptionStatuses = [], onMove }) {
+export default function TaskCard({ task, t, csrf, endpoints, dimmed, highlight, transitions = {}, labels = {}, columnOrder = [], exceptionStatuses = [], onMove }) {
     const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
         id: task.id,
         data: { from: task.displayStatus },
@@ -147,6 +149,7 @@ export default function TaskCard({ task, t, csrf, endpoints, dimmed, transitions
             endpoints={endpoints}
             dimmed={dimmed}
             dragging={isDragging}
+            highlight={highlight}
             setNodeRef={setNodeRef}
             listeners={listeners}
             attributes={attributes}

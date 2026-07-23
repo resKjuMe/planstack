@@ -110,6 +110,9 @@ Alpine.store('notifications', {
         if (this.messages.length > NOTIFICATIONS_MAX) {
             this.messages.length = NOTIFICATIONS_MAX;
         }
+        // Als DOM-Event weiterreichen, damit andere Views (z. B. das React-Board)
+        // reagieren können, ohne eine zweite Pusher-Verbindung zu öffnen.
+        window.dispatchEvent(new CustomEvent('planstack:notification', { detail: data }));
     },
 
     // Klick auf die Glocke: Flyout auf-/zuklappen; beim Öffnen als gelesen

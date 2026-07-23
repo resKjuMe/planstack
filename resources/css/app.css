@@ -15,6 +15,19 @@
     .board-cell { animation: none; }
 }
 
+/* Board: kurzzeitiges Hervorheben einer Kachel nach einem per WebSocket/Pusher
+   ausgelösten Statuswechsel. Startet im Logo-Rot (#FF4B3E) und blendet über 3 s
+   nach transparent aus (Ring + zarter Hintergrund). Läuft einmalig beim
+   (Re-)Mount der Karte in der Zielspalte. */
+@keyframes ps-highlight-fade {
+    0%   { box-shadow: 0 0 0 3px rgb(255 75 62 / 0.9); background-color: rgb(255 75 62 / 0.14); }
+    100% { box-shadow: 0 0 0 0 rgb(255 75 62 / 0); background-color: transparent; }
+}
+.ps-highlight { animation: ps-highlight-fade 3s ease-out; }
+@media (prefers-reduced-motion: reduce) {
+    .ps-highlight { animation: none; }
+}
+
 /* Globale Tooltips (siehe resources/js/tooltip.js): gestylter Ersatz fuer die
    nativen title-Tooltips, theme-bewusst. `hidden` haelt es aus dem Layout, bis
    das JS es misst und positioniert. */

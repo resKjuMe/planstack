@@ -122,6 +122,60 @@ export default function Board({ data }) {
 
     const collapse = useBoardCollapseState(data.projectId, defaultExpandedKeys);
 
+    // --- Live-Statuswechsel via Pusher (app.js reicht die Nutzlast als
+    // DOM-Event 'planstack:notification' weiter) ---
+    // Bei { task_id, status_changed: true, status } wird die betroffene Kachel
+    // – sofern auf diesem Board vorhanden und der Zielstatus bekannt ist – in
+    // die Statusspalte verschoben und kurz hervorgehoben (3 s Fade-out, CSS).
+    const [highlightedIds, setHighlightedIds] = useState(() => new Set());
+    // Refs, damit der Listener einmalig registriert wird und trotzdem stets die
+    // aktuellen tasks/collapse sieht (kein Re-Subscribe pro Render).
+    const tasksRef = useRef(tasks);
+    const collapseRef = useRef(collapse);
+    const highlightTimers = useRef(new Map());
+    useEffect(() => { tasksRef.current = tasks; }, [tasks]);
+    useEffect(() => { collapseRef.current = collapse; }, [collapse]);
+
+    useEffect(() => {
+        const knownStatus = (s) =>
+            workflow.columnOrder.includes(s) || workflow.exceptionStatuses.includes(s);
+
+        const onNotification = (e) => {
+            const d = e.detail;
+            if (! d || d.status_changed !== true || d.task_id == null || ! d.status) return;
+            if (! knownStatus(d.status)) return; // unbekannte Spalte → Kachel nicht „verschwinden" lassen
+            if (! tasksRef.current.some((tk) => tk.id === d.task_id)) return; // nicht auf diesem Board
+
+            setTasks((prev) =>
+                prev.map((tk) =>
+                    tk.id === d.task_id ? { ...tk, status: d.status, displayStatus: d.status } : tk,
+                ),
+            );
+            collapseRef.current.setCollapsed(d.status, false); // Zielspalte sichtbar halten
+
+            setHighlightedIds((prev) => new Set(prev).add(d.task_id));
+            const existing = highlightTimers.current.get(d.task_id);
+            if (existing) clearTimeout(existing);
+            const timer = setTimeout(() => {
+                setHighlightedIds((prev) => {
+                    const n = new Set(prev);
+                    n.delete(d.task_id);
+                    return n;
+                });
+                highlightTimers.current.delete(d.task_id);
+            }, 3000);
+            highlightTimers.current.set(d.task_id, timer);
+        };
+
+        window.addEventListener('planstack:notification', onNotification);
+        const timers = highlightTimers.current;
+        return () => {
+            window.removeEventListener('planstack:notification', onNotification);
+            for (const timer of timers.values()) clearTimeout(timer);
+            timers.clear();
+        };
+    }, [workflow.columnOrder, workflow.exceptionStatuses]);
+
     // --- Drag-and-drop (@dnd-kit) ---
     // The dragged card is rendered as a decoupled DragOverlay, so the board may
     // freely re-layout during the drag (groups split into their status columns)
@@ -200,6 +254,7 @@ export default function Board({ data }) {
                 csrf={csrf}
                 endpoints={endpoints}
                 dimmed={filters.highlightBlocked && ! task.isBlocked}
+                highlight={highlightedIds.has(task.id)}
                 transitions={workflow.transitions}
                 labels={workflow.labels}
                 columnOrder={workflow.columnOrder}
@@ -207,7 +262,7 @@ export default function Board({ data }) {
                 onMove={performMove}
             />
         ),
-        [t, csrf, endpoints, filters.highlightBlocked, workflow.transitions, workflow.labels, workflow.columnOrder, workflow.exceptionStatuses, performMove],
+        [t, csrf, endpoints, filters.highlightBlocked, highlightedIds, workflow.transitions, workflow.labels, workflow.columnOrder, workflow.exceptionStatuses, performMove],
     );
 
     const draggingTask = dragging ? tasks.find((tk) => tk.id === dragging.taskId) : null;
