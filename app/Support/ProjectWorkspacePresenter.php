@@ -63,6 +63,9 @@ class ProjectWorkspacePresenter
             'sequence' => [
                 'strings' => $this->sequenceStrings(),
             ],
+            'calibration' => [
+                'strings' => $this->calibrationStrings(),
+            ],
         ];
     }
 
@@ -225,6 +228,75 @@ class ProjectWorkspacePresenter
             'hideMoreBlocked' => __('status.hide_count_more_blocked_prs'),
             'completedPrs' => __('status.completed_prs'),
             'workWithClaude' => __('status.work_through_with_claude_l2lr_name'),
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function calibrationStrings(): array
+    {
+        return [
+            'title' => __('common.calibration'),
+            'showHideExplanation' => __('common.show_hide_explanation'),
+            'loading' => __('status.loading'),
+            'totalMergedTasks' => __('status.total_merged_tasks'),
+            'lastSyncedTime' => __('status.last_synced_time'),
+            // Hilfe-Abschnitte
+            'metrics' => __('status.metrics'),
+            'chartsTable' => __('status.charts_table'),
+            'helpMetrics' => [
+                ['strong' => __('status.median_deviation'), 'text' => __('status.typical_deviation_of_the_actually')],
+                ['strong' => __('status.velocity'), 'text' => __('status.completed_story_points_per_day_measured')],
+                ['strong' => __('status.accuracy_25'), 'text' => __('status.share_of_tasks_whose_file_deviation_is')],
+                ['strong' => __('status.data_basis'), 'text' => __('status.how_many_of_the_merged_tasks_have_a')],
+            ],
+            'helpCharts' => [
+                ['strong' => __('status.estimated_vs_actual'), 'text' => __('status.one_task_per_point_x_estimated_y')],
+                ['strong' => __('status.accuracy_by_sp'), 'text' => __('status.hit_rate_grouped_by_task_size_shows')],
+                ['strong' => __('status.deviation'), 'text' => __('status.changed_estimated_estimated_green_25')],
+                ['strong' => __('status.outliers'), 'text' => __('status.deviation_over_50')],
+                ['strong' => __('status.time_sp'), 'text' => __('status.calendar_time_from_claim_merge_divided')],
+                ['strong' => __('status.no_estimate_2'), 'text' => __('status.task_with_no_file_count_on_record')],
+            ],
+            // KPI-Kacheln
+            'medianDeviation' => __('status.median_deviation'),
+            'velocity' => __('status.velocity'),
+            'spDay' => __('status.sp_day'),
+            'perSp' => __('status.per_sp'),
+            'claimMerge' => __('status.claim_merge'),
+            'accuracy25' => __('status.accuracy_25'),
+            'dataBasis' => __('status.data_basis'),
+            'tasksWithEstimate' => __('status.tasks_with_a_file_estimate'),
+            // Warnbanner
+            'noEstimateNote' => __('status.no_estimate_note'),
+            'show' => __('status.show'),
+            // Panels
+            'estimatedVsActual' => __('status.estimated_vs_actual'),
+            'filesPerTaskDiagonal' => __('status.files_per_task_diagonal_perfect_estimate'),
+            'estimated' => __('status.estimated'),
+            'changed' => __('status.changed'),
+            'noTasksWithEstimate' => __('status.no_tasks_with_a_file_estimate'),
+            'accuracyBySp' => __('status.accuracy_by_sp'),
+            'shareWithin25' => __('status.share_within_25'),
+            // Tabs + Sortierung
+            'all' => __('common.all'),
+            'outliersOnly' => __('status.outliers_only'),
+            'noEstimate' => __('status.no_estimate'),
+            'groupedBySp' => __('status.grouped_by_sp'),
+            'sort' => __('status.sort'),
+            'deviation' => __('status.deviation'),
+            'storyPoints' => __('common.story_points'),
+            'date' => __('status.date'),
+            'timeSp' => __('status.time_sp'),
+            // Tabelle
+            'task' => __('status.task'),
+            'filesEstimatedChanged' => __('status.files_estimated_changed'),
+            'noEstimate2' => __('status.no_estimate_2'),
+            'noEntries' => __('status.no_entries'),
+            'avgToMerge' => __('status.avg_to_merge'),
+            'tasks' => __('common.tasks'),
+            'days' => __('status.days'),
         ];
     }
 }

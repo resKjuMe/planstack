@@ -9,6 +9,7 @@ import BoardView from '../views/BoardView.jsx';
 import SummaryView from '../views/SummaryView.jsx';
 import DiagramView from '../views/DiagramView.jsx';
 import PrSequenceView from '../views/PrSequenceView.jsx';
+import CalibrationView from '../views/CalibrationView.jsx';
 
 // EINE Inertia-Seite für die Projekt-Unterseiten. Board und Summary werden rein
 // clientseitig umgeschaltet — 0 Server-Calls beim Tab-Wechsel: die statischen
@@ -18,7 +19,7 @@ import PrSequenceView from '../views/PrSequenceView.jsx';
 //
 // Weitere Unterseiten (Diagramm, PR-Sequence, …) laufen bis zu ihrer Migration
 // weiter über den normalen Inertia-Visit (globaler Klick-Interceptor in app.jsx).
-const CLIENT_TABS = ['board', 'summary', 'diagram', 'pr-sequence'];
+const CLIENT_TABS = ['board', 'summary', 'diagram', 'pr-sequence', 'calibration'];
 
 function tabForPath(pathname, tabs) {
     for (const t of tabs) {
@@ -31,7 +32,7 @@ function tabForPath(pathname, tabs) {
     return null;
 }
 
-export default function ProjectWorkspace({ activeTab, currentUserId, project, can, tabs, flash, board, summary, diagram, sequence }) {
+export default function ProjectWorkspace({ activeTab, currentUserId, project, can, tabs, flash, board, summary, diagram, sequence, calibration }) {
     const { errors } = usePage().props;
     const [tab, setTab] = useState(activeTab);
 
@@ -86,7 +87,9 @@ export default function ProjectWorkspace({ activeTab, currentUserId, project, ca
                 ? `${project.name} · ${diagram.strings.title}`
                 : tab === 'pr-sequence'
                     ? `${project.name} · ${sequence.strings.title}`
-                    : `${project.name} · ${board.strings.boardTitle}`;
+                    : tab === 'calibration'
+                        ? `${project.name} · ${calibration.strings.title}`
+                        : `${project.name} · ${board.strings.boardTitle}`;
 
     return (
         <>
@@ -107,6 +110,8 @@ export default function ProjectWorkspace({ activeTab, currentUserId, project, ca
                         <DiagramView project={project} currentUserId={currentUserId} strings={diagram.strings} />
                     ) : tab === 'pr-sequence' ? (
                         <PrSequenceView project={project} strings={sequence.strings} />
+                    ) : tab === 'calibration' ? (
+                        <CalibrationView project={project} strings={calibration.strings} />
                     ) : (
                         <BoardView meta={board.meta} strings={board.strings} />
                     )}
