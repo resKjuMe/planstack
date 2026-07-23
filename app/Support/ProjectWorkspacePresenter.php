@@ -60,6 +60,9 @@ class ProjectWorkspacePresenter
             'diagram' => [
                 'strings' => $this->diagramStrings(),
             ],
+            'sequence' => [
+                'strings' => $this->sequenceStrings(),
+            ],
         ];
     }
 
@@ -175,6 +178,53 @@ class ProjectWorkspacePresenter
             'satisfied' => __('status.satisfied'),
             'bottleneck' => __('status.bottleneck'),
             'noOpenPrs' => __('status.no_open_prs'),
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function sequenceStrings(): array
+    {
+        return [
+            'title' => __('common.pr_sequence'),
+            'showHideExplanation' => __('common.show_hide_explanation'),
+            'helpBullets' => [
+                ['strong' => __('common.pr_sequence'), 'text' => __('status.recommended_order_for_working_through')],
+                ['text' => __('status.metrics_open_prs_total_story_points')],
+                ['strong' => __('status.bottleneck'), 'text' => __('status.blocks_many_downstream_prs_finishing')],
+                ['text' => __('status.the_filter_pills_narrow_to_pickable')],
+            ],
+            // Kennzahlen-Kacheln
+            'openPrs' => __('status.open_prs'),
+            'totalStoryPoints' => __('status.total_story_points'),
+            'blocks' => __('common.blocks'),
+            'criticalPath' => __('status.critical_path'),
+            // Filter-Pills
+            'all' => __('common.all'),
+            'pickable' => __('status.pickable'),
+            'concerns' => __('status.concerns'),
+            'claimed' => __('status.claimed'),
+            // Zeile
+            'pos' => __('status.pos'),
+            'bottleneck' => __('status.bottleneck'),
+            'largePr' => __('status.large_pr'),
+            'largestPr' => __('status.largest_pr'),
+            'files' => __('status.files'),
+            'tokens' => __('status.tokens'),
+            'claimedBy' => __('status.claimed_by'),
+            'since' => __('status.since'),
+            'waitingOn' => __('status.waiting_on'),
+            'noOpenPrs' => __('status.no_open_prs'),
+            'noPrsInFilter' => __('status.no_prs_in_this_filter'),
+            'loading' => __('status.loading'),
+            // Roh-Templates (Client interpoliert :platzhalter / trans_choice via |)
+            'dependDirectly' => __('status.count_prs_depend_directly_on_this_one'),
+            'blocksPrs' => __('status.blocks_prs'),
+            'showMoreBlocked' => __('status.show_count_more_blocked_prs'),
+            'hideMoreBlocked' => __('status.hide_count_more_blocked_prs'),
+            'completedPrs' => __('status.completed_prs'),
+            'workWithClaude' => __('status.work_through_with_claude_l2lr_name'),
         ];
     }
 }
