@@ -128,10 +128,11 @@ export default function Board({ data }) {
     //  • status_changed=true  → Kachel in die Zielspalte verschieben + ROT
     //    hervorheben.
     //  • status_changed=false → nur BLAU hervorheben (kein Verschieben).
-    // Das Highlight bleibt zunächst statisch bestehen („hold") und beginnt erst
-    // beim nächsten Fensterfokus bzw. bei Maus-/Tastatur-Interaktion über 10 s
-    // auszublenden — so verpasst man es nicht, wenn das Ereignis eintrifft,
-    // während man gerade woanders ist.
+    // Hat das Fenster beim Eintreffen bereits Fokus, blendet das Highlight sofort
+    // über 10 s aus. Ist das Fenster NICHT fokussiert, bleibt es statisch bestehen
+    // („hold") und beginnt erst beim nächsten Fensterfokus bzw. bei Maus-/
+    // Tastatur-Interaktion auszublenden — so verpasst man es nicht, wenn das
+    // Ereignis eintrifft, während man gerade woanders ist.
     // highlightedIds: Map task_id → { variant: 'move'|'update', fading: bool }.
     const [highlightedIds, setHighlightedIds] = useState(() => new Map());
     // Refs, damit der Listener einmalig registriert wird und trotzdem stets die
@@ -148,13 +149,28 @@ export default function Board({ data }) {
         const knownStatus = (s) =>
             workflow.columnOrder.includes(s) || workflow.exceptionStatuses.includes(s);
 
-        // Highlight setzen (Phase „hold": statisch, kein Fade). Ein evtl. laufender
-        // Entfern-Timer wird gestoppt — das Highlight bleibt, bis der Nutzer
-        // wieder fokussiert/interagiert.
-        const hold = (taskId, variant) => {
+        // Entfern-Timer (10 s) einmalig setzen.
+        const scheduleRemoval = (taskId) => {
+            if (highlightTimers.current.has(taskId)) return;
+            const timer = setTimeout(() => {
+                setHighlightedIds((prev) => {
+                    const n = new Map(prev);
+                    n.delete(taskId);
+                    return n;
+                });
+                highlightTimers.current.delete(taskId);
+            }, 10000);
+            highlightTimers.current.set(taskId, timer);
+        };
+
+        // Highlight setzen. Bei Fensterfokus sofort ausblenden (fading=true +
+        // Timer); ohne Fokus statisch „hold" (fading=false) bis Fokus/Interaktion.
+        const apply = (taskId, variant) => {
             const running = highlightTimers.current.get(taskId);
             if (running) { clearTimeout(running); highlightTimers.current.delete(taskId); }
-            setHighlightedIds((prev) => new Map(prev).set(taskId, { variant, fading: false }));
+            const focused = document.hasFocus();
+            setHighlightedIds((prev) => new Map(prev).set(taskId, { variant, fading: focused }));
+            if (focused) scheduleRemoval(taskId);
         };
 
         // Alle „hold"-Highlights ins Ausblenden überführen (10 s), ausgelöst durch
@@ -172,16 +188,7 @@ export default function Board({ data }) {
             });
 
             for (const [id, v] of highlightsRef.current) {
-                if (v.fading || highlightTimers.current.has(id)) continue;
-                const timer = setTimeout(() => {
-                    setHighlightedIds((prev) => {
-                        const n = new Map(prev);
-                        n.delete(id);
-                        return n;
-                    });
-                    highlightTimers.current.delete(id);
-                }, 10000);
-                highlightTimers.current.set(id, timer);
+                if (! v.fading) scheduleRemoval(id);
             }
         };
 
@@ -198,9 +205,9 @@ export default function Board({ data }) {
                     ),
                 );
                 collapseRef.current.setCollapsed(d.status, false); // Zielspalte sichtbar halten
-                hold(d.task_id, 'move'); // rot
+                apply(d.task_id, 'move'); // rot
             } else if (d.status_changed === false) {
-                hold(d.task_id, 'update'); // blau, ohne Verschieben
+                apply(d.task_id, 'update'); // blau, ohne Verschieben
             }
         };
 
