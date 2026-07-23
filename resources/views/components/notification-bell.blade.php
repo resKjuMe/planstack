@@ -8,8 +8,25 @@
     $labelBase = __('nav.notifications');
     $labelNew = __('nav.new_messages');
     $labelOffline = __('nav.not_connected');
+
+    // Übersetzungs-Tabellen für die lesbare Darstellung (in der aktuellen
+    // Sprache des Betrachters gerendert): Event-Wert → Bezeichnung und die
+    // Status-Icon-Palette (Key → Inneres SVG-Markup) als Single Source of Truth.
+    $eventLabels = [];
+    foreach (\App\Enums\TaskEvent::cases() as $taskEvent) {
+        $eventLabels[$taskEvent->value] = $taskEvent->label();
+    }
+    $statusIcons = \App\Support\StatusIcons::all();
 @endphp
-<div x-data
+<div x-data="{
+        eventLabels: @js($eventLabels),
+        statusIcons: @js($statusIcons),
+        structured(d) { return d && typeof d === 'object' && typeof d.event !== 'undefined'; },
+        eventLabel(d) { return this.eventLabels[d.event] ?? d.event; },
+        statusIcon(d) { return d.status_changed && d.status_icon ? (this.statusIcons[d.status_icon] ?? null) : null; },
+        when(iso) { try { return new Date(iso).toLocaleString(); } catch (e) { return iso; } },
+        raw(d) { return typeof d === 'string' ? d : JSON.stringify(d, null, 2); },
+     }"
      @keydown.escape.window="$store.notifications.open = false"
      @click.outside="$store.notifications.open = false"
      {{ $attributes->merge(['class' => 'relative']) }}>
@@ -61,11 +78,35 @@
             <template x-if="$store.notifications.messages.length === 0">
                 <p class="px-2 py-6 text-center text-sm text-gray-500 dark:text-gray-400">{{ __('nav.no_messages') }}</p>
             </template>
-            <ul class="space-y-2">
+            <ul class="space-y-1">
                 <template x-for="(msg, i) in $store.notifications.messages" :key="i">
-                    <li>
-                        <div class="mb-0.5 text-[10px] uppercase tracking-wide text-gray-400 dark:text-gray-500" x-text="msg.at"></div>
-                        <pre class="overflow-x-auto whitespace-pre-wrap break-words rounded bg-gray-50 p-2 text-xs leading-snug text-gray-800 dark:bg-gray-900 dark:text-gray-200" x-text="typeof msg.data === 'string' ? msg.data : JSON.stringify(msg.data, null, 2)"></pre>
+                    <li class="rounded px-2 py-1.5 hover:bg-gray-50 dark:hover:bg-gray-700/40">
+                        {{-- Lesbare Darstellung: [Status-Icon bei Statuswechsel] Projekt › Task: Event --}}
+                        <template x-if="structured(msg.data)">
+                            <div>
+                                <div class="flex items-start gap-1.5">
+                                    <template x-if="statusIcon(msg.data)">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                                             class="mt-0.5 h-4 w-4 flex-none text-gray-500 dark:text-gray-400" aria-hidden="true" x-html="statusIcon(msg.data)"></svg>
+                                    </template>
+                                    <div class="min-w-0 text-sm leading-snug text-gray-800 dark:text-gray-200">
+                                        <template x-if="msg.data.project_name">
+                                            <span class="text-gray-500 dark:text-gray-400"><span x-text="msg.data.project_name"></span> <span class="text-gray-300 dark:text-gray-600">›</span> </span>
+                                        </template>
+                                        <span class="font-medium" x-text="msg.data.task_name ?? ('#' + msg.data.task_id)"></span><span class="text-gray-500 dark:text-gray-400">:</span>
+                                        <span x-text="' ' + eventLabel(msg.data)"></span>
+                                    </div>
+                                </div>
+                                <div class="mt-0.5 text-[10px] uppercase tracking-wide text-gray-400 dark:text-gray-500" x-text="when(msg.at)"></div>
+                            </div>
+                        </template>
+                        {{-- Fallback: unbekannte/rohe Nutzlast weiterhin als JSON --}}
+                        <template x-if="!structured(msg.data)">
+                            <div>
+                                <div class="mb-0.5 text-[10px] uppercase tracking-wide text-gray-400 dark:text-gray-500" x-text="when(msg.at)"></div>
+                                <pre class="overflow-x-auto whitespace-pre-wrap break-words rounded bg-gray-50 p-2 text-xs leading-snug text-gray-800 dark:bg-gray-900 dark:text-gray-200" x-text="raw(msg.data)"></pre>
+                            </div>
+                        </template>
                     </li>
                 </template>
             </ul>

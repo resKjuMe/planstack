@@ -35,10 +35,18 @@ class EventController extends ApiController
         $event = TaskEvent::from($data['event']);
         $result = $this->events->record($task, $event, $request->user());
 
+        // Zusätzlich zu den Automations-Ergebnissen die Anzeige-Daten für die
+        // Header-Glocke mitgeben: Projekt-/Task-Name und das Icon des (ggf. neu
+        // gesetzten) Status. So kann die Glocke „Projekt › Task: Event"
+        // lesbar darstellen, statt die rohe Nutzlast zu zeigen. $task->orgStatus
+        // spiegelt nach record() den aktuellen (evtl. gewechselten) Status.
         $payload = [
             'task_id' => $task->id,
+            'task_name' => $task->name,
+            'project_name' => $task->project?->name,
             'event' => $event->value,
             ...$result,
+            'status_icon' => $task->orgStatus?->icon,
         ];
 
         // Ereignis via Pusher an den Organisations-Channel senden (Header-Glocke).
