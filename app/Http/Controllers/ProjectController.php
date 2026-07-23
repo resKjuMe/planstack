@@ -114,24 +114,89 @@ class ProjectController extends Controller
     /**
      * Zugriffs-Verwaltung (zugewiesene Teams + Rollen) als eigener Projekt-Tab.
      */
-    public function access(Project $project): View
+    public function access(Project $project): InertiaResponse
     {
         $this->authorize('view', $project);
 
         $project->load(['owner', 'teams.members', 'memberships']);
 
-        // Users with access (owner + members of assigned teams) and their role.
         $accessUsers = $project->accessUsers();
         $roleByUser = $project->memberships->keyBy('user_id');
 
-        // Teams the current user can still assign (their teams, not yet assigned).
         $assignedTeamIds = $project->teams->pluck('id');
         $assignableTeams = Auth::user()->teams()
             ->whereNotIn('teams.id', $assignedTeamIds)
             ->orderBy('name')
             ->get();
 
-        return view('projects.access', compact('project', 'accessUsers', 'roleByUser', 'assignableTeams'));
+        return Inertia::render('ProjectAccess', [
+            'project' => ['alias' => $project->alias, 'name' => $project->name],
+            'flash' => ['status' => session('status'), 'error' => session('error')],
+            'editTabs' => \App\Support\ProjectEditTabs::for($project, 'access'),
+            'canManage' => Auth::user()->can('manageMembers', $project),
+            'teams' => $project->teams->map(fn ($t) => [
+                'id' => $t->id,
+                'name' => $t->name,
+                'memberCount' => $t->members->count(),
+            ])->values(),
+            'assignableTeams' => $assignableTeams->map(fn ($t) => ['id' => $t->id, 'name' => $t->name])->values(),
+            'users' => $accessUsers->map(function ($user) use ($project, $roleByUser) {
+                $isOwner = $project->isOwner($user);
+                $role = $isOwner
+                    ? ProjectRole::ADMIN
+                    : ($roleByUser->get($user->id)?->role ?? ProjectRole::WORKER);
+
+                return [
+                    'id' => $user->id,
+                    'name' => $user->name,
+                    'email' => $user->email,
+                    'isOwner' => $isOwner,
+                    'role' => $role->value,
+                    'roleLabel' => $role->label(),
+                    'hasMembership' => $roleByUser->has($user->id),
+                ];
+            })->values(),
+            'roles' => collect(ProjectRole::cases())->map(fn ($r) => ['value' => $r->value, 'label' => $r->label()])->values(),
+            'urls' => [
+                'teamStore' => route('projects.teams.store', $project),
+                'teamDestroy' => route('projects.teams.destroy', [$project, '__ID__']),
+                'memberUpdate' => route('projects.members.update', [$project, '__ID__']),
+                'memberDestroy' => route('projects.members.destroy', [$project, '__ID__']),
+            ],
+            'strings' => [
+                'editTitle' => __('projects.edit_project'),
+                'accessTitle' => __('common.access'),
+                'showHideExplanation' => __('common.show_hide_explanation'),
+                'assignedTeams' => __('projects.assigned_teams'),
+                'rolesHeading' => __('projects.roles'),
+                'helpTeams' => [
+                    ['text' => __('projects.access_to_the_project_is_managed_via')],
+                    ['strong' => __('projects.assign'), 'text' => __('projects.adds_one_of_your_teams_its_members_gain')],
+                    ['strong' => __('common.remove'), 'text' => __('projects.revokes_the_assignment_the_members_lose')],
+                    ['text' => __('projects.without_an_assigned_team_only_the')],
+                ],
+                'helpRoles' => [
+                    ['text' => __('projects.the_role_determines_what_someone_may_do')],
+                    ['strong' => __('projects.contributor'), 'text' => __('projects.default_role_view_claim_and_work_on')],
+                    ['strong' => __('projects.architect'), 'text' => __('projects.for_technical_planning_slicing_tasks')],
+                    ['strong' => __('projects.administrator'), 'text' => __('projects.may_additionally_manage_the_project')],
+                ],
+                'countMembers' => __('common.count_members'),
+                'remove' => __('common.remove'),
+                'removeTeamConfirm' => __('projects.remove_team_assignment'),
+                'assignTeam' => __('projects.assign_team'),
+                'assign' => __('projects.assign'),
+                'noTeamAssigned' => __('projects.no_team_assigned_yet_without_a_team_no'),
+                'noFurtherTeams' => __('projects.no_further_own_teams_to_assign_create'),
+                'user' => __('projects.user'),
+                'role' => __('projects.role'),
+                'projectOwner' => __('projects.project_owner'),
+                'save' => __('common.save'),
+                'reset' => __('projects.reset'),
+                'resetToWorker' => __('projects.reset_to_worker'),
+                'accessViaTeams' => __('projects.access_comes_via_the_assigned_teams'),
+            ],
+        ]);
     }
 
     public function edit(Project $project): InertiaResponse

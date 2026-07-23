@@ -6,6 +6,8 @@ import ProjectWorkspace from './shell/pages/ProjectWorkspace.jsx';
 import ProjectsIndex from './shell/pages/ProjectsIndex.jsx';
 import ProjectCreate from './shell/pages/ProjectCreate.jsx';
 import ProjectEdit from './shell/pages/ProjectEdit.jsx';
+import ProjectAccess from './shell/pages/ProjectAccess.jsx';
+import ProjectPhases from './shell/pages/ProjectPhases.jsx';
 
 // Seiten-Registry: „BladePage" bettet noch nicht migrierte Blade-Seiten ein,
 // echte React-Seiten werden namentlich aufgelöst. Unbekannte Namen fallen auf
@@ -17,6 +19,8 @@ const pages = {
     ProjectsIndex,
     ProjectCreate,
     ProjectEdit,
+    ProjectAccess,
+    ProjectPhases,
 };
 
 createInertiaApp({

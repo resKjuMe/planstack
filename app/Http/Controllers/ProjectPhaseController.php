@@ -4,9 +4,11 @@ namespace App\Http\Controllers;
 
 use App\Models\Phase;
 use App\Models\Project;
+use App\Support\ProjectEditTabs;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\View\View;
+use Inertia\Inertia;
+use Inertia\Response as InertiaResponse;
 
 /**
  * Web-Verwaltung der Projektphasen (Anlegen, Umbenennen, Umsortieren, Löschen) —
@@ -16,13 +18,53 @@ use Illuminate\View\View;
  */
 class ProjectPhaseController extends Controller
 {
-    public function index(Project $project): View
+    public function index(Project $project): InertiaResponse
     {
         $this->authorize('view', $project);
 
         $phases = $project->phases()->withCount('tasks')->get();
 
-        return view('projects.phases', compact('project', 'phases'));
+        return Inertia::render('ProjectPhases', [
+            'project' => ['alias' => $project->alias],
+            'flash' => ['status' => session('status'), 'error' => session('error')],
+            'editTabs' => ProjectEditTabs::for($project, 'phases'),
+            'canContribute' => auth()->user()->can('contribute', $project),
+            'phases' => $phases->map(fn (Phase $p) => [
+                'id' => $p->id,
+                'name' => $p->name,
+                'tasksCount' => $p->tasks_count,
+            ])->values(),
+            'urls' => [
+                'store' => route('projects.phases.store', $project),
+                'update' => route('projects.phases.update', [$project, '__ID__']),
+                'move' => route('projects.phases.move', [$project, '__ID__']),
+                'destroy' => route('projects.phases.destroy', [$project, '__ID__']),
+            ],
+            'strings' => [
+                'editTitle' => __('projects.edit_project'),
+                'phasesTitle' => __('common.phases'),
+                'showHideExplanation' => __('common.show_hide_explanation'),
+                'helpBullets' => [
+                    ['text' => __('projects.phases_group_tasks_into_sections_e_g')],
+                    ['strong' => __('common.create'), 'text' => __('projects.adds_a_new_phase_at_the_end_of_the_list')],
+                    ['strong' => __('projects.arrows'), 'text' => __('projects.change_the_order')],
+                    ['strong' => __('common.delete'), 'text' => __('projects.removes_only_the_phase_the_contained')],
+                ],
+                'phasesCount' => __('projects.phases_count'),
+                'noPhases' => __('projects.no_phases_created_yet'),
+                'newPhase' => __('projects.new_phase'),
+                'placeholder' => __('projects.e_g_foundation'),
+                'create' => __('common.create'),
+                'save' => __('common.save'),
+                'cancel' => __('common.cancel'),
+                'edit' => __('common.edit'),
+                'delete' => __('common.delete'),
+                'moveUp' => __('projects.move_up'),
+                'moveDown' => __('projects.move_down'),
+                'deleteConfirm' => __('projects.delete_phase_name_the_count_contained'),
+                'tasksSuffix' => __('common.tasks'),
+            ],
+        ]);
     }
 
     public function store(Request $request, Project $project): RedirectResponse
