@@ -20,7 +20,7 @@ Schedule::command('planstack:sync-prs')
 // zuletzt aktualisierten offenen PRs je Repo via GraphQL nach github_pull_requests
 // spiegeln — Grundlage der serverseitigen „fix"-Erkennung. Gleiche Schutzflags wie
 // oben: kein paralleler Zweitlauf, bei mehreren App-Servern nur auf einem.
-Schedule::command('planstack:sync-pr-status')
+Schedule::command('planstack:sync-pr-status --repo=clockodo-intern/main')
     ->everyMinute()
     ->withoutOverlapping()
     ->onOneServer();
