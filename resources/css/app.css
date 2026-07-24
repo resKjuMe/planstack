@@ -350,13 +350,18 @@
 .ps-node .t .detail:hover { text-decoration: underline; }
 .ps-node .t .pr { font-weight: 400; text-decoration: none; }
 .ps-node .t .pr:hover { text-decoration: underline; }
-/* CI-Rollup-Icon vor der PR-Nummer (inline im Titel und im pr-badge). */
+/* CI-Rollup-Icon vor der PR-Nummer (inline im Titel und im pr-badge). Die Farbe
+   wird inline gesetzt (siehe ciIcon() im Renderer), da mermaid-Knotenstyles externe
+   Farbregeln überschreiben. */
 .ps-node .ps-ci { display: inline-flex; align-items: center; vertical-align: -0.15em; }
 .ps-node .ps-ci .ps-ico { width: 12px; height: 12px; margin: 0 2px 0 0; }
-.ps-node .ps-ci-success { color: #16a34a; }
-.ps-node .ps-ci-failure { color: #dc2626; }
-.ps-node .ps-ci-pending { color: #d97706; }
-.ps-node .ps-ci-unknown { color: #9ca3af; }
+/* mermaid überschreibt fill/stroke der Shapes in gerenderten Knoten über eigene
+   Selektoren — die CI-Farbe daher mit !important auf die Shapes erzwingen (Outline). */
+.ps-node .ps-ci :is(circle, path, polyline) { fill: none !important; }
+.ps-node .ps-ci-success :is(circle, path, polyline) { stroke: #16a34a !important; }
+.ps-node .ps-ci-failure :is(circle, path, polyline) { stroke: #dc2626 !important; }
+.ps-node .ps-ci-pending :is(circle, path, polyline) { stroke: #d97706 !important; }
+.ps-node .ps-ci-unknown :is(circle, path, polyline) { stroke: #9ca3af !important; }
 .ps-node .t .who { font-weight: 400; color: var(--ps-sub); }
 .ps-node .s { font-size: 10px; margin-top: 2px; color: var(--ps-sub); }
 .ps-node .s .ps-ico { width: 11px; height: 11px; margin-right: 2px; vertical-align: -0.1em; }
