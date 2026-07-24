@@ -163,14 +163,16 @@ Kurz nach dem Start dem Nutzer einmal bestätigen, dass der Auto-Modus für `<PR
 
 **Warten (5 Minuten):** Nach einem `idle`-Auto-Run 300 s echt pausieren (nicht mit Arbeit „totlaufen"), bevor der nächste startet. Kommt vorher ein Nutzer-Input, diesen bevorzugt behandeln.
 
-**Auto-Run (ein Subagent, genau eine Arbeitseinheit):** Der Subagent führt **eine** Einheit Arbeit nach folgender **Priorität** aus, meldet sie zurück und beendet sich; er startet **keine** weiteren Auto-Runs (das macht der Supervisor). Er nutzt dieselben Endpunkte, Status-/Event-Regeln (ereignisgesteuert, Status nur über Events) und lokalen Einstellungen wie die normale Abarbeitung.
+**Auto-Run (ein Subagent, genau eine Arbeitseinheit):** Der Subagent **wählt** anhand des Boards die erste zutreffende Arbeit und **ruft dafür das passende bestehende `/planstack`-Sub-Kommando** auf — jeweils mit **explizitem** `<PROJECT>` **und** `<TASK>` (kein Auto-Pick im Sub-Kommando) —, führt es vollständig aus, meldet das Ergebnis zurück und beendet sich; er startet **keine** weiteren Auto-Runs (das macht der Supervisor). Priorität:
 
-1. **Reviewbar?** Liegt mindestens ein Task zum Review bereit (`REVIEWBAR`-Pool bzw. noch nicht übernommener `IN_REVIEW`, mit PR, nicht selbst umgesetzt), den **ersten** davon reviewen — vollständiger **Review**-Flow (siehe „Review": `review-next`/`review-claim`, `REVIEWING`→`REVIEWED`→`APPROVED`/`CHANGES_REQUESTED`, Ergebnis erfassen). → `action: "review"`.
-2. **Sonst: eigene offene Tasks?** Gibt es Tasks, die **ich selbst** beansprucht habe und die noch in Arbeit sind (Status *beansprucht / in Analyse / in Arbeit / in Bereinigung*), den **ersten** davon **bis zu einem polierten PR** (`POLISHED`) fertigstellen — den ereignisgesteuerten Zyklus ab dem aktuellen Status weiterführen (Analyse → Umsetzung → PR → Politur/Babysit), inkl. lokaler Checks gemäß Einstellungen. → `action: "finish"`.
-3. **Sonst: pickbar?** Ist ein Task pickbar, per `claim-next` den **besten** beanspruchen und **bis der PR erstellt ist** (`PROCESSED`) umsetzen. → `action: "pick"`.
-4. **Sonst:** nichts zu tun. → `action: "idle"`.
+1. **Reviewbar?** Liegt mindestens ein Task zum Review bereit (`REVIEWBAR`-Pool bzw. noch nicht übernommener `IN_REVIEW`, mit PR, nicht selbst umgesetzt), den **ersten** davon per **`/planstack review <PROJECT> <TASK>`** reviewen. → `action: "review"`.
+2. **Sonst: eigene offene Tasks?** Gibt es Tasks, die **ich selbst** beansprucht habe und die noch in Arbeit sind (Status *beansprucht / in Analyse / in Arbeit / in Bereinigung*), den **ersten** davon **bis zu einem polierten PR** fertigstellen:
+   - hat er bereits einen offenen PR, der noch Politur braucht (rote CI oder offene/ungelöste Kommentare) → **`/planstack fix <PROJECT> <TASK>`**. → `action: "fix"`.
+   - sonst → **`/planstack <PROJECT> <TASK>`** (der Ein-Task-Modus führt den Zyklus ab dem aktuellen Status weiter, bis ein polierter PR steht). → `action: "finish"`.
+3. **Sonst: pickbar?** Ist ein Task pickbar, den **besten** (höchste `unlocks`) bestimmen und per **`/planstack <PROJECT> <TASK>`** bis zum erstellten PR umsetzen. → `action: "pick"`.
+4. **Sonst:** nichts zu tun, kein Sub-Kommando aufrufen. → `action: "idle"`.
 
-Eigene Tasks (Schritt 2) ermittelt der Subagent über das Board bzw. `GET /tasks`, gefiltert auf die eigene Beanspruchung (Identität = der Board-Nutzer dieses Tokens) und einen Arbeits-Status. Meldet ein Schritt einen **Concern** statt einer Umsetzung, gilt der Auto-Run als „hat etwas getan" (`action: "concern"`, nicht `idle`). Nicht pickbare/übernehmbare Tasks nie erzwingen.
+Der Subagent ermittelt den konkreten `<TASK>` (Name) zuerst aus dem Board bzw. `GET /tasks` (Schritt 2 gefiltert auf die eigene Beanspruchung — Identität = der Board-Nutzer dieses Tokens — und einen Arbeits-Status) und ruft das Sub-Kommando dann gezielt mit diesem Namen auf. Das jeweilige Sub-Kommando bringt seinen eigenen (ereignisgesteuerten) Zyklus, seine lokalen Checks/Einstellungen und seine Selbst-Update-Prüfung selbst mit — der Auto-Run baut nichts davon nach. Meldet die Umsetzung einen **Concern** statt einer Änderung, gilt der Auto-Run als „hat etwas getan" (`action: "concern"`, nicht `idle`). Nicht pickbare/übernehmbare Tasks nie erzwingen.
 
 ## Review (`/planstack review [<PROJECT>] [<TASK>]`)
 
