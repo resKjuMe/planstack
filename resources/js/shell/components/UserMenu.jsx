@@ -66,7 +66,12 @@ export default function UserMenu({ shell, ciUpdate }) {
                             </a>
                         ))}
 
-                        <form method="POST" action={shell.logoutHref}>
+                        {/* stopPropagation: der Klick darf NICHT bis zum onClick des
+                            Dropdown-Wrappers (setOpen(false)) durchblubbern — sonst
+                            unmountet React das Formular noch VOR dem nativen Submit
+                            (bekanntes „Form im sich-schließenden Menü"-Problem) und
+                            der Logout-POST wird verworfen. */}
+                        <form method="POST" action={shell.logoutHref} onClick={(e) => e.stopPropagation()}>
                             <input type="hidden" name="_token" value={shell.csrf} />
                             <button
                                 type="submit"
