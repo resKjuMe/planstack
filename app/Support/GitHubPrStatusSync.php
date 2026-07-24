@@ -34,11 +34,22 @@ class GitHubPrStatusSync
             number
             title
             reviewDecision
+            isInMergeQueue
+            mergeQueueEntry { state }
             commits(last: 1) {
               nodes {
                 commit {
                   committedDate
-                  statusCheckRollup { state }
+                  statusCheckRollup {
+                    state
+                    contexts(first: 100) {
+                      nodes {
+                        __typename
+                        ... on CheckRun { status conclusion }
+                        ... on StatusContext { state }
+                      }
+                    }
+                  }
                 }
               }
             }
@@ -191,11 +202,18 @@ class GitHubPrStatusSync
             ->count();
 
         $committedDate = data_get($node, 'commits.nodes.0.commit.committedDate');
+        $ci = $this->ciCounts(data_get($node, 'commits.nodes.0.commit.statusCheckRollup.contexts.nodes', []));
 
         $task->fill([
             'pr_node_id' => $node['id'] ?? null,
             'pr_title' => $node['title'] ?? null,
             'pr_ci_status' => data_get($node, 'commits.nodes.0.commit.statusCheckRollup.state'),
+            'pr_ci_failed' => $ci['failed'],
+            'pr_ci_running' => $ci['running'],
+            'pr_ci_success' => $ci['success'],
+            'pr_ci_waiting' => $ci['waiting'],
+            'pr_in_merge_queue' => (bool) ($node['isInMergeQueue'] ?? false),
+            'pr_merge_queue_state' => data_get($node, 'mergeQueueEntry.state'),
             'pr_unresolved_threads' => $unresolved,
             'pr_review_decision' => $node['reviewDecision'] ?? null,
             'pr_last_commit_at' => $committedDate ? Carbon::parse($committedDate) : null,
@@ -203,6 +221,46 @@ class GitHubPrStatusSync
         ]);
 
         $task->saveQuietly();
+    }
+
+    /**
+     * Zählt die einzelnen CI-Steps (statusCheckRollup.contexts) nach Kategorie:
+     * failed / running / successful / waiting. Ein Context ist entweder ein CheckRun
+     * (status + conclusion) oder ein StatusContext (state).
+     *
+     * @param  array<int, array<string, mixed>>  $contexts
+     * @return array{failed: int, running: int, success: int, waiting: int}
+     */
+    private function ciCounts(array $contexts): array
+    {
+        $c = ['failed' => 0, 'running' => 0, 'success' => 0, 'waiting' => 0];
+
+        foreach ($contexts as $ctx) {
+            if (($ctx['__typename'] ?? null) === 'CheckRun') {
+                $status = $ctx['status'] ?? null;      // QUEUED|IN_PROGRESS|COMPLETED|WAITING|PENDING|REQUESTED
+                $conclusion = $ctx['conclusion'] ?? null; // SUCCESS|NEUTRAL|SKIPPED|FAILURE|…
+                if ($status === 'COMPLETED') {
+                    $c[in_array($conclusion, ['SUCCESS', 'NEUTRAL', 'SKIPPED'], true) ? 'success' : 'failed']++;
+                } elseif ($status === 'IN_PROGRESS') {
+                    $c['running']++;
+                } else { // QUEUED, WAITING, PENDING, REQUESTED
+                    $c['waiting']++;
+                }
+            } else { // StatusContext
+                $state = $ctx['state'] ?? null;        // EXPECTED|ERROR|FAILURE|PENDING|SUCCESS
+                if ($state === 'SUCCESS') {
+                    $c['success']++;
+                } elseif (in_array($state, ['FAILURE', 'ERROR'], true)) {
+                    $c['failed']++;
+                } elseif ($state === 'PENDING') {
+                    $c['running']++;
+                } else { // EXPECTED
+                    $c['waiting']++;
+                }
+            }
+        }
+
+        return $c;
     }
 
     private function client(?string $token): PendingRequest
