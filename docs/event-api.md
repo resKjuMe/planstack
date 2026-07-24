@@ -2,13 +2,27 @@
 
 ## Definition
 
-`POST /api/events`
+Zwei gleichwertige Einstiege (identische Wirkung und Antwort):
+
+`POST /api/events` — Task per numerischer id im Body:
 ```json
 {
     "task_id": 123,
     "event": "{EVENT_NAME}"
 }
 ```
+
+`POST /api/projects/{project}/tasks/{task}/events` — projekt-gebunden, `{task}`
+per Name **oder** id im Pfad (scopeBindings hält ihn aufs Projekt beschränkt):
+```json
+{
+    "event": "{EVENT_NAME}"
+}
+```
+
+Die projekt-gebundene Variante ist über **jedes** Projekt per REST erreichbar
+(kein an ein einzelnes Projekt gebundener MCP-Server nötig) und nimmt den
+Task-Namen, den der Client ohnehin kennt.
 
 ## Zweck
 

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Enums\TaskEvent;
+use App\Models\Project;
 use App\Models\Task;
 use App\Support\NotificationBroadcaster;
 use App\Support\TaskEventService;
@@ -11,9 +12,13 @@ use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 
 /**
- * POST /api/events — nimmt Fortschritts-Events des /planstack-Skills (und des
- * "Sync"-Buttons) entgegen (siehe docs/event-api.md) und wendet die je Event in
- * der Organisation hinterlegte Automation auf die Aufgabe an.
+ * Nimmt Fortschritts-Events des /planstack-Skills (und des "Sync"-Buttons)
+ * entgegen (siehe docs/event-api.md) und wendet die je Event in der Organisation
+ * hinterlegte Automation auf die Aufgabe an. Zwei Einstiege mit identischer
+ * Wirkung: die top-level Route (`POST /api/events`, Task per numerischer id im
+ * Body) und die projekt-gebundene Route (`POST /api/projects/{project}/tasks/
+ * {task}/events`, Task per Name **oder** id im Pfad — bequem für den Skill, der
+ * projektübergreifend über REST arbeitet und den Task-Namen ohnehin kennt).
  */
 class EventController extends ApiController
 {
@@ -22,6 +27,9 @@ class EventController extends ApiController
         private readonly NotificationBroadcaster $broadcaster,
     ) {}
 
+    /**
+     * POST /api/events — Task per numerischer id im Body.
+     */
     public function store(Request $request): JsonResponse
     {
         $data = $request->validate([
@@ -30,9 +38,33 @@ class EventController extends ApiController
         ]);
 
         $task = Task::findOrFail($data['task_id']);
+
+        return $this->emit($request, $task, TaskEvent::from($data['event']));
+    }
+
+    /**
+     * POST /api/projects/{project}/tasks/{task}/events — projekt-gebunden, Task
+     * per Name oder id im Pfad (scopeBindings hält ihn aufs Projekt beschränkt).
+     * So kann jedes Projekt Events über plain REST melden, ohne den (an ein
+     * einzelnes Projekt gebundenen) MCP-Server zu benötigen.
+     */
+    public function storeForTask(Request $request, Project $project, Task $task): JsonResponse
+    {
+        $data = $request->validate([
+            'event' => ['required', 'string', Rule::enum(TaskEvent::class)],
+        ]);
+
+        return $this->emit($request, $task, TaskEvent::from($data['event']));
+    }
+
+    /**
+     * Gemeinsame Logik: Event protokollieren, Automation anwenden, Header-Glocke
+     * benachrichtigen und die maßgebliche Nutzlast zurückgeben.
+     */
+    private function emit(Request $request, Task $task, TaskEvent $event): JsonResponse
+    {
         $this->authorize('update', $task);
 
-        $event = TaskEvent::from($data['event']);
         $result = $this->events->record($task, $event, $request->user());
 
         // Zusätzlich zu den Automations-Ergebnissen die Anzeige-Daten für die

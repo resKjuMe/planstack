@@ -95,6 +95,10 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('projects/{project}/tasks/{task}/review-claim', [TaskController::class, 'reviewClaim']);
         Route::post('projects/{project}/tasks/{task}/review', [TaskController::class, 'review']);
         Route::post('projects/{project}/tasks/{task}/status', [TaskController::class, 'status']);
+        // Fortschritts-Event projekt-gebunden melden (Task per Name/id im Pfad) —
+        // projektunabhängige REST-Alternative zum top-level POST /events und zum
+        // MCP-Tool emit_event. Siehe EventController.
+        Route::post('projects/{project}/tasks/{task}/events', [EventController::class, 'storeForTask']);
         Route::post('projects/{project}/tasks/{task}/pr', [TaskController::class, 'pr']);
         Route::post('projects/{project}/tasks/{task}/merge', [TaskController::class, 'merge']);
         // Gebündelte Aktion: PR setzen (optional) + fertig melden (+ optional mergen)

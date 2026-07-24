@@ -188,6 +188,51 @@ class EventApiTest extends TestCase
         $this->assertSame($analyzing->id, $task->refresh()->status_id);
     }
 
+    public function test_project_scoped_route_emits_event_addressing_task_by_name(): void
+    {
+        [$user, $project, $task] = $this->ownedTask();
+        $organization = $project->organization;
+        $target = $organization->statusForRole(StatusRole::IN_PROGRESS);
+
+        $organization->eventAutomations()->updateOrCreate(
+            ['event' => TaskEvent::PROCESSING->value],
+            ['target_status_id' => $target->id, 'overridable_status_ids' => null, 'effects' => null],
+        );
+
+        // Task per Name (nicht id) im Pfad — wie der Skill ihn kennt.
+        $this->postJson("/api/projects/{$project->alias}/tasks/{$task->name}/events", ['event' => 'PROCESSING'])
+            ->assertOk()
+            ->assertJsonPath('event', 'PROCESSING')
+            ->assertJsonPath('status', 'IN_PROGRESS');
+
+        $this->assertSame($target->id, $task->refresh()->status_id);
+        $this->assertDatabaseHas('task_events', [
+            'task_id' => $task->id,
+            'actor_id' => $user->id,
+            'event' => 'PROCESSING',
+        ]);
+    }
+
+    public function test_project_scoped_route_rejects_task_from_another_project(): void
+    {
+        [, $project, ] = $this->ownedTask();
+        // Fremdes Projekt/Task desselben Users — scopeBindings muss ihn ablehnen.
+        $other = Project::factory()->create(['created_by_id' => $project->created_by_id]);
+        $otherTask = $other->tasks()->create(['name' => 'X1', 'summary' => 'fremd']);
+
+        $this->postJson("/api/projects/{$project->alias}/tasks/{$otherTask->name}/events", ['event' => 'CLAIMED'])
+            ->assertNotFound();
+    }
+
+    public function test_project_scoped_route_forbids_non_member(): void
+    {
+        [, $project, $task] = $this->ownedTask();
+        Sanctum::actingAs(User::factory()->create()); // a stranger
+
+        $this->postJson("/api/projects/{$project->alias}/tasks/{$task->name}/events", ['event' => 'CLAIMED'])
+            ->assertForbidden();
+    }
+
     public function test_invalid_event_is_rejected(): void
     {
         [, , $task] = $this->ownedTask();

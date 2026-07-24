@@ -18,15 +18,15 @@ Endpunkte unter `$BASE/projects/$PROJ`, Aufruf mit `curl -s "${AUTH[@]}"`:
 | `POST /tasks/{id}/concern {summary,…}` · `DELETE …/concern` | melden · auflösen |
 | `POST /tasks/{id}/gate {gate}` · `/split {children}` | Gate setzen · splitten |
 | `POST /phases` · `POST /tasks` | anlegen |
-| `POST $BASE/events {task_id,event}` | Fortschritts-Event melden (top-level, **nicht** unter `/projects`; `task_id` numerisch) |
+| `POST /tasks/{id}/events {event}` | Fortschritts-Event melden (projekt-gebunden, `{id}` per Name **oder** id). Alternativ top-level `POST $BASE/events {task_id,event}` (`task_id` numerisch) |
 | `GET /config` | Konfig + `operating_manual` + `status_rules` |
 
 In Task-Pfaden ist `{id}` **auch per Task-Name** ansprechbar (z. B. `.../tasks/C27/claim`) — kein separater name→id-Lookup nötig.
 
-**Fortschritts-Events (best-effort, nicht blockierend):** Während der Abarbeitung den Fortschritt melden — `POST $BASE/events {task_id,event}` (top-level, **nicht** unter `/projects`). Zweck: die Organisation kann je Event einen Statuswechsel und/oder Feld-Automationen hinterlegen; ohne Konfiguration ist es eine reine Meldung. **Fire-and-forget gegenüber Fehlern** — Netzwerk-/HTTP-Fehler ignorieren, den Ablauf nie blockieren, das Absetzen nicht in Prosa berichten. `task_id` ist die **numerische** id (aus der Claim-/Task-Antwort). Bequemer Helfer (`$BASE`/`AUTH` stammen aus dem Zugang):
+**Fortschritts-Events (best-effort, nicht blockierend):** Während der Abarbeitung den Fortschritt melden — projekt-gebunden `POST $BASE/projects/$PROJ/tasks/{id}/events {event}` (`{id}` per Name **oder** id) **oder** top-level `POST $BASE/events {task_id,event}` (`task_id` numerisch). Beide wirken identisch; die projekt-gebundene Variante ist über **jedes** Projekt per REST erreichbar (kein an ein einzelnes Projekt gebundener MCP-Server nötig) und nimmt den Task-Namen, den man ohnehin kennt. Zweck: die Organisation kann je Event einen Statuswechsel und/oder Feld-Automationen hinterlegen; ohne Konfiguration ist es eine reine Meldung. **Fire-and-forget gegenüber Fehlern** — Netzwerk-/HTTP-Fehler ignorieren, den Ablauf nie blockieren, das Absetzen nicht in Prosa berichten. Bequemer Helfer (`$BASE`/`$PROJ`/`AUTH` stammen aus dem Zugang):
 
 ```bash
-ev(){ curl -s "${AUTH[@]}" -X POST "$BASE/events" -d "{\"task_id\":$1,\"event\":\"$2\"}" 2>/dev/null || true; }
+ev(){ curl -s "${AUTH[@]}" -X POST "$BASE/projects/$PROJ/tasks/$1/events" -d "{\"event\":\"$2\"}" 2>/dev/null || true; }
 ```
 
 **Die Antwort ist maßgeblich (nicht selbst herleiten):** `POST /events` liefert `{configured, status_changed, status, applied_fields}` zurück. Liegt eine Antwort vor, ist ihr `status` der **tatsächliche** Status des Tasks nach dem Event — den Status **niemals** aus dem Event-Namen erraten. `status_changed:false` bei einem statustreibenden Event bedeutet nicht „Fehler", sondern dass der Guard nicht passte (der aktuelle Status stand nicht in der Override-Menge, s. `status_rules` → „Ereignis-gesteuerte Status-Zuweisung") — meist, weil ein vorheriges Event fehlte oder die Reihenfolge nicht stimmte. In dem Fall den zurückgemeldeten `status` akzeptieren, **nicht** dagegen anarbeiten. `configured:false` heißt: für dieses Event ist in der Org keine Automation hinterlegt — reine Meldung, kein Statuswechsel zu erwarten.
