@@ -107,6 +107,27 @@ export function TaskCardView({
                 </div>
             )}
 
+            {/* In the "Approved" column, show the approver beneath the assignee.
+                The approver is the reviewer who signed off (reviewed_by). */}
+            {task.isApproved && task.reviewerName && (
+                <div className="mt-0.5 flex items-center gap-1 text-xs text-gray-400 dark:text-gray-500" title={t('approver')}>
+                    <svg
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        className="h-3.5 w-3.5 shrink-0"
+                        aria-hidden="true"
+                    >
+                        <circle cx="12" cy="12" r="10" />
+                        <path d="m9 12 2 2 4-4" />
+                    </svg>
+                    <span className="truncate">{task.reviewerName}</span>
+                </div>
+            )}
+
             {/* Split button: primary = next status, dropdown = the remaining
                 allowed statuses. Uses the same move path as drag-and-drop. */}
             {! overlay && next && onMove && (

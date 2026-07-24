@@ -35,6 +35,7 @@ return [
     // Karte
     'unassigned' => '—',
     'reviewer' => 'Reviewer',
+    'approver' => 'Approver',
     'badge_blocked' => 'Blockiert',
     'badge_concerned' => 'Problematisch',
     'claim' => 'Beanspruchen',

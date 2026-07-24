@@ -62,6 +62,9 @@ export function mapApiTask(apiTask, meta) {
         isBlocked: displayStatus === roleKeys.BLOCKED,
         isConcerned: displayStatus === roleKeys.CONCERNED,
         isInReview: displayStatus === roleKeys.IN_REVIEW,
+        // APPROVED is a custom (role-less) status, so it's matched by its key —
+        // same way MERGED is referenced directly in the board.
+        isApproved: displayStatus === 'APPROVED',
         concernSummary: apiTask.concern?.summary || apiTask.concern?.blocker || null,
     };
 }

@@ -35,6 +35,7 @@ return [
     // Card
     'unassigned' => '—',
     'reviewer' => 'Reviewer',
+    'approver' => 'Approver',
     'badge_blocked' => 'Blocked',
     'badge_concerned' => 'Concerned',
     'claim' => 'Claim',
