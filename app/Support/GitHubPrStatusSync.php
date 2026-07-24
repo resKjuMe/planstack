@@ -25,10 +25,18 @@ use Illuminate\Support\Facades\Http;
  */
 class GitHubPrStatusSync
 {
+    /** PRs je GraphQL-Seite. Klein halten: 100 PRs mit contexts+threads in einem
+     *  Request lassen GitHub timeouten (HTTP 504) — daher in Seiten paginieren. */
+    private const PAGE_SIZE = 25;
+
+    /** Obergrenze: die N zuletzt aktualisierten offenen PRs je Repo. */
+    private const MAX_PRS = 100;
+
     private const QUERY = <<<'GQL'
-    query($owner: String!, $repo: String!) {
+    query($owner: String!, $repo: String!, $first: Int!, $after: String) {
       repository(owner: $owner, name: $repo) {
-        pullRequests(first: 100, states: OPEN, orderBy: {field: UPDATED_AT, direction: DESC}) {
+        pullRequests(first: $first, after: $after, states: OPEN, orderBy: {field: UPDATED_AT, direction: DESC}) {
+          pageInfo { hasNextPage endCursor }
           nodes {
             id
             number
@@ -42,7 +50,7 @@ class GitHubPrStatusSync
                   committedDate
                   statusCheckRollup {
                     state
-                    contexts(first: 100) {
+                    contexts(first: 50) {
                       nodes {
                         __typename
                         ... on CheckRun { status conclusion }
@@ -53,7 +61,7 @@ class GitHubPrStatusSync
                 }
               }
             }
-            reviewThreads(first: 100) {
+            reviewThreads(first: 50) {
               nodes { isResolved }
             }
           }
@@ -114,46 +122,73 @@ class GitHubPrStatusSync
 
             $result['repos']++;
 
-            try {
-                $response = $client->post('/graphql', [
-                    'query' => self::QUERY,
-                    'variables' => ['owner' => $owner, 'repo' => $name],
-                ]);
-            } catch (ConnectionException $e) {
-                $result['errors']++;
-                $result['failures'][] = "{$repo}: ".$e->getMessage();
+            // In Seiten paginieren (siehe PAGE_SIZE) und die Knoten sammeln, bis
+            // MAX_PRS erreicht sind oder keine weitere Seite existiert. Ein Fehler
+            // auf einer Seite bricht nur dieses Repo ab; bereits geholte Knoten
+            // werden trotzdem angewandt.
+            $nodes = [];
+            $after = null;
 
-                continue;
+            while (count($nodes) < self::MAX_PRS) {
+                $first = min(self::PAGE_SIZE, self::MAX_PRS - count($nodes));
+
+                try {
+                    $response = $client->post('/graphql', [
+                        'query' => self::QUERY,
+                        'variables' => ['owner' => $owner, 'repo' => $name, 'first' => $first, 'after' => $after],
+                    ]);
+                } catch (ConnectionException $e) {
+                    $result['errors']++;
+                    $result['failures'][] = "{$repo}: ".$e->getMessage();
+                    break;
+                }
+
+                if ($response->failed()) {
+                    $result['errors']++;
+                    $result['failures'][] = "{$repo}: HTTP {$response->status()}";
+                    break;
+                }
+
+                $body = $response->json();
+                $conn = data_get($body, 'data.repository.pullRequests');
+                $pageNodes = (is_array($conn) && is_array($conn['nodes'] ?? null)) ? $conn['nodes'] : null;
+
+                // GraphQL kann Feld-Fehler (HTTP 200 + errors[]) liefern UND trotzdem
+                // Teildaten mitschicken: ein Feld ohne Token-Recht (z. B. mergeQueueEntry)
+                // kommt als null zurück, der Rest steht. Nur wenn gar keine Knoten
+                // kommen, ist es ein harter Fehler.
+                if (! empty($body['errors'])) {
+                    $messages = collect($body['errors'])->pluck('message')->filter()->unique()->values()->implode('; ');
+                    if ($pageNodes === null) {
+                        $result['errors']++;
+                        $result['failures'][] = "{$repo}: {$messages}";
+                        break;
+                    }
+                    // Teildaten übernehmen; Warnung einmal vermerken (dedupliziert).
+                    $note = "{$repo} (Teildaten): {$messages}";
+                    if (! in_array($note, $result['failures'], true)) {
+                        $result['failures'][] = $note;
+                    }
+                }
+
+                if ($pageNodes === null) {
+                    // Repo nicht gefunden / kein Zugriff → data.repository ist null.
+                    $result['errors']++;
+                    $result['failures'][] = "{$repo}: keine PR-Daten (Repo unbekannt oder kein Zugriff?)";
+                    break;
+                }
+
+                $nodes = array_merge($nodes, $pageNodes);
+
+                if (! data_get($conn, 'pageInfo.hasNextPage')) {
+                    break;
+                }
+                $after = data_get($conn, 'pageInfo.endCursor');
             }
 
-            if ($response->failed()) {
-                $result['errors']++;
-                $result['failures'][] = "{$repo}: HTTP {$response->status()}";
-
-                continue;
+            if ($nodes !== []) {
+                $result['prs'] += $this->applyToTasks((string) $repo, $nodes);
             }
-
-            $body = $response->json();
-
-            // GraphQL meldet Fehler mit HTTP 200 + einem "errors"-Array.
-            if (! empty($body['errors'])) {
-                $result['errors']++;
-                $messages = array_map(fn ($e) => $e['message'] ?? 'GraphQL-Fehler', $body['errors']);
-                $result['failures'][] = "{$repo}: ".implode('; ', $messages);
-
-                continue;
-            }
-
-            $nodes = data_get($body, 'data.repository.pullRequests.nodes');
-            if (! is_array($nodes)) {
-                // Repo nicht gefunden / kein Zugriff → data.repository ist null.
-                $result['errors']++;
-                $result['failures'][] = "{$repo}: keine PR-Daten (Repo unbekannt oder kein Zugriff?)";
-
-                continue;
-            }
-
-            $result['prs'] += $this->applyToTasks((string) $repo, $nodes);
         }
 
         return $result;
@@ -228,14 +263,24 @@ class GitHubPrStatusSync
      * failed / running / successful / waiting. Ein Context ist entweder ein CheckRun
      * (status + conclusion) oder ein StatusContext (state).
      *
-     * @param  array<int, array<string, mixed>>  $contexts
-     * @return array{failed: int, running: int, success: int, waiting: int}
+     * Einzelne Kontexte können null sein, wenn dem Token das Recht „Checks: read"
+     * fehlt (GitHub liefert dann den Rollup-`state`, aber nicht die Einzel-Checks).
+     * Gab es Kontexte, war aber keiner lesbar, geben wir null („unbekannt") statt
+     * eines irreführenden 0 zurück.
+     *
+     * @param  array<int, array<string, mixed>|null>  $contexts
+     * @return array{failed: ?int, running: ?int, success: ?int, waiting: ?int}
      */
     private function ciCounts(array $contexts): array
     {
         $c = ['failed' => 0, 'running' => 0, 'success' => 0, 'waiting' => 0];
+        $usable = 0;
 
         foreach ($contexts as $ctx) {
+            if (! is_array($ctx)) {
+                continue; // null → nicht lesbar (fehlendes „Checks: read"-Recht)
+            }
+            $usable++;
             if (($ctx['__typename'] ?? null) === 'CheckRun') {
                 $status = $ctx['status'] ?? null;      // QUEUED|IN_PROGRESS|COMPLETED|WAITING|PENDING|REQUESTED
                 $conclusion = $ctx['conclusion'] ?? null; // SUCCESS|NEUTRAL|SKIPPED|FAILURE|…
@@ -258,6 +303,12 @@ class GitHubPrStatusSync
                     $c['waiting']++;
                 }
             }
+        }
+
+        // Es gab Kontexte, aber keiner war lesbar (Token ohne „Checks: read") →
+        // unbekannt statt fälschlich 0.
+        if ($contexts !== [] && $usable === 0) {
+            return ['failed' => null, 'running' => null, 'success' => null, 'waiting' => null];
         }
 
         return $c;

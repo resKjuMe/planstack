@@ -40,6 +40,10 @@ class SyncPrStatus extends Command
 
         if ($result['errors'] > 0) {
             $this->warn("{$result['errors']} Fehler: ".implode('; ', $result['failures']));
+        } elseif ($result['failures'] !== []) {
+            // Teildaten-Hinweise (kein harter Fehler), z. B. fehlendes „Checks: read"-
+            // Recht → CI-Step-Aufschlüsselung bleibt leer, Rest wird uebernommen.
+            $this->comment('Hinweise: '.implode('; ', $result['failures']));
         }
 
         return self::SUCCESS;

@@ -39,6 +39,7 @@ class GitHubPrStatusSyncTest extends TestCase
                 'data' => [
                     'repository' => [
                         'pullRequests' => [
+                            'pageInfo' => ['hasNextPage' => false, 'endCursor' => null],
                             'nodes' => [
                                 [
                                     'id' => 'PR_kwABC',
