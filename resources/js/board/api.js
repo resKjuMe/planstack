@@ -45,12 +45,13 @@ export function mapApiTask(apiTask, meta) {
         ? meta.endpoints.task.replace('__TASK__', String(apiTask.id))
         : '#';
 
-    // "Stacked": the task depends on one or more parent tasks that aren't merged
-    // yet, so its branch/PR sits on top of not-yet-merged work. Prerequisites
-    // carry their status key; MERGED is matched by role (fallback to the key).
-    const mergedKey = roleKeys.MERGED ?? 'MERGED';
+    // "Stacked": the task depends on one or more parent tasks that aren't done
+    // yet, so its branch/PR sits on top of unfinished work. A parent counts as
+    // resolved once it's MERGED or COMPLETED; both are matched by role (fallback
+    // to the canonical key).
+    const doneKeys = [roleKeys.MERGED ?? 'MERGED', roleKeys.COMPLETED ?? 'COMPLETED'];
     const prerequisites = Array.isArray(apiTask.prerequisites) ? apiTask.prerequisites : [];
-    const unmergedParents = prerequisites.filter((p) => p.status !== mergedKey);
+    const unmergedParents = prerequisites.filter((p) => ! doneKeys.includes(p.status));
 
     return {
         id: apiTask.id,
