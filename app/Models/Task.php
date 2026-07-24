@@ -66,6 +66,7 @@ class Task extends Model
         'pr_ci_waiting',
         'pr_in_merge_queue',
         'pr_merge_queue_state',
+        'pr_mergeable',
         'pr_unresolved_threads',
         'pr_review_decision',
         'pr_last_commit_at',

@@ -38,7 +38,7 @@ class TaskResource extends JsonResource
     private const STANDARD_EXTRA = [
         'display_status', 'phase_id', 'effort', 'pr_number', 'pr_url',
         'pr_ci_status', 'pr_ci_failed', 'pr_ci_running', 'pr_ci_success', 'pr_ci_waiting',
-        'pr_in_merge_queue', 'pr_merge_queue_state', 'pr_unresolved_threads', 'pr_review_decision',
+        'pr_in_merge_queue', 'pr_merge_queue_state', 'pr_mergeable', 'pr_unresolved_threads', 'pr_review_decision',
         'claimed_by_id', 'prerequisites', 'concern', 'stacking',
         'last_reviewed_at', 'last_review_recommendation', 'last_review_summary',
         'target_actual', 'test_cases', 'criticality', 'criticality_label',
@@ -128,6 +128,7 @@ class TaskResource extends JsonResource
             'pr_ci_waiting' => $this->pr_ci_waiting,
             'pr_in_merge_queue' => $this->pr_in_merge_queue !== null ? (bool) $this->pr_in_merge_queue : null,
             'pr_merge_queue_state' => $this->pr_merge_queue_state,
+            'pr_mergeable' => $this->pr_mergeable,
             'pr_unresolved_threads' => $this->pr_unresolved_threads,
             'pr_review_decision' => $this->pr_review_decision,
             // Aggregierte Ist-Kennzahlen der (gesyncten) Pull-Requests — Grundlage

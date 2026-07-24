@@ -46,6 +46,7 @@ class GitHubPrStatusSyncTest extends TestCase
                                     'number' => 42,
                                     'title' => 'S1: Fix the widget',
                                     'reviewDecision' => 'CHANGES_REQUESTED',
+                                    'mergeable' => 'CONFLICTING',
                                     'isInMergeQueue' => true,
                                     'mergeQueueEntry' => ['state' => 'AWAITING_CHECKS'],
                                     'commits' => ['nodes' => [[
@@ -105,6 +106,7 @@ class GitHubPrStatusSyncTest extends TestCase
         $this->assertSame(1, $task->pr_ci_waiting);
         $this->assertTrue($task->pr_in_merge_queue);
         $this->assertSame('AWAITING_CHECKS', $task->pr_merge_queue_state);
+        $this->assertSame('CONFLICTING', $task->pr_mergeable);
         $this->assertNotNull($task->pr_last_commit_at);
         $this->assertSame('2026-07-24 09:30:00', $task->pr_last_commit_at->utc()->format('Y-m-d H:i:s'));
         $this->assertNotNull($task->pr_status_synced_at);

@@ -42,6 +42,7 @@ class GitHubPrStatusSync
             number
             title
             reviewDecision
+            mergeable
             isInMergeQueue
             mergeQueueEntry { state }
             commits(last: 1) {
@@ -249,6 +250,7 @@ class GitHubPrStatusSync
             'pr_ci_waiting' => $ci['waiting'],
             'pr_in_merge_queue' => (bool) ($node['isInMergeQueue'] ?? false),
             'pr_merge_queue_state' => data_get($node, 'mergeQueueEntry.state'),
+            'pr_mergeable' => $node['mergeable'] ?? null,
             'pr_unresolved_threads' => $unresolved,
             'pr_review_decision' => $node['reviewDecision'] ?? null,
             'pr_last_commit_at' => $committedDate ? Carbon::parse($committedDate) : null,
