@@ -45,6 +45,7 @@ return [
     'ci_pending' => 'CI running',
     'ci_unknown' => 'CI status unknown',
     'unresolved_comments' => 'Unresolved comments',
+    'pr_conflict' => 'Approved & CI green, but merge conflict',
     'claim' => 'Claim',
     'release' => 'Release',
 

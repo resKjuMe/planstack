@@ -362,6 +362,8 @@
 .ps-node .ps-ci-failure :is(circle, path, polyline) { stroke: #dc2626 !important; }
 .ps-node .ps-ci-pending :is(circle, path, polyline) { stroke: #d97706 !important; }
 .ps-node .ps-ci-unknown :is(circle, path, polyline) { stroke: #9ca3af !important; }
+/* Approved + CI grün, aber Merge-Konflikt: rotes „!" rechtsbündig in der PR-Zeile. */
+.ps-node .ps-conflict { float: right; margin-left: 8px; color: #dc2626 !important; font-weight: 800; }
 .ps-node .t .who { font-weight: 400; color: var(--ps-sub); }
 .ps-node .s { font-size: 10px; margin-top: 2px; color: var(--ps-sub); }
 .ps-node .s .ps-ico { width: 11px; height: 11px; margin-right: 2px; vertical-align: -0.1em; }

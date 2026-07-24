@@ -138,6 +138,12 @@ function nodeLabel(n, showDesc = false) {
     if (n.claimer) {
         title += ` <span class='who'>· ${esc(initials(n.claimer))}</span>`;
     }
+    // Approved + CI grün, aber Merge-Konflikt → rotes Ausrufezeichen rechtsbündig
+    // in der PR-Zeile (macht auf einen sonst mergefertigen, aber konfliktbehafteten
+    // PR aufmerksam).
+    if (n.statusKey === 'APPROVED' && n.ciStatus === 'SUCCESS' && n.mergeable === 'CONFLICTING') {
+        title += `<span class='ps-conflict' title='Approved & CI grün, aber Merge-Konflikt'>!</span>`;
+    }
     parts.push(`<div class='t'>${svgIcon(n.icon || STATUS_ICONS[n.cat] || '')}${title}</div>`);
 
     parts.push(`<div class='s'>${subtitle(n)}</div>`);

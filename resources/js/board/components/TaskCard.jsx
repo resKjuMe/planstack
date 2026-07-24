@@ -42,6 +42,8 @@ export function TaskCardView({
     // PR-Zustandszeile nur zeigen, wenn ein PR existiert (dann liegen — sobald der
     // Sync gelaufen ist — CI-Status und offene Kommentare vor).
     const ci = task.prNumber ? ciMeta(task.ciStatus) : null;
+    // Approved + CI grün, aber Merge-Konflikt → rotes „!" rechtsbündig in der PR-Zeile.
+    const prConflict = task.isApproved && task.ciStatus === 'SUCCESS' && task.mergeable === 'CONFLICTING';
 
     return (
         <div
@@ -144,6 +146,9 @@ export function TaskCardView({
                             </svg>
                             {task.unresolvedThreads}
                         </span>
+                    )}
+                    {prConflict && (
+                        <span className="ml-auto font-bold text-rose-600 dark:text-rose-500" title={t('pr_conflict')}>!</span>
                     )}
                 </div>
             )}

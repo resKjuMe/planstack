@@ -148,6 +148,7 @@ export function deriveDiagram({
             done: isDone(t),
             statusKey: st?.key || null,
             ciStatus: t.pr_ci_status ?? null,
+            mergeable: t.pr_mergeable ?? null,
             sp: sp(t),
             files: t.affected_files ?? null,
             pr: t.pr_number,

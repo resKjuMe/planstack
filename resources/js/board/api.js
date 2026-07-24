@@ -69,6 +69,7 @@ export function mapApiTask(apiTask, meta) {
         // der Sync gelaufen ist): CI-Rollup + Anzahl unresolved Review-Threads.
         ciStatus: apiTask.pr_ci_status ?? null,
         unresolvedThreads: apiTask.pr_unresolved_threads ?? null,
+        mergeable: apiTask.pr_mergeable ?? null,
         mergedAt: apiTask.merged_at ?? null,
         url,
         isBlocked: displayStatus === roleKeys.BLOCKED,
