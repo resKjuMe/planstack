@@ -14,7 +14,10 @@ class ApiTokenController extends Controller
      */
     public function store(Request $request): RedirectResponse
     {
-        $data = $request->validate([
+        // Eigener Fehler-Bag, damit die Profilseite (React) den Validierungsfehler
+        // NUR am Token-Formular zeigt und nicht am gleichnamigen `name`-Feld des
+        // Profil-Formulars.
+        $data = $request->validateWithBag('createApiToken', [
             'name' => ['required', 'string', 'max:255'],
         ]);
 

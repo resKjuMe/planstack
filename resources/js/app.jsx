@@ -12,6 +12,11 @@ import ProjectClaude from './shell/pages/ProjectClaude.jsx';
 import TaskCreate from './shell/pages/TaskCreate.jsx';
 import TaskEdit from './shell/pages/TaskEdit.jsx';
 import TaskShow from './shell/pages/TaskShow.jsx';
+import ConcernEdit from './shell/pages/ConcernEdit.jsx';
+import TeamsIndex from './shell/pages/TeamsIndex.jsx';
+import TeamCreate from './shell/pages/TeamCreate.jsx';
+import TeamShow from './shell/pages/TeamShow.jsx';
+import Profile from './shell/pages/Profile.jsx';
 
 // Seiten-Registry: „BladePage" bettet noch nicht migrierte Blade-Seiten ein,
 // echte React-Seiten werden namentlich aufgelöst. Unbekannte Namen fallen auf
@@ -29,6 +34,11 @@ const pages = {
     TaskCreate,
     TaskEdit,
     TaskShow,
+    ConcernEdit,
+    TeamsIndex,
+    TeamCreate,
+    TeamShow,
+    Profile,
 };
 
 createInertiaApp({

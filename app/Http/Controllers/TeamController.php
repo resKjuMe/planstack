@@ -8,36 +8,63 @@ use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\View\View;
+use Inertia\Inertia;
+use Inertia\Response as InertiaResponse;
 
 class TeamController extends Controller
 {
-    public function index(): View
+    public function index(): InertiaResponse
     {
-        $userId = Auth::id();
-        $user = Auth::user();
-        $orgId = $user->organization_id;
-        // Der Organisationsgründer sieht alle Teams seiner Organisation.
-        $isOrgOwner = $user->organization?->isOwner($user) === true;
+        return Inertia::render('TeamsIndex', [
+            'createUrl' => route('teams.create'),
+            'flash' => ['status' => session('status'), 'error' => session('error')],
+            // Teamliste asynchron nachladen (Skeleton währenddessen).
+            'teams' => Inertia::defer(function () {
+                $userId = Auth::id();
+                $user = Auth::user();
+                $isOrgOwner = $user->organization?->isOwner($user) === true;
 
-        $teams = Team::query()
-            ->where('organization_id', $orgId)
-            ->when(! $isOrgOwner, fn ($q) => $q->where(fn ($inner) => $inner
-                ->where('created_by_id', $userId)
-                ->orWhereHas('members', fn ($m) => $m->where('users.id', $userId))))
-            ->withCount('members')
-            ->with('owner')
-            ->latest()
-            ->get();
-
-        return view('teams.index', compact('teams'));
+                return Team::query()
+                    ->where('organization_id', $user->organization_id)
+                    ->when(! $isOrgOwner, fn ($q) => $q->where(fn ($inner) => $inner
+                        ->where('created_by_id', $userId)
+                        ->orWhereHas('members', fn ($m) => $m->where('users.id', $userId))))
+                    ->withCount('members')
+                    ->with('owner')
+                    ->latest()
+                    ->get()
+                    ->map(fn ($team) => [
+                        'id' => $team->id,
+                        'name' => $team->name,
+                        'membersCount' => $team->members_count,
+                        'ownerName' => $team->owner?->name,
+                        'showUrl' => route('teams.show', $team),
+                    ])->values();
+            }),
+            'strings' => [
+                'teams' => __('common.teams'),
+                'newTeam' => __('teams.new_team'),
+                'noTeams' => __('teams.no_teams_yet_create_a_team_and_add'),
+                'creator' => __('teams.creator_2'),
+                'countMembersTpl' => __('common.count_members', ['count' => '__COUNT__']),
+            ],
+        ]);
     }
 
-    public function create(): View
+    public function create(): InertiaResponse
     {
         $this->authorize('create', Team::class);
 
-        return view('teams.create');
+        return Inertia::render('TeamCreate', [
+            'storeUrl' => route('teams.store'),
+            'cancelUrl' => route('teams.index'),
+            'strings' => [
+                'newTeam' => __('teams.new_team'),
+                'teamName' => __('teams.team_name'),
+                'cancel' => __('common.cancel'),
+                'create' => __('common.create'),
+            ],
+        ]);
     }
 
     public function store(StoreTeamRequest $request): RedirectResponse
@@ -55,21 +82,68 @@ class TeamController extends Controller
             ->with('status', __('flash.team_created', ['name' => $team->name]));
     }
 
-    public function show(Team $team): View
+    public function show(Team $team): InertiaResponse
     {
         $this->authorize('view', $team);
 
-        $team->load(['owner', 'members']);
+        return Inertia::render('TeamShow', [
+            'team' => ['id' => $team->id, 'name' => $team->name],
+            'flash' => ['status' => session('status'), 'error' => session('error')],
+            'urls' => [
+                'update' => route('teams.update', $team),
+                'destroy' => route('teams.destroy', $team),
+                'memberStore' => route('teams.members.store', $team),
+                'memberDestroy' => route('teams.members.destroy', [$team, '__ID__']),
+            ],
+            // Mitglieder/Rechte/Auswahl asynchron nachladen (Skeleton währenddessen).
+            'teamData' => Inertia::defer(function () use ($team) {
+                $team->load(['owner', 'members']);
+                $user = Auth::user();
 
-        // User der Organisation, die noch nicht Mitglied dieses Teams sind —
-        // Auswahlliste zum Hinzufügen (ersetzt die frühere E-Mail-Eingabe).
-        $assignableUsers = User::query()
-            ->where('organization_id', $team->organization_id)
-            ->whereNotIn('id', $team->members->pluck('id'))
-            ->orderBy('name')
-            ->get();
+                // User der Organisation, die noch nicht Mitglied dieses Teams sind —
+                // Auswahlliste zum Hinzufügen.
+                $assignableUsers = User::query()
+                    ->where('organization_id', $team->organization_id)
+                    ->whereNotIn('id', $team->members->pluck('id'))
+                    ->orderBy('name')
+                    ->get();
 
-        return view('teams.show', compact('team', 'assignableUsers'));
+                return [
+                    'canUpdate' => $user->can('update', $team),
+                    'canManageMembers' => $user->can('manageMembers', $team),
+                    'canDelete' => $user->can('delete', $team),
+                    'members' => $team->members->map(fn ($m) => [
+                        'id' => $m->id,
+                        'name' => $m->name,
+                        'email' => $m->email,
+                        'isOwner' => $team->isOwner($m),
+                    ])->values(),
+                    'assignableUsers' => $assignableUsers->map(fn ($u) => [
+                        'id' => $u->id,
+                        'label' => "{$u->name} ({$u->email})",
+                    ])->values(),
+                ];
+            }),
+            'strings' => [
+                'team' => __('teams.team'),
+                'renameTeam' => __('teams.rename_team'),
+                'teamName' => __('teams.team_name_2'),
+                'members' => __('common.members'),
+                'name' => __('common.name'),
+                'email' => __('common.email'),
+                'creatorBadge' => __('teams.creator'),
+                'remove' => __('common.remove'),
+                'removeMemberConfirm' => __('teams.remove_member'),
+                'addMember' => __('teams.add_member'),
+                'add' => __('teams.add'),
+                'chooseHint' => __('teams.choose_from_the_members_of_your'),
+                'allMembersHint' => __('teams.all_members_of_your_organization_are'),
+                'deleteTeam' => __('teams.delete_team'),
+                'deleteConfirm' => __('teams.really_delete_this_team'),
+                'delete' => __('common.delete'),
+                'save' => __('common.save'),
+            ],
+        ]);
     }
 
     public function update(Request $request, Team $team): RedirectResponse
