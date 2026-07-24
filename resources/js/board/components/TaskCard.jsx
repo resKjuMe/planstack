@@ -60,7 +60,22 @@ export function TaskCardView({
             <p className="mt-1 text-sm text-gray-700 dark:text-gray-300 line-clamp-3">{task.summary}</p>
 
             <div className="mt-2 flex items-center justify-between text-xs text-gray-400 dark:text-gray-500">
-                <span className="truncate">{task.claimerName ?? t('unassigned')}</span>
+                <span className="flex items-center gap-1 truncate" title={t('assignee')}>
+                    <svg
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        className="h-3.5 w-3.5 shrink-0"
+                        aria-hidden="true"
+                    >
+                        <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" />
+                        <circle cx="12" cy="7" r="4" />
+                    </svg>
+                    <span className="truncate">{task.claimerName ?? t('unassigned')}</span>
+                </span>
                 <span className="flex items-center gap-2 shrink-0">
                     {task.prNumber && (
                         <a href={task.prUrl || undefined} onPointerDown={stop} className="text-gray-500 dark:text-gray-400 hover:underline">
