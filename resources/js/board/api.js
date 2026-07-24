@@ -45,6 +45,13 @@ export function mapApiTask(apiTask, meta) {
         ? meta.endpoints.task.replace('__TASK__', String(apiTask.id))
         : '#';
 
+    // "Stacked": the task depends on one or more parent tasks that aren't merged
+    // yet, so its branch/PR sits on top of not-yet-merged work. Prerequisites
+    // carry their status key; MERGED is matched by role (fallback to the key).
+    const mergedKey = roleKeys.MERGED ?? 'MERGED';
+    const prerequisites = Array.isArray(apiTask.prerequisites) ? apiTask.prerequisites : [];
+    const unmergedParents = prerequisites.filter((p) => p.status !== mergedKey);
+
     return {
         id: apiTask.id,
         name: apiTask.name,
@@ -65,6 +72,9 @@ export function mapApiTask(apiTask, meta) {
         // APPROVED is a custom (role-less) status, so it's matched by its key —
         // same way MERGED is referenced directly in the board.
         isApproved: displayStatus === 'APPROVED',
+        // Stacked on not-yet-merged parents (see above); the names feed the tooltip.
+        isStacked: unmergedParents.length > 0,
+        stackedOn: unmergedParents.map((p) => p.name),
         concernSummary: apiTask.concern?.summary || apiTask.concern?.blocker || null,
     };
 }

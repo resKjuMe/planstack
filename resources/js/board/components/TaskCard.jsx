@@ -54,6 +54,29 @@ export function TaskCardView({
                             ⚠ {t('badge_concerned')}
                         </span>
                     )}
+                    {/* Stacked: the task depends on parents that aren't merged yet.
+                        Right-aligned marker in the title row (layers icon). */}
+                    {task.isStacked && (
+                        <span
+                            title={task.stackedOn?.length ? `${t('stacked')}: ${task.stackedOn.join(', ')}` : t('stacked')}
+                            className="shrink-0 text-gray-400 dark:text-gray-500"
+                        >
+                            <svg
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="2"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                className="h-4 w-4"
+                                aria-hidden="true"
+                            >
+                                <path d="M12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.84z" />
+                                <path d="M2 12a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 12" />
+                                <path d="M2 17a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 17" />
+                            </svg>
+                        </span>
+                    )}
                 </div>
             </div>
 

@@ -36,6 +36,7 @@ return [
     'unassigned' => '—',
     'reviewer' => 'Reviewer',
     'approver' => 'Approver',
+    'stacked' => 'Stacked on unmerged tasks',
     'badge_blocked' => 'Blocked',
     'badge_concerned' => 'Concerned',
     'claim' => 'Claim',
