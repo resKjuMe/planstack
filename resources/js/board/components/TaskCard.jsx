@@ -103,7 +103,52 @@ export function TaskCardView({
 
             <p className="mt-1 text-sm text-gray-700 dark:text-gray-300 line-clamp-3">{task.summary}</p>
 
-            <div className="mt-2 flex items-center justify-between text-xs text-gray-400 dark:text-gray-500">
+            {/* PR-Zeile (über Claimer/Worker): CI-Status vor der PR-Nummer, dahinter
+                — nur wenn > 0 — die ungelösten Review-Kommentare. Daten aus dem
+                minütlichen planstack:sync-pr-status. */}
+            {task.prNumber && (
+                <div className="mt-2 flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400">
+                    {/* CI-Icon in Icon-Spalte (wie Personen-Icon) → PR-Nummer bündig
+                        mit Autor/Reviewer-Name. */}
+                    {ci && (
+                        <span className={`flex items-center ${ci.cls}`} title={t(ci.titleKey)}>
+                            <svg
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="2"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                className="h-3.5 w-3.5 shrink-0"
+                                aria-hidden="true"
+                                dangerouslySetInnerHTML={{ __html: ci.paths }}
+                            />
+                        </span>
+                    )}
+                    <a href={task.prUrl || undefined} onPointerDown={stop} className="hover:underline">
+                        #{task.prNumber}
+                    </a>
+                    {(task.unresolvedThreads ?? 0) > 0 && (
+                        <span className="ml-2 flex items-center gap-0.5" title={t('unresolved_comments')}>
+                            <svg
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="2"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                className="h-3.5 w-3.5"
+                                aria-hidden="true"
+                            >
+                                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                            </svg>
+                            {task.unresolvedThreads}
+                        </span>
+                    )}
+                </div>
+            )}
+
+            <div className="mt-1 flex items-center justify-between text-xs text-gray-400 dark:text-gray-500">
                 <span className="flex items-center gap-1 truncate" title={t('assignee')}>
                     <svg
                         viewBox="0 0 24 24"
@@ -121,47 +166,6 @@ export function TaskCardView({
                     <span className="truncate">{task.claimerName ?? t('unassigned')}</span>
                 </span>
                 <span className="flex items-center gap-2 shrink-0">
-                    {task.prNumber && (
-                        <>
-                            {/* CI-Status vor der PR-Nummer (Daten aus planstack:sync-pr-status). */}
-                            {ci && (
-                                <span className={`flex items-center ${ci.cls}`} title={t(ci.titleKey)}>
-                                    <svg
-                                        viewBox="0 0 24 24"
-                                        fill="none"
-                                        stroke="currentColor"
-                                        strokeWidth="2"
-                                        strokeLinecap="round"
-                                        strokeLinejoin="round"
-                                        className="h-3.5 w-3.5"
-                                        aria-hidden="true"
-                                        dangerouslySetInnerHTML={{ __html: ci.paths }}
-                                    />
-                                </span>
-                            )}
-                            <a href={task.prUrl || undefined} onPointerDown={stop} className="text-gray-500 dark:text-gray-400 hover:underline">
-                                #{task.prNumber}
-                            </a>
-                            {/* Ungelöste Review-Kommentare — nur wenn > 0. */}
-                            {(task.unresolvedThreads ?? 0) > 0 && (
-                                <span className="flex items-center gap-0.5" title={t('unresolved_comments')}>
-                                    <svg
-                                        viewBox="0 0 24 24"
-                                        fill="none"
-                                        stroke="currentColor"
-                                        strokeWidth="2"
-                                        strokeLinecap="round"
-                                        strokeLinejoin="round"
-                                        className="h-3.5 w-3.5"
-                                        aria-hidden="true"
-                                    >
-                                        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-                                    </svg>
-                                    {task.unresolvedThreads}
-                                </span>
-                            )}
-                        </>
-                    )}
                     {task.storyPoints ? <span>{task.storyPoints} SP</span> : null}
                 </span>
             </div>
@@ -169,7 +173,7 @@ export function TaskCardView({
             {/* In the "In Review" column, show the reviewer beneath the assignee
                 so it's clear who is reviewing (distinct from who worked the task). */}
             {task.isInReview && task.reviewerName && (
-                <div className="mt-0.5 flex items-center gap-1 text-xs text-gray-400 dark:text-gray-500" title={t('reviewer')}>
+                <div className="mt-1 flex items-center gap-1 text-xs text-gray-400 dark:text-gray-500" title={t('reviewer')}>
                     <svg
                         viewBox="0 0 24 24"
                         fill="none"
@@ -190,7 +194,7 @@ export function TaskCardView({
             {/* In the "Approved" column, show the approver beneath the assignee.
                 The approver is the reviewer who signed off (reviewed_by). */}
             {task.isApproved && task.reviewerName && (
-                <div className="mt-0.5 flex items-center gap-1 text-xs text-gray-400 dark:text-gray-500" title={t('approver')}>
+                <div className="mt-1 flex items-center gap-1 text-xs text-gray-400 dark:text-gray-500" title={t('approver')}>
                     <svg
                         viewBox="0 0 24 24"
                         fill="none"
