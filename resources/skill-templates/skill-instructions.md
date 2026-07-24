@@ -146,9 +146,9 @@ Projekt B2R:  config_version 2
 
 (Mit `<PROJECT>` nur die allgemeine Zeile + diese eine Projekt-Zeile.)
 
-## Auto-Modus (`/planstack <PROJECT> auto`)
+## Auto-Modus (`/planstack auto <PROJECT>`)
 
-Arbeitet das Board von `<PROJECT>` **dauerhaft und unbeaufsichtigt** ab. `auto` steht in der `<TASK>`-Position (`/planstack <PROJECT> auto`) und aktiviert diesen Modus — es ist **kein** Task namens „auto". Der Haupt-Agent ist dabei nur **Supervisor**: Er startet in einer Endlosschleife nacheinander **Auto-Runs**, jeder Auto-Run läuft als **eigener Subagent** (frischer Kontext), und der Supervisor entscheidet nur anhand von dessen Ergebnisbericht, wie es weitergeht. Der Modus endet nicht von selbst — er läuft, bis der Nutzer ihn abbricht.
+Arbeitet das Board von `<PROJECT>` **dauerhaft und unbeaufsichtigt** ab. `auto` steht in der **Sub-Kommando-Position** (erstes Argument, wie `review`/`fix`/`settings`/`update-config`), gefolgt vom Projekt: `/planstack auto <PROJECT>`. Es ist **kein** Task namens „auto". Der Haupt-Agent ist dabei nur **Supervisor**: Er startet in einer Endlosschleife nacheinander **Auto-Runs**, jeder Auto-Run läuft als **eigener Subagent** (frischer Kontext), und der Supervisor entscheidet nur anhand von dessen Ergebnisbericht, wie es weitergeht. Der Modus endet nicht von selbst — er läuft, bis der Nutzer ihn abbricht.
 
 **Supervisor-Schleife** (Haupt-Agent):
 
