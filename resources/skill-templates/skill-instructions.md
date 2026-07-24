@@ -148,16 +148,20 @@ Projekt B2R:  config_version 2
 
 ## Review (`/planstack review [<PROJECT>] [<TASK>]`)
 
-Reviewt Tasks, die **in Review** sind (Status `IN_REVIEW`, mit PR). **Eigene Tasks (selbst beansprucht/umgesetzt) sind nicht reviewbar** — `review-next` überspringt sie, ein gezielter Aufruf darauf wird abgelehnt. Ablauf:
+Reviewt Tasks, die **zum Review bereitliegen**: im Pool-Status `REVIEWBAR` (die Spalte *vor* `IN_REVIEW`) oder in einem noch nicht übernommenen `IN_REVIEW` — jeweils mit PR. **Eigene Tasks (selbst beansprucht/umgesetzt) sind nicht reviewbar** — `review-next` überspringt sie, ein gezielter Aufruf darauf wird abgelehnt. Das Übernehmen setzt nur `reviewed_by`; die Verschiebung nach `IN_REVIEW` löst das `REVIEWING`-Event über die Org-Automation aus (die Endpunkte verschieben nicht selbst). Ablauf:
 
 1. **Task wählen & Review übernehmen** (setzt `reviewed_by`):
    - `<PROJECT> <TASK>`: gezielt dieser Task → `POST $BASE/projects/$PROJ/tasks/$TASK/review-claim`.
-   - nur `<PROJECT>`: automatisch den ersten in-review Task mit PR → `POST $BASE/projects/$PROJ/review-next`.
+   - nur `<PROJECT>`: automatisch den ersten zum Review bereiten Task mit PR aus dem `REVIEWBAR`-Pool → `POST $BASE/projects/$PROJ/review-next`.
    - **weder `<TASK>` noch `<PROJECT>`**: **projektübergreifend** — `GET $BASE/projects` auflisten und `review-next` pro Projekt aufrufen, bis eines einen Task liefert.
    Antwort `{"reviewing": null}` bzw. leer ⇒ nichts zu reviewen (nächstes Projekt / fertig). Nach dem Übernehmen `ev <id> REVIEWING` melden (best-effort, `<id>` aus der Antwort).
 2. **Review ausführen:** den **Review-Skill** (`/review`) für den PR des Tasks laufen lassen — mit Strenge gemäß `review_strictness` und Prüftiefe gemäß `review_thoroughness`. Die Antwort aus Schritt 1 trägt **immer** `pr_number` (und `pr_url`, sofern Repo konfiguriert) — unabhängig von den Board-/`task.fields`-Einstellungen. Ergebnis = Empfehlung (`APPROVE` oder `REQUEST_CHANGES`) + die ausführliche Review-Analyse.
-3. **Empfehlung festlegen** gemäß Einstellung `review_auto_status`: bei `manual` die Empfehlung vom Nutzer bestätigen lassen, bei `auto` die aus dem Review abgeleitete Empfehlung direkt verwenden.
-4. **Ergebnis erfassen:** `POST $BASE/projects/$PROJ/tasks/$TASK/review` mit `{"recommendation":"APPROVE|REQUEST_CHANGES","summary":"…"}` — füllt `last_reviewed_at`, `last_review_recommendation`, `last_review_summary`. Das Feld `summary` ist **keine Kurzbeschreibung**, sondern die **ausführliche Review-Analyse**. Aufbau (in dieser Reihenfolge):
+3. **Review vorlegen & Empfehlung festlegen** gemäß Einstellung `review_auto_status`:
+   - `auto`: die aus dem Review abgeleitete Empfehlung direkt verwenden — **keine** Rückfrage nötig.
+   - `manual` **oder nicht gesetzt** (Default): dem Nutzer **zuerst die vollständige Review anzeigen** (Review-Konfiguration + TLDR + ausführliche Analyse, Aufbau wie in Schritt 4) und **erst danach** die Empfehlung (`APPROVE`/`REQUEST_CHANGES`) bestätigen lassen. **Grundsatz: nie nach der Entscheidung fragen, ohne die Review vorher gezeigt zu haben.**
+
+   Solange die Settings das automatische Bestätigen bzw. Ablegen/Posten **nicht** aktiv festlegen — also `review_auto_status`≠`auto` **oder** `review_results` schreibt nicht automatisch nach Task/PR — wird also erst die Review angezeigt und die Bestätigung des Nutzers eingeholt, **bevor** irgendetwas in Task oder PR geschrieben wird (Schritte 4–5). Bei `auto` laufen die Schritte 4–5 direkt.
+4. **Ergebnis erfassen** (nach Bestätigung bzw. direkt bei `auto`): `POST $BASE/projects/$PROJ/tasks/$TASK/review` mit `{"recommendation":"APPROVE|REQUEST_CHANGES","summary":"…"}` — füllt `last_reviewed_at`, `last_review_recommendation`, `last_review_summary`. Das Feld `summary` ist **keine Kurzbeschreibung**, sondern die **ausführliche Review-Analyse**. Aufbau (in dieser Reihenfolge):
    1. **Review-Konfiguration** (vorab, damit das Review für andere nachvollziehbar ist) — eine Zeile: `Review-Konfiguration: Strenge=<review_strictness>, Gründlichkeit=<review_thoroughness>, Modell=<tatsächlich genutztes Claude-Modell>, Effort=<Reasoning-Aufwand>`.
    2. **TLDR** — eine Zeile: `TLDR: <Kernaussage in 1–3 Sätzen>`.
    3. **Ausführliche Analyse** — Befunde je Datei/Aspekt, Begründungen, Risiken, Vorschläge.
