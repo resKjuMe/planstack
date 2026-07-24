@@ -10,11 +10,12 @@ use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 
 /**
- * Sendet ein Entity-Änderungs-Event via Pusher — als gequeueter Job, damit der
- * (best-effort, netzgebundene) Pusher-Trigger NICHT in der Request-Latenz hängt.
- * Bei QUEUE_CONNECTION=sync läuft er inline (wie zuvor), sonst asynchron über den
- * Worker. Die Nutzlast ist zum Dispatch-Zeitpunkt fertig berechnet (kein
- * Model-Zugriff im Job nötig).
+ * Sendet ein Entity-Änderungs-Event via Pusher. Wird per dispatchAfterResponse()
+ * angestoßen (siehe BroadcastsEntityChange), läuft also NACH dem Senden der
+ * Antwort im selben Prozess: der (best-effort, netzgebundene) Pusher-Trigger hängt
+ * nicht in der Request-Latenz, braucht aber keinen Queue-Worker und ist unabhängig
+ * von QUEUE_CONNECTION. Die Nutzlast ist zum Dispatch-Zeitpunkt fertig berechnet
+ * (kein Model-Zugriff im Job nötig).
  */
 class BroadcastEntityChange implements ShouldQueue
 {

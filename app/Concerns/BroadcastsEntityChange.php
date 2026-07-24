@@ -50,8 +50,12 @@ trait BroadcastsEntityChange
         }
         static::$broadcastCoalesce[$key] = true;
 
-        // Gequeuet → aus der Request-Latenz genommen (siehe BroadcastEntityChange).
-        BroadcastEntityChange::dispatch($scope['organization_id'], [
+        // Nach dem Senden der Antwort im selben Prozess ausführen (afterResponse):
+        // nimmt den (netzgebundenen) Pusher-Trigger aus der Request-Latenz, braucht
+        // aber KEINEN laufenden Queue-Worker und ist unabhängig von
+        // QUEUE_CONNECTION — sonst blieben die Entity-Broadcasts ohne Worker in der
+        // Queue liegen und Live-Updates (Board/Summary) kämen nie an.
+        BroadcastEntityChange::dispatchAfterResponse($scope['organization_id'], [
             'type' => 'entity-changed',
             'entity' => $scope['entity'],
             'id' => $scope['id'],
