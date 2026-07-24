@@ -29,7 +29,11 @@ return Application::configure(basePath: dirname(__DIR__))
 
         // Applies the authenticated user's stored locale to every web request.
         // Appended so it runs after the auth middleware and $request->user() is set.
+        // Also on the api group so same-origin browser fetches (shared React store,
+        // e.g. GET /api/status-config) return locale-aware labels; bearer-token
+        // clients (CLI/MCP) have no session user here and keep the default locale.
         $middleware->appendToGroup('web', \App\Http\Middleware\SetLocale::class);
+        $middleware->appendToGroup('api', \App\Http\Middleware\SetLocale::class);
 
         // „Inertia über Blade": HandleInertiaRequests richtet Inertia ein (Root-
         // View, Shared-Data, Versions-/Redirect-Handling); BladeToInertia läuft
