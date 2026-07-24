@@ -8,6 +8,7 @@ return [
     'checklist_label_test' => 'Test instructions',
     'creator_cannot_be_removed' => 'The creator cannot be removed.',
     'github_repo_not_configured' => 'No GitHub repository is configured for ":alias".',
+    'github_token_missing' => 'No GITHUB_TOKEN configured — the GraphQL API does not allow anonymous requests.',
     'github_unreachable' => 'GitHub is unreachable: :error — for "SSL certificate problem" set curl.cainfo in php.ini or (locally only) GITHUB_VERIFY_SSL=false.',
     'invitation_code_no_match' => 'No match for this invitation code.',
     'invitation_send_failed' => 'The invitation could not be sent. Please try again later.',

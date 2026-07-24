@@ -15,3 +15,12 @@ Schedule::command('planstack:sync-prs')
     ->everyMinute()
     ->withoutOverlapping()
     ->onOneServer();
+
+// PR-Zustand (CI, unresolved Threads, Review-Entscheidung, letzter Commit) der 100
+// zuletzt aktualisierten offenen PRs je Repo via GraphQL nach github_pull_requests
+// spiegeln — Grundlage der serverseitigen „fix"-Erkennung. Gleiche Schutzflags wie
+// oben: kein paralleler Zweitlauf, bei mehreren App-Servern nur auf einem.
+Schedule::command('planstack:sync-pr-status')
+    ->everyMinute()
+    ->withoutOverlapping()
+    ->onOneServer();
