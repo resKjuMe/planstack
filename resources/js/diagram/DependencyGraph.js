@@ -103,7 +103,7 @@ function nodeLabel(n, showDesc = false) {
     if (n.cat === 'inreview' && n.reviewedBy) {
         reviewed = n.reviewedByMe ? ' is-reviewed' : ' is-reviewed-other';
     }
-    const cls = `ps-node cat-${n.cat} tok-${n.color || 'gray'}${reviewed}${n.done ? ' is-done' : ''}${n.bottleneck ? ' has-bn' : ''}`;
+    const cls = `ps-node cat-${n.cat} tok-${n.color || 'gray'}${reviewed}${n.done ? ' is-done' : ''}${n.bottleneck ? ' has-bn' : ''}${n.reviewRecommendation ? ' has-rv' : ''}`;
     const parts = [`<div class='${cls}'>`];
 
     let title = n.url
@@ -153,12 +153,14 @@ function nodeLabel(n, showDesc = false) {
     }
 
     if (n.reviewRecommendation) {
+        // Review-Empfehlung sitzt in der oberen LINKEN Ecke, damit sie nie mit
+        // PR-Badge/Flaschenhals (obere rechte Ecke) kollidiert — unabhängig von der
+        // Breite der PR-Nummer.
         const approve = n.reviewRecommendation === 'APPROVE';
-        const shift = (n.bottleneck || (n.done && n.pr)) ? ' ps-rv--shift' : '';
         const cls2 = approve ? 'ps-rv ps-rv-approve' : 'ps-rv ps-rv-changes';
         const label = approve ? 'Review: genehmigt' : 'Review: Änderungen erforderlich';
         const icon = approve ? REVIEW_APPROVE_ICON : REVIEW_CHANGES_ICON;
-        parts.push(`<span class='${cls2}${shift}' title='${label}'>${svgIcon(icon)}</span>`);
+        parts.push(`<span class='${cls2}' title='${label}'>${svgIcon(icon)}</span>`);
     }
 
     parts.push('</div>');
@@ -217,7 +219,7 @@ export class DependencyGraph {
 
         this.allNodes = [];
         this.allEdges = [];
-        this.hideDone = false;
+        this.hiddenStatuses = new Set();
         this.showDesc = false;
         this.phaseFilter = null;
         this.lockedKey = null;
@@ -236,10 +238,10 @@ export class DependencyGraph {
      * Daten + Optionen setzen und neu rendern. Wird von der React-View bei jeder
      * Store- oder Optionsänderung aufgerufen.
      */
-    async update({ nodes, edges, hideDone, showDesc, phaseFilter }) {
+    async update({ nodes, edges, hiddenStatuses, showDesc, phaseFilter }) {
         this.allNodes = nodes || [];
         this.allEdges = edges || [];
-        this.hideDone = !!hideDone;
+        this.hiddenStatuses = new Set(hiddenStatuses || []);
         this.showDesc = !!showDesc;
         this.phaseFilter = phaseFilter ?? null;
 
@@ -271,8 +273,8 @@ export class DependencyGraph {
         if (this.phaseFilter !== null) {
             nodes = nodes.filter((n) => String(n.phase) === String(this.phaseFilter));
         }
-        if (this.hideDone) {
-            nodes = nodes.filter((n) => !n.done);
+        if (this.hiddenStatuses.size) {
+            nodes = nodes.filter((n) => !this.hiddenStatuses.has(n.statusKey));
         }
         const kept = new Set(nodes.map((n) => n.key));
         return {

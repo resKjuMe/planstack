@@ -146,6 +146,7 @@ export function deriveDiagram({
             icon: st?.icon || null,
             phase: t.phase_id,
             done: isDone(t),
+            statusKey: st?.key || null,
             sp: sp(t),
             files: t.affected_files ?? null,
             pr: t.pr_number,
@@ -204,6 +205,7 @@ export function deriveDiagram({
     const legend = [...statuses]
         .sort((a, b) => (a.position ?? 0) - (b.position ?? 0))
         .map((s) => ({
+            key: s.key,
             label: s.label,
             color: s.color_token,
             icon: s.icon || null,

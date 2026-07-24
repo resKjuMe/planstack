@@ -370,6 +370,9 @@
 
 .ps-node.is-done { padding-right: 12px; }
 .ps-node.has-bn { padding-right: 12px; }
+/* Review-Empfehlungs-Icon sitzt in der oberen LINKEN Ecke — Platz links freihalten,
+   damit es den Inhalt nicht überlagert (PR-Badge/Flaschenhals bleiben rechts). */
+.ps-node.has-rv { padding-left: 12px; }
 .ps-node .pr-badge {
     position: absolute; top: -8px; right: -9px;
     font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
@@ -392,13 +395,12 @@
 
 .ps-node .ps-rv {
     display: inline-flex; align-items: center; justify-content: center;
-    position: absolute; top: -9px; right: -9px;
+    position: absolute; top: -9px; left: -9px;
     width: 20px; height: 20px; border-radius: 9999px;
 }
 .ps-node .ps-rv .ps-ico { width: 12px; height: 12px; margin: 0; }
 .ps-node .ps-rv-approve { background: #dcfce7; border: 1px solid #16a34a; color: #16a34a; }
 .ps-node .ps-rv-changes { background: #fef3c7; border: 1px solid #d97706; color: #b45309; }
-.ps-node .ps-rv--shift { right: 15px; }
 
 .ps-diagram-legend .lg-item { display: inline-flex; align-items: center; gap: 5px; }
 .ps-diagram-legend .lg-swatch { display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 17px; border-radius: 5px; background: var(--n-bg, #fff); border: 1px solid var(--n-border, #d4d4d8); color: var(--n-text, #52525b); }

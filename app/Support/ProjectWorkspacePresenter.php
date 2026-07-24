@@ -178,7 +178,7 @@ class ProjectWorkspacePresenter
             'clickToFilter' => __('status.click_to_filter'),
             'clearSelection' => __('status.clear_selection'),
             'shortDescriptions' => __('status.short_descriptions'),
-            'hideDone' => __('status.hide_done'),
+            'statusFilter' => __('status.status_filter'),
             'asPng' => __('status.as_png'),
             'openDependency' => __('status.open_dependency'),
             'satisfied' => __('status.satisfied'),

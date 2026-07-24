@@ -123,6 +123,7 @@ return [
     'show_less' => 'weniger anzeigen',
     'since' => 'seit',
     'sort' => 'Sortieren:',
+    'status_filter' => 'Status:',
     'sp_day' => 'SP/Tag',
     'sp_wk' => 'SP/Wo',
     'task' => 'Task',
