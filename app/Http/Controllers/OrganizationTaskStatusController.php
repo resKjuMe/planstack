@@ -7,6 +7,7 @@ use App\Models\OrgStatus;
 use App\Models\OrgStatusGroup;
 use App\Models\OrgStatusTransition;
 use App\Models\Task;
+use App\Support\OrganizationTabs;
 use App\Support\StatusEffects;
 use App\Support\StatusIcons;
 use Illuminate\Http\RedirectResponse;
@@ -14,7 +15,8 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
-use Illuminate\View\View;
+use Inertia\Inertia;
+use Inertia\Response as InertiaResponse;
 
 /**
  * Org-owner administration of the organization's configurable task statuses:
@@ -44,7 +46,7 @@ class OrganizationTaskStatusController extends Controller
         return $organization;
     }
 
-    public function index(Request $request): View
+    public function index(Request $request): InertiaResponse
     {
         $organization = $this->ownedOrganization($request);
 
@@ -54,16 +56,88 @@ class OrganizationTaskStatusController extends Controller
             ->whereIn('from_status_id', $statuses->pluck('id'))
             ->get()
             ->groupBy('from_status_id')
-            ->map(fn ($rows) => $rows->pluck('to_status_id')->all());
+            ->map(fn ($rows) => $rows->pluck('to_status_id')->values()->all())
+            ->all();
 
-        return view('organization.statuses', [
-            'organization' => $organization,
-            'statuses' => $statuses,
-            'transitions' => $transitions,
+        $groups = $organization->statusGroups()->get()
+            ->map(fn ($g) => ['id' => $g->id, 'key' => $g->key, 'label' => $g->label])
+            ->values()
+            ->all();
+
+        return Inertia::render('OrganizationStatuses', [
+            'tabs' => OrganizationTabs::for('statuses'),
+            'flash' => ['status' => session('status'), 'error' => session('error')],
+            'statuses' => $statuses->map(fn ($s) => [
+                'id' => $s->id,
+                'key' => $s->key,
+                'label' => $s->label,
+                'label_en' => $s->label_en,
+                'color_token' => $s->color_token,
+                'icon' => $s->icon,
+                'position' => $s->position,
+                'wip_limit' => $s->wip_limit,
+                'group_id' => $s->group_id,
+                'is_column' => (bool) $s->is_column,
+                'default_expanded' => (bool) $s->default_expanded,
+                'kind' => $s->kind,
+                // role === null marks a custom (deletable) status; canonical
+                // statuses carry a role and are protected.
+                'role' => $s->role?->value,
+            ])->values()->all(),
+            'transitions' => (object) $transitions,
             'colors' => self::COLORS,
             'iconKeys' => StatusIcons::keys(),
-            'iconMarkup' => StatusIcons::all(),
-            'groups' => $organization->statusGroups()->get(),
+            'iconMarkup' => (object) StatusIcons::all(),
+            'groups' => $groups,
+            'kinds' => array_map(
+                fn ($k) => ['value' => $k, 'label' => __('board_admin.kind_'.$k)],
+                self::CUSTOM_KINDS,
+            ),
+            'urls' => [
+                'updateAll' => route('organization.statuses.update-all'),
+                'store' => route('organization.statuses.store'),
+                'destroy' => route('organization.statuses.destroy', ['status' => '__ID__']),
+                'transitions' => route('organization.statuses.transitions'),
+                'reorder' => route('organization.statuses.reorder'),
+                'groupStore' => route('organization.statuses.groups.store'),
+                'groupDestroy' => route('organization.statuses.groups.destroy', ['group' => '__ID__']),
+                'effectsIndex' => route('organization.statuses.effects.index'),
+            ],
+            'strings' => [
+                'title' => __('board_admin.title'),
+                'intro' => __('board_admin.intro'),
+                'automationsLink' => __('board_admin.automations_link'),
+                'statusesHeading' => __('board_admin.statuses'),
+                'colKey' => __('board_admin.col_key'),
+                'colLabel' => __('board_admin.col_label'),
+                'colLabelEn' => __('board_admin.col_label_en'),
+                'colColor' => __('board_admin.col_color'),
+                'colIcon' => __('board_admin.col_icon'),
+                'noIcon' => __('board_admin.no_icon'),
+                'colIsColumn' => __('board_admin.col_is_column'),
+                'colExpanded' => __('board_admin.col_expanded'),
+                'colWip' => __('board_admin.col_wip'),
+                'colGroup' => __('board_admin.col_group'),
+                'noGroup' => __('board_admin.no_group'),
+                'dragToSort' => __('board_admin.drag_to_sort'),
+                'moveUp' => __('board_admin.drag_to_sort'),
+                'moveDown' => __('board_admin.drag_to_sort'),
+                'delete' => __('board_admin.delete'),
+                'deleteStatusConfirm' => __('board_admin.delete_status_confirm'),
+                'save' => __('board_admin.save'),
+                'kind' => __('board_admin.kind'),
+                'createStatus' => __('board_admin.create_status'),
+                'groupsTitle' => __('board_admin.groups_title'),
+                'groupsIntro' => __('board_admin.groups_intro'),
+                'groupLabel' => __('board_admin.group_label'),
+                'addGroup' => __('board_admin.add_group'),
+                'deleteGroup' => __('board_admin.delete_group'),
+                'noGroups' => __('board_admin.no_groups'),
+                'transitionsTitle' => __('board_admin.transitions_title'),
+                'transitionsIntro' => __('board_admin.transitions_intro'),
+                'transitionsFrom' => __('board_admin.transitions_from'),
+                'saveTransitions' => __('board_admin.save_transitions'),
+            ],
         ]);
     }
 
@@ -160,16 +234,42 @@ class OrganizationTaskStatusController extends Controller
      * Sub-page: edit the on-enter effects (automatic field population) of every
      * status in one place — the status counterpart to the event effects page.
      */
-    public function effects(Request $request): View
+    public function effects(Request $request): InertiaResponse
     {
         $organization = $this->ownedOrganization($request);
 
-        return view('organization.status-effects', [
-            'organization' => $organization,
-            'statuses' => $organization->statuses()->get(),
+        return Inertia::render('OrganizationStatusEffects', [
+            'tabs' => OrganizationTabs::for('statuses'),
+            'flash' => ['status' => session('status'), 'error' => session('error')],
+            'statuses' => $organization->statuses()->get()->map(fn (OrgStatus $status) => [
+                'id' => $status->id,
+                'label' => $status->label,
+                'key' => $status->key,
+                'icon' => StatusIcons::svg($status->icon),
+                'color_token' => $status->color_token,
+                'effects' => collect($status->on_enter_effects ?? [])->map(fn ($effect) => [
+                    'field' => $effect['field'] ?? '',
+                    'value' => $effect['value'] ?? '',
+                    'only_if_empty' => (bool) ($effect['only_if_empty'] ?? false),
+                ])->values()->all(),
+            ])->values(),
             'effectFields' => StatusEffects::ALLOWED_FIELDS,
-            'iconKeys' => StatusIcons::keys(),
-            'iconMarkup' => StatusIcons::all(),
+            'urls' => [
+                'updateAll' => route('organization.statuses.effects.update-all'),
+                'statusesIndex' => route('organization.statuses.index'),
+            ],
+            'strings' => [
+                'automationsTitle' => __('board_admin.automations_title'),
+                'automationsIntro' => __('board_admin.automations_intro'),
+                'backToStatuses' => __('board_admin.back_to_statuses'),
+                'colStatus' => __('board_admin.col_status'),
+                'automations' => __('board_admin.automations'),
+                'effectField' => __('board_admin.effect_field'),
+                'effectValuePlaceholder' => __('board_admin.effect_value_placeholder'),
+                'effectOnlyIfEmpty' => __('board_admin.effect_only_if_empty'),
+                'addEffect' => __('board_admin.add_effect'),
+                'save' => __('board_admin.save'),
+            ],
         ]);
     }
 

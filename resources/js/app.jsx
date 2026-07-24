@@ -24,6 +24,10 @@ import SkillSetup from './shell/pages/SkillSetup.jsx';
 import PlanstackCiSetup from './shell/pages/PlanstackCiSetup.jsx';
 import Organization from './shell/pages/Organization.jsx';
 import OrganizationCustomFields from './shell/pages/OrganizationCustomFields.jsx';
+import OrganizationStatuses from './shell/pages/OrganizationStatuses.jsx';
+import OrganizationStatusEffects from './shell/pages/OrganizationStatusEffects.jsx';
+import OrganizationEvents from './shell/pages/OrganizationEvents.jsx';
+import OrganizationEventsEffects from './shell/pages/OrganizationEventsEffects.jsx';
 
 // Seiten-Registry: „BladePage" bettet noch nicht migrierte Blade-Seiten ein,
 // echte React-Seiten werden namentlich aufgelöst. Unbekannte Namen fallen auf
@@ -53,6 +57,10 @@ const pages = {
     PlanstackCiSetup,
     Organization,
     OrganizationCustomFields,
+    OrganizationStatuses,
+    OrganizationStatusEffects,
+    OrganizationEvents,
+    OrganizationEventsEffects,
 };
 
 createInertiaApp({
