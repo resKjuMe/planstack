@@ -6,6 +6,22 @@
 return [
     'releases' => [
         [
+            'version' => '2.4.0',
+            'date' => '2026-07-24',
+            'tldr' => [
+                'de' => ['Benachrichtigungen als Seitenleiste'],
+                'en' => ['Notifications as a sidebar'],
+            ],
+            'changes' => [
+                'de' => [
+                    'Neu: Du entscheidest jetzt selbst, wie Benachrichtigungen dargestellt werden. Unter „Profil" wählst du zwischen der klassischen Glocke oben rechts (Flyout beim Klick) und einer dauerhaft ausgeklappten Seitenleiste, die die letzten Ereignisse immer im Blick behält. Auf schmalen Bildschirmen bleibt die Glocke als Zugang erhalten.',
+                ],
+                'en' => [
+                    'New: You now decide how notifications are shown. Under "Profile" you can switch between the classic bell in the top right (a flyout on click) and a permanently expanded sidebar that keeps the latest events always in view. On narrow screens the bell remains available as the entry point.',
+                ],
+            ],
+        ],
+        [
             'version' => '2.3.0',
             'date' => '2026-07-24',
             'tldr' => [

@@ -41,7 +41,7 @@ function Saved({ show, label }) {
 }
 
 function ProfileInfoForm({ user, urls, flash, strings }) {
-    const form = useForm({ name: user.name, email: user.email, locale: user.locale });
+    const form = useForm({ name: user.name, email: user.email, locale: user.locale, notification_display: user.notificationDisplay });
 
     const submit = (e) => { e.preventDefault(); form.patch(urls.profileUpdate); };
 
@@ -84,6 +84,16 @@ function ProfileInfoForm({ user, urls, flash, strings }) {
                         <option value="en">{strings.englishUs}</option>
                     </select>
                     {err(form, 'locale')}
+                </div>
+
+                <div>
+                    <label htmlFor="notification_display" className={label}>{strings.notificationDisplay}</label>
+                    <select id="notification_display" value={form.data.notification_display} onChange={(e) => form.setData('notification_display', e.target.value)} className={input}>
+                        <option value="dropdown">{strings.notificationDropdown}</option>
+                        <option value="sidebar">{strings.notificationSidebar}</option>
+                    </select>
+                    <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{strings.notificationDisplayHint}</p>
+                    {err(form, 'notification_display')}
                 </div>
 
                 <div className="flex items-center gap-4">

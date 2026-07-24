@@ -2,52 +2,19 @@
      Verbindet sich – nur auf der Domain planstack.eskju.net – über den globalen
      Alpine-Store $store.notifications (siehe resources/js/app.js) mit dem
      WebSocket-Server. Eingehende Nachrichten erhöhen den Zähler (Pill im
-     Logo-Rot #FF4B3E). Ein Klick öffnet ein Flyout mit den letzten Nachrichten
-     als JSON und markiert sie als gelesen. --}}
+     Logo-Rot #FF4B3E). Ein Klick öffnet ein Flyout mit den letzten Nachrichten.
+
+     Darstellungs-Helfer und die lokalisierten Tabellen (Event-Label, Status-Icons)
+     liefert das Alpine-Component `notificationsView` (app.js) aus dem JSON-Script
+     #notifications-meta (app-root.blade.php). Diese Datei ist die klassische
+     „dropdown"-Darstellung; die dauerhaft ausgeklappte Variante steht in
+     notification-sidebar.blade.php. --}}
 @php
     $labelBase = __('nav.notifications');
     $labelNew = __('nav.new_messages');
     $labelOffline = __('nav.not_connected');
-
-    // Übersetzungs-Tabellen für die lesbare Darstellung (in der aktuellen
-    // Sprache des Betrachters gerendert): Event-Wert → Bezeichnung und die
-    // Status-Icon-Palette (Key → Inneres SVG-Markup) als Single Source of Truth.
-    $eventLabels = [];
-    foreach (\App\Enums\TaskEvent::cases() as $taskEvent) {
-        $eventLabels[$taskEvent->value] = $taskEvent->label();
-    }
-    $statusIcons = \App\Support\StatusIcons::all();
 @endphp
-<div x-data="{
-        eventLabels: @js($eventLabels),
-        statusIcons: @js($statusIcons),
-        structured(d) { return d && typeof d === 'object' && typeof d.event !== 'undefined'; },
-        eventLabel(d) { return this.eventLabels[d.event] ?? d.event; },
-        statusIcon(d) { return d.status_changed && d.status_icon ? (this.statusIcons[d.status_icon] ?? null) : null; },
-        nowTick: 0,
-        when(iso) { try { return new Date(iso).toLocaleString(); } catch (e) { return iso; } },
-        relative(iso) {
-            // nowTick lesen, damit Alpine diese Ausgabe an den Sekunden-Tick
-            // koppelt und die relative Zeit im offenen Flyout live mitzählt.
-            void this.nowTick;
-            try {
-                const t = new Date(iso).getTime();
-                if (isNaN(t)) return iso;
-                const s = Math.max(0, Math.round((Date.now() - t) / 1000));
-                const de = (document.documentElement.lang || 'de').toLowerCase().startsWith('de');
-                if (s < 5) return de ? 'gerade eben' : 'just now';
-                if (s < 60) return de ? ('vor ' + s + 's') : (s + 's ago');
-                const m = Math.floor(s / 60);
-                if (m < 60) return de ? ('vor ' + m + 'min') : (m + 'min ago');
-                const h = Math.floor(m / 60);
-                if (h < 24) return de ? ('vor ' + h + 'h') : (h + 'h ago');
-                const d = Math.floor(h / 24);
-                return de ? ('vor ' + d + 'd') : (d + 'd ago');
-            } catch (e) { return iso; }
-        },
-        raw(d) { return typeof d === 'string' ? d : JSON.stringify(d, null, 2); },
-     }"
-     x-init="setInterval(() => { if ($store.notifications.open) nowTick++ }, 1000)"
+<div x-data="notificationsView()"
      @keydown.escape.window="$store.notifications.open = false"
      @click.outside="$store.notifications.open = false"
      {{ $attributes->merge(['class' => 'relative']) }}>
@@ -80,7 +47,7 @@
         </span>
     </button>
 
-    {{-- Flyout: letzte Socket-Nachrichten als JSON --}}
+    {{-- Flyout: letzte Socket-Nachrichten --}}
     <div x-cloak
          x-show="$store.notifications.open"
          x-transition
@@ -96,42 +63,7 @@
         </div>
 
         <div class="max-h-96 overflow-auto p-2">
-            <template x-if="$store.notifications.messages.length === 0">
-                <p class="px-2 py-6 text-center text-sm text-gray-500 dark:text-gray-400">{{ __('nav.no_messages') }}</p>
-            </template>
-            <ul class="space-y-1">
-                <template x-for="(msg, i) in $store.notifications.messages" :key="i">
-                    <li class="rounded px-2 py-1.5 hover:bg-gray-50 dark:hover:bg-gray-700/40">
-                        {{-- Lesbare Darstellung: [Status-Icon bei Statuswechsel] Projekt › Task: Event --}}
-                        <template x-if="structured(msg.data)">
-                            <div class="flex items-start gap-2">
-                                <div class="flex min-w-0 flex-1 items-start gap-1.5">
-                                    {{-- Icon-Spalte immer reservieren, damit der Text ohne
-                                         Statuswechsel identisch eingerückt bleibt. --}}
-                                    <svg x-show="statusIcon(msg.data)" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-                                         class="mt-0.5 h-4 w-4 flex-none text-gray-500 dark:text-gray-400" aria-hidden="true" x-html="statusIcon(msg.data)"></svg>
-                                    <span x-show="!statusIcon(msg.data)" class="mt-0.5 h-4 w-4 flex-none" aria-hidden="true"></span>
-                                    <div class="min-w-0 text-sm leading-snug text-gray-800 dark:text-gray-200">
-                                        <template x-if="msg.data.project_name">
-                                            <span class="text-gray-500 dark:text-gray-400"><span x-text="msg.data.project_name"></span> <span class="text-gray-300 dark:text-gray-600">›</span> </span>
-                                        </template>
-                                        <span class="font-medium" x-text="msg.data.task_name ?? ('#' + msg.data.task_id)"></span><span class="text-gray-500 dark:text-gray-400">:</span>
-                                        <span x-text="' ' + eventLabel(msg.data)"></span>
-                                    </div>
-                                </div>
-                                <div class="mt-0.5 flex-none whitespace-nowrap text-[10px] text-gray-400 dark:text-gray-500" x-text="relative(msg.at)" :title="when(msg.at)"></div>
-                            </div>
-                        </template>
-                        {{-- Fallback: unbekannte/rohe Nutzlast weiterhin als JSON --}}
-                        <template x-if="!structured(msg.data)">
-                            <div>
-                                <div class="mb-0.5 flex justify-end text-[10px] text-gray-400 dark:text-gray-500" x-text="relative(msg.at)" :title="when(msg.at)"></div>
-                                <pre class="overflow-x-auto whitespace-pre-wrap break-words rounded bg-gray-50 p-2 text-xs leading-snug text-gray-800 dark:bg-gray-900 dark:text-gray-200" x-text="raw(msg.data)"></pre>
-                            </div>
-                        </template>
-                    </li>
-                </template>
-            </ul>
+            <x-notification-list />
         </div>
     </div>
 </div>

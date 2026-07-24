@@ -42,9 +42,25 @@
              Desktop + Mobile). Liegt außerhalb des Inertia-Mounts, damit er über
              SPA-Navigationen hinweg erhalten bleibt; das React-Grundgerüst hängt
              die Knoten einmalig in die Navi (siehe Relocate). --}}
+        @php
+            // Lokalisierte Tabellen für die Nachrichtenliste (Event-Wert →
+            // Bezeichnung, Status-Icon-Palette). Single Source of Truth für Flyout
+            // und Sidebar; von den Alpine-Helfern (notificationsView) gelesen.
+            $eventLabels = [];
+            foreach (\App\Enums\TaskEvent::cases() as $taskEvent) {
+                $eventLabels[$taskEvent->value] = $taskEvent->label();
+            }
+        @endphp
+        <script id="notifications-meta" type="application/json">@json(['eventLabels' => $eventLabels, 'statusIcons' => \App\Support\StatusIcons::all()])</script>
+
         <div id="shell-nodes" hidden>
             <div id="shell-bell" class="relative"><x-notification-bell /></div>
             <div id="shell-bell-mobile" class="relative"><x-notification-bell /></div>
+            @auth
+                @if (Auth::user()->organization_id && Auth::user()->notification_display === 'sidebar')
+                    <div id="shell-sidebar" class="h-full"><x-notification-sidebar /></div>
+                @endif
+            @endauth
         </div>
 
         @inertia

@@ -26,6 +26,7 @@ class ProfileController extends Controller
                 'name' => $user->name,
                 'email' => $user->email,
                 'locale' => $user->locale,
+                'notificationDisplay' => $user->notification_display,
                 'isUnverified' => $user instanceof MustVerifyEmail && ! $user->hasVerifiedEmail(),
             ],
             'urls' => [
@@ -60,6 +61,10 @@ class ProfileController extends Controller
                 'language' => __('profile.language'),
                 'german' => __('profile.german'),
                 'englishUs' => __('profile.english_us'),
+                'notificationDisplay' => __('profile.notification_display'),
+                'notificationDisplayHint' => __('profile.notification_display_hint'),
+                'notificationDropdown' => __('profile.notification_dropdown'),
+                'notificationSidebar' => __('profile.notification_sidebar'),
                 'save' => __('common.save'),
                 'saved' => __('profile.saved'),
                 'updatePassword' => __('profile.update_password'),

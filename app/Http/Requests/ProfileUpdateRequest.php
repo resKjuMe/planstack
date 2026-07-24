@@ -27,6 +27,7 @@ class ProfileUpdateRequest extends FormRequest
                 Rule::unique(User::class)->ignore($this->user()->id),
             ],
             'locale' => ['required', Rule::in(['de', 'en'])],
+            'notification_display' => ['required', Rule::in(['dropdown', 'sidebar'])],
         ];
     }
 }

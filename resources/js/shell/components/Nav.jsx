@@ -23,7 +23,7 @@ function LinkIcon({ link, changelogUnseen, labels }) {
     return null;
 }
 
-export default function Nav({ shell }) {
+export default function Nav({ shell, sidebar = false }) {
     const [mobileOpen, setMobileOpen] = useState(false);
     const themeLabels = shell.labels.theme;
     const { ciUpdate, changelogUnseen } = useUpdateIndicators({
@@ -64,7 +64,9 @@ export default function Nav({ shell }) {
                     {/* Rechte Seite (Desktop) */}
                     <div className="hidden sm:flex sm:items-center sm:ms-6">
                         <ThemeToggle labels={themeLabels} className="me-1" />
-                        <Relocate sourceId="shell-bell" className="me-2" />
+                        {/* Im Sidebar-Modus uebernimmt ab lg die Seitenleiste; die
+                            Header-Glocke bleibt dort als Fallback nur bis lg sichtbar. */}
+                        <Relocate sourceId="shell-bell" className={sidebar ? 'me-2 lg:hidden' : 'me-2'} />
                         <UserMenu shell={shell} ciUpdate={ciUpdate} />
                     </div>
 

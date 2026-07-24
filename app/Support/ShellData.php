@@ -19,6 +19,7 @@ final class ShellData
 
         return [
             'hasOrg' => $user?->organization_id !== null,
+            'notificationDisplay' => $user?->notification_display ?? 'dropdown',
             'user' => [
                 'name' => $user?->name ?? '',
                 'email' => $user?->email ?? '',

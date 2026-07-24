@@ -240,6 +240,62 @@ Alpine.store('notifications', {
 // alle fachlichen Events ab), bleibt aber als dokumentierter Vertrag erhalten.
 void NOTIFICATIONS_EVENT;
 
+// Darstellungs-Helfer für die Nachrichtenliste (lesbare Aufbereitung einer
+// Payload, relative Zeit). Wird von BEIDEN Darstellungen der Glocke geteilt:
+// dem Header-Flyout (components/notification-bell.blade.php) und der dauerhaft
+// ausgeklappten Seitenleiste (components/notification-sidebar.blade.php). Die
+// server-seitig lokalisierten Tabellen (Event-Label, Status-Icon-SVGs) kommen
+// aus dem JSON-Script #notifications-meta (siehe app-root.blade.php).
+//
+// Parameter `mode`: 'dropdown' (Default) oder 'sidebar'. Im Sidebar-Modus ist
+// die Liste dauerhaft sichtbar, daher tickt die relative Zeit dort immer; im
+// Flyout nur, solange es geöffnet ist.
+Alpine.data('notificationsView', (mode = 'dropdown') => ({
+    mode,
+    eventLabels: {},
+    statusIcons: {},
+    nowTick: 0,
+
+    init() {
+        try {
+            const meta = JSON.parse(document.getElementById('notifications-meta')?.textContent || '{}');
+            this.eventLabels = meta.eventLabels || {};
+            this.statusIcons = meta.statusIcons || {};
+        } catch (e) {
+            console.error('[notifications] Meta-Daten konnten nicht gelesen werden:', e);
+        }
+        // Sekunden-Tick, an den die relative Zeit gekoppelt ist — nur wenn die
+        // Liste sichtbar ist (Flyout offen oder Sidebar-Modus).
+        setInterval(() => {
+            if (this.mode === 'sidebar' || this.$store.notifications.open) this.nowTick++;
+        }, 1000);
+    },
+
+    structured(d) { return d && typeof d === 'object' && typeof d.event !== 'undefined'; },
+    eventLabel(d) { return this.eventLabels[d.event] ?? d.event; },
+    statusIcon(d) { return d.status_changed && d.status_icon ? (this.statusIcons[d.status_icon] ?? null) : null; },
+    when(iso) { try { return new Date(iso).toLocaleString(); } catch (e) { return iso; } },
+    relative(iso) {
+        // nowTick lesen, damit Alpine diese Ausgabe an den Sekunden-Tick koppelt.
+        void this.nowTick;
+        try {
+            const t = new Date(iso).getTime();
+            if (isNaN(t)) return iso;
+            const s = Math.max(0, Math.round((Date.now() - t) / 1000));
+            const de = (document.documentElement.lang || 'de').toLowerCase().startsWith('de');
+            if (s < 5) return de ? 'gerade eben' : 'just now';
+            if (s < 60) return de ? ('vor ' + s + 's') : (s + 's ago');
+            const m = Math.floor(s / 60);
+            if (m < 60) return de ? ('vor ' + m + 'min') : (m + 'min ago');
+            const h = Math.floor(m / 60);
+            if (h < 24) return de ? ('vor ' + h + 'h') : (h + 'h ago');
+            const d = Math.floor(h / 24);
+            return de ? ('vor ' + d + 'd') : (d + 'd ago');
+        } catch (e) { return iso; }
+    },
+    raw(d) { return typeof d === 'string' ? d : JSON.stringify(d, null, 2); },
+}));
+
 window.Alpine = Alpine;
 
 Alpine.start();
