@@ -65,6 +65,10 @@ export function mapApiTask(apiTask, meta) {
         storyPoints: Number(apiTask.effort?.story_points ?? 0),
         prNumber: apiTask.pr_number ?? null,
         prUrl: apiTask.pr_url ?? null,
+        // Von GitHub gepollter PR-Zustand (nur gesetzt, wenn ein PR existiert und
+        // der Sync gelaufen ist): CI-Rollup + Anzahl unresolved Review-Threads.
+        ciStatus: apiTask.pr_ci_status ?? null,
+        unresolvedThreads: apiTask.pr_unresolved_threads ?? null,
         mergedAt: apiTask.merged_at ?? null,
         url,
         isBlocked: displayStatus === roleKeys.BLOCKED,

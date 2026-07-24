@@ -39,6 +39,12 @@ return [
     'stacked' => 'Gestapelt auf noch nicht abgeschlossene Tasks',
     'badge_blocked' => 'Blockiert',
     'badge_concerned' => 'Problematisch',
+    // PR-Zustandszeile (CI-Icon + ungelöste Kommentare)
+    'ci_success' => 'CI erfolgreich',
+    'ci_failure' => 'CI fehlgeschlagen',
+    'ci_pending' => 'CI läuft',
+    'ci_unknown' => 'CI-Status unbekannt',
+    'unresolved_comments' => 'Ungelöste Kommentare',
     'claim' => 'Beanspruchen',
     'release' => 'Freigeben',
 

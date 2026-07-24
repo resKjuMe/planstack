@@ -39,6 +39,12 @@ return [
     'stacked' => 'Stacked on unfinished tasks',
     'badge_blocked' => 'Blocked',
     'badge_concerned' => 'Concerned',
+    // PR status row (CI icon + unresolved comments)
+    'ci_success' => 'CI passed',
+    'ci_failure' => 'CI failed',
+    'ci_pending' => 'CI running',
+    'ci_unknown' => 'CI status unknown',
+    'unresolved_comments' => 'Unresolved comments',
     'claim' => 'Claim',
     'release' => 'Release',
 

@@ -37,6 +37,7 @@ class TaskResource extends JsonResource
     /** Extra keys added for `task.fields=standard`. */
     private const STANDARD_EXTRA = [
         'display_status', 'phase_id', 'effort', 'pr_number', 'pr_url',
+        'pr_ci_status', 'pr_unresolved_threads', 'pr_review_decision',
         'claimed_by_id', 'prerequisites', 'concern', 'stacking',
         'last_reviewed_at', 'last_review_recommendation', 'last_review_summary',
         'target_actual', 'test_cases', 'criticality', 'criticality_label',
@@ -116,6 +117,12 @@ class TaskResource extends JsonResource
             'custom_fields' => $this->custom_fields ?? null,
             'pr_number' => $this->pr_number,
             'pr_url' => $this->x_pr_url ?? null,
+            // Von GitHub gepollter PR-Zustand (planstack:sync-pr-status): CI-Rollup,
+            // Anzahl unresolved Review-Threads, Review-Entscheidung. Für die
+            // Board-Karte (CI-Icon + offene Kommentare).
+            'pr_ci_status' => $this->pr_ci_status,
+            'pr_unresolved_threads' => $this->pr_unresolved_threads,
+            'pr_review_decision' => $this->pr_review_decision,
             // Aggregierte Ist-Kennzahlen der (gesyncten) Pull-Requests — Grundlage
             // der Kalibrierung (Ist-Dateien vs. Schätzung affected_files). Nur wenn
             // die Relation geladen ist; null, wenn die Task keine PRs hat.

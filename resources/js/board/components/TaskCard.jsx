@@ -1,6 +1,23 @@
 import React, { useState } from 'react';
 import { useDraggable } from '@dnd-kit/core';
 
+// CI-Rollup des PR (task.ciStatus, aus planstack:sync-pr-status) → Icon + Farbe +
+// Titel-Key. SUCCESS=Haken (grün), FAILURE/ERROR=Kreuz (rot), PENDING/EXPECTED=Uhr
+// (gelb), sonst/null=Fragezeichen (grau, „unbekannt").
+const CI_CHECK = '<circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/>';
+const CI_CROSS = '<circle cx="12" cy="12" r="10"/><path d="m15 9-6 6"/><path d="m9 9 6 6"/>';
+const CI_CLOCK = '<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>';
+const CI_QUESTION = '<circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.82 1c0 2-3 3-3 3"/><path d="M12 17h.01"/>';
+const CI_META = {
+    SUCCESS: { titleKey: 'ci_success', cls: 'text-green-600 dark:text-green-500', paths: CI_CHECK },
+    FAILURE: { titleKey: 'ci_failure', cls: 'text-rose-600 dark:text-rose-500', paths: CI_CROSS },
+    ERROR: { titleKey: 'ci_failure', cls: 'text-rose-600 dark:text-rose-500', paths: CI_CROSS },
+    PENDING: { titleKey: 'ci_pending', cls: 'text-amber-500', paths: CI_CLOCK },
+    EXPECTED: { titleKey: 'ci_pending', cls: 'text-amber-500', paths: CI_CLOCK },
+};
+const CI_UNKNOWN = { titleKey: 'ci_unknown', cls: 'text-gray-400 dark:text-gray-500', paths: CI_QUESTION };
+const ciMeta = (status) => CI_META[status] ?? CI_UNKNOWN;
+
 // Presentational card (also used for the drag overlay). No drag wiring here.
 export function TaskCardView({
     task,
@@ -21,6 +38,10 @@ export function TaskCardView({
 }) {
     const [open, setOpen] = useState(false);
     const stop = (e) => e.stopPropagation();
+
+    // PR-Zustandszeile nur zeigen, wenn ein PR existiert (dann liegen — sobald der
+    // Sync gelaufen ist — CI-Status und offene Kommentare vor).
+    const ci = task.prNumber ? ciMeta(task.ciStatus) : null;
 
     return (
         <div
@@ -101,9 +122,45 @@ export function TaskCardView({
                 </span>
                 <span className="flex items-center gap-2 shrink-0">
                     {task.prNumber && (
-                        <a href={task.prUrl || undefined} onPointerDown={stop} className="text-gray-500 dark:text-gray-400 hover:underline">
-                            #{task.prNumber}
-                        </a>
+                        <>
+                            {/* CI-Status vor der PR-Nummer (Daten aus planstack:sync-pr-status). */}
+                            {ci && (
+                                <span className={`flex items-center ${ci.cls}`} title={t(ci.titleKey)}>
+                                    <svg
+                                        viewBox="0 0 24 24"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        strokeWidth="2"
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        className="h-3.5 w-3.5"
+                                        aria-hidden="true"
+                                        dangerouslySetInnerHTML={{ __html: ci.paths }}
+                                    />
+                                </span>
+                            )}
+                            <a href={task.prUrl || undefined} onPointerDown={stop} className="text-gray-500 dark:text-gray-400 hover:underline">
+                                #{task.prNumber}
+                            </a>
+                            {/* Ungelöste Review-Kommentare — nur wenn > 0. */}
+                            {(task.unresolvedThreads ?? 0) > 0 && (
+                                <span className="flex items-center gap-0.5" title={t('unresolved_comments')}>
+                                    <svg
+                                        viewBox="0 0 24 24"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        strokeWidth="2"
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        className="h-3.5 w-3.5"
+                                        aria-hidden="true"
+                                    >
+                                        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                                    </svg>
+                                    {task.unresolvedThreads}
+                                </span>
+                            )}
+                        </>
                     )}
                     {task.storyPoints ? <span>{task.storyPoints} SP</span> : null}
                 </span>
