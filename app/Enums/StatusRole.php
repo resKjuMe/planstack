@@ -13,6 +13,11 @@ namespace App\Enums;
  * is retired — the initial status is PICKABLE) so the seeded default set stays
  * wire-compatible with the existing API/MCP clients. TaskStatus is progressively
  * replaced by this enum (see the phased plan); until then both coexist.
+ *
+ * Exception: REVIEWABLE has no legacy TaskStatus equivalent — it anchors the
+ * "ready for review" pool column (default key REVIEWBAR) that tasks wait in
+ * before a reviewer takes over (→ IN_REVIEW). Orgs without that column simply
+ * carry no REVIEWABLE status; the review flow falls back to IN_REVIEW.
  */
 enum StatusRole: string
 {
@@ -22,6 +27,7 @@ enum StatusRole: string
     case CLAIMED = 'CLAIMED';
     case ANALYZING = 'ANALYZING';
     case IN_PROGRESS = 'IN_PROGRESS';
+    case REVIEWABLE = 'REVIEWABLE';
     case IN_REVIEW = 'IN_REVIEW';
     case COMPLETED = 'COMPLETED';
     case MERGED = 'MERGED';
@@ -36,7 +42,7 @@ enum StatusRole: string
             self::PICKABLE => 'waiting',
             self::BLOCKED, self::CONCERNED => 'exception',
             self::CLAIMED, self::ANALYZING, self::IN_PROGRESS => 'active',
-            self::IN_REVIEW => 'review',
+            self::REVIEWABLE, self::IN_REVIEW => 'review',
             self::COMPLETED, self::MERGED => 'done',
         };
     }

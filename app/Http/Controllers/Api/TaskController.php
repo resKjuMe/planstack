@@ -278,11 +278,14 @@ class TaskController extends ApiController
 
     /**
      * POST /api/projects/{project}/review-next — pick the first task that is
-     * IN_REVIEW and has a PR, take over its review (set reviewed_by) for the token
-     * user, and return it decorated (pr_url, summary … for reviewing). Ordered
-     * oldest-first. Concurrency-safe: reviewed_by is set via a conditional UPDATE,
-     * so two reviewers never grab the same task. Returns 200 `{"reviewing": null}`
-     * when nothing is awaiting review.
+     * awaiting review (in the REVIEWABLE pool, e.g. column REVIEWBAR, or a not-yet-
+     * taken IN_REVIEW task) and has a PR, take over its review (set reviewed_by)
+     * for the token user, and return it decorated (pr_url, summary … for
+     * reviewing). Ordered oldest-first. Concurrency-safe: reviewed_by is set via a
+     * conditional UPDATE, so two reviewers never grab the same task. The status
+     * transition (→ IN_REVIEW) is left to the client's REVIEWING event / org
+     * automation — this endpoint only stamps the reviewer. Returns 200
+     * `{"reviewing": null}` when nothing is awaiting review.
      */
     public function reviewNext(Request $request, Project $project): JsonResource|JsonResponse
     {
@@ -290,10 +293,8 @@ class TaskController extends ApiController
 
         $uid = $request->user()->id;
 
-        $reviewStatusId = $project->organization?->statusForRole(StatusRole::IN_REVIEW)?->id;
-
         $candidates = $project->tasks()
-            ->where('status_id', $reviewStatusId)
+            ->whereIn('status_id', $this->reviewPoolStatusIds($project))
             ->whereNotNull('pr_number')
             ->whereNull('reviewed_by')
             // Eigene Tasks (selbst beansprucht/umgesetzt) nicht zum Review picken.
@@ -319,15 +320,17 @@ class TaskController extends ApiController
     }
 
     /**
-     * POST .../review-claim — take over the review of a specific IN_REVIEW task
-     * (set reviewed_by) before running the actual review.
+     * POST .../review-claim — take over the review of a specific task that is
+     * awaiting review (in the REVIEWABLE pool, e.g. REVIEWBAR, or a not-yet-taken
+     * IN_REVIEW task) by stamping reviewed_by, before running the actual review.
+     * The status move (→ IN_REVIEW) is driven by the client's REVIEWING event.
      */
     public function reviewClaim(Request $request, Project $project, Task $task): JsonResource|JsonResponse
     {
         $this->authorize('update', $task);
 
-        if ($task->status !== TaskStatus::IN_REVIEW) {
-            return $this->conflict('Task ist nicht in Review.');
+        if (! in_array($task->status_id, $this->reviewPoolStatusIds($project), true)) {
+            return $this->conflict('Task liegt nicht zum Review bereit.');
         }
 
         if ($task->claimed_by_id === $request->user()->id) {
@@ -826,5 +829,24 @@ class TaskController extends ApiController
         $resource->alwaysIncludePr = true;
 
         return $resource;
+    }
+
+    /**
+     * Status IDs a task may sit in while awaiting a reviewer: the REVIEWABLE pool
+     * (e.g. column REVIEWBAR) plus IN_REVIEW — the latter covers canonical orgs
+     * without a dedicated pool column as well as orphaned IN_REVIEW tasks that
+     * have no reviewer yet. Callers additionally gate on reviewed_by (null) to
+     * skip tasks already being reviewed.
+     *
+     * @return array<int, int>
+     */
+    private function reviewPoolStatusIds(Project $project): array
+    {
+        $org = $project->organization;
+
+        return collect([
+            $org?->statusForRole(StatusRole::REVIEWABLE)?->id,
+            $org?->statusForRole(StatusRole::IN_REVIEW)?->id,
+        ])->filter()->values()->all();
     }
 }
