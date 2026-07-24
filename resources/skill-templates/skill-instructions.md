@@ -146,6 +146,32 @@ Projekt B2R:  config_version 2
 
 (Mit `<PROJECT>` nur die allgemeine Zeile + diese eine Projekt-Zeile.)
 
+## Auto-Modus (`/planstack <PROJECT> auto`)
+
+Arbeitet das Board von `<PROJECT>` **dauerhaft und unbeaufsichtigt** ab. `auto` steht in der `<TASK>`-Position (`/planstack <PROJECT> auto`) und aktiviert diesen Modus — es ist **kein** Task namens „auto". Der Haupt-Agent ist dabei nur **Supervisor**: Er startet in einer Endlosschleife nacheinander **Auto-Runs**, jeder Auto-Run läuft als **eigener Subagent** (frischer Kontext), und der Supervisor entscheidet nur anhand von dessen Ergebnisbericht, wie es weitergeht. Der Modus endet nicht von selbst — er läuft, bis der Nutzer ihn abbricht.
+
+**Supervisor-Schleife** (Haupt-Agent):
+
+1. **Einen Auto-Run als Subagent starten** (Agent-Tool, `subagent_type: general-purpose`, **synchron** — `run_in_background: false`, weil das Ergebnis die nächste Entscheidung bestimmt). Prompt = die „Auto-Run"-Anweisung unten, mit `<PROJECT>` fest eingesetzt.
+2. **Ergebnisbericht lesen.** Der Subagent liefert strukturiert zurück: `{ "action": "review|finish|pick|concern|idle", "task": "<Name|null>", "detail": "<kurz>" }`.
+3. **Verzweigen:**
+   - `action` ≠ `idle` (der Auto-Run hat etwas erledigt) → **sofort** den nächsten Auto-Run starten (zurück zu 1), ohne Pause.
+   - `action` = `idle` (nichts zu tun gefunden) → **5 Minuten warten**, dann den nächsten Auto-Run starten (zurück zu 1).
+4. Endlos wiederholen.
+
+Kurz nach dem Start dem Nutzer einmal bestätigen, dass der Auto-Modus für `<PROJECT>` läuft; danach je Auto-Run knapp berichten (eine Zeile: Aktion + Task) gemäß Einstellung `verbosity`.
+
+**Warten (5 Minuten):** Nach einem `idle`-Auto-Run 300 s echt pausieren (nicht mit Arbeit „totlaufen"), bevor der nächste startet. Kommt vorher ein Nutzer-Input, diesen bevorzugt behandeln.
+
+**Auto-Run (ein Subagent, genau eine Arbeitseinheit):** Der Subagent führt **eine** Einheit Arbeit nach folgender **Priorität** aus, meldet sie zurück und beendet sich; er startet **keine** weiteren Auto-Runs (das macht der Supervisor). Er nutzt dieselben Endpunkte, Status-/Event-Regeln (ereignisgesteuert, Status nur über Events) und lokalen Einstellungen wie die normale Abarbeitung.
+
+1. **Reviewbar?** Liegt mindestens ein Task zum Review bereit (`REVIEWBAR`-Pool bzw. noch nicht übernommener `IN_REVIEW`, mit PR, nicht selbst umgesetzt), den **ersten** davon reviewen — vollständiger **Review**-Flow (siehe „Review": `review-next`/`review-claim`, `REVIEWING`→`REVIEWED`→`APPROVED`/`CHANGES_REQUESTED`, Ergebnis erfassen). → `action: "review"`.
+2. **Sonst: eigene offene Tasks?** Gibt es Tasks, die **ich selbst** beansprucht habe und die noch in Arbeit sind (Status *beansprucht / in Analyse / in Arbeit / in Bereinigung*), den **ersten** davon **bis zu einem polierten PR** (`POLISHED`) fertigstellen — den ereignisgesteuerten Zyklus ab dem aktuellen Status weiterführen (Analyse → Umsetzung → PR → Politur/Babysit), inkl. lokaler Checks gemäß Einstellungen. → `action: "finish"`.
+3. **Sonst: pickbar?** Ist ein Task pickbar, per `claim-next` den **besten** beanspruchen und **bis der PR erstellt ist** (`PROCESSED`) umsetzen. → `action: "pick"`.
+4. **Sonst:** nichts zu tun. → `action: "idle"`.
+
+Eigene Tasks (Schritt 2) ermittelt der Subagent über das Board bzw. `GET /tasks`, gefiltert auf die eigene Beanspruchung (Identität = der Board-Nutzer dieses Tokens) und einen Arbeits-Status. Meldet ein Schritt einen **Concern** statt einer Umsetzung, gilt der Auto-Run als „hat etwas getan" (`action: "concern"`, nicht `idle`). Nicht pickbare/übernehmbare Tasks nie erzwingen.
+
 ## Review (`/planstack review [<PROJECT>] [<TASK>]`)
 
 Reviewt Tasks, die **zum Review bereitliegen**: im Pool-Status `REVIEWBAR` (die Spalte *vor* `IN_REVIEW`) oder in einem noch nicht übernommenen `IN_REVIEW` — jeweils mit PR. **Eigene Tasks (selbst beansprucht/umgesetzt) sind nicht reviewbar** — `review-next` überspringt sie, ein gezielter Aufruf darauf wird abgelehnt. Das Übernehmen setzt nur `reviewed_by`; die Verschiebung nach `IN_REVIEW` löst das `REVIEWING`-Event über die Org-Automation aus (die Endpunkte verschieben nicht selbst). Ablauf:

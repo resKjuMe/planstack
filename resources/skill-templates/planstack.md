@@ -1,7 +1,7 @@
 ---
 name: planstack
 description: Planstack-Boards über die REST-API abarbeiten — projektübergreifend. Aufruf „/planstack <PROJECT>" (ganzes Board) oder „/planstack <PROJECT> <TASK>" (ein Task). Das Projekt kommt aus dem Argument, der Zugang aus config.json. Einziger Zustandsspeicher ist die API.
-argument-hint: <project> [task] · do <project> [task] · review [project] [task] · fix [project] <task|pr> · plan [project] · settings · update-config [project]
+argument-hint: <project> [task] · <project> auto · do <project> [task] · review [project] [task] · fix [project] <task|pr> · plan [project] · settings · update-config [project]
 ---
 
 # Planstack (Remote, projektübergreifend)
@@ -12,6 +12,7 @@ Ein Planstack-Board wird über die **REST-API** abgearbeitet: Board lesen, Task 
 
 - `/planstack <PROJECT>` — das Board von `<PROJECT>` abarbeiten (besten Pick wählen, Zyklus s. u.).
 - `/planstack <PROJECT> <TASK>` — gezielt **einen** Task (`<TASK>` = Task-Name, z. B. `C27`) dieses Projekts abarbeiten.
+- `/planstack <PROJECT> auto` — **Auto-Modus**: das Board von `<PROJECT>` dauerhaft und unbeaufsichtigt abarbeiten (reviewen → eigene Tasks fertigstellen → pickbaren Task umsetzen; bei Leerlauf 5 min warten, dann weiter). `auto` steht in der `<TASK>`-Position. Die ausführliche Anleitung ist serverseitig gepflegt (siehe „Auto-Modus").
 - `/planstack do <PROJECT> [<TASK>]` — **Alias** für die beiden Formen oben: erzwingt den Abarbeitungs-Modus (ganzes Board bzw. ein Task). Nützlich, wenn ein Projekt-Alias mit einem reservierten Sub-Kommando (`review`, `fix`, `settings`, `update-config`, `plan`) kollidiert. `<PROJECT>` = Alias **oder** id, `<TASK>` = Name **oder** id (optional).
 - `/planstack review [<PROJECT>] [<TASK>]` — in-review Task(s) mit PR reviewen (übernimmt Review, führt den Review-Skill aus, erfasst das Ergebnis; ohne Argumente projektübergreifend; siehe „Review").
 - `/planstack fix [<PROJECT>] <TASK|PR-NUMMER>` — offenen PR reparieren (Task/PR erforderlich): Merge-Konflikte auflösen, Kommentare + Review-Kommentare beantworten/fixen/resolven, rote CI korrigieren (siehe „Fix").
@@ -45,6 +46,12 @@ Alle Endpunkte laufen unter `$BASE/projects/$PROJ` (siehe Betriebshandbuch). Feh
 **A — ganzes Board (`/planstack <PROJECT>`):** dem Zyklus des Betriebshandbuchs folgen. Pro Runde `POST $BASE/projects/$PROJ/claim-next` → das wählt den besten pickbaren Task (höchste `unlocks`) und claimt ihn atomar in einem Aufruf; die Antwort ist der geclaimte Task mit Arbeitsdetails (spart `GET /board` + `claim` + `GET /task`). Dann `analyze` → umsetzen bzw. `concern` → PR → `done` → `merge`. Kommt `{"claimed": null}` zurück, ist nichts (mehr) pickbar → fertig bzw. warten.
 
 **B — ein Task (`/planstack <PROJECT> <TASK>`):** Der Task ist direkt per Name ansprechbar (Pfadsegment akzeptiert Name **oder** id) — kein name→id-Lookup nötig: `POST $BASE/projects/$PROJ/tasks/$TASK/claim`, dann `GET .../tasks/$TASK` für die Details (falls `claim.return_details` aus ist), und denselben Zyklus **nur für diesen Task** (analyze → umsetzen/concern → PR → done → merge). Ist der Task nicht pickbar (Gate offen, bereits beansprucht oder schon mit PR), das melden statt es zu erzwingen.
+
+## Auto-Modus (`/planstack <PROJECT> auto`)
+
+Arbeitet das Board von `<PROJECT>` **dauerhaft und unbeaufsichtigt** ab (`auto` in der `<TASK>`-Position, kein Task namens „auto"). Der Haupt-Agent wirkt als **Supervisor** und startet in einer Endlosschleife nacheinander **Auto-Runs**, jeder als **eigener Subagent** (synchron). Ein Auto-Run erledigt genau **eine** Arbeitseinheit nach Priorität: (1) ersten reviewbaren Task reviewen, sonst (2) ersten eigenen offenen Task bis zum polierten PR (`POLISHED`) fertigstellen, sonst (3) ersten pickbaren Task bis zum erstellten PR (`PROCESSED`) umsetzen, sonst nichts (`idle`). Hat der Auto-Run etwas getan, startet sofort der nächste; war er `idle`, wird **5 Minuten** gewartet und dann weitergemacht. Der Modus endet erst auf Nutzer-Abbruch.
+
+Die vollständige, verbindliche Anleitung (Supervisor-Schleife, Ergebnisbericht, Priorität) wird **serverseitig gepflegt** (`skill_instructions`, Abschnitt „Auto-Modus") und bei Drift (`X-Planstack-Skill-Revision`) frisch nachgeladen.
 
 ## Plan (`/planstack plan [<PROJECT>]`)
 
