@@ -138,9 +138,11 @@ export default function OrganizationStatuses({
 
     const saveAll = () => {
         // Position aus der aktuellen Reihenfolge in jede Zeile schreiben.
+        // transform() liefert in @inertiajs/react void zurück, daher nicht chainen.
         bulk.transform((data) => ({
             statuses: Object.fromEntries(order.map((id, i) => [id, { ...data.statuses[id], position: i }])),
-        })).put(urls.updateAll, { preserveScroll: true });
+        }));
+        bulk.put(urls.updateAll, { preserveScroll: true });
     };
 
     const addStatus = (e) => {
