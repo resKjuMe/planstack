@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\EventController;
 use App\Http\Controllers\Api\McpController;
+use App\Http\Controllers\Api\NextActionController;
 use App\Http\Controllers\Api\PhaseController;
 use App\Http\Controllers\Api\ChangelogController;
 use App\Http\Controllers\Api\ProjectConfigController;
@@ -50,6 +51,10 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Review: nächsten in-review Task mit PR zum Review übernehmen (Auto-Pick).
     Route::post('projects/{project}/review-next', [TaskController::class, 'reviewNext']);
+
+    // Nächste sinnvolle Aktion entscheiden (fix → review → work) und den Task
+    // atomar reservieren — {action, task} in einem Call für „/planstack auto".
+    Route::post('projects/{project}/next-action', NextActionController::class);
 
     // Org-weite Status-Konfiguration für den geteilten React-Store (einmal laden,
     // über alle Projekte/Unterseiten wiederverwenden).

@@ -53,5 +53,18 @@ return [
 
     'github_webhook_secret' => env('GITHUB_WEBHOOK_SECRET'),
 
+    /*
+    |--------------------------------------------------------------------------
+    | next-action: Fix-Lease
+    |--------------------------------------------------------------------------
+    |
+    | Wie lange (Minuten) die „fix"-Aktion von POST /projects/{p}/next-action
+    | einen Task für einen Worker reserviert. Nach Ablauf gilt der Task wieder
+    | als frei (ein toter Worker gibt den PR automatisch frei).
+    |
+    */
+
+    'fix_lease_minutes' => (int) env('PLANSTACK_FIX_LEASE_MINUTES', 15),
+
 ];
 
