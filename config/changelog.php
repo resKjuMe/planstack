@@ -6,6 +6,26 @@
 return [
     'releases' => [
         [
+            'version' => '2.3.0',
+            'date' => '2026-07-24',
+            'tldr' => [
+                'de' => ['Navigation ohne Neuladen – überall', 'Zuverlässige Live-Aktualisierungen', 'Abmelden repariert'],
+                'en' => ['Reload-free navigation everywhere', 'Reliable live updates', 'Logout fixed'],
+            ],
+            'changes' => [
+                'de' => [
+                    'Neu: Die gesamte Oberfläche wechselt jetzt ohne Neuladen der Seite. Auch Teams, Profil, Organisation (inklusive Status, Automationen und eigene Felder), FAQ, Changelog, der Planstack-Skill und die CI-Anleitung öffnen sofort — schwerere Inhalte erscheinen währenddessen als kurze Lade-Vorschau statt einer weißen Seite.',
+                    'Behoben: Live-Aktualisierungen kommen jetzt zuverlässig an — ändert sich an anderer Stelle (anderer Tab oder andere Person) etwas, springt z. B. die Fortschrittsanzeige „X von Y PRs" in der Summary sofort mit, ohne die Seite neu zu laden.',
+                    'Behoben: „Abmelden" im Nutzermenü funktioniert wieder.',
+                ],
+                'en' => [
+                    'New: The entire interface now switches without reloading the page. Teams, Profile, Organization (including statuses, automations and custom fields), FAQ, changelog, the Planstack skill and the CI guide open instantly too — heavier content shows a brief loading preview instead of a blank page while it arrives.',
+                    'Fixed: Live updates now arrive reliably — when something changes elsewhere (another tab or another person), the progress readout such as "X of Y PRs" in the summary updates immediately, without reloading the page.',
+                    'Fixed: "Sign out" in the user menu works again.',
+                ],
+            ],
+        ],
+        [
             'version' => '2.2.0',
             'date' => '2026-07-23',
             'tldr' => [
