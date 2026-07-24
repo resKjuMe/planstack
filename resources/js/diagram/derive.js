@@ -24,7 +24,12 @@ function categoryOf(role, kind) {
             return 'analyzing';
         case 'IN_PROGRESS':
             return 'inprogress';
+        case 'REVIEWABLE':
         case 'IN_REVIEW':
+            // REVIEWABLE (Pool REVIEWBAR, wartet auf Reviewer) und IN_REVIEW (in
+            // Review) teilen sich die Review-Darstellung inkl. „claim review"-Button;
+            // Farbe/Label kommen weiterhin aus der Status-Config und unterscheiden
+            // die beiden Spalten.
             return 'inreview';
         case 'BLOCKED':
             return 'blocked';

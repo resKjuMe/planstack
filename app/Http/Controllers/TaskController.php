@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\StatusRole;
 use App\Enums\TaskStatus;
 use App\Http\Requests\StoreTaskRequest;
 use App\Http\Requests\UpdateTaskRequest;
@@ -204,22 +205,41 @@ class TaskController extends Controller
 
     /**
      * Claim the review of a task: stamp the current user as reviewer. Only
-     * possible while the task is in review, has no reviewer yet, and the user is
-     * not its own assignee (you don't review your own work).
+     * possible while the task awaits review (in the REVIEWABLE pool, e.g. column
+     * REVIEWBAR, or a not-yet-taken IN_REVIEW task), has no reviewer yet, and the
+     * user is not its own assignee (you don't review your own work).
      */
     public function reviewClaim(Project $project, Task $task): RedirectResponse
     {
         $this->authorize('update', $task);
 
         $user = request()->user();
+        $organization = $project->organization;
 
-        if ($task->status !== TaskStatus::IN_REVIEW
+        if (! in_array($task->status_id, $organization?->reviewPoolStatusIds() ?? [], true)
             || $task->reviewed_by !== null
             || $task->claimed_by_id === $user->id) {
             return back()->with('status', __('flash.review_cannot_claim'));
         }
 
-        $task->update(['reviewed_by' => $user->id]);
+        // Reviewer stempeln. Die Board-UI arbeitet ohne Fortschritts-Events,
+        // daher den Task hier — analog zu move() — aktiv aus dem Pool (REVIEWBAR)
+        // nach IN_REVIEW ziehen, sofern der Übergang erlaubt ist. Liegt er schon
+        // (verwaist) in IN_REVIEW, bleibt der Status und nur reviewed_by wird
+        // gesetzt.
+        $attrs = [];
+        $inReview = $organization?->statusForRole(StatusRole::IN_REVIEW);
+        if ($inReview !== null
+            && $task->status_id !== $inReview->id
+            && OrgBoardWorkflow::forOrganization($organization)->canTransition($task->orgStatus?->key, $inReview->key)) {
+            $attrs = array_merge(
+                ['status_id' => $inReview->id, 'status' => TaskStatus::tryFrom($inReview->key)?->value],
+                StatusEffects::resolve($task, $inReview, $user),
+            );
+        }
+        $attrs['reviewed_by'] = $user->id;
+
+        $task->update($attrs);
 
         return back()->with('status', __('flash.review_claimed', ['name' => $task->name]));
     }

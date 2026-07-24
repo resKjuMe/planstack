@@ -842,11 +842,6 @@ class TaskController extends ApiController
      */
     private function reviewPoolStatusIds(Project $project): array
     {
-        $org = $project->organization;
-
-        return collect([
-            $org?->statusForRole(StatusRole::REVIEWABLE)?->id,
-            $org?->statusForRole(StatusRole::IN_REVIEW)?->id,
-        ])->filter()->values()->all();
+        return $project->organization?->reviewPoolStatusIds() ?? [];
     }
 }
