@@ -39,6 +39,8 @@ class SkillSetupController extends Controller
                 'usageProject' => __('skill.works_through_this_project_s_entire'),
                 'usageTask' => __('skill.works_through_a_single_specific_task'),
                 'usageTaskShortcode' => __('skill.task_shortcode_e_g'),
+                'usageAuto' => __('skill.works_through_the_board_unattended'),
+                'usageWorkDeprecated' => __('skill.the_bare_form_without_work_is_deprecated'),
                 'usageReview' => __('skill.reviews_tasks_that_are_in_review_with_a'),
                 'usageFix' => __('skill.repairs_an_open_pr_resolves_merge'),
                 'usageSettings' => __('skill.view_change_local_settings_tests'),

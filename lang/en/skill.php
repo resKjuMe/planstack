@@ -24,6 +24,7 @@ return [
     'self_updating' => 'Self-updating:',
     'task_shortcode_e_g' => '= task shortcode, e.g.',
     'the' => 'The',
+    'the_bare_form_without_work_is_deprecated' => 'Backward compatibility: the old short form without "work" (/planstack <PROJECT> or /planstack <PROJECT> <TASK>) still works, but is deprecated and will be removed in v3.0.0 — after that, "work" is mandatory.',
     'the_folder' => 'The folder',
     'the_skill_automatically_picks_up' => 'The Skill automatically picks up changes to the operations manual, status rules, and the general Skill instructions (e.g. the PR title convention) — no re-download needed (assuming a one-time reload).',
     'the_skill_serves_every_project_your' => 'The Skill serves every project your token has access to.',
@@ -35,5 +36,6 @@ return [
     'with_a_freshly_generated_personal' => 'with a freshly generated, personal access token.',
     'with_the_planstack_skill_claude_code' => 'With the Planstack Skill, Claude Code works through a Planstack board via the REST API: read the board, pick a task, implement it, open a PR, merge. The package is',
     'works_through_a_single_specific_task' => 'Works through a single specific task',
-    'works_through_this_project_s_entire' => 'Works through this project\'s entire board (picks the best candidate, running the cycle through to merge).',
+    'works_through_the_board_unattended' => 'Auto mode: works through the board continuously and unattended (review → finish your own tasks → implement a pickable task; on idle, wait 5 min, then continue).',
+    'works_through_this_project_s_entire' => 'Works through this project\'s entire board (picks the best candidate, running the cycle through to reviewable).',
 ];

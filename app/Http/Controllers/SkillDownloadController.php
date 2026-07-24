@@ -12,8 +12,8 @@ class SkillDownloadController extends Controller
 {
     /**
      * Download the general, project-independent Planstack Claude-Code skill as a
-     * ready-to-install ZIP: the bootstrap SKILL.md (usage "/planstack <PROJECT>
-     * [<TASK>]") plus the shared operating manual + status rules, and a config.json
+     * ready-to-install ZIP: the bootstrap SKILL.md (usage "/planstack work
+     * <PROJECT> [<TASK>]") plus the shared operating manual + status rules, and a config.json
      * prefilled with the configured API URL and a freshly minted personal access
      * token for the current user.
      *

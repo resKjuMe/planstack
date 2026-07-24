@@ -24,6 +24,7 @@ return [
     'self_updating' => 'Selbst-aktualisierend:',
     'task_shortcode_e_g' => '= Task-Kürzel, z. B.',
     'the' => 'Die',
+    'the_bare_form_without_work_is_deprecated' => 'Rückwärtskompatibilität: Die alte Kurzform ohne „work" (/planstack <PROJEKT> bzw. /planstack <PROJEKT> <TASK>) funktioniert weiterhin, ist aber veraltet und wird mit v3.0.0 abgeschafft — danach ist „work" verpflichtend.',
     'the_folder' => 'Den Ordner',
     'the_skill_automatically_picks_up' => 'Betriebshandbuch, Statusregeln und die allgemeinen Skill-Anweisungen (z. B. die PR-Titel-Konvention) zieht der Skill bei Änderungen automatisch nach — ohne erneuten Download (ein einmaliges Neu-Laden vorausgesetzt).',
     'the_skill_serves_every_project_your' => 'Der Skill bedient alle Projekte, auf die dein Token Zugriff hat.',
@@ -35,5 +36,6 @@ return [
     'with_a_freshly_generated_personal' => 'mit einem frisch erzeugten, persönlichen Zugriffstoken.',
     'with_the_planstack_skill_claude_code' => 'Mit dem Planstack-Skill arbeitet Claude Code ein Planstack-Board über die REST-API ab: Board lesen, Task picken, umsetzen, PR setzen, mergen. Das Paket ist',
     'works_through_a_single_specific_task' => 'Arbeitet gezielt einen einzelnen Task ab',
-    'works_through_this_project_s_entire' => 'Arbeitet das ganze Board dieses Projekts ab (besten Pick wählen, Zyklus bis zum Merge).',
+    'works_through_the_board_unattended' => 'Auto-Modus: arbeitet das Board dauerhaft und unbeaufsichtigt ab (reviewen → eigene Tasks fertigstellen → pickbaren Task umsetzen; bei Leerlauf 5 min warten, dann weiter).',
+    'works_through_this_project_s_entire' => 'Arbeitet das ganze Board dieses Projekts ab (besten Pick wählen, Zyklus bis reviewable).',
 ];

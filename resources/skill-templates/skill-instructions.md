@@ -126,7 +126,7 @@ Task C27
 Gesamt: Planstack-Calls 1 090 · Aufgaben-Ausführung 23 700 · Summe 24 790
 ```
 
-Im Einzel-Task-Modus (`/planstack <PROJECT> <TASK>`) genügen die eine Task-Tabelle und die Gesamtsumme.
+Im Einzel-Task-Modus (`/planstack work <PROJECT> <TASK>`) genügen die eine Task-Tabelle und die Gesamtsumme.
 
 ## Konfiguration ziehen (`/planstack update-config`)
 
@@ -168,8 +168,8 @@ Kurz nach dem Start dem Nutzer einmal bestätigen, dass der Auto-Modus für `<PR
 1. **Reviewbar?** Liegt mindestens ein Task zum Review bereit (`REVIEWBAR`-Pool bzw. noch nicht übernommener `IN_REVIEW`, mit PR, nicht selbst umgesetzt), den **ersten** davon per **`/planstack review <PROJECT> <TASK>`** reviewen. → `action: "review"`.
 2. **Sonst: eigene offene Tasks?** Gibt es Tasks, die **ich selbst** beansprucht habe und die noch in Arbeit sind (Status *beansprucht / in Analyse / in Arbeit / in Bereinigung*), den **ersten** davon **bis zu einem polierten PR** fertigstellen:
    - hat er bereits einen offenen PR, der noch Politur braucht (rote CI oder offene/ungelöste Kommentare) → **`/planstack fix <PROJECT> <TASK>`**. → `action: "fix"`.
-   - sonst → **`/planstack <PROJECT> <TASK>`** (der Ein-Task-Modus führt den Zyklus ab dem aktuellen Status weiter, bis ein polierter PR steht). → `action: "finish"`.
-3. **Sonst: pickbar?** Ist ein Task pickbar, den **besten** (höchste `unlocks`) bestimmen und per **`/planstack <PROJECT> <TASK>`** bis zum erstellten PR umsetzen. → `action: "pick"`.
+   - sonst → **`/planstack work <PROJECT> <TASK>`** (der Ein-Task-Modus führt den Zyklus ab dem aktuellen Status weiter, bis ein polierter PR steht). → `action: "finish"`.
+3. **Sonst: pickbar?** Ist ein Task pickbar, den **besten** (höchste `unlocks`) bestimmen und per **`/planstack work <PROJECT> <TASK>`** bis zum erstellten PR umsetzen. → `action: "pick"`.
 4. **Sonst:** nichts zu tun, kein Sub-Kommando aufrufen. → `action: "idle"`.
 
 Der Subagent ermittelt den konkreten `<TASK>` (Name) zuerst aus dem Board bzw. `GET /tasks` (Schritt 2 gefiltert auf die eigene Beanspruchung — Identität = der Board-Nutzer dieses Tokens — und einen Arbeits-Status) und ruft das Sub-Kommando dann gezielt mit diesem Namen auf. Das jeweilige Sub-Kommando bringt seinen eigenen (ereignisgesteuerten) Zyklus, seine lokalen Checks/Einstellungen und seine Selbst-Update-Prüfung selbst mit — der Auto-Run baut nichts davon nach. Meldet die Umsetzung einen **Concern** statt einer Änderung, gilt der Auto-Run als „hat etwas getan" (`action: "concern"`, nicht `idle`). Nicht pickbare/übernehmbare Tasks nie erzwingen.

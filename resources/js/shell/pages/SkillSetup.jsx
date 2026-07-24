@@ -54,12 +54,16 @@ export default function SkillSetup({ downloadUrl, profileUrl, strings }) {
                         <h3 className={h3}>{strings.usage}</h3>
                         <dl className="mt-3 space-y-3 text-sm">
                             <div>
-                                <dt className={`${mono} text-gray-800 dark:text-gray-100`}>/planstack &lt;PROJEKT&gt;</dt>
+                                <dt className={`${mono} text-gray-800 dark:text-gray-100`}>/planstack work &lt;PROJEKT&gt;</dt>
                                 <dd className="text-gray-600 dark:text-gray-400">{strings.usageProject}</dd>
                             </div>
                             <div>
-                                <dt className={`${mono} text-gray-800 dark:text-gray-100`}>/planstack &lt;PROJEKT&gt; &lt;TASK&gt;</dt>
+                                <dt className={`${mono} text-gray-800 dark:text-gray-100`}>/planstack work &lt;PROJEKT&gt; &lt;TASK&gt;</dt>
                                 <dd className="text-gray-600 dark:text-gray-400">{strings.usageTask} (<span className={mono}>&lt;TASK&gt;</span> {strings.usageTaskShortcode} <span className={mono}>C27</span>).</dd>
+                            </div>
+                            <div>
+                                <dt className={`${mono} text-gray-800 dark:text-gray-100`}>/planstack auto &lt;PROJEKT&gt;</dt>
+                                <dd className="text-gray-600 dark:text-gray-400">{strings.usageAuto}</dd>
                             </div>
                             <div>
                                 <dt className={`${mono} text-gray-800 dark:text-gray-100`}>/planstack review [&lt;PROJEKT&gt;] [&lt;TASK&gt;]</dt>
@@ -80,6 +84,9 @@ export default function SkillSetup({ downloadUrl, profileUrl, strings }) {
                         </dl>
                         <p className="mt-3 text-xs text-gray-400 dark:text-gray-500">
                             <span className={mono}>&lt;PROJEKT&gt;</span> {strings.usageAliasIs} <span className={mono}>L2L</span>, <span className={mono}>LOG</span>). {strings.usageServesEvery}
+                        </p>
+                        <p className="mt-2 text-xs text-amber-600 dark:text-amber-500">
+                            {strings.usageWorkDeprecated}
                         </p>
                     </div>
 

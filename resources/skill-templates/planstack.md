@@ -1,7 +1,7 @@
 ---
 name: planstack
-description: Planstack-Boards über die REST-API abarbeiten — projektübergreifend. Aufruf „/planstack <PROJECT>" (ganzes Board) oder „/planstack <PROJECT> <TASK>" (ein Task). Das Projekt kommt aus dem Argument, der Zugang aus config.json. Einziger Zustandsspeicher ist die API.
-argument-hint: <project> [task] · auto <project> · do <project> [task] · review [project] [task] · fix [project] <task|pr> · plan [project] · settings · update-config [project]
+description: Planstack-Boards über die REST-API abarbeiten — projektübergreifend. Aufruf „/planstack work <PROJECT>" (ganzes Board) oder „/planstack work <PROJECT> <TASK>" (ein Task). Das Projekt kommt aus dem Argument, der Zugang aus config.json. Einziger Zustandsspeicher ist die API.
+argument-hint: work <project> [task] · auto <project> · review [project] [task] · fix [project] <task|pr> · plan [project] · settings · update-config [project]
 ---
 
 # Planstack (Remote, projektübergreifend)
@@ -10,10 +10,9 @@ Ein Planstack-Board wird über die **REST-API** abgearbeitet: Board lesen, Task 
 
 ## Aufruf
 
-- `/planstack <PROJECT>` — das Board von `<PROJECT>` abarbeiten (besten Pick wählen, Zyklus s. u.).
-- `/planstack <PROJECT> <TASK>` — gezielt **einen** Task (`<TASK>` = Task-Name, z. B. `C27`) dieses Projekts abarbeiten.
+- `/planstack work <PROJECT>` — das Board von `<PROJECT>` abarbeiten (besten Pick wählen, Zyklus s. u.).
+- `/planstack work <PROJECT> <TASK>` — gezielt **einen** Task (`<TASK>` = Task-Name, z. B. `C27`) dieses Projekts abarbeiten. `work` steht in der **Sub-Kommando-Position** (erstes Argument); `<PROJECT>` = Alias **oder** id, `<TASK>` = Name **oder** id (optional).
 - `/planstack auto <PROJECT>` — **Auto-Modus**: das Board von `<PROJECT>` dauerhaft und unbeaufsichtigt abarbeiten (reviewen → eigene Tasks fertigstellen → pickbaren Task umsetzen; bei Leerlauf 5 min warten, dann weiter). `auto` steht in der **Sub-Kommando-Position** (erstes Argument), gefolgt vom Projekt. Die ausführliche Anleitung ist serverseitig gepflegt (siehe „Auto-Modus").
-- `/planstack do <PROJECT> [<TASK>]` — **Alias** für die beiden Formen oben: erzwingt den Abarbeitungs-Modus (ganzes Board bzw. ein Task). Nützlich, wenn ein Projekt-Alias mit einem reservierten Sub-Kommando (`auto`, `review`, `fix`, `settings`, `update-config`, `plan`) kollidiert. `<PROJECT>` = Alias **oder** id, `<TASK>` = Name **oder** id (optional).
 - `/planstack review [<PROJECT>] [<TASK>]` — in-review Task(s) mit PR reviewen (übernimmt Review, führt den Review-Skill aus, erfasst das Ergebnis; ohne Argumente projektübergreifend; siehe „Review").
 - `/planstack fix [<PROJECT>] <TASK|PR-NUMMER>` — offenen PR reparieren (Task/PR erforderlich): Merge-Konflikte auflösen, Kommentare + Review-Kommentare beantworten/fixen/resolven, rote CI korrigieren (siehe „Fix").
 - `/planstack plan [<PROJECT>]` — Projekte, Phasen und Tasks anlegen (Planung). Die Anleitung dazu ist serverseitig gepflegt und wird bei **jedem** Aufruf frisch geladen (siehe „Plan").
@@ -21,6 +20,8 @@ Ein Planstack-Board wird über die **REST-API** abgearbeitet: Board lesen, Task 
 - `/planstack update-config [<PROJECT>]` — neueste allgemeine (+ Projekt-)Konfiguration ziehen und die Versionsnummern anzeigen (siehe „Konfiguration ziehen").
 
 `<PROJECT>` ist der Projekt-Alias (z. B. `L2L`, `LOG`). Dasselbe installierte Skill bedient **alle** Projekte, auf die dein Token Zugriff hat.
+
+> **Rückwärtskompatibilität (bis v3.0.0):** Die alte Kurzform ohne `work` — `/planstack <PROJECT>` bzw. `/planstack <PROJECT> <TASK>` — funktioniert weiterhin und ist gleichbedeutend mit `work`. Sie ist **veraltet** und wird mit **v3.0.0 abgeschafft**; ab dann ist `work` verpflichtend. Das frühere Alias `/planstack do <PROJECT> [<TASK>]` bleibt als Synonym für `work` bestehen (nützlich bei Namenskollision mit einem reservierten Sub-Kommando: `work`, `auto`, `review`, `fix`, `settings`, `update-config`, `plan`).
 
 ## Zugang
 
@@ -32,27 +33,29 @@ j(){ python3 -c "import json;print(json.load(open('$CFG')).get('$1',''))"; }
 BASE=$(j base_url); TOKEN=$(j token); SKILLREV=$(j skill_revision)
 AUTH=(-H "Authorization: Bearer $TOKEN" -H "Accept: application/json" -H "Content-Type: application/json")
 
-# Aufruf: /planstack [do] <PROJECT> [<TASK>]  →  ein optionales fuehrendes "do" ist
-# ein Alias fuer den Abarbeitungs-Modus und wird verworfen; PROJ = erstes echtes
-# Argument (Alias oder id), TASK = optionales zweites (Name oder id).
+# Aufruf: /planstack work <PROJECT> [<TASK>]  →  "work" (Synonym: "do") ist das
+# Sub-Kommando fuer den Abarbeitungs-Modus und wird verworfen; PROJ = zweites
+# Argument (Alias oder id), TASK = optionales drittes (Name oder id).
 # /planstack auto <PROJECT>  →  Auto-Modus, PROJ = zweites Argument.
+# Rueckwaertskompatibel bis v3.0.0: fehlt "work"/"do", ist A1 direkt das PROJEKT
+# (veraltet, wird mit v3.0.0 abgeschafft).
 read -r A1 A2 A3 <<<"$ARGUMENTS"
-if [ "$A1" = "do" ]; then PROJ=$A2; TASK=$A3
+if [ "$A1" = "work" ] || [ "$A1" = "do" ]; then PROJ=$A2; TASK=$A3
 elif [ "$A1" = "auto" ]; then MODE=auto; PROJ=$A2
-else PROJ=$A1; TASK=$A2; fi
+else PROJ=$A1; TASK=$A2; fi   # <- veraltete Kurzform (ohne work), bis v3.0.0
 ```
 
 Alle Endpunkte laufen unter `$BASE/projects/$PROJ` (siehe Betriebshandbuch). Fehler: `401` Token · `403` kein Zugriff aufs Projekt · `404` unbekannter Alias.
 
 ## Zwei Modi
 
-**A — ganzes Board (`/planstack <PROJECT>`):** dem Zyklus des Betriebshandbuchs folgen. Pro Runde `POST $BASE/projects/$PROJ/claim-next` → das wählt den besten pickbaren Task (höchste `unlocks`) und claimt ihn atomar in einem Aufruf; die Antwort ist der geclaimte Task mit Arbeitsdetails (spart `GET /board` + `claim` + `GET /task`). Dann `analyze` → umsetzen bzw. `concern` → PR → `done` → `merge`. Kommt `{"claimed": null}` zurück, ist nichts (mehr) pickbar → fertig bzw. warten.
+**A — ganzes Board (`/planstack work <PROJECT>`):** dem Zyklus des Betriebshandbuchs folgen. Pro Runde `POST $BASE/projects/$PROJ/claim-next` → das wählt den besten pickbaren Task (höchste `unlocks`) und claimt ihn atomar in einem Aufruf; die Antwort ist der geclaimte Task mit Arbeitsdetails (spart `GET /board` + `claim` + `GET /task`). Dann `analyze` → umsetzen bzw. `concern` → PR → `done` → `merge`. Kommt `{"claimed": null}` zurück, ist nichts (mehr) pickbar → fertig bzw. warten.
 
-**B — ein Task (`/planstack <PROJECT> <TASK>`):** Der Task ist direkt per Name ansprechbar (Pfadsegment akzeptiert Name **oder** id) — kein name→id-Lookup nötig: `POST $BASE/projects/$PROJ/tasks/$TASK/claim`, dann `GET .../tasks/$TASK` für die Details (falls `claim.return_details` aus ist), und denselben Zyklus **nur für diesen Task** (analyze → umsetzen/concern → PR → done → merge). Ist der Task nicht pickbar (Gate offen, bereits beansprucht oder schon mit PR), das melden statt es zu erzwingen.
+**B — ein Task (`/planstack work <PROJECT> <TASK>`):** Der Task ist direkt per Name ansprechbar (Pfadsegment akzeptiert Name **oder** id) — kein name→id-Lookup nötig: `POST $BASE/projects/$PROJ/tasks/$TASK/claim`, dann `GET .../tasks/$TASK` für die Details (falls `claim.return_details` aus ist), und denselben Zyklus **nur für diesen Task** (analyze → umsetzen/concern → PR → done → merge). Ist der Task nicht pickbar (Gate offen, bereits beansprucht oder schon mit PR), das melden statt es zu erzwingen.
 
 ## Auto-Modus (`/planstack auto <PROJECT>`)
 
-Arbeitet das Board von `<PROJECT>` **dauerhaft und unbeaufsichtigt** ab (`auto` in der **Sub-Kommando-Position**, erstes Argument, gefolgt vom Projekt; kein Task namens „auto"). Der Haupt-Agent wirkt als **Supervisor** und startet in einer Endlosschleife nacheinander **Auto-Runs**, jeder als **eigener Subagent** (synchron). Ein Auto-Run erledigt genau **eine** Arbeitseinheit, indem er das passende bestehende Sub-Kommando (mit explizitem `<PROJECT>`/`<TASK>`) aufruft: (1) ersten reviewbaren Task via `/planstack review <PROJECT> <TASK>`, sonst (2) ersten eigenen offenen Task via `/planstack <PROJECT> <TASK>` (bzw. `/planstack fix <PROJECT> <TASK>`, wenn der PR nur noch Politur braucht) bis zum polierten PR, sonst (3) besten pickbaren Task via `/planstack <PROJECT> <TASK>` bis zum erstellten PR, sonst nichts (`idle`). Hat der Auto-Run etwas getan, startet sofort der nächste; war er `idle`, wird **5 Minuten** gewartet und dann weitergemacht. Der Modus endet erst auf Nutzer-Abbruch.
+Arbeitet das Board von `<PROJECT>` **dauerhaft und unbeaufsichtigt** ab (`auto` in der **Sub-Kommando-Position**, erstes Argument, gefolgt vom Projekt; kein Task namens „auto"). Der Haupt-Agent wirkt als **Supervisor** und startet in einer Endlosschleife nacheinander **Auto-Runs**, jeder als **eigener Subagent** (synchron). Ein Auto-Run erledigt genau **eine** Arbeitseinheit, indem er das passende bestehende Sub-Kommando (mit explizitem `<PROJECT>`/`<TASK>`) aufruft: (1) ersten reviewbaren Task via `/planstack review <PROJECT> <TASK>`, sonst (2) ersten eigenen offenen Task via `/planstack work <PROJECT> <TASK>` (bzw. `/planstack fix <PROJECT> <TASK>`, wenn der PR nur noch Politur braucht) bis zum polierten PR, sonst (3) besten pickbaren Task via `/planstack work <PROJECT> <TASK>` bis zum erstellten PR, sonst nichts (`idle`). Hat der Auto-Run etwas getan, startet sofort der nächste; war er `idle`, wird **5 Minuten** gewartet und dann weitergemacht. Der Modus endet erst auf Nutzer-Abbruch.
 
 Die vollständige, verbindliche Anleitung (Supervisor-Schleife, Ergebnisbericht, Priorität) wird **serverseitig gepflegt** (`skill_instructions`, Abschnitt „Auto-Modus") und bei Drift (`X-Planstack-Skill-Revision`) frisch nachgeladen.
 
