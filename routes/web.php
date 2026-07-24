@@ -2,7 +2,11 @@
 
 use App\Http\Controllers\ApiDocsController;
 use App\Http\Controllers\ApiTokenController;
+use App\Http\Controllers\ChangelogController;
+use App\Http\Controllers\FaqController;
 use App\Http\Controllers\GitWebhookController;
+use App\Http\Controllers\PlanstackCiSetupController;
+use App\Http\Controllers\SkillSetupController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ProjectCalibrationController;
 use App\Http\Controllers\ProjectChangelogController;
@@ -121,23 +125,23 @@ Route::middleware('auth')->group(function () {
     // ---- Erfordert die Zugehörigkeit zu einer Organisation ----
     Route::middleware(EnsureUserHasOrganization::class)->group(function () {
     // Nutzer-Changelog der Website (Versionsübersicht in der Hauptnavi)
-    Route::view('/changelog', 'changelog')->name('changelog');
+    Route::get('/changelog', ChangelogController::class)->name('changelog');
 
     // Allgemeiner Planstack-Claude-Code-Skill (projektübergreifend): eigener
     // Hauptnavi-Punkt mit vorgeschalteter Erklärungsseite (/skill) und dem
     // eigentlichen ZIP-Download (/skill/download). Das Projekt wird dem Skill
     // dynamisch als Argument übergeben (/planstack <PROJECT>).
-    Route::view('/skill', 'skill.setup')->name('skill.setup');
+    Route::get('/skill', SkillSetupController::class)->name('skill.setup');
     Route::get('/skill/download', SkillDownloadController::class)->name('skill.download');
 
     // Einrichtungs-/Anleitungsseite für die CI-Status-Anzeige (Userscript +
     // lokaler ci-server) — reguläre App-Seite mit Menü.
-    Route::view('/planstack-ci/setup', 'planstack-ci.setup')->name('planstack-ci.setup');
+    Route::get('/planstack-ci/setup', PlanstackCiSetupController::class)->name('planstack-ci.setup');
 
     // FAQ / Nachschlagewerk (Hauptnavi „FAQ")
     Route::prefix('faq')->name('faq.')->group(function () {
-        Route::view('/', 'faq.index')->name('index');
-        Route::view('/status-logic', 'faq.status-logic')->name('status-logic');
+        Route::get('/', [FaqController::class, 'index'])->name('index');
+        Route::get('/status-logic', [FaqController::class, 'statusLogic'])->name('status-logic');
     });
 
     // Teams

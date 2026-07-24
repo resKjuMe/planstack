@@ -4,12 +4,14 @@ namespace App\Http\Controllers;
 
 use App\Models\CustomField;
 use App\Models\Organization;
+use App\Support\OrganizationTabs;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
-use Illuminate\View\View;
+use Inertia\Inertia;
+use Inertia\Response as InertiaResponse;
 
 /**
  * Org-owner administration of the organization's custom task fields. Each field
@@ -28,19 +30,52 @@ class OrganizationCustomFieldController extends Controller
         return $organization;
     }
 
-    public function index(Request $request): View
+    public function index(Request $request): InertiaResponse
     {
         $organization = $this->ownedOrganization($request);
 
         $existingKeys = $organization->customFields()->pluck('key')->all();
+        $types = array_keys(CustomField::TYPES);
 
-        return view('organization.custom-fields', [
-            'organization' => $organization,
-            'fields' => $organization->customFields()->get(),
-            'types' => array_keys(CustomField::TYPES),
+        return Inertia::render('OrganizationCustomFields', [
+            'tabs' => OrganizationTabs::for('custom-fields'),
+            'flash' => ['status' => session('status'), 'error' => session('error')],
+            'fields' => $organization->customFields()->get()->map(fn ($f) => [
+                'id' => $f->id,
+                'key' => $f->key,
+                'label' => $f->label,
+                'label_en' => $f->label_en ?? '',
+                'type' => $f->type,
+                'validation' => $f->validation ?? '',
+                'destroyUrl' => route('organization.custom-fields.destroy', $f),
+            ])->values(),
+            'types' => collect($types)->map(fn ($t) => ['value' => $t, 'label' => __('custom_fields.type_'.$t)])->values(),
             // Presets, die noch nicht (nach Schlüssel) angelegt sind.
             'presets' => collect(CustomField::PRESETS)
-                ->reject(fn ($preset) => in_array($preset['key'], $existingKeys, true)),
+                ->reject(fn ($preset) => in_array($preset['key'], $existingKeys, true))
+                ->map(fn ($preset, $id) => ['id' => $id, 'label' => $preset['label'], 'key' => $preset['key']])
+                ->values(),
+            'urls' => [
+                'updateAll' => route('organization.custom-fields.update-all'),
+                'store' => route('organization.custom-fields.store'),
+                'preset' => route('organization.custom-fields.preset'),
+            ],
+            'strings' => [
+                'title' => __('custom_fields.title'),
+                'intro' => __('custom_fields.intro', ['field' => __('custom_fields.field_placeholder')]),
+                'presetsLabel' => __('custom_fields.presets_label'),
+                'colKey' => __('custom_fields.col_key'),
+                'colLabel' => __('custom_fields.col_label'),
+                'colLabelEn' => __('custom_fields.col_label_en'),
+                'colType' => __('custom_fields.col_type'),
+                'colValidation' => __('custom_fields.col_validation'),
+                'validationPlaceholder' => __('custom_fields.validation_placeholder'),
+                'noFields' => __('custom_fields.no_fields'),
+                'addField' => __('custom_fields.add_field'),
+                'save' => __('custom_fields.save'),
+                'delete' => __('custom_fields.delete'),
+                'deleteConfirm' => __('custom_fields.delete_confirm'),
+            ],
         ]);
     }
 

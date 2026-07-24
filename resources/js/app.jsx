@@ -17,6 +17,13 @@ import TeamsIndex from './shell/pages/TeamsIndex.jsx';
 import TeamCreate from './shell/pages/TeamCreate.jsx';
 import TeamShow from './shell/pages/TeamShow.jsx';
 import Profile from './shell/pages/Profile.jsx';
+import FaqIndex from './shell/pages/FaqIndex.jsx';
+import FaqStatusLogic from './shell/pages/FaqStatusLogic.jsx';
+import Changelog from './shell/pages/Changelog.jsx';
+import SkillSetup from './shell/pages/SkillSetup.jsx';
+import PlanstackCiSetup from './shell/pages/PlanstackCiSetup.jsx';
+import Organization from './shell/pages/Organization.jsx';
+import OrganizationCustomFields from './shell/pages/OrganizationCustomFields.jsx';
 
 // Seiten-Registry: „BladePage" bettet noch nicht migrierte Blade-Seiten ein,
 // echte React-Seiten werden namentlich aufgelöst. Unbekannte Namen fallen auf
@@ -39,6 +46,13 @@ const pages = {
     TeamCreate,
     TeamShow,
     Profile,
+    FaqIndex,
+    FaqStatusLogic,
+    Changelog,
+    SkillSetup,
+    PlanstackCiSetup,
+    Organization,
+    OrganizationCustomFields,
 };
 
 createInertiaApp({

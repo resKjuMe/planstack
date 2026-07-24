@@ -8,11 +8,13 @@ use App\Models\Organization;
 use App\Models\OrganizationInvitation;
 use App\Models\Team;
 use App\Models\User;
+use App\Support\OrganizationTabs;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Mail;
-use Illuminate\View\View;
+use Inertia\Inertia;
+use Inertia\Response as InertiaResponse;
 
 /**
  * Organisationszugehörigkeit: jeder User gehört höchstens einer Organisation an.
@@ -22,16 +24,76 @@ use Illuminate\View\View;
  */
 class OrganizationController extends Controller
 {
-    public function index(): View
+    public function index(): InertiaResponse
     {
         $user = Auth::user();
         $organization = $user->organization;
         $organization?->load(['owner', 'members']);
 
+        $isOwner = $organization && $organization->isOwner($user);
+
         // Teams, die der Gründer einer Einladung zuordnen kann (seine eigenen).
         $assignableTeams = $user->teams()->orderBy('name')->get();
 
-        return view('organization.index', compact('user', 'organization', 'assignableTeams'));
+        return Inertia::render('Organization', [
+            'tabs' => $organization ? OrganizationTabs::for('organization') : null,
+            'flash' => ['status' => session('status'), 'error' => session('error')],
+            'organization' => $organization ? [
+                'name' => $organization->name,
+                'ownerName' => $organization->owner?->name,
+                'memberCount' => $organization->members->count(),
+                'isOwner' => $isOwner,
+                'members' => $organization->members->sortBy('name')->map(fn ($m) => [
+                    'id' => $m->id,
+                    'name' => $m->name,
+                    'email' => $m->email,
+                    'isFounder' => $organization->isOwner($m),
+                    'isYou' => $m->id === $user->id,
+                ])->values(),
+            ] : null,
+            'assignableTeams' => $assignableTeams->map(fn ($t) => ['id' => $t->id, 'name' => $t->name])->values(),
+            'urls' => [
+                'store' => route('organization.store'),
+                'join' => route('organization.join'),
+                'invite' => route('organization.invite'),
+                'leave' => route('organization.leave'),
+                'destroy' => route('organization.destroy'),
+            ],
+            'strings' => [
+                'organization' => __('common.organization'),
+                'foundedBy' => __('organization.founded_by'),
+                'member' => __('organization.member'),
+                'members' => __('common.members'),
+                'name' => __('common.name'),
+                'email' => __('common.email'),
+                'founder' => __('organization.founder'),
+                'you' => __('organization.you'),
+                'deleteConfirmTpl' => __('organization.really_delete_organization_name_all', ['name' => '__NAME__']),
+                'deleteOrganization' => __('organization.delete_organization'),
+                'deleteHint' => __('organization.removes_the_organization_for_all'),
+                'leaveConfirm' => __('organization.really_leave_this_organization'),
+                'leaveOrganization' => __('organization.leave_organization'),
+                'inviteMembers' => __('organization.invite_members'),
+                'inviteHint' => __('organization.send_a_personal_invitation_by_email_the'),
+                'emailAddress' => __('organization.email_address'),
+                'sendInvitation' => __('organization.send_invitation'),
+                'emailPlaceholder' => __('organization.colleague_company_com'),
+                'teamsOptional' => __('organization.teams_optional'),
+                'teamsHint' => __('organization.the_invited_person_will_be_added_to'),
+                'noTeamsYet' => __('organization.you_are_not_in_any_team_yet_create_some'),
+                'noOrgIntro' => __('organization.you_don_t_belong_to_any_organization'),
+                'createOrganization' => __('organization.create_organization'),
+                'createHint' => __('organization.create_a_new_organization_you'),
+                'organizationName' => __('organization.organization_name'),
+                'create' => __('organization.create'),
+                'orgNamePlaceholder' => __('organization.e_g_my_company'),
+                'joinOrganization' => __('organization.join_organization'),
+                'joinHint' => __('organization.enter_the_personal_invitation_code_from'),
+                'invitationCode' => __('organization.invitation_code'),
+                'join' => __('organization.join'),
+                'codePlaceholder' => __('organization.code_from_the_email'),
+            ],
+        ]);
     }
 
     public function store(StoreOrganizationRequest $request): RedirectResponse
