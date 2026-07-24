@@ -2,7 +2,9 @@
 
 namespace App\Support;
 
+use App\Enums\StatusRole;
 use App\Enums\TaskStatus;
+use App\Models\OrgStatus;
 use App\Models\Phase;
 use App\Models\Project;
 use App\Models\ProjectMembership;
@@ -15,6 +17,7 @@ use iamfarhad\LaravelAuditLog\Models\EloquentAuditLog;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Str;
 
 /**
  * Baut den kombinierten, paginierten Changelog-Feed (UNION ALL über die
@@ -94,7 +97,9 @@ class ChangelogPresenter
         $changes = $query->orderByDesc('created_at')->paginate(self::PER_PAGE, ['*'], 'page', $page);
         $logs = $changes->getCollection();
 
-        $mergedStatus = $this->mergeConcernStatusFlips($logs, $concernTaskById);
+        $statusesById = $project->organization->statuses()->get()->keyBy('id');
+
+        $mergedStatus = $this->mergeConcernStatusFlips($logs, $concernTaskById, $statusesById);
         $this->mergeTaskPrNumberIntoStatusChange($logs);
 
         $userRefIds = $logs->flatMap(fn ($log) => [
@@ -107,8 +112,8 @@ class ChangelogPresenter
             ->filter()
             ->unique();
         $usersById = User::whereIn('id', $userIds)->pluck('name', 'id');
-        $refs = ['users' => $usersById, 'tasks' => $tasksById, 'phases' => $phasesById];
-        $lookups = [$project, $tasksById, $phasesById, $concernTaskById, $requirementsById, $membershipUserById, $usersById];
+        $refs = ['users' => $usersById, 'tasks' => $tasksById, 'phases' => $phasesById, 'statuses' => $statusesById];
+        $lookups = [$project, $tasksById, $phasesById, $concernTaskById, $requirementsById, $membershipUserById, $usersById, $statusesById];
 
         $items = $logs->map(function ($log, $key) use ($refs, $lookups, $mergedStatus) {
             $merged = $mergedStatus[$key] ?? null;
@@ -122,8 +127,8 @@ class ChangelogPresenter
                     'label' => __('changelog.source_task').' '.$this->auditActionVerb('updated'),
                     'rows' => [[
                         'field' => $this->auditFieldLabel('status'),
-                        'old' => $this->statusLabel($merged['old']),
-                        'new' => $this->statusLabel($merged['new']),
+                        'old' => $this->orgStatusLabelById($refs['statuses'], $merged['old']),
+                        'new' => $this->orgStatusLabelById($refs['statuses'], $merged['new']),
                     ]],
                 ]);
             }
@@ -180,15 +185,22 @@ class ChangelogPresenter
     }
 
     /**
-     * @return array<int|string, array{old: ?string, new: ?string}>
+     * @param  Collection<int, OrgStatus>  $statusesById
+     * @return array<int|string, array{old: ?int, new: ?int}>
      */
-    private function mergeConcernStatusFlips(Collection $logs, Collection $concernTaskById): array
+    private function mergeConcernStatusFlips(Collection $logs, Collection $concernTaskById, Collection $statusesById): array
     {
+        $concernedIds = $statusesById
+            ->filter(fn (OrgStatus $s) => $s->role === StatusRole::CONCERNED)
+            ->keys()
+            ->map(fn ($id) => (int) $id)
+            ->all();
+
         $statusFlips = [];
         foreach ($logs as $key => $log) {
             $new = Arr::except($log->new_values ?? [], ['updated_at']);
             if ($log->entity_class === Task::class && $log->action === 'updated'
-                && array_keys($new) === ['status'] && ($new['status'] ?? null) === TaskStatus::CONCERNED->value) {
+                && array_keys($new) === ['status_id'] && in_array((int) ($new['status_id'] ?? 0), $concernedIds, true)) {
                 $statusFlips[(int) $log->entity_id][] = $key;
             }
         }
@@ -215,8 +227,8 @@ class ChangelogPresenter
                 }
 
                 $merged[$key] = [
-                    'old' => $taskLog->old_values['status'] ?? null,
-                    'new' => $taskLog->new_values['status'] ?? null,
+                    'old' => $taskLog->old_values['status_id'] ?? null,
+                    'new' => $taskLog->new_values['status_id'] ?? null,
                 ];
                 $logs->forget($taskLogKey);
                 unset($statusFlips[$taskId][$i]);
@@ -243,7 +255,7 @@ class ChangelogPresenter
 
             if (array_keys($new) === ['pr_number']) {
                 $prOnlyByTask[$taskId][] = $key;
-            } elseif (array_key_exists('status', $new)) {
+            } elseif (array_key_exists('status_id', $new)) {
                 $statusByTask[$taskId][] = $key;
             }
         }
@@ -273,18 +285,35 @@ class ChangelogPresenter
         }
     }
 
-    private function statusLabel(?string $value): string
+    private function orgStatusLabel(OrgStatus $status): string
     {
-        if ($value === null) {
+        return Str::startsWith(app()->getLocale(), 'en') && $status->label_en
+            ? $status->label_en
+            : $status->label;
+    }
+
+    /**
+     * @param  Collection<int, OrgStatus>  $statusesById
+     */
+    private function orgStatusLabelById(Collection $statusesById, mixed $id): string
+    {
+        if ($id === null || $id === '') {
             return '—';
         }
 
-        return TaskStatus::tryFrom($value)?->label() ?? $value;
+        $status = $statusesById[(int) $id] ?? null;
+
+        return $status ? $this->orgStatusLabel($status) : (string) $id;
     }
 
-    private function statusBadge(?string $value): string
+    /**
+     * @param  Collection<int, OrgStatus>  $statusesById
+     */
+    private function orgStatusBadgeById(Collection $statusesById, mixed $id): string
     {
-        return TaskStatus::tryFrom((string) $value)?->badgeClasses() ?? 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300';
+        $status = $id !== null ? ($statusesById[(int) $id] ?? null) : null;
+
+        return StatusPalette::badge($status?->color_token);
     }
 
     private function shortName(string $name): string
@@ -305,7 +334,7 @@ class ChangelogPresenter
     }
 
     /**
-     * @param  array{users: Collection, tasks: Collection, phases: Collection}  $refs
+     * @param  array{users: Collection, tasks: Collection, phases: Collection, statuses: Collection}  $refs
      * @return array<int, array{field: string, old: ?string, new: ?string}>
      */
     private function auditDiff(EloquentAuditLog $log, array $refs): array
@@ -342,6 +371,7 @@ class ChangelogPresenter
         Collection $requirementsById,
         Collection $membershipUserById,
         Collection $usersById,
+        Collection $statusesById,
         ?array $merged = null,
     ): array {
         $id = (int) $log->entity_id;
@@ -353,10 +383,11 @@ class ChangelogPresenter
 
         if ($log->entity_class === Task::class) {
             $new = $log->new_values ?? [];
-            if ($log->action === 'updated' && array_key_exists('status', $new)) {
-                $old = $log->old_values['status'] ?? null;
-                $statusLabel = $this->statusLabel($new['status']);
-                if ($new['status'] === TaskStatus::CLAIMED->value && ! empty($new['claimed_by_id'])) {
+            if ($log->action === 'updated' && array_key_exists('status_id', $new)) {
+                $old = $log->old_values['status_id'] ?? null;
+                $newStatus = $statusesById[(int) $new['status_id']] ?? null;
+                $statusLabel = $this->orgStatusLabelById($statusesById, $new['status_id']);
+                if ($newStatus?->role === StatusRole::CLAIMED && ! empty($new['claimed_by_id'])) {
                     $claimer = $usersById[$new['claimed_by_id']] ?? null;
                     if ($claimer) {
                         $statusLabel .= ' ('.$this->initials($claimer).')';
@@ -364,10 +395,10 @@ class ChangelogPresenter
                 }
                 $segments = [$tag($tasksById[$id] ?? ($values['name'] ?? __('changelog.task_ref', ['id' => $id]))), $text(' · ')];
                 if ($old !== null) {
-                    $segments[] = ['t' => 'status', 'v' => $this->statusLabel($old), 'cls' => $this->statusBadge($old)];
+                    $segments[] = ['t' => 'status', 'v' => $this->orgStatusLabelById($statusesById, $old), 'cls' => $this->orgStatusBadgeById($statusesById, $old)];
                     $segments[] = $text(' → ');
                 }
-                $segments[] = ['t' => 'status', 'v' => $statusLabel, 'cls' => $this->statusBadge($new['status'])];
+                $segments[] = ['t' => 'status', 'v' => $statusLabel, 'cls' => $this->orgStatusBadgeById($statusesById, $new['status_id'])];
                 if (! empty($new['pr_number'])) {
                     $segments[] = $text(' ');
                     $segments[] = ['t' => 'status', 'v' => '#'.$new['pr_number'], 'cls' => 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300'];
@@ -385,7 +416,7 @@ class ChangelogPresenter
 
             if ($merged) {
                 $segments[] = $text(__('changelog.status_arrow'));
-                $segments[] = ['t' => 'status', 'v' => $this->statusLabel($merged['new']), 'cls' => $this->statusBadge($merged['new'])];
+                $segments[] = ['t' => 'status', 'v' => $this->orgStatusLabelById($statusesById, $merged['new']), 'cls' => $this->orgStatusBadgeById($statusesById, $merged['new'])];
             } else {
                 $segments[] = $text(' '.$verb);
             }
@@ -442,7 +473,7 @@ class ChangelogPresenter
             'description_acceptance_criteria' => __('changelog.field_acceptance_criteria'),
             'github_repo' => __('changelog.field_github_repo'),
             'skill_description' => __('changelog.field_skill_description'),
-            'status' => __('changelog.field_status'),
+            'status', 'status_id' => __('changelog.field_status'),
             'phase_id' => __('changelog.field_phase'),
             'position' => __('changelog.field_position'),
             'effort_story_points' => __('changelog.field_story_points'),
@@ -465,7 +496,7 @@ class ChangelogPresenter
     }
 
     /**
-     * @param  array{users: Collection, tasks: Collection, phases: Collection}  $refs
+     * @param  array{users: Collection, tasks: Collection, phases: Collection, statuses: Collection}  $refs
      */
     private function auditFormatValue(string $key, mixed $value, array $refs): string
     {
@@ -503,6 +534,10 @@ class ChangelogPresenter
 
         if ($key === 'status') {
             return TaskStatus::tryFrom((string) $value)?->label() ?? (string) $value;
+        }
+
+        if ($key === 'status_id') {
+            return $this->orgStatusLabelById($refs['statuses'], $value);
         }
 
         $str = (string) $value;
