@@ -350,6 +350,13 @@
 .ps-node .t .detail:hover { text-decoration: underline; }
 .ps-node .t .pr { font-weight: 400; text-decoration: none; }
 .ps-node .t .pr:hover { text-decoration: underline; }
+/* CI-Rollup-Icon vor der PR-Nummer (inline im Titel und im pr-badge). */
+.ps-node .ps-ci { display: inline-flex; align-items: center; vertical-align: -0.15em; }
+.ps-node .ps-ci .ps-ico { width: 12px; height: 12px; margin: 0 2px 0 0; }
+.ps-node .ps-ci-success { color: #16a34a; }
+.ps-node .ps-ci-failure { color: #dc2626; }
+.ps-node .ps-ci-pending { color: #d97706; }
+.ps-node .ps-ci-unknown { color: #9ca3af; }
 .ps-node .t .who { font-weight: 400; color: var(--ps-sub); }
 .ps-node .s { font-size: 10px; margin-top: 2px; color: var(--ps-sub); }
 .ps-node .s .ps-ico { width: 11px; height: 11px; margin-right: 2px; vertical-align: -0.1em; }

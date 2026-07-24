@@ -46,6 +46,23 @@ function svgIcon(paths) {
     return `<svg class='ps-ico' xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round' aria-hidden='true'>${paths}</svg>`;
 }
 
+// CI-Rollup-Icon vor der PR-Nummer — gleiche Logik wie auf der Board-Karte:
+// SUCCESS=Haken (grün), FAILURE/ERROR=Kreuz (rot), PENDING/EXPECTED=Uhr (gelb),
+// sonst/null=Fragezeichen (grau, „unbekannt"). Farbe via CSS-Klasse (.ps-ci-*).
+const CI_ICON = {
+    SUCCESS: { cls: 'ps-ci-success', paths: '<circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4 -4"/>' },
+    FAILURE: { cls: 'ps-ci-failure', paths: '<circle cx="12" cy="12" r="10"/><path d="m15 9 -6 6"/><path d="m9 9 6 6"/>' },
+    ERROR: { cls: 'ps-ci-failure', paths: '<circle cx="12" cy="12" r="10"/><path d="m15 9 -6 6"/><path d="m9 9 6 6"/>' },
+    PENDING: { cls: 'ps-ci-pending', paths: '<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>' },
+    EXPECTED: { cls: 'ps-ci-pending', paths: '<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>' },
+};
+const CI_UNKNOWN = { cls: 'ps-ci-unknown', paths: '<circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.82 1c0 2 -3 3 -3 3"/><path d="M12 17h.01"/>' };
+
+function ciIcon(status) {
+    const meta = CI_ICON[status] || CI_UNKNOWN;
+    return `<span class='ps-ci ${meta.cls}'>${svgIcon(meta.paths)}</span>`;
+}
+
 function initials(name) {
     return String(name).trim().split(/\s+/).filter(Boolean).slice(0, 2)
         .map((w) => w[0].toUpperCase()).join('');
@@ -111,6 +128,7 @@ function nodeLabel(n, showDesc = false) {
         : esc(n.name);
     if (n.pr && !n.done) {
         title += ' ';
+        title += ciIcon(n.ciStatus); // CI-Status vor der PR-Nummer
         title += n.prUrl
             ? `<a class='pr' href='${esc(n.prUrl)}' target='_blank' rel='noopener'>#${esc(n.pr)}</a>`
             : `<span class='pr'>#${esc(n.pr)}</span>`;
@@ -142,9 +160,10 @@ function nodeLabel(n, showDesc = false) {
     }
 
     if (n.done && n.pr) {
+        const badge = ciIcon(n.ciStatus) + `#${esc(n.pr)}`; // CI-Status vor der PR-Nummer
         parts.push(n.prUrl
-            ? `<a class='pr-badge' href='${esc(n.prUrl)}' target='_blank' rel='noopener'>#${esc(n.pr)}</a>`
-            : `<span class='pr-badge'>#${esc(n.pr)}</span>`);
+            ? `<a class='pr-badge' href='${esc(n.prUrl)}' target='_blank' rel='noopener'>${badge}</a>`
+            : `<span class='pr-badge'>${badge}</span>`);
     }
 
     if (n.bottleneck) {
