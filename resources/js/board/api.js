@@ -52,6 +52,8 @@ export function mapApiTask(apiTask, meta) {
         displayStatus,
         claimerId: apiTask.claimed_by_id ?? null,
         claimerName: apiTask.claimed_by ?? null,
+        reviewerId: apiTask.reviewed_by ?? null,
+        reviewerName: apiTask.reviewed_by_name ?? null,
         storyPoints: Number(apiTask.effort?.story_points ?? 0),
         prNumber: apiTask.pr_number ?? null,
         prUrl: apiTask.pr_url ?? null,
@@ -59,6 +61,7 @@ export function mapApiTask(apiTask, meta) {
         url,
         isBlocked: displayStatus === roleKeys.BLOCKED,
         isConcerned: displayStatus === roleKeys.CONCERNED,
+        isInReview: displayStatus === roleKeys.IN_REVIEW,
         concernSummary: apiTask.concern?.summary || apiTask.concern?.blocker || null,
     };
 }

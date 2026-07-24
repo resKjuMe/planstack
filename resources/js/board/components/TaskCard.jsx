@@ -71,6 +71,15 @@ export function TaskCardView({
                 </span>
             </div>
 
+            {/* In the "In Review" column, show the reviewer beneath the assignee
+                so it's clear who is reviewing (distinct from who worked the task). */}
+            {task.isInReview && task.reviewerName && (
+                <div className="mt-0.5 flex items-center gap-1 text-xs text-gray-400 dark:text-gray-500" title={t('reviewer')}>
+                    <span aria-hidden>👁</span>
+                    <span className="truncate">{task.reviewerName}</span>
+                </div>
+            )}
+
             {/* Split button: primary = next status, dropdown = the remaining
                 allowed statuses. Uses the same move path as drag-and-drop. */}
             {! overlay && next && onMove && (
