@@ -121,8 +121,8 @@ class Organization extends Model
      * Status IDs a task may sit in while awaiting a reviewer: the REVIEWABLE pool
      * (e.g. column REVIEWBAR) plus IN_REVIEW — the latter covers canonical orgs
      * without a dedicated pool column as well as orphaned, not-yet-taken IN_REVIEW
-     * tasks. Callers additionally gate on reviewed_by (null) to skip tasks that
-     * are already being reviewed.
+     * tasks. Callers additionally gate on reviewed_by to skip tasks that someone
+     * ELSE is already reviewing (a caller's own reservation stays resumable).
      *
      * @return array<int, int>
      */

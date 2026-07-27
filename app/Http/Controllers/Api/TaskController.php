@@ -277,14 +277,26 @@ class TaskController extends ApiController
     }
 
     /**
-     * POST /api/projects/{project}/review-next — pick the first task that is
-     * awaiting review (in the REVIEWABLE pool, e.g. column REVIEWBAR, or a not-yet-
-     * taken IN_REVIEW task) and has a PR, take over its review (set reviewed_by)
-     * for the token user, and return it decorated (pr_url, summary … for
-     * reviewing). Ordered oldest-first. Concurrency-safe: reviewed_by is set via a
-     * conditional UPDATE, so two reviewers never grab the same task. The status
-     * transition (→ IN_REVIEW) is left to the client's REVIEWING event / org
-     * automation — this endpoint only stamps the reviewer. Returns 200
+     * POST /api/projects/{project}/review-next — pick the next task that is
+     * awaiting review (in the REVIEWABLE pool, e.g. column REVIEWBAR, or an
+     * IN_REVIEW task) and has a PR, take over its review (set reviewed_by) for the
+     * token user, and return it decorated (pr_url, summary … for reviewing).
+     *
+     * Reviews the token user has ALREADY reserved but not finished (no
+     * last_reviewed_at yet) come first: since neither this endpoint nor
+     * review-claim moves the task out of the pool, an interrupted review would
+     * otherwise be invisible here and the worker would keep opening new ones while
+     * its own review stays dangling. An own review whose RESULT is already
+     * recorded is deliberately not re-offered — it waits on the status move
+     * (APPROVED/CHANGES_REQUESTED event), not on review work, and would otherwise
+     * be handed out forever. Free tasks follow, oldest first.
+     *
+     * Concurrency-safe: reviewed_by is set via a conditional UPDATE, so two
+     * reviewers never grab the same task (own reservations need no UPDATE — they
+     * are already stamped and are resumed as-is, without a redundant broadcast).
+     *
+     * The status transition (→ IN_REVIEW) is left to the client's REVIEWING event /
+     * org automation — this endpoint only stamps the reviewer. Returns 200
      * `{"reviewing": null}` when nothing is awaiting review.
      */
     public function reviewNext(Request $request, Project $project): JsonResource|JsonResponse
@@ -296,16 +308,29 @@ class TaskController extends ApiController
         $candidates = $project->tasks()
             ->whereIn('status_id', $this->reviewPoolStatusIds($project))
             ->whereNotNull('pr_number')
-            ->whereNull('reviewed_by')
+            // Freie Reviews UND die eigenen, reservierten-aber-unfertigen (→ fortsetzen).
+            ->where(fn ($q) => $q
+                ->whereNull('reviewed_by')
+                ->orWhere(fn ($own) => $own
+                    ->where('reviewed_by', $uid)
+                    ->whereNull('last_reviewed_at')))
             // Eigene Tasks (selbst beansprucht/umgesetzt) nicht zum Review picken.
             ->where(fn ($q) => $q->whereNull('claimed_by_id')->orWhere('claimed_by_id', '!=', $uid))
+            // Eigener, offener Review zuerst; danach die ältesten freien.
+            ->orderByRaw('case when reviewed_by = ? then 0 else 1 end', [$uid])
             ->orderBy('id')
             ->get();
 
         foreach ($candidates as $candidate) {
+            // Schon von mir reserviert: nichts zu stempeln (und nichts zu
+            // broadcasten) — den offenen Review einfach fortsetzen.
+            if ($candidate->reviewed_by === $uid) {
+                return $this->reviewResource($project, $candidate);
+            }
+
             $claimed = Task::whereKey($candidate->id)
                 ->whereNull('reviewed_by')
-                ->update(['reviewed_by' => $request->user()->id]);
+                ->update(['reviewed_by' => $uid]);
 
             if ($claimed === 1) {
                 // Query-Builder-Update umgeht Eloquent-Events → Socket explizit anstoßen.
@@ -835,8 +860,8 @@ class TaskController extends ApiController
      * Status IDs a task may sit in while awaiting a reviewer: the REVIEWABLE pool
      * (e.g. column REVIEWBAR) plus IN_REVIEW — the latter covers canonical orgs
      * without a dedicated pool column as well as orphaned IN_REVIEW tasks that
-     * have no reviewer yet. Callers additionally gate on reviewed_by (null) to
-     * skip tasks already being reviewed.
+     * have no reviewer yet. Callers additionally gate on reviewed_by to skip tasks
+     * a DIFFERENT user is already reviewing (own reservations are resumable).
      *
      * @return array<int, int>
      */

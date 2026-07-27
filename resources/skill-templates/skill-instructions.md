@@ -180,7 +180,7 @@ Reviewt Tasks, die **zum Review bereitliegen**: im Pool-Status `REVIEWBAR` (die 
 
 1. **Task wählen & Review übernehmen** (setzt `reviewed_by`):
    - `<PROJECT> <TASK>`: gezielt dieser Task → `POST $BASE/projects/$PROJ/tasks/$TASK/review-claim`.
-   - nur `<PROJECT>`: automatisch den ersten zum Review bereiten Task mit PR aus dem `REVIEWBAR`-Pool → `POST $BASE/projects/$PROJ/review-next`.
+   - nur `<PROJECT>`: automatisch den ersten zum Review bereiten Task mit PR aus dem `REVIEWBAR`-Pool → `POST $BASE/projects/$PROJ/review-next`. Ein **schon selbst übernommener** Review (eigener `reviewed_by`, noch ohne erfasstes Ergebnis) wird dabei **zuerst** geliefert und fortgesetzt — abgebrochene Reviews bleiben so nicht liegen. Ist das Ergebnis schon erfasst, kommt der Task nicht erneut (er wartet dann nur noch auf den Statuswechsel).
    - **weder `<TASK>` noch `<PROJECT>`**: **projektübergreifend** — `GET $BASE/projects` auflisten und `review-next` pro Projekt aufrufen, bis eines einen Task liefert.
    Antwort `{"reviewing": null}` bzw. leer ⇒ nichts zu reviewen (nächstes Projekt / fertig). Nach dem Übernehmen `ev <id> REVIEWING` melden (best-effort, `<id>` aus der Antwort).
 2. **Review ausführen:** den **Review-Skill** (`/review`) für den PR des Tasks laufen lassen — mit Strenge gemäß `review_strictness` und Prüftiefe gemäß `review_thoroughness`. Die Antwort aus Schritt 1 trägt **immer** `pr_number` (und `pr_url`, sofern Repo konfiguriert) — unabhängig von den Board-/`task.fields`-Einstellungen. Ergebnis = Empfehlung (`APPROVE` oder `REQUEST_CHANGES`) + die ausführliche Review-Analyse.

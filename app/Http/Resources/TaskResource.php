@@ -40,6 +40,9 @@ class TaskResource extends JsonResource
         'pr_ci_status', 'pr_ci_failed', 'pr_ci_running', 'pr_ci_success', 'pr_ci_waiting',
         'pr_in_merge_queue', 'pr_merge_queue_state', 'pr_mergeable', 'pr_unresolved_threads', 'pr_review_decision',
         'claimed_by_id', 'prerequisites', 'concern', 'stacking',
+        // Reviewer gehört zum Review-Zustand wie last_review_* — ohne ihn kann ein
+        // Client nicht erkennen, dass ein Review (auch sein eigener) schon läuft.
+        'reviewed_by', 'reviewed_by_name',
         'last_reviewed_at', 'last_review_recommendation', 'last_review_summary',
         'target_actual', 'test_cases', 'criticality', 'criticality_label',
         'custom_fields',

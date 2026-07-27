@@ -175,9 +175,12 @@ export function TaskCardView({
                 </span>
             </div>
 
-            {/* In the "In Review" column, show the reviewer beneath the assignee
-                so it's clear who is reviewing (distinct from who worked the task). */}
-            {task.isInReview && task.reviewerName && (
+            {/* In the review columns, show the reviewer beneath the assignee so
+                it's clear who is reviewing (distinct from who worked the task).
+                Includes the REVIEWBAR pool: review-next/review-claim reserve a
+                task there via reviewed_by without moving it, so the reservation
+                must be visible before the task reaches "in Review". */}
+            {(task.isInReview || task.isReviewable) && task.reviewerName && (
                 <div className="mt-1 flex items-center gap-1 text-xs text-gray-400 dark:text-gray-500" title={t('reviewer')}>
                     <svg
                         viewBox="0 0 24 24"

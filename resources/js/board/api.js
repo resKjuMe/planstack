@@ -75,6 +75,12 @@ export function mapApiTask(apiTask, meta) {
         isBlocked: displayStatus === roleKeys.BLOCKED,
         isConcerned: displayStatus === roleKeys.CONCERNED,
         isInReview: displayStatus === roleKeys.IN_REVIEW,
+        // Review-Pool (Spalte REVIEWBAR): wartet auf einen Reviewer — kann aber
+        // schon reserviert sein (review-next/review-claim stempeln reviewed_by,
+        // OHNE den Status zu ändern), deshalb zeigt die Karte hier denselben
+        // Reviewer wie in „in Review". Orgs ohne Pool-Spalte haben keinen
+        // REVIEWABLE-Key → immer false.
+        isReviewable: roleKeys.REVIEWABLE != null && displayStatus === roleKeys.REVIEWABLE,
         // APPROVED is a custom (role-less) status, so it's matched by its key —
         // same way MERGED is referenced directly in the board.
         isApproved: displayStatus === 'APPROVED',
