@@ -44,6 +44,9 @@ class BoardPresenter
                 'move' => route('projects.tasks.board-move', [$project, '__TASK__']),
                 'claim' => route('projects.tasks.claim', [$project, '__TASK__']),
                 'task' => route('projects.tasks.show', [$project, '__TASK__']),
+                // Anleitung für den claudetask:-Handler — die Karte verlinkt sie,
+                // wenn der Claude-Start dort fehlzuschlagen scheint.
+                'claudetaskSetup' => route('claudetask.setup'),
             ],
             'csrf' => csrf_token(),
             'strings' => $this->strings(),

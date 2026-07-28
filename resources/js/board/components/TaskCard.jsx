@@ -105,7 +105,14 @@ export function TaskCardView({
                     {/* Kopier-Menü (Task-Name, Projekt + Task-Name, URL, die drei
                         /planstack-Kommandos). Im Drag-Overlay weggelassen — dort
                         ist die Karte nicht bedienbar. */}
-                    {! overlay && <CopyMenu task={task} t={t} projectAlias={projectAlias} />}
+                    {! overlay && (
+                        <CopyMenu
+                            task={task}
+                            t={t}
+                            projectAlias={projectAlias}
+                            setupUrl={endpoints?.claudetaskSetup ?? null}
+                        />
+                    )}
                 </div>
             </div>
 

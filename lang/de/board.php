@@ -60,6 +60,9 @@ return [
     'copy_fix_command' => 'Fix-Command',
     'copy_review_command' => 'Review-Command',
     'start_with_claude' => 'In Claude starten (:command)',
+    'claudetask_not_registered' => 'Claude ließ sich nicht starten.',
+    'claudetask_clipboard_fallback' => 'Vermutlich ist der claudetask:-Handler nicht registriert. Der Prompt liegt in der Zwischenablage.',
+    'claudetask_setup_link' => 'So richtest du den Handler ein',
 
     // Drag-and-drop
     'move_error' => 'Statuswechsel abgelehnt: :message',

@@ -22,6 +22,7 @@ import FaqStatusLogic from './shell/pages/FaqStatusLogic.jsx';
 import Changelog from './shell/pages/Changelog.jsx';
 import SkillSetup from './shell/pages/SkillSetup.jsx';
 import PlanstackCiSetup from './shell/pages/PlanstackCiSetup.jsx';
+import ClaudetaskSetup from './shell/pages/ClaudetaskSetup.jsx';
 import Organization from './shell/pages/Organization.jsx';
 import OrganizationCustomFields from './shell/pages/OrganizationCustomFields.jsx';
 import OrganizationStatuses from './shell/pages/OrganizationStatuses.jsx';
@@ -55,6 +56,7 @@ const pages = {
     Changelog,
     SkillSetup,
     PlanstackCiSetup,
+    ClaudetaskSetup,
     Organization,
     OrganizationCustomFields,
     OrganizationStatuses,

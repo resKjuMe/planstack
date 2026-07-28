@@ -3,6 +3,7 @@
 use App\Http\Controllers\ApiDocsController;
 use App\Http\Controllers\ApiTokenController;
 use App\Http\Controllers\ChangelogController;
+use App\Http\Controllers\ClaudetaskSetupController;
 use App\Http\Controllers\FaqController;
 use App\Http\Controllers\GitWebhookController;
 use App\Http\Controllers\PlanstackCiSetupController;
@@ -137,6 +138,10 @@ Route::middleware('auth')->group(function () {
     // Einrichtungs-/Anleitungsseite für die CI-Status-Anzeige (Userscript +
     // lokaler ci-server) — reguläre App-Seite mit Menü.
     Route::get('/planstack-ci/setup', PlanstackCiSetupController::class)->name('planstack-ci.setup');
+
+    // Anleitung für den lokalen claudetask:-Protokoll-Handler; verlinkt aus dem
+    // Kopier-Menü der Board-Karten, wenn der Start dort fehlzuschlagen scheint.
+    Route::get('/claudetask/setup', ClaudetaskSetupController::class)->name('claudetask.setup');
 
     // FAQ / Nachschlagewerk (Hauptnavi „FAQ")
     Route::prefix('faq')->name('faq.')->group(function () {

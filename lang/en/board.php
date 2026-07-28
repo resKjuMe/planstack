@@ -60,6 +60,9 @@ return [
     'copy_fix_command' => 'Fix command',
     'copy_review_command' => 'Review command',
     'start_with_claude' => 'Start in Claude (:command)',
+    'claudetask_not_registered' => 'Claude could not be started.',
+    'claudetask_clipboard_fallback' => 'The claudetask: handler is probably not registered. The prompt is on your clipboard.',
+    'claudetask_setup_link' => 'How to set up the handler',
 
     // Drag-and-drop
     'move_error' => 'Status change rejected: :message',
