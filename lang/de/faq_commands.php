@@ -1,0 +1,173 @@
+<?php
+
+// FAQ-Artikel „Kommandos & Status" — die Sub-Kommandos des planstack-Skills und
+// die Board-Status. Die Aufrufe selbst (Pfade, gh/git-Kommandos) stehen als
+// Literale im Controller: Code laeuft nicht durch die Uebersetzung.
+return [
+    'title' => 'Kommandos & Status',
+    'intro' => 'Was die Sub-Kommandos des planstack-Skills tun, welche Aufrufe sie in welcher Reihenfolge machen, und was jeder Status genau bedeutet. Maßgeblich ist immer die API — es gibt keine lokalen Zustandsdateien.',
+
+    // Abschnitt 1: Lebenszyklus
+    'lifecycle_title' => 'Ein Task von Anfang bis Ende',
+    'lifecycle_hint' => 'Die Aufrufe in der Reihenfolge, in der sie im Normalfall passieren — mit dem Status, in dem der Task danach steht. Ein Schritt ohne Status ändert ihn nicht.',
+    'lifecycle_no_change' => 'kein Wechsel',
+    'lc_board' => 'Board lesen — pickbare Tasks, sortiert nach `unlocks`. Nur im manuellen Weg nötig; `claim-next` erledigt Auswahl und Claim in einem Aufruf.',
+    'lc_claim_next' => 'Besten pickbaren Task (höchste `unlocks`) wählen und atomar beanspruchen. Antwort `{"claimed":null}` heißt: nichts (mehr) pickbar.',
+    'lc_details' => 'Details holen — Beschreibung, Akzeptanzkriterien, Voraussetzungen. Nur nötig, wenn der Claim sie nicht schon mitgeliefert hat (`claim.return_details`).',
+    'lc_analyze' => 'Analyse beginnt. Entweder direkter Statuswechsel oder Fortschritts-Event — nie beides: hat die Organisation Events mit Status-Zuweisung hinterlegt, entfällt der direkte Wechsel.',
+    'lc_in_progress' => 'Umsetzung beginnt. Auch hier gilt: direkter Wechsel oder Event, je nach Organisations-Konfiguration.',
+    'lc_concern' => 'Abzweig statt Weiterarbeiten: Ist der Task fachlich nicht umsetzbar, wird ein Concern gemeldet statt geraten. Die Runde endet hier.',
+    'lc_pr_create' => 'PR anlegen. Titel-Konvention verbindlich: `<PROJECT>-<TASK>: <Kurzbeschreibung>`.',
+    'lc_pr_set' => 'PR am Task eintragen. Der Status bleibt, aber die Gates abhängiger Tasks öffnen sich sofort — ein offener PR gilt als geliefert.',
+    'lc_done' => 'Fertig melden. Mit gesetztem PR landet der Task in „In Review", ohne PR bleibt er „In Arbeit".',
+    'lc_review_claim' => 'Review übernehmen. Setzt nur `reviewed_by`; die Antwort trägt `pr_number` und `pr_url`. Eigene Tasks sind nicht reviewbar.',
+    'lc_review_result' => 'Review-Ergebnis erfassen — `APPROVE` oder `REQUEST_CHANGES` samt ausführlicher Analyse.',
+    'lc_merge' => 'Mergen. Idempotent — ein zweiter Aufruf ist unschädlich. Damit ist der Task vom Board.',
+    'lc_sync' => 'Alternativ ohne Skill: Der PR-Abgleich („PRs abgleichen" bzw. die CI) erkennt den Merge bei GitHub und setzt den Status serverseitig.',
+
+    // Abschnitt 2: Kommandos
+    'commands_title' => 'Die Kommandos',
+    'commands_hint' => 'Ein installiertes Skill bedient alle Projekte, auf die das Token Zugriff hat. Das Sub-Kommando steht immer an erster Stelle, danach das Projekt.',
+    'no_calls' => 'Keine API-Aufrufe — rein lokal.',
+    'th_step' => 'Schritt',
+    'th_call' => 'Aufruf',
+    'th_what' => 'Was passiert',
+    'th_status' => 'Status danach',
+
+    'cmd_work_board_purpose' => 'Arbeitet das ganze Board ab: wählt selbst den besten pickbaren Task, setzt ihn bis zum Merge um und wiederholt das, bis nichts mehr pickbar ist.',
+    'cmd_work_board_1' => 'Besten pickbaren Task wählen und claimen — beides in einem Aufruf. `{"claimed":null}` beendet den Durchlauf.',
+    'cmd_work_board_2' => 'Analyse: Beschreibung, Akzeptanzkriterien und Voraussetzungen lesen, bevor Code entsteht.',
+    'cmd_work_board_3' => 'Umsetzen — oder, wenn es fachlich nicht geht, einen Concern melden statt zu raten.',
+    'cmd_work_board_4' => 'PR anlegen und am Task eintragen. Das öffnet sofort die Gates der abhängigen Tasks.',
+    'cmd_work_board_5' => 'Fertig melden und mergen.',
+    'cmd_work_board_6' => 'Board neu lesen (gemäß `reread.policy`) und mit dem nächsten Task weitermachen — der Zustand ändert sich, während andere arbeiten.',
+
+    'cmd_work_task_purpose' => 'Arbeitet genau einen Task ab, per Name angesprochen — kein Auto-Pick. Ab dem aktuellen Status wird der Zyklus weitergeführt, nicht neu begonnen.',
+    'cmd_work_task_1' => 'Direkt per Task-Name beanspruchen — Task-Pfade nehmen Name oder id, ein name→id-Lookup ist nicht nötig. Antwort `409`: schon beansprucht, dann nicht erzwingen.',
+    'cmd_work_task_2' => 'Details holen, falls der Claim sie nicht mitgeliefert hat.',
+    'cmd_work_task_3' => 'Derselbe Zyklus wie beim ganzen Board — nur für diesen einen Task. Ist er nicht pickbar (Gate offen, beansprucht, schon mit PR), wird das gemeldet statt erzwungen.',
+
+    'cmd_auto_purpose' => 'Arbeitet das Board dauerhaft und unbeaufsichtigt ab. Der Haupt-Agent ist nur Supervisor und startet in einer Endlosschleife Auto-Runs, jeder als eigener Subagent mit genau einer Arbeitseinheit. Der Modus endet erst auf Abbruch.',
+    'cmd_auto_1' => 'Sticky-Statuszeile setzen, bevor die Arbeitseinheit beginnt — so früh wie möglich, damit dauerhaft sichtbar ist, was läuft.',
+    'cmd_auto_2' => 'Priorität 1: Liegt etwas zum Review bereit, wird das gereviewt.',
+    'cmd_auto_3' => 'Priorität 2: eigene, noch offene Tasks bis zum polierten PR fertigstellen — mit offenem PR, der nur noch Politur braucht, über `fix`.',
+    'cmd_auto_4' => 'Priorität 3: den besten pickbaren Task umsetzen, bis der PR steht.',
+    'cmd_auto_5' => 'Statt der drei Prüfungen einzeln: entscheidet fix → review → work in einem Aufruf und reserviert den Task atomar.',
+    'cmd_auto_6' => 'Nichts zu tun (`idle`): 5 Minuten warten, Statuszeile auf „Idle" setzen, dann von vorn. Hat der Auto-Run etwas getan, startet der nächste sofort.',
+
+    'cmd_review_purpose' => 'Reviewt Tasks, die zum Review bereitliegen (mit PR). Ohne Task wird automatisch einer des Projekts gewählt, ohne Projekt wird projektübergreifend gesucht. Eigene Tasks sind nicht reviewbar.',
+    'cmd_review_1' => 'Gezielt diesen Task zum Review übernehmen — setzt `reviewed_by`.',
+    'cmd_review_2' => 'Oder automatisch den nächsten bereiten Task holen. Ein bereits selbst übernommener, noch offener Review kommt zuerst und wird fortgesetzt. `{"reviewing":null}` heißt: nichts anstehend.',
+    'cmd_review_3' => 'Ohne Projekt: alle zugänglichen Projekte durchgehen, bis eines einen Task liefert.',
+    'cmd_review_4' => 'Den Review-Skill auf dem PR laufen lassen — Strenge und Prüftiefe kommen aus den lokalen Einstellungen.',
+    'cmd_review_5' => 'Ergebnis erfassen: Empfehlung plus die ausführliche Analyse. Im Default wird die Review vorher angezeigt und die Empfehlung bestätigt — nie nach der Entscheidung fragen, ohne die Review gezeigt zu haben.',
+    'cmd_review_6' => 'Nur wenn die Einstellungen es vorsehen: das Ergebnis zusätzlich am PR hinterlegen.',
+    'cmd_review_7' => 'Fortschritts-Events melden — nach dem Erfassen `REVIEWED`, danach je nach Empfehlung `APPROVED` oder `CHANGES_REQUESTED`.',
+
+    'cmd_fix_purpose' => 'Bringt einen offenen PR wieder in mergefähigen Zustand. Läuft vollständig über `gh`/`git` am PR — serverseitig passiert nichts außer den Fortschritts-Events. Task oder PR-Nummer ist Pflicht.',
+    'cmd_fix_1' => 'Ziel auflösen: Ist das Argument numerisch, ist es die PR-Nummer. Ist es ein Task-Name, kommt die PR-Nummer aus dem Task. Ohne Projekt wird projektübergreifend gesucht.',
+    'cmd_fix_2' => 'Politur beginnt.',
+    'cmd_fix_3' => 'Merge-Konflikte zum Ziel-Branch auflösen: Head-Branch auschecken, Base-Branch einmergen, auflösen, committen, pushen.',
+    'cmd_fix_4' => 'PR-/Issue-Kommentare fachlich beantworten und, wo nötig, den Code fixen.',
+    'cmd_fix_5' => 'Review-Kommentare an Codezeilen beantworten, fixen und die Threads auflösen.',
+    'cmd_fix_6' => 'Rote Checks lokal reproduzieren, korrigieren, pushen — bis die CI grün ist.',
+    'cmd_fix_7' => 'Politur fertig: CI grün, Kommentare beantwortet und aufgelöst. Damit wird der Task wieder reviewbar.',
+
+    'cmd_plan_purpose' => 'Legt Projekte, Phasen und Tasks an. Die Anleitung dazu ist eigenständig versioniert und wird bei jedem Aufruf frisch geladen — vor der Planung, nicht danach.',
+    'cmd_plan_1' => 'Pflicht zu Beginn: `plan_instructions` lesen. Sie beschreiben Ablauf, Endpunkte und den Feld-für-Feld-Leitfaden für Tasks. Existiert noch kein Projekt, genügt ein beliebiges zugängliches, nur um die Anleitung zu ziehen.',
+    'cmd_plan_2' => 'Neues Projekt anlegen (optional).',
+    'cmd_plan_3' => 'Phasen anlegen.',
+    'cmd_plan_4' => 'Tasks anlegen — `affected_files` (geschätzte Dateianzahl) immer mitgeben. Verbindliche Konvention, serverseitig aber nicht erzwungen.',
+
+    'cmd_settings_purpose' => 'Zeigt und ändert die lokalen Einstellungen des Skills — Tests, PHPStan, PHPCS, Babysit-PRs, Review-Verhalten und Ausgabe-Umfang. Diese Werte liegen nur lokal und gehen nie an den Server.',
+
+    'cmd_update_config_purpose' => 'Zieht die neueste serverseitig gepflegte Konfiguration und den aktuellen Skill-Text. Nötig ist das selten von Hand: jede Board-Antwort trägt die Revisions-Header, und bei Drift zieht das Skill von selbst nach.',
+    'cmd_update_config_1' => 'Konfiguration lesen — Einstellungen, Betriebshandbuch, Statusregeln, Skill-Anweisungen und die Einzel-Versionen (`config_versions`).',
+    'cmd_update_config_2' => 'Den ausgelieferten Skill-Text holen und die eigene SKILL.md damit überschreiben. Pflicht — wer nur die Revision hochschreibt, folgt danach dauerhaft dem alten Text, weil die Drift-Prüfung nie wieder anschlägt.',
+    'cmd_update_config_3' => 'Erst danach die gelieferte `skill_revision` als Baseline in `config.json` schreiben.',
+
+    // Abschnitt 3: Status
+    'statuses_title' => 'Was jeder Status genau macht',
+    'statuses_hint' => 'Es gibt keine formale Zustandsmaschine: jeder Status wird von einem konkreten Aufruf gesetzt oder für die Anzeige aus dem Gate abgeleitet.',
+    'statuses_note' => 'Das sind die zehn eingebauten Kern-Status. Organisationen können darüber hinaus eigene Status konfigurieren — etwa den Pool „REVIEWBAR" vor „In Review", aus dem `review-next` die Tasks holt.',
+    'th_status_single' => 'Status',
+    'th_meaning' => 'Bedeutung',
+    'th_does' => 'Was er bewirkt',
+    'th_set_by' => 'Gesetzt durch',
+    'th_next' => 'Danach',
+    'kind_waiting' => 'wartend',
+    'kind_active' => 'in Arbeit',
+    'kind_review' => 'Review',
+    'kind_done' => 'erledigt',
+    'kind_exception' => 'Ausnahme',
+    'flag_derived' => 'abgeleitet',
+    'flag_stored' => 'gespeichert',
+    'flag_counts_done' => 'zählt als erledigt',
+
+    'status_unknown_does' => 'Kein Status gespeichert. Für die Anzeige wird aus dem Gate abgeleitet, ob der Task blockiert oder startbereit ist. Zählt nicht als erledigt und erfüllt kein Gate — abhängige Tasks bleiben blockiert.',
+    'status_unknown_set_by' => 'Zustand eines neu angelegten Tasks. Es wird nichts gesetzt.',
+    'status_unknown_next' => 'Für die Anzeige „Blockiert" oder „Startbereit"; beim Claim „Beansprucht".',
+
+    'status_blocked_does' => 'Rein abgeleitet, nie gespeichert: mindestens eine Voraussetzung ist nicht geliefert (hat keinen PR und ist nicht erledigt). Der Task ist nicht pickbar, `claim-next` überspringt ihn.',
+    'status_blocked_set_by' => 'Niemanden — die Ableitung aus dem Gate. Ein Task kann nicht auf „Blockiert" gesetzt werden.',
+    'status_blocked_next' => '„Startbereit", sobald jede Voraussetzung einen PR hat oder erledigt ist.',
+
+    'status_concerned_does' => 'Nimmt den Task aus dem regulären Fluss: nicht pickbar, keine Weiterarbeit, bis jemand entscheidet. Der gemeldete Text ist Teil des Tasks und im Board sichtbar.',
+    'status_concerned_set_by' => 'Das Melden eines Concerns, oder das Fortschritts-Event `CONCERNED`. Greift nicht mehr, wenn der Task schon gemerged ist.',
+    'status_concerned_next' => 'Beim Auflösen „Beansprucht" (wenn noch beansprucht), sonst „Startbereit".',
+
+    'status_pickable_does' => 'Der Task ist startbereit: alle Voraussetzungen geliefert, nicht beansprucht, kein PR, kein erledigter Status. Aus genau diesen wählt `claim-next` den mit den meisten `unlocks`.',
+    'status_pickable_set_by' => 'Die Ableitung aus dem Gate — oder das Freigeben eines beanspruchten Tasks, das den Bearbeiter entfernt.',
+    'status_pickable_next' => '„Beansprucht" beim Claim.',
+
+    'status_claimed_does' => 'Der Task gehört einem Bearbeiter (`assignee` plus Zeitstempel) und ist damit für andere gesperrt — ein zweiter Claim antwortet `409`. Er ist nicht mehr pickbar, aber noch nicht in Arbeit.',
+    'status_claimed_set_by' => 'Der Claim (gezielt oder über `claim-next`), oder das Fortschritts-Event `CLAIMED`.',
+    'status_claimed_next' => '„In Analyse" — oder „Problem", wenn sich der Task als nicht umsetzbar erweist.',
+
+    'status_analyzing_does' => 'Signalisiert, dass Beschreibung, Akzeptanzkriterien und Voraussetzungen gelesen werden. Es entsteht noch kein Code. Der Task bleibt beansprucht und gesperrt.',
+    'status_analyzing_set_by' => 'Der Statuswechsel `analyze` oder das Fortschritts-Event `ANALYZING` — je nach Organisation eines von beiden, nie beides.',
+    'status_analyzing_next' => '„In Arbeit" — oder „Problem".',
+
+    'status_in_progress_does' => 'Die Umsetzung läuft. Der Task bleibt gesperrt; ein PR ist noch nicht eingetragen, die Gates abhängiger Tasks sind also noch zu.',
+    'status_in_progress_set_by' => 'Der Statuswechsel `in_progress` oder das Event `PROCESSING`. Ebenfalls das Ergebnis von „fertig", solange kein PR gesetzt ist.',
+    'status_in_progress_next' => '„In Review", sobald ein PR eingetragen und „fertig" gemeldet ist.',
+
+    'status_in_review_does' => 'Die Arbeit ist abgegeben und ein PR liegt vor. Der Task ist reviewbar — für andere, nicht für den Umsetzer selbst; `review-next` liefert genau solche Tasks.',
+    'status_in_review_set_by' => '„fertig" melden bei gesetztem PR. Aus dem PR-Abgleich entsteht dieser Status nie.',
+    'status_in_review_next' => '„Gemerged" nach dem Merge.',
+
+    'status_completed_does' => 'Zählt als erledigt: fließt in den Fortschritt ein und erfüllt das Gate abhängiger Tasks endgültig. Entsteht ausschließlich am Eltern-Task eines Splits.',
+    'status_completed_set_by' => 'Das Splitten eines Tasks — der Eltern-Task gilt damit als erledigt, die Kinder starten offen.',
+    'status_completed_next' => 'Endzustand.',
+
+    'status_merged_does' => 'Endzustand: zählt als erledigt, nimmt den Task vom Board und erfüllt das Gate abhängiger Tasks endgültig.',
+    'status_merged_set_by' => 'Der Merge-Aufruf (idempotent) oder der serverseitige PR-Abgleich, wenn GitHub den PR als gemerged meldet.',
+    'status_merged_next' => 'Endzustand.',
+
+    // Abschnitt 4: Events
+    'events_title' => 'Fortschritts-Events',
+    'events_hint' => 'Parallel zu den Statuswechseln meldet das Skill Fortschritt als Event. Ob daraus ein Statuswechsel wird, entscheidet die Organisation — ohne Konfiguration ist es eine reine Meldung.',
+    'events_best_effort' => 'Events sind „fire and forget": Fehler werden ignoriert, der Ablauf wird nie blockiert, und das Absetzen wird nicht in Prosa berichtet.',
+    'events_authoritative' => 'Maßgeblich ist die Antwort, nicht der Event-Name: sie liefert den tatsächlichen Status nach dem Event. `status_changed:false` ist kein Fehler, sondern heißt, dass der Guard nicht passte — dann gilt der zurückgemeldete Status.',
+    'events_merged_note' => 'Das Event `MERGED` meldet nicht das Skill, sondern der Server beim PR-Abgleich.',
+    'th_event' => 'Event',
+    'th_when' => 'Wann',
+    'th_effect' => 'Wirkung',
+    'effect_status' => 'treibt den Status',
+    'effect_info' => 'nur Protokoll',
+    'ev_claiming' => 'Vor dem Claim — nur wenn die id schon bekannt ist, also im Ein-Task-Modus.',
+    'ev_claimed' => 'Nach dem Claim.',
+    'ev_analyzing' => 'Analyse beginnt.',
+    'ev_analyzed' => 'Analyse fertig.',
+    'ev_processing' => 'Umsetzung beginnt.',
+    'ev_processed' => 'Umsetzung fertig.',
+    'ev_publishing' => 'PR wird erstellt.',
+    'ev_polishing' => 'Politur beginnt (`fix`).',
+    'ev_polished' => 'CI grün, Kommentare beantwortet und aufgelöst — der Task wird reviewbar.',
+    'ev_concerned' => 'Ein Concern wurde gemeldet.',
+    'ev_reviewing' => 'Review übernommen.',
+    'ev_reviewed' => 'Review-Ergebnis erfasst.',
+    'ev_approved' => 'Empfehlung war `APPROVE`.',
+    'ev_changes_requested' => 'Empfehlung war `REQUEST_CHANGES`.',
+    'events_default_note' => 'Die Spalte „Wirkung" zeigt die Standard-Konfiguration. Was in dieser Organisation tatsächlich einen Status setzt, steht verbindlich in den Statusregeln.',
+];

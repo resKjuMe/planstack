@@ -19,6 +19,7 @@ import TeamShow from './shell/pages/TeamShow.jsx';
 import Profile from './shell/pages/Profile.jsx';
 import FaqIndex from './shell/pages/FaqIndex.jsx';
 import FaqStatusLogic from './shell/pages/FaqStatusLogic.jsx';
+import FaqCommands from './shell/pages/FaqCommands.jsx';
 import Changelog from './shell/pages/Changelog.jsx';
 import SkillSetup from './shell/pages/SkillSetup.jsx';
 import PlanstackCiSetup from './shell/pages/PlanstackCiSetup.jsx';
@@ -53,6 +54,7 @@ const pages = {
     Profile,
     FaqIndex,
     FaqStatusLogic,
+    FaqCommands,
     Changelog,
     SkillSetup,
     PlanstackCiSetup,

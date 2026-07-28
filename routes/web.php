@@ -147,6 +147,7 @@ Route::middleware('auth')->group(function () {
     Route::prefix('faq')->name('faq.')->group(function () {
         Route::get('/', [FaqController::class, 'index'])->name('index');
         Route::get('/status-logic', [FaqController::class, 'statusLogic'])->name('status-logic');
+        Route::get('/commands', [FaqController::class, 'commands'])->name('commands');
     });
 
     // Teams

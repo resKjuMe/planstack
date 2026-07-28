@@ -24,6 +24,11 @@ class FaqController extends Controller
                     'title' => __('faq.status_logic_rules'),
                     'desc' => __('faq.how_a_task_s_status_comes_about_and'),
                 ],
+                [
+                    'href' => route('faq.commands'),
+                    'title' => __('faq_commands.title'),
+                    'desc' => __('faq_commands.intro'),
+                ],
             ],
             'strings' => [
                 'faq' => __('faq.faq'),
@@ -32,16 +37,162 @@ class FaqController extends Controller
         ]);
     }
 
+    /**
+     * Kommandos & Status: die Sub-Kommandos des planstack-Skills mit ihrer
+     * chronologischen Aufruf-Kette, jeder Status mit seiner konkreten Wirkung und
+     * die Fortschritts-Events. Inhaltlich die Kurzform des serverseitig
+     * gepflegten Betriebshandbuchs (resources/skill-templates/) — die Aufrufe
+     * selbst stehen als Literale hier, nicht in den Sprachdateien: Pfade und
+     * `gh`-Kommandos sind Code und laufen nicht durch die Übersetzung.
+     */
+    public function commands(): InertiaResponse
+    {
+        $t = fn (string $key) => __('faq_commands.'.$key);
+
+        // Ein Task von Anfang bis Ende — mit dem Status, in dem er danach steht
+        // (null = dieser Schritt ändert den Status nicht).
+        $lifecycle = [
+            ['GET /projects/{p}/board', 'lc_board', null],
+            ['POST /projects/{p}/claim-next', 'lc_claim_next', 'CLAIMED'],
+            ['GET /projects/{p}/tasks/{t}?fields=full', 'lc_details', null],
+            ['POST …/tasks/{t}/status {analyze}', 'lc_analyze', 'ANALYZING'],
+            ['POST …/tasks/{t}/status {in_progress}', 'lc_in_progress', 'IN_PROGRESS'],
+            ['POST …/tasks/{t}/concern', 'lc_concern', 'CONCERNED'],
+            ['gh pr create', 'lc_pr_create', null],
+            ['POST …/tasks/{t}/pr {pr_number}', 'lc_pr_set', null],
+            ['POST …/tasks/{t}/status {done}', 'lc_done', 'IN_REVIEW'],
+            ['POST …/tasks/{t}/review-claim', 'lc_review_claim', null],
+            ['POST …/tasks/{t}/review {recommendation,summary}', 'lc_review_result', null],
+            ['POST …/tasks/{t}/merge', 'lc_merge', 'MERGED'],
+            ['— (PR-Abgleich)', 'lc_sync', 'MERGED'],
+        ];
+
+        $commands = [
+            ['/planstack work <PROJECT>', 'cmd_work_board_purpose', [
+                ['POST /projects/{p}/claim-next', 'cmd_work_board_1'],
+                ['POST …/tasks/{t}/status {analyze}', 'cmd_work_board_2'],
+                ['POST …/tasks/{t}/status {in_progress}', 'cmd_work_board_3'],
+                ['gh pr create · POST …/tasks/{t}/pr', 'cmd_work_board_4'],
+                ['POST …/tasks/{t}/status {done} · /merge', 'cmd_work_board_5'],
+                ['GET /projects/{p}/board', 'cmd_work_board_6'],
+            ]],
+            ['/planstack work <PROJECT> <TASK>', 'cmd_work_task_purpose', [
+                ['POST /projects/{p}/tasks/{t}/claim', 'cmd_work_task_1'],
+                ['GET /projects/{p}/tasks/{t}', 'cmd_work_task_2'],
+                ['—', 'cmd_work_task_3'],
+            ]],
+            ['/planstack auto <PROJECT>', 'cmd_auto_purpose', [
+                ['~/.claude/planstack-status-<session_id>.txt', 'cmd_auto_1'],
+                ['POST /projects/{p}/review-next', 'cmd_auto_2'],
+                ['GET /projects/{p}/tasks', 'cmd_auto_3'],
+                ['POST /projects/{p}/claim-next', 'cmd_auto_4'],
+                ['POST /projects/{p}/next-action', 'cmd_auto_5'],
+                ['—', 'cmd_auto_6'],
+            ]],
+            ['/planstack review [<PROJECT>] [<TASK>]', 'cmd_review_purpose', [
+                ['POST /projects/{p}/tasks/{t}/review-claim', 'cmd_review_1'],
+                ['POST /projects/{p}/review-next', 'cmd_review_2'],
+                ['GET /projects', 'cmd_review_3'],
+                ['/review', 'cmd_review_4'],
+                ['POST …/tasks/{t}/review {recommendation,summary}', 'cmd_review_5'],
+                ['gh pr review --approve | --request-changes', 'cmd_review_6'],
+                ['POST …/tasks/{t}/events {event}', 'cmd_review_7'],
+            ]],
+            ['/planstack fix [<PROJECT>] <TASK|PR>', 'cmd_fix_purpose', [
+                ['GET /projects/{p}/tasks/{t}', 'cmd_fix_1'],
+                ['POST …/tasks/{t}/events {POLISHING}', 'cmd_fix_2'],
+                ['git fetch · git merge origin/<base>', 'cmd_fix_3'],
+                ['gh pr view --comments', 'cmd_fix_4'],
+                ['gh api …/pulls/{pr}/comments', 'cmd_fix_5'],
+                ['gh pr checks', 'cmd_fix_6'],
+                ['POST …/tasks/{t}/events {POLISHED}', 'cmd_fix_7'],
+            ]],
+            ['/planstack plan [<PROJECT>]', 'cmd_plan_purpose', [
+                ['GET /projects/{p}/config', 'cmd_plan_1'],
+                ['POST /projects', 'cmd_plan_2'],
+                ['POST /projects/{p}/phases', 'cmd_plan_3'],
+                ['POST /projects/{p}/tasks', 'cmd_plan_4'],
+            ]],
+            ['/planstack settings', 'cmd_settings_purpose', []],
+            ['/planstack update-config [<PROJECT>]', 'cmd_update_config_purpose', [
+                ['GET /projects/{p}/config', 'cmd_update_config_1'],
+                ['GET /skill', 'cmd_update_config_2'],
+                ['config.json', 'cmd_update_config_3'],
+            ]],
+        ];
+
+        // Status in derselben Reihenfolge wie die Legende der Statuslogik-Seite,
+        // damit beide Artikel dieselbe Lesereihenfolge haben. „Herkunft" und
+        // „zählt als erledigt" kommen aus dem Enum, nicht aus einer zweiten Liste.
+        $statuses = collect(array_reverse(TaskStatus::displayOrder()))
+            ->map(fn (TaskStatus $s) => [
+                'name' => $s->name,
+                'value' => $s->value,
+                'kind' => $t('kind_'.$s->kind()),
+                'meaning' => __('faq.status_'.strtolower($s->name).'_desc'),
+                'does' => $t('status_'.strtolower($s->name).'_does'),
+                'setBy' => $t('status_'.strtolower($s->name).'_set_by'),
+                'next' => $t('status_'.strtolower($s->name).'_next'),
+                'stored' => $s->isExplicit() || $s === TaskStatus::UNKNOWN || $s === TaskStatus::PICKABLE,
+                'derived' => ! $s->isExplicit(),
+                'countsDone' => $s->isDone(),
+            ])->values()->all();
+
+        $events = [
+            ['CLAIMING', 'ev_claiming', false],
+            ['CLAIMED', 'ev_claimed', true],
+            ['ANALYZING', 'ev_analyzing', true],
+            ['ANALYZED', 'ev_analyzed', false],
+            ['PROCESSING', 'ev_processing', true],
+            ['PROCESSED', 'ev_processed', false],
+            ['PUBLISHING', 'ev_publishing', false],
+            ['POLISHING', 'ev_polishing', false],
+            ['POLISHED', 'ev_polished', true],
+            ['CONCERNED', 'ev_concerned', true],
+            ['REVIEWING', 'ev_reviewing', false],
+            ['REVIEWED', 'ev_reviewed', false],
+            ['APPROVED', 'ev_approved', false],
+            ['CHANGES_REQUESTED', 'ev_changes_requested', false],
+        ];
+
+        $stringKeys = [
+            'faq', 'title', 'intro',
+            'lifecycle_title', 'lifecycle_hint', 'lifecycle_no_change',
+            'commands_title', 'commands_hint', 'no_calls',
+            'th_step', 'th_call', 'th_what', 'th_status',
+            'statuses_title', 'statuses_hint', 'statuses_note',
+            'th_status_single', 'th_meaning', 'th_does', 'th_set_by', 'th_next',
+            'flag_derived', 'flag_stored', 'flag_counts_done',
+            'events_title', 'events_hint', 'events_best_effort', 'events_authoritative',
+            'events_merged_note', 'events_default_note',
+            'th_event', 'th_when', 'th_effect', 'effect_status', 'effect_info',
+        ];
+
+        return Inertia::render('FaqCommands', [
+            'tabs' => $this->tabs('commands'),
+            'badges' => $this->badges(),
+            'lifecycle' => collect($lifecycle)->map(fn ($r) => [
+                'call' => $r[0], 'what' => $t($r[1]), 'status' => $r[2],
+            ])->all(),
+            'commands' => collect($commands)->map(fn ($c) => [
+                'name' => $c[0],
+                'purpose' => $t($c[1]),
+                'steps' => collect($c[2])->map(fn ($s) => ['call' => $s[0], 'what' => $t($s[1])])->all(),
+            ])->all(),
+            'statuses' => $statuses,
+            'events' => collect($events)->map(fn ($e) => [
+                'event' => $e[0], 'when' => $t($e[1]), 'drivesStatus' => $e[2],
+            ])->all(),
+            'strings' => collect($stringKeys)
+                ->mapWithKeys(fn (string $k) => [
+                    lcfirst(str_replace(' ', '', ucwords(str_replace('_', ' ', $k)))) => $k === 'faq' ? __('faq.faq') : $t($k),
+                ])->all(),
+        ]);
+    }
+
     public function statusLogic(): InertiaResponse
     {
-        // Status-Badge-Katalog (Name → Label + Tailwind-Klassen), damit die
-        // React-Seite Badges inline in den Fließtext setzen kann.
-        $badges = collect(TaskStatus::cases())
-            ->mapWithKeys(fn (TaskStatus $s) => [$s->name => [
-                'label' => $s->label(),
-                'classes' => $s->badgeClasses(),
-                'value' => $s->value,
-            ]])->all();
+        $badges = $this->badges();
 
         $meta = [
             'UNKNOWN' => ['faq.status_unknown_desc', ['faq.stored', 'faq.derived']],
@@ -112,7 +263,25 @@ class FaqController extends Controller
         return [
             ['key' => 'index', 'label' => __('common.overview'), 'href' => route('faq.index'), 'active' => $active === 'index'],
             ['key' => 'status-logic', 'label' => __('components.status_logic'), 'href' => route('faq.status-logic'), 'active' => $active === 'status-logic'],
+            ['key' => 'commands', 'label' => __('faq_commands.title'), 'href' => route('faq.commands'), 'active' => $active === 'commands'],
         ];
+    }
+
+    /**
+     * Status-Badge-Katalog (Name → Label + Tailwind-Klassen), damit die
+     * React-Seiten Badges inline in den Fließtext setzen können. Geteilt von der
+     * Statuslogik- und der Kommando-Seite.
+     *
+     * @return array<string, array{label: string, classes: string, value: string}>
+     */
+    private function badges(): array
+    {
+        return collect(TaskStatus::cases())
+            ->mapWithKeys(fn (TaskStatus $s) => [$s->name => [
+                'label' => $s->label(),
+                'classes' => $s->badgeClasses(),
+                'value' => $s->value,
+            ]])->all();
     }
 
     /**
