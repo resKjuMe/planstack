@@ -42,9 +42,13 @@ class FaqCommandsPageTest extends TestCase
         $this->get(route('faq.commands'))->assertRedirect(route('login'));
     }
 
+    /** Spalten der Standard-Konfiguration ohne eigenen TaskStatus-Fall. */
+    private const ORG_COLUMNS = ['BEREINIGEN', 'REVIEWBAR', 'APPROVED'];
+
     public function test_renders_the_article_with_its_content_blocks(): void
     {
-        $last = count(TaskStatus::cases()) - 1;
+        // Jeder Kern-Status plus die fest hinterlegten Standard-Spalten.
+        $expected = count(TaskStatus::cases()) + count(self::ORG_COLUMNS);
 
         $this->actingAs($this->member())
             ->get(route('faq.commands'))
@@ -54,11 +58,42 @@ class FaqCommandsPageTest extends TestCase
                 ->has('lifecycle')
                 ->has('commands')
                 ->has('events')
-                // Ein Eintrag je TaskStatus — kein Status ohne Erklärung.
-                ->has('statuses', count(TaskStatus::cases()))
+                ->has('statuses', $expected)
                 ->where('statuses.0.name', 'UNKNOWN')
-                ->where('statuses.'.$last.'.name', 'MERGED')
+                ->where('statuses.'.($expected - 1).'.name', 'MERGED')
             );
+    }
+
+    /**
+     * „in Bereinigung", „reviewbar" und „approved" sind in der Standard-
+     * Konfiguration überall vorhanden, haben aber keinen TaskStatus-Fall — sie
+     * fielen deshalb zunächst aus der enum-getriebenen Tabelle heraus. Sie müssen
+     * dabei sein, ein Badge tragen und als Org-Spalte gekennzeichnet sein.
+     */
+    public function test_includes_the_default_org_columns(): void
+    {
+        $page = $this->actingAs($this->member())
+            ->get(route('faq.commands'))
+            ->assertOk()
+            ->inertiaPage()['props'];
+
+        $byName = collect($page['statuses'])->keyBy('name');
+
+        foreach (self::ORG_COLUMNS as $key) {
+            $this->assertTrue($byName->has($key), $key.' fehlt in der Status-Tabelle');
+            $this->assertTrue($byName[$key]['orgColumn'], $key.' nicht als Org-Spalte gekennzeichnet');
+            $this->assertFalse($byName[$key]['derived'], $key.' ist ein gespeicherter Status');
+            $this->assertNotEmpty($page['badges'][$key]['label'] ?? null, $key.' ohne Badge-Label');
+        }
+
+        // Kern-Status bleiben unmarkiert, damit die Kennzeichnung etwas aussagt.
+        $this->assertFalse($byName['IN_PROGRESS']['orgColumn']);
+
+        // Reihenfolge: die Spalten stehen an ihrer Stelle im Lebenszyklus.
+        $names = collect($page['statuses'])->pluck('name')->all();
+        $this->assertLessThan(array_search('REVIEWBAR', $names, true), array_search('BEREINIGEN', $names, true));
+        $this->assertLessThan(array_search('IN_REVIEW', $names, true), array_search('REVIEWBAR', $names, true));
+        $this->assertLessThan(array_search('COMPLETED', $names, true), array_search('APPROVED', $names, true));
     }
 
     /**

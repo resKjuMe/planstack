@@ -92,7 +92,7 @@ return [
     // Abschnitt 3: Status
     'statuses_title' => 'Was jeder Status genau macht',
     'statuses_hint' => 'Es gibt keine formale Zustandsmaschine: jeder Status wird von einem konkreten Aufruf gesetzt oder für die Anzeige aus dem Gate abgeleitet.',
-    'statuses_note' => 'Das sind die zehn eingebauten Kern-Status. Organisationen können darüber hinaus eigene Status konfigurieren — etwa den Pool „REVIEWBAR" vor „In Review", aus dem `review-next` die Tasks holt.',
+    'statuses_note' => 'Die Tabelle zeigt die Standard-Konfiguration. „Unbekannt" ist dabei kein konfigurierter Status, sondern der Zustand ohne Status. „in Bereinigung", „reviewbar" und „approved" sind Spalten der Standard-Konfiguration ohne eigenen Kern-Status im Code — der Server erkennt sie über ihre Rolle. Eine Organisation kann Bezeichnungen ändern und weitere Spalten ergänzen; die Bedeutung hängt dann an der Rolle, nicht am Namen.',
     'th_status_single' => 'Status',
     'th_meaning' => 'Bedeutung',
     'th_does' => 'Was er bewirkt',
@@ -106,6 +106,7 @@ return [
     'flag_derived' => 'abgeleitet',
     'flag_stored' => 'gespeichert',
     'flag_counts_done' => 'zählt als erledigt',
+    'flag_org_column' => 'Org-Spalte',
 
     'status_unknown_does' => 'Kein Status gespeichert. Für die Anzeige wird aus dem Gate abgeleitet, ob der Task blockiert oder startbereit ist. Zählt nicht als erledigt und erfüllt kein Gate — abhängige Tasks bleiben blockiert.',
     'status_unknown_set_by' => 'Zustand eines neu angelegten Tasks. Es wird nichts gesetzt.',
@@ -142,6 +143,26 @@ return [
     'status_completed_does' => 'Zählt als erledigt: fließt in den Fortschritt ein und erfüllt das Gate abhängiger Tasks endgültig. Entsteht ausschließlich am Eltern-Task eines Splits.',
     'status_completed_set_by' => 'Das Splitten eines Tasks — der Eltern-Task gilt damit als erledigt, die Kinder starten offen.',
     'status_completed_next' => 'Endzustand.',
+
+    // Spalten der Standard-Konfiguration ohne eigenen TaskStatus-Fall.
+    'label_bereinigen' => 'in Bereinigung',
+    'label_reviewbar' => 'reviewbar',
+    'label_approved' => 'approved',
+
+    'status_bereinigen_meaning' => 'Der PR steht, wird aber noch aufgeräumt — Merge-Konflikte, offene Kommentare, rote CI.',
+    'status_bereinigen_does' => 'Zählt als Arbeit, nicht als erledigt: der Task bleibt beansprucht und gesperrt. Sein PR ist aber schon eingetragen, die Gates abhängiger Tasks sind also offen. Zum Review steht er noch nicht bereit.',
+    'status_bereinigen_set_by' => 'Nicht vom Skill — die Spalte gehört der Organisation und wird von Hand auf dem Board oder per Automation gesetzt. Das Skill behandelt sie als Arbeits-Status: `/planstack work` führt einen Task von hier weiter, `/planstack fix` poliert seinen PR.',
+    'status_bereinigen_next' => '„reviewbar" — in der Standard-Konfiguration über das Event `POLISHED`, sobald die CI grün ist und alle Kommentare beantwortet und aufgelöst sind.',
+
+    'status_reviewbar_meaning' => 'Der Pool vor „in Review": die Arbeit ist abgegeben und wartet darauf, dass jemand das Review übernimmt.',
+    'status_reviewbar_does' => 'Zählt nicht als erledigt. `review-next` holt seine Tasks aus genau diesem Pool und überspringt dabei den eigenen Umsetzer. Der Server erkennt den Pool an der Rolle `REVIEWABLE`, nicht am Schlüssel — die Spalte darf also anders heißen.',
+    'status_reviewbar_set_by' => 'In der Standard-Konfiguration das Event `POLISHED`. Das Übernehmen eines Reviews setzt nur `reviewed_by`; der Wechsel nach „in Review" kommt aus der Org-Automation zum Event `REVIEWING`, nicht aus dem Endpunkt.',
+    'status_reviewbar_next' => '„in Review", sobald jemand das Review übernimmt.',
+
+    'status_approved_meaning' => 'Das Review empfiehlt den Merge: freigegeben, aber noch nicht gemerged.',
+    'status_approved_does' => 'Zählt als erledigt und als geliefert — der Fortschritt springt, und die Gates abhängiger Tasks sind endgültig erfüllt. Aus dem Review-Pool ist der Task damit heraus.',
+    'status_approved_set_by' => 'Eine Org-Automation auf das Event `APPROVED`, das `/planstack review` nach der Empfehlung `APPROVE` meldet. Ohne diese Automation bleibt das Event eine reine Meldung und der Status unverändert.',
+    'status_approved_next' => '„gemerged" nach dem Merge bzw. über den PR-Abgleich.',
 
     'status_merged_does' => 'Endzustand: zählt als erledigt, nimmt den Task vom Board und erfüllt das Gate abhängiger Tasks endgültig.',
     'status_merged_set_by' => 'Der Merge-Aufruf (idempotent) oder der serverseitige PR-Abgleich, wenn GitHub den PR als gemerged meldet.',

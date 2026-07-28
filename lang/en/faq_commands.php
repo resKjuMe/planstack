@@ -92,7 +92,7 @@ return [
     // Section 3: statuses
     'statuses_title' => 'What each status does exactly',
     'statuses_hint' => 'There is no formal state machine: every status is set by a concrete call, or derived from the gate for display.',
-    'statuses_note' => 'These are the ten built-in core statuses. Organizations can configure their own on top — for instance the "REVIEWBAR" pool ahead of "in review", which is where `review-next` takes its tasks from.',
+    'statuses_note' => 'The table shows the default configuration. "Unknown" is not a configured status but the state of having none. "Polishing", "reviewable" and "approved" are columns of the default configuration without their own core status in the code — the server recognizes them by their role. An organization can rename them and add further columns; the meaning then hangs off the role, not the name.',
     'th_status_single' => 'Status',
     'th_meaning' => 'Meaning',
     'th_does' => 'What it does',
@@ -106,6 +106,7 @@ return [
     'flag_derived' => 'derived',
     'flag_stored' => 'stored',
     'flag_counts_done' => 'counts as done',
+    'flag_org_column' => 'org column',
 
     'status_unknown_does' => 'No status stored. For display, the gate decides whether the task shows as blocked or ready to start. Does not count as done and satisfies no gate — dependent tasks stay blocked.',
     'status_unknown_set_by' => 'The state of a newly created task. Nothing is set.',
@@ -142,6 +143,26 @@ return [
     'status_completed_does' => 'Counts as done: feeds into the progress and satisfies the gate of dependent tasks for good. Only ever arises on the parent task of a split.',
     'status_completed_set_by' => 'Splitting a task — the parent counts as done, the children start out open.',
     'status_completed_next' => 'Final state.',
+
+    // Columns of the default configuration without their own TaskStatus case.
+    'label_bereinigen' => 'polishing',
+    'label_reviewbar' => 'reviewable',
+    'label_approved' => 'approved',
+
+    'status_bereinigen_meaning' => 'The PR is up but still being tidied — merge conflicts, open comments, red CI.',
+    'status_bereinigen_does' => 'Counts as work, not as done: the task stays claimed and locked. Its PR is already recorded, though, so the gates of dependent tasks are open. It is not ready for review yet.',
+    'status_bereinigen_set_by' => 'Not by the skill — the column belongs to the organization and is set by hand on the board or by an automation. The skill treats it as a work status: `/planstack work` carries a task on from here, `/planstack fix` polishes its PR.',
+    'status_bereinigen_next' => '"Reviewable" — in the default configuration via the `POLISHED` event, once the CI is green and all comments are answered and resolved.',
+
+    'status_reviewbar_meaning' => 'The pool ahead of "in review": the work is handed in and waits for somebody to take the review.',
+    'status_reviewbar_does' => 'Does not count as done. `review-next` takes its tasks from exactly this pool, skipping the implementer. The server recognizes the pool by the `REVIEWABLE` role, not by the key — so the column may be named differently.',
+    'status_reviewbar_set_by' => 'In the default configuration the `POLISHED` event. Taking over a review only sets `reviewed_by`; the move to "in review" comes from the org automation on the `REVIEWING` event, not from the endpoint.',
+    'status_reviewbar_next' => '"In review", as soon as somebody takes the review.',
+
+    'status_approved_meaning' => 'The review recommends the merge: approved, but not merged yet.',
+    'status_approved_does' => 'Counts as done and as delivered — the progress jumps and the gates of dependent tasks are satisfied for good. The task is out of the review pool.',
+    'status_approved_set_by' => 'An org automation on the `APPROVED` event, which `/planstack review` reports after an `APPROVE` recommendation. Without that automation the event stays a plain report and the status is unchanged.',
+    'status_approved_next' => '"Merged" after the merge, or via the PR sync.',
 
     'status_merged_does' => 'Final state: counts as done, takes the task off the board and satisfies the gate of dependent tasks for good.',
     'status_merged_set_by' => 'The merge call (idempotent) or the server-side PR sync, when GitHub reports the PR as merged.',

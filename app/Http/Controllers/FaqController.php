@@ -128,22 +128,50 @@ class FaqController extends Controller
             ]],
         ];
 
-        // Status in derselben Reihenfolge wie die Legende der Statuslogik-Seite,
-        // damit beide Artikel dieselbe Lesereihenfolge haben. „Herkunft" und
-        // „zählt als erledigt" kommen aus dem Enum, nicht aus einer zweiten Liste.
-        $statuses = collect(array_reverse(TaskStatus::displayOrder()))
-            ->map(fn (TaskStatus $s) => [
-                'name' => $s->name,
-                'value' => $s->value,
-                'kind' => $t('kind_'.$s->kind()),
-                'meaning' => __('faq.status_'.strtolower($s->name).'_desc'),
-                'does' => $t('status_'.strtolower($s->name).'_does'),
-                'setBy' => $t('status_'.strtolower($s->name).'_set_by'),
-                'next' => $t('status_'.strtolower($s->name).'_next'),
-                'stored' => $s->isExplicit() || $s === TaskStatus::UNKNOWN || $s === TaskStatus::PICKABLE,
-                'derived' => ! $s->isExplicit(),
-                'countsDone' => $s->isDone(),
-            ])->values()->all();
+        // Status in Lebenszyklus-Reihenfolge. Zu den Kern-Status aus dem Enum
+        // kommen die Spalten der Standard-Konfiguration, die keinen eigenen
+        // TaskStatus-Fall haben (BEREINIGEN/REVIEWBAR/APPROVED) — sie sind hier
+        // bewusst FEST hinterlegt und nicht aus der Org-Konfiguration gelesen: der
+        // Artikel beschreibt den Standard, nicht die Einstellungen des Lesers.
+        // Ihr Badge nutzt die Klassen des nächstliegenden Kern-Status, damit die
+        // Seite bei ihrer eigenen Palette bleibt (keine Org-Farbtokens).
+        $extra = [
+            'BEREINIGEN' => ['active', TaskStatus::IN_PROGRESS, false],
+            'REVIEWBAR' => ['review', TaskStatus::IN_REVIEW, false],
+            'APPROVED' => ['done', TaskStatus::COMPLETED, true],
+        ];
+
+        $order = [
+            TaskStatus::UNKNOWN, TaskStatus::BLOCKED, TaskStatus::CONCERNED,
+            TaskStatus::PICKABLE, TaskStatus::CLAIMED, TaskStatus::ANALYZING,
+            TaskStatus::IN_PROGRESS, 'BEREINIGEN', 'REVIEWBAR', TaskStatus::IN_REVIEW,
+            'APPROVED', TaskStatus::COMPLETED, TaskStatus::MERGED,
+        ];
+
+        $statuses = collect($order)->map(function ($s) use ($t, $extra) {
+            $isEnum = $s instanceof TaskStatus;
+            $name = $isEnum ? $s->name : $s;
+            $low = strtolower($name);
+
+            return [
+                'name' => $name,
+                'value' => $name,
+                'kind' => $t('kind_'.($isEnum ? $s->kind() : $extra[$name][0])),
+                // Kern-Status erben ihre Bedeutung von der Statuslogik-Seite; die
+                // Standard-Spalten bringen eine eigene mit.
+                'meaning' => $isEnum ? __('faq.status_'.$low.'_desc') : $t('status_'.$low.'_meaning'),
+                'does' => $t('status_'.$low.'_does'),
+                'setBy' => $t('status_'.$low.'_set_by'),
+                'next' => $t('status_'.$low.'_next'),
+                'stored' => $isEnum
+                    ? ($s->isExplicit() || $s === TaskStatus::UNKNOWN || $s === TaskStatus::PICKABLE)
+                    : true,
+                'derived' => $isEnum && ! $s->isExplicit(),
+                'countsDone' => $isEnum ? $s->isDone() : $extra[$name][2],
+                // Kennzeichnet die Spalten ohne eigenen TaskStatus-Fall.
+                'orgColumn' => ! $isEnum,
+            ];
+        })->values()->all();
 
         $events = [
             ['CLAIMING', 'ev_claiming', false],
@@ -178,7 +206,14 @@ class FaqController extends Controller
 
         return Inertia::render('FaqCommands', [
             'tabs' => $this->tabs('commands'),
-            'badges' => $this->badges(),
+            'badges' => collect($extra)->reduce(
+                fn (array $carry, array $def, string $key) => $carry + [$key => [
+                    'label' => $t('label_'.strtolower($key)),
+                    'classes' => $def[1]->badgeClasses(),
+                    'value' => $key,
+                ]],
+                $this->badges(),
+            ),
             'lifecycle' => collect($lifecycle)->map(fn ($r) => [
                 'call' => $r[0], 'what' => $t($r[1]), 'status' => $r[2], 'statusLine' => $r[3],
             ])->all(),
