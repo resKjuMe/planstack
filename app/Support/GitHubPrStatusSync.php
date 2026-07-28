@@ -20,6 +20,13 @@ use Illuminate\Support\Facades\Http;
  *
  * Nur die 100 jüngsten offenen PRs je Repo werden abgefragt: Tasks, deren PR nicht
  * in diesem Fenster liegt (oder bereits geschlossen ist), bleiben unangetastet.
+ *
+ * Fehler beenden den Lauf nicht: eine fehlgeschlagene Seite (Timeout, 504, GraphQL-
+ * Fehler) wird gemeldet und mit halbierter Seitengröße wiederholt, statt die Pagi-
+ * nierung des Repos abzubrechen — sonst kostet ein einzelner 504 auf Seite 1 den CI-
+ * Status aller folgenden PRs. Erst wenn eine Seite dauerhaft scheitert, endet das
+ * Repo; alle bis dahin geholten Knoten werden angewandt.
+ *
  * Der Schreibvorgang läuft „quiet" (kein entity-changed-Broadcast) — es ist ein
  * reiner Hintergrund-Abgleich in die DB.
  */
@@ -31,6 +38,15 @@ class GitHubPrStatusSync
 
     /** Obergrenze: die N zuletzt aktualisierten offenen PRs je Repo. */
     private const MAX_PRS = 100;
+
+    /** Versuche je Seite, bevor die Paginierung eines Repos endet. Jeder weitere
+     *  Versuch halbiert die Seitengröße — ein 504 ist meist eine zu große Seite. */
+    private const PAGE_ATTEMPTS = 4;
+
+    /** Anfrage-Budget je Repo. Ein sauberer Lauf braucht 4 (100/25); der Rest ist
+     *  Luft für Wiederholungen und kleinere Seiten, damit ein dauerhaft langsames
+     *  Repo den Minuten-Cron nicht unbegrenzt beschäftigt. */
+    private const MAX_REQUESTS = 24;
 
     private const QUERY = <<<'GQL'
     query($owner: String!, $repo: String!, $first: Int!, $after: String) {
@@ -124,67 +140,55 @@ class GitHubPrStatusSync
             $result['repos']++;
 
             // In Seiten paginieren (siehe PAGE_SIZE) und die Knoten sammeln, bis
-            // MAX_PRS erreicht sind oder keine weitere Seite existiert. Ein Fehler
-            // auf einer Seite bricht nur dieses Repo ab; bereits geholte Knoten
-            // werden trotzdem angewandt.
+            // MAX_PRS erreicht sind oder keine weitere Seite existiert.
+            //
+            // Ein Fehler auf einer Seite beendet den Lauf NICHT: er wird gemeldet und
+            // dieselbe Seite mit halbierter Seitengröße erneut geholt (ein 504 ist in
+            // der Regel eine zu große Seite). Überspringen ist keine Option — ohne den
+            // endCursor der fehlgeschlagenen Antwort gibt es keinen Einstieg in die
+            // Folgeseite. Erst wenn PAGE_ATTEMPTS Versuche an einem Cursor scheitern
+            // (oder der Fehler nicht wiederholbar ist), endet die Paginierung dieses
+            // Repos; die bereits geholten Knoten werden immer angewandt.
             $nodes = [];
             $after = null;
+            $size = self::PAGE_SIZE;
+            $attempts = 0;
+            $requests = 0;
 
             while (count($nodes) < self::MAX_PRS) {
-                $first = min(self::PAGE_SIZE, self::MAX_PRS - count($nodes));
-
-                try {
-                    $response = $client->post('/graphql', [
-                        'query' => self::QUERY,
-                        'variables' => ['owner' => $owner, 'repo' => $name, 'first' => $first, 'after' => $after],
-                    ]);
-                } catch (ConnectionException $e) {
-                    $result['errors']++;
-                    $result['failures'][] = "{$repo}: ".$e->getMessage();
+                if ($requests >= self::MAX_REQUESTS) {
+                    $this->note($result, "{$repo}: Anfrage-Budget (".self::MAX_REQUESTS.') erschöpft — restliche Seiten ungeprüft', isError: false);
                     break;
                 }
 
-                if ($response->failed()) {
-                    $result['errors']++;
-                    $result['failures'][] = "{$repo}: HTTP {$response->status()}";
-                    break;
-                }
+                $requests++;
+                $page = $this->fetchPage($client, $owner, $name, max(1, min($size, self::MAX_PRS - count($nodes))), $after);
 
-                $body = $response->json();
-                $conn = data_get($body, 'data.repository.pullRequests');
-                $pageNodes = (is_array($conn) && is_array($conn['nodes'] ?? null)) ? $conn['nodes'] : null;
+                if ($page['error'] !== null) {
+                    $this->note($result, "{$repo}: {$page['error']}", isError: true);
 
-                // GraphQL kann Feld-Fehler (HTTP 200 + errors[]) liefern UND trotzdem
-                // Teildaten mitschicken: ein Feld ohne Token-Recht (z. B. mergeQueueEntry)
-                // kommt als null zurück, der Rest steht. Nur wenn gar keine Knoten
-                // kommen, ist es ein harter Fehler.
-                if (! empty($body['errors'])) {
-                    $messages = collect($body['errors'])->pluck('message')->filter()->unique()->values()->implode('; ');
-                    if ($pageNodes === null) {
-                        $result['errors']++;
-                        $result['failures'][] = "{$repo}: {$messages}";
+                    if (! $page['retryable'] || ++$attempts >= self::PAGE_ATTEMPTS) {
                         break;
                     }
-                    // Teildaten übernehmen; Warnung einmal vermerken (dedupliziert).
-                    $note = "{$repo} (Teildaten): {$messages}";
-                    if (! in_array($note, $result['failures'], true)) {
-                        $result['failures'][] = $note;
-                    }
+
+                    $size = max(1, intdiv($size, 2));
+
+                    continue;
                 }
 
-                if ($pageNodes === null) {
-                    // Repo nicht gefunden / kein Zugriff → data.repository ist null.
-                    $result['errors']++;
-                    $result['failures'][] = "{$repo}: keine PR-Daten (Repo unbekannt oder kein Zugriff?)";
+                $attempts = 0;
+
+                // Teildaten (HTTP 200 + errors[]): übernehmen, Warnung vermerken.
+                if ($page['warning'] !== null) {
+                    $this->note($result, "{$repo} {$page['warning']}", isError: false);
+                }
+
+                $nodes = array_merge($nodes, $page['nodes']);
+
+                if (! data_get($page['pageInfo'], 'hasNextPage')) {
                     break;
                 }
-
-                $nodes = array_merge($nodes, $pageNodes);
-
-                if (! data_get($conn, 'pageInfo.hasNextPage')) {
-                    break;
-                }
-                $after = data_get($conn, 'pageInfo.endCursor');
+                $after = data_get($page['pageInfo'], 'endCursor');
             }
 
             if ($nodes !== []) {
@@ -196,11 +200,88 @@ class GitHubPrStatusSync
     }
 
     /**
+     * Eine Seite der zuletzt aktualisierten offenen PRs holen.
+     *
+     * `retryable` sagt, ob ein zweiter Versuch am selben Cursor Sinn hat: Timeouts,
+     * 5xx und GraphQL-Fehler ohne Daten ja — ein fehlendes `repository` (Repo
+     * unbekannt oder kein Zugriff) nein, das bleibt bei jedem Versuch gleich.
+     *
+     * @return array{nodes: ?array<int, array<string, mixed>>, pageInfo: array<string, mixed>, error: ?string, retryable: bool, warning: ?string}
+     */
+    private function fetchPage(PendingRequest $client, string $owner, string $name, int $first, ?string $after): array
+    {
+        // Gemeinsame Basis der Fehlerfälle; die Rückgaben ergänzen error + retryable.
+        $noData = ['nodes' => null, 'pageInfo' => [], 'warning' => null];
+
+        try {
+            $response = $client->post('/graphql', [
+                'query' => self::QUERY,
+                'variables' => ['owner' => $owner, 'repo' => $name, 'first' => $first, 'after' => $after],
+            ]);
+        } catch (ConnectionException $e) {
+            return $noData + ['error' => $e->getMessage(), 'retryable' => true];
+        }
+
+        if ($response->failed()) {
+            return $noData + ['error' => "HTTP {$response->status()}", 'retryable' => true];
+        }
+
+        $body = $response->json();
+        $conn = data_get($body, 'data.repository.pullRequests');
+        $pageNodes = (is_array($conn) && is_array($conn['nodes'] ?? null)) ? $conn['nodes'] : null;
+
+        $messages = empty($body['errors'])
+            ? null
+            : collect($body['errors'])->pluck('message')->filter()->unique()->values()->implode('; ');
+
+        // GraphQL kann Feld-Fehler (HTTP 200 + errors[]) liefern UND trotzdem
+        // Teildaten mitschicken: ein Feld ohne Token-Recht (z. B. mergeQueueEntry)
+        // kommt als null zurück, der Rest steht. Nur wenn gar keine Knoten kommen,
+        // ist die Seite fehlgeschlagen.
+        if ($pageNodes !== null) {
+            return [
+                'nodes' => $pageNodes,
+                'pageInfo' => (array) data_get($conn, 'pageInfo', []),
+                'error' => null,
+                'retryable' => false,
+                'warning' => $messages === null ? null : "(Teildaten): {$messages}",
+            ];
+        }
+
+        if ($messages !== null) {
+            return $noData + ['error' => $messages, 'retryable' => true];
+        }
+
+        // Keine Fehler, aber auch kein repository → Repo unbekannt / kein Zugriff.
+        return $noData + ['error' => 'keine PR-Daten (Repo unbekannt oder kein Zugriff?)', 'retryable' => false];
+    }
+
+    /**
+     * Meldung dedupliziert anhängen. `isError` zählt sie zusätzlich als Fehler —
+     * einmal je Meldung, nicht je Versuch, sonst zählt eine wiederholte Seite
+     * mehrfach.
+     *
+     * @param  array{repos: int, prs: int, errors: int, tokenMissing: bool, failures: array<int, string>}  $result
+     */
+    private function note(array &$result, string $message, bool $isError): void
+    {
+        if (in_array($message, $result['failures'], true)) {
+            return;
+        }
+
+        $result['failures'][] = $message;
+
+        if ($isError) {
+            $result['errors']++;
+        }
+    }
+
+    /**
      * Die PR-Knoten eines Repos auf die passenden Tasks schreiben. Abgleich über
      * project.github_repo == $repo und task.pr_number == PR-Nummer.
      *
      * @param  array<int, array<string, mixed>>  $nodes
-     * @return int  Anzahl aktualisierter Tasks
+     * @return int Anzahl aktualisierter Tasks
      */
     private function applyToTasks(string $repo, array $nodes): int
     {

@@ -112,6 +112,103 @@ class GitHubPrStatusSyncTest extends TestCase
         $this->assertNotNull($task->pr_status_synced_at);
     }
 
+    public function test_a_failed_page_is_reported_but_does_not_stop_the_pagination(): void
+    {
+        config([
+            'planstack.github_token' => 'test-token',
+            'planstack.github_api' => 'https://api.github.com',
+            'planstack.github_verify_ssl' => false,
+        ]);
+
+        $user = User::factory()->create();
+        $project = Project::factory()->create([
+            'created_by_id' => $user->id,
+            'github_repo' => 'acme/widgets',
+        ]);
+        // Der Task hängt an einem PR, der erst NACH der fehlgeschlagenen Seite käme:
+        // bricht die Paginierung beim 504 ab, bleibt sein CI-Status leer.
+        $task = $project->tasks()->create([
+            'name' => 'S2',
+            'summary' => 'PR auf der zweiten Seite',
+            'pr_number' => 77,
+            'status' => StatusRole::IN_REVIEW->value,
+        ]);
+
+        Http::fake([
+            'api.github.com/graphql' => Http::sequence()
+                // Seite 1: GitHub braucht zu lange (zu große Seite). Zwei Antworten,
+                // weil der Http-Client selbst schon einmal nachfasst (retry(2)).
+                ->push(['message' => 'Server Error'], 504)
+                ->push(['message' => 'Server Error'], 504)
+                // … derselbe Cursor, halbierte Seitengröße → jetzt klappt es.
+                ->push([
+                    'data' => ['repository' => ['pullRequests' => [
+                        'pageInfo' => ['hasNextPage' => false, 'endCursor' => null],
+                        'nodes' => [[
+                            'id' => 'PR_kw77',
+                            'number' => 77,
+                            'title' => 'S2: Auf Seite zwei',
+                            'reviewDecision' => 'APPROVED',
+                            'mergeable' => 'MERGEABLE',
+                            'commits' => ['nodes' => [[
+                                'commit' => [
+                                    'committedDate' => '2026-07-28T10:00:00Z',
+                                    'statusCheckRollup' => [
+                                        'state' => 'SUCCESS',
+                                        'contexts' => ['nodes' => [
+                                            ['__typename' => 'CheckRun', 'status' => 'COMPLETED', 'conclusion' => 'SUCCESS'],
+                                        ]],
+                                    ],
+                                ],
+                            ]]],
+                            'reviewThreads' => ['nodes' => []],
+                        ]],
+                    ]]],
+                ], 200),
+        ]);
+
+        $result = (new GitHubPrStatusSync)->syncAll();
+
+        // Der 504 wird gemeldet …
+        $this->assertSame(1, $result['errors']);
+        $this->assertContains('acme/widgets: HTTP 504', $result['failures']);
+        // … der Lauf liefert den PR aber trotzdem.
+        $this->assertSame(1, $result['prs']);
+        // Der zweite Versuch geht mit halbierter Seitengröße an denselben Cursor.
+        Http::assertSent(fn ($request) => ($request->data()['variables']['first'] ?? null) === 12);
+
+        $task->refresh();
+        $this->assertSame('SUCCESS', $task->pr_ci_status);
+        $this->assertSame('APPROVED', $task->pr_review_decision);
+    }
+
+    public function test_it_gives_up_on_a_repo_it_cannot_read(): void
+    {
+        config([
+            'planstack.github_token' => 'test-token',
+            'planstack.github_api' => 'https://api.github.com',
+            'planstack.github_verify_ssl' => false,
+        ]);
+
+        $user = User::factory()->create();
+        Project::factory()->create([
+            'created_by_id' => $user->id,
+            'github_repo' => 'acme/widgets',
+        ]);
+
+        // Kein repository und keine errors → Repo unbekannt / kein Zugriff. Daran
+        // ändert ein zweiter Versuch nichts: genau eine Anfrage.
+        Http::fake([
+            'api.github.com/graphql' => Http::response(['data' => ['repository' => null]], 200),
+        ]);
+
+        $result = (new GitHubPrStatusSync)->syncAll();
+
+        $this->assertSame(1, $result['errors']);
+        $this->assertSame(0, $result['prs']);
+        Http::assertSentCount(1);
+    }
+
     public function test_it_reports_token_missing_without_calling_github(): void
     {
         config(['planstack.github_token' => null]);
