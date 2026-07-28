@@ -39,6 +39,8 @@ const STATUS_ICONS = {
 };
 const BOTTLENECK_ICON = '<path d="M6.5 7h11"/><path d="M6.5 17h11"/><path d="M6 20v-2a6 6 0 1 1 12 0v2a1 1 0 0 1 -1 1h-10a1 1 0 0 1 -1 -1z"/><path d="M6 4v2a6 6 0 1 0 12 0v-2a1 1 0 0 0 -1 -1h-10a1 1 0 0 0 -1 1z"/>';
 const FILE_ICON = '<path d="M14 3v4a1 1 0 0 0 1 1h4"/><path d="M17 21h-10a2 2 0 0 1 -2 -2v-14a2 2 0 0 1 2 -2h7l5 5v11a2 2 0 0 1 -2 2z"/>';
+// Tooltip, wenn eine PR-Nummer ohne Ziel bleibt (Projekt ohne github_repo).
+const PR_NO_REPO = 'Nicht verlinkbar: im Projekt ist kein GitHub-Repository konfiguriert';
 const REVIEW_APPROVE_ICON = '<path d="M5 12l5 5l10 -10"/>';
 const REVIEW_CHANGES_ICON = '<path d="M12 9v4"/><path d="M12 17h.01"/><path d="M10.24 3.957l-8.422 14.06a1.989 1.989 0 0 0 1.7 2.983h16.845a1.989 1.989 0 0 0 1.7 -2.983l-8.423 -14.06a1.989 1.989 0 0 0 -3.4 0z"/>';
 
@@ -131,9 +133,11 @@ function nodeLabel(n, showDesc = false) {
     if (n.pr && !n.done) {
         title += ' ';
         title += ciIcon(n.ciStatus); // CI-Status vor der PR-Nummer
+        // Ohne github_repo am Projekt liefert die API keine prUrl — dann bleibt die
+        // Nummer Text und der Tooltip nennt den Grund.
         title += n.prUrl
             ? `<a class='pr' href='${esc(n.prUrl)}' target='_blank' rel='noopener'>#${esc(n.pr)}</a>`
-            : `<span class='pr'>#${esc(n.pr)}</span>`;
+            : `<span class='pr' title='${PR_NO_REPO}'>#${esc(n.pr)}</span>`;
     }
     if (n.claimer) {
         title += ` <span class='who'>· ${esc(initials(n.claimer))}</span>`;
@@ -171,7 +175,7 @@ function nodeLabel(n, showDesc = false) {
         const badge = ciIcon(n.ciStatus) + `#${esc(n.pr)}`; // CI-Status vor der PR-Nummer
         parts.push(n.prUrl
             ? `<a class='pr-badge' href='${esc(n.prUrl)}' target='_blank' rel='noopener'>${badge}</a>`
-            : `<span class='pr-badge'>${badge}</span>`);
+            : `<span class='pr-badge' title='${PR_NO_REPO}'>${badge}</span>`);
     }
 
     if (n.bottleneck) {

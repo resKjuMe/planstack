@@ -127,9 +127,22 @@ export function TaskCardView({
                             />
                         </span>
                     )}
-                    <a href={task.prUrl || undefined} onPointerDown={stop} className="hover:underline">
-                        #{task.prNumber}
-                    </a>
+                    {/* Ohne github_repo am Projekt gibt es keine prUrl — dann statt
+                        eines toten <a> ein erklärender Text (sonst sieht die Nummer
+                        klickbar aus, tut aber nichts). */}
+                    {task.prUrl ? (
+                        <a
+                            href={task.prUrl}
+                            target="_blank"
+                            rel="noopener"
+                            onPointerDown={stop}
+                            className="hover:underline"
+                        >
+                            #{task.prNumber}
+                        </a>
+                    ) : (
+                        <span title={t('pr_no_repo')}>#{task.prNumber}</span>
+                    )}
                     {(task.unresolvedThreads ?? 0) > 0 && (
                         <span className="ml-2 flex items-center gap-0.5" title={t('unresolved_comments')}>
                             <svg

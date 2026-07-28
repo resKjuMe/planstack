@@ -78,7 +78,7 @@ function MetaChips({ chips }) {
                     {c.href ? (
                         <a href={c.href} target="_blank" rel="noopener" className={'font-medium text-indigo-700 dark:text-indigo-400 hover:underline' + (c.mono ? ' font-mono' : '')}>{c.value}</a>
                     ) : (
-                        <span className={'font-medium text-gray-700 dark:text-gray-300' + (c.mono ? ' font-mono' : '')}>{c.value}</span>
+                        <span title={c.title || undefined} className={'font-medium text-gray-700 dark:text-gray-300' + (c.mono ? ' font-mono' : '')}>{c.value}</span>
                     )}
                 </span>
             ))}

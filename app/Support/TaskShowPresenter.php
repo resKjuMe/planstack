@@ -165,11 +165,14 @@ class TaskShowPresenter
             $chips[] = ['label' => null, 'value' => __('tasks.count_files', ['count' => $task->affected_files])];
         }
         if ($task->pr_number) {
+            // Ohne konfiguriertes github_repo lässt sich keine PR-URL bilden — dann
+            // bleibt der Chip Text und der Tooltip nennt den Grund.
             $chips[] = [
                 'label' => __('tasks.pr'),
                 'value' => '#'.$task->pr_number,
                 'mono' => true,
                 'href' => $repo ? "https://github.com/{$repo}/pull/{$task->pr_number}" : null,
+                'title' => $repo ? null : __('tasks.pr_no_repo'),
             ];
         }
 

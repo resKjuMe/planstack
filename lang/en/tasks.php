@@ -60,6 +60,7 @@ return [
     'phase' => 'Phase',
     'points_sp' => ':points SP',
     'pr' => 'PR',
+    'pr_no_repo' => 'Not linkable: no GitHub repository configured for this project',
     'pr_number' => 'PR number',
     'prerequisites' => 'Prerequisites',
     'prerequisites_requirements' => 'Prerequisites (requirements)',

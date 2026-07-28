@@ -121,6 +121,26 @@ class SkillTemplate
     }
 
     /**
+     * The complete general SKILL.md: bootstrap header (usage + access + self-update)
+     * followed by the shared operating manual, status rules and skill instructions.
+     * Project-agnostic — per-project behaviour arrives at runtime via client_hints.
+     *
+     * Single source for both the ZIP download and `GET /api/skill`, so a skill can
+     * rewrite its own snapshot with exactly what a fresh install would contain.
+     */
+    public static function composed(): string
+    {
+        $parts = [
+            rtrim(self::default()),
+            rtrim(self::operatingManual()),
+            rtrim(self::statusRules()),
+            rtrim(self::skillInstructions()),
+        ];
+
+        return implode("\n\n", array_filter($parts))."\n";
+    }
+
+    /**
      * Replace the {{alias}}/{{name}} placeholders with the project's values.
      */
     public static function render(string $text, Project $project): string

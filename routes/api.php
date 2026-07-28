@@ -7,6 +7,7 @@ use App\Http\Controllers\Api\PhaseController;
 use App\Http\Controllers\Api\ChangelogController;
 use App\Http\Controllers\Api\ProjectConfigController;
 use App\Http\Controllers\Api\ProjectController;
+use App\Http\Controllers\Api\SkillController;
 use App\Http\Controllers\Api\StatusConfigController;
 use App\Http\Controllers\Api\TaskController;
 use Illuminate\Http\Request;
@@ -26,6 +27,10 @@ use Illuminate\Support\Facades\Route;
 Route::middleware('auth:sanctum')->group(function () {
     // Wer bin ich? (Smoke-Test für Token-Auth)
     Route::get('/user', fn (Request $request) => $request->user());
+
+    // Aktueller Skill-Text (SKILL.md) + Revision — damit ein installierter Skill
+    // seinen eigenen, ggf. veralteten Snapshot überschreiben kann.
+    Route::get('skill', SkillController::class);
 
     // Fortschritts-Events (task_id + event); wendet die je Event konfigurierte
     // Automation an und protokolliert das Event. Siehe docs/event-api.md.

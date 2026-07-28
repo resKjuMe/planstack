@@ -24,7 +24,7 @@ class SkillDownloadController extends Controller
      */
     public function __invoke(Request $request): BinaryFileResponse
     {
-        $skillMd = $this->composeSkill();
+        $skillMd = SkillTemplate::composed();
 
         if (blank($skillMd)) {
             abort(404, 'Skill-Vorlage nicht gefunden.');
@@ -68,23 +68,5 @@ class SkillDownloadController extends Controller
         return response()
             ->download($tmp, 'planstack-skill.zip', ['Content-Type' => 'application/zip'])
             ->deleteFileAfterSend();
-    }
-
-    /**
-     * Compose the full general SKILL.md: bootstrap header (usage + access +
-     * self-update) followed by the shared operating manual + status rules.
-     * Project-agnostic, so no per-project notes or config snapshot are baked in —
-     * per-project behaviour is delivered at runtime via the board's client_hints.
-     */
-    private function composeSkill(): string
-    {
-        $parts = [
-            rtrim(SkillTemplate::default()),
-            rtrim(SkillTemplate::operatingManual()),
-            rtrim(SkillTemplate::statusRules()),
-            rtrim(SkillTemplate::skillInstructions()),
-        ];
-
-        return implode("\n\n", array_filter($parts))."\n";
     }
 }

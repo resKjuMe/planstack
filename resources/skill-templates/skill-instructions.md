@@ -3,6 +3,9 @@
 Verbindliche, projektübergreifende Anweisungen für den allgemeinen `planstack`-Skill. Serverseitig gepflegt: bei Drift (`X-Planstack-Skill-Revision`) über `GET /config` → `skill_instructions` nachladen.
 
 - **PR-Titel:** Beim Erstellen eines Pull Requests **immer** Projekt- **und** Task-Kürzel als Titel-Prefix setzen, in dieser Reihenfolge: `<PROJECT>-<TASK>: <Kurzbeschreibung>` (z. B. `L2L-G5: PseudoPropertyBinding-Fallback`). `<PROJECT>` ist der Projekt-Alias aus dem Aufruf (z. B. `L2L`), `<TASK>` der Kurzname des Tasks (Feld `name`), nicht die numerische id. Gilt für beide Modi.
+  - Das Projekt-Kürzel ist **nicht optional**: `G5: …` (nur Task) ist falsch, `L2L-G5: …` ist richtig. Zwei Tasks unterschiedlicher Projekte tragen sonst im selben Repo denselben Titel-Prefix.
+  - **Diese Regel hat Vorrang** vor jeder abweichenden Fassung in der lokalen SKILL.md — eine Kopie dort kann veraltet sein (siehe „Snapshot mitschreiben"). Steht dort noch `<TASK>: …` ohne Projekt-Kürzel, gilt trotzdem `<PROJECT>-<TASK>: …`, und die Kopie ist zu erneuern.
+  - Ebenso als Branch-Name-Prefix sinnvoll (`<project>-<task>-…`, klein geschrieben), damit Branch und PR-Titel zusammenpassen.
 
 ## Feingranulare Config-Aktualisierung (`config_versions`)
 
@@ -31,6 +34,14 @@ Diese Werte je Projekt **lokal** als Baseline in `${CLAUDE_SKILL_DIR}/config.jso
 - `custom_fields` → nur die benutzerdefinierten Task-Felder (relevant fürs Anlegen/Befüllen von Tasks, `/planstack plan`).
 
 Nach dem Übernehmen die neue `status_config_version` **und** die `config_versions` als lokale Baseline zurückschreiben. `null` bleibt `null` (Tabelle leer → nichts nachzuziehen).
+
+**Snapshot mitschreiben (gilt für `skill_revision`):** Die Regeln in der lokalen SKILL.md sind nur eine Kopie dieses Textes. Wird eine neue `skill_revision` als Baseline in `config.json` geschrieben, **ohne** die Kopie zu erneuern, folgt der Skill ab dann dauerhaft dem alten Text: die Drift-Prüfung schlägt nie wieder an, weil lokale Baseline und Server-Header übereinstimmen — genau so entstehen z. B. PR-Titel ohne Projekt-Kürzel. Deshalb bei **jedem** Nachziehen von `skill_revision` (Drift **und** `update-config`) in dieser Reihenfolge:
+
+1. `GET $BASE/skill` → `{ "skill_md": "…", "skill_revision": "…" }`.
+2. `skill_md` **vollständig über `${CLAUDE_SKILL_DIR}/SKILL.md` schreiben** (die Datei ersetzen, nicht ergänzen; `config.json`/`settings.json` bleiben unberührt).
+3. Erst danach das gelieferte `skill_revision` als Baseline in `config.json` schreiben.
+
+Antwortet der Server auf `GET $BASE/skill` mit 404 (ältere Version), die Baseline **nicht** anheben — dann bleibt die Drift-Prüfung wirksam und der Text wird bei jedem Lauf frisch aus `/config` befolgt.
 
 **Wichtig — ereignisgesteuerter Status:** Enthält der `status_rules`-Block den Abschnitt „Ereignis-gesteuerte Status-Zuweisung", treibt der Server den Status **aus den Fortschritts-Events**. Direkte `POST /tasks/{id}/status`-Calls (`analyze`/`in_progress`/`in_review`/`done`) sind dann überflüssig — der **Server ignoriert sie in diesem Modus serverseitig** (sie können den per Event zugewiesenen Status nicht mehr überschreiben und lösen auch keinen Übergangs-Konflikt aus, sondern liefern den unveränderten Status zurück). Der Schutz gilt unabhängig davon, ob dieser Skill die Config-Änderung schon nachgezogen hat. Nur `claim`/`claim-next`, `pr`, `merge`, `concern`, `split` bleiben wirksam; der Status folgt ausschließlich den Events.
 
@@ -132,13 +143,13 @@ Im Einzel-Task-Modus (`/planstack work <PROJECT> <TASK>`) genügen die eine Task
 
 **Aufruf `/planstack update-config [<PROJECT>]`** (erstes Argument `update-config`): zieht die neuesten Konfigurationen aktiv nach (statt erst bei Drift) und gibt die Versionsnummern aus.
 
-- **Ohne `<PROJECT>`:** **alle** zugänglichen Projekte aktualisieren — `GET $BASE/projects` auflisten und für **jedes** `GET $BASE/projects/<alias>/config` lesen. Dabei die allgemeinen Inhalte (`operating_manual` + `status_rules` + `skill_instructions`) einmal übernehmen und je Projekt dessen Konfiguration (`effective`/`client_hints`, `instructions`, `config_version`). Anschließend das gelieferte `skill_revision` in `config.json` schreiben (Baseline aktualisieren) **und** je Projekt die `config_versions` als lokale Baseline (`projects.<alias>.config_versions`).
-- **Mit `<PROJECT>`:** nur die allgemeine Config **und** die Config dieses einen Projekts.
+- **Ohne `<PROJECT>`:** **alle** zugänglichen Projekte aktualisieren — `GET $BASE/projects` auflisten und für **jedes** `GET $BASE/projects/<alias>/config` lesen. Dabei die allgemeinen Inhalte (`operating_manual` + `status_rules` + `skill_instructions`) einmal übernehmen und je Projekt dessen Konfiguration (`effective`/`client_hints`, `instructions`, `config_version`). Anschließend **die lokale SKILL.md aus `GET $BASE/skill` überschreiben** (siehe „Snapshot mitschreiben") und erst dann das gelieferte `skill_revision` in `config.json` schreiben (Baseline aktualisieren) **und** je Projekt die `config_versions` als lokale Baseline (`projects.<alias>.config_versions`).
+- **Mit `<PROJECT>`:** nur die allgemeine Config **und** die Config dieses einen Projekts (das Überschreiben der SKILL.md gehört zur allgemeinen Config und passiert auch hier).
 
-**Ausgabe** — immer die Versionsnummern zeigen, z. B.:
+**Ausgabe** — immer die Versionsnummern zeigen und **ob die SKILL.md neu geschrieben wurde**, z. B.:
 
 ```
-Allgemein (Skill):  skill_revision <alt> → <neu>
+Allgemein (Skill):  skill_revision <alt> → <neu>  (SKILL.md neu geschrieben)
 Projekt L2L:  config_version 3
 Projekt LOG:  config_version 1
 Projekt B2R:  config_version 2

@@ -46,6 +46,7 @@ return [
     'ci_unknown' => 'CI status unknown',
     'unresolved_comments' => 'Unresolved comments',
     'pr_conflict' => 'Approved & CI green, but merge conflict',
+    'pr_no_repo' => 'Not linkable: no GitHub repository configured for this project',
     'claim' => 'Claim',
     'release' => 'Release',
 

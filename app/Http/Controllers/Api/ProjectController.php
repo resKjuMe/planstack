@@ -102,7 +102,10 @@ class ProjectController extends ApiController
     }
 
     /**
-     * PATCH /api/projects/{project} — update name/description (not the alias).
+     * PATCH /api/projects/{project} — update name/description/github_repo (not the
+     * alias). `github_repo` (owner/repo) is what turns a task's pr_number into a
+     * clickable pr_url and enables the PR-status sync, so it must be settable
+     * without the web UI.
      */
     public function update(Request $request, Project $project): JsonResource
     {
@@ -111,6 +114,7 @@ class ProjectController extends ApiController
         $data = $request->validate([
             'name' => ['sometimes', 'required', 'string', 'max:100'],
             'description' => ['nullable', 'string'],
+            'github_repo' => ['nullable', 'string', 'max:255', 'regex:#^[\w.-]+/[\w.-]+$#'],
         ]);
 
         $project->update($data);
