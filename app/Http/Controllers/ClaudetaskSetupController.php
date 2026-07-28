@@ -25,6 +25,11 @@ class ClaudetaskSetupController extends Controller
                 'intro2' => __('claudetask.intro_2'),
                 'prerequisite' => __('claudetask.prerequisite'),
 
+                'quickSetupHeading' => __('claudetask.quick_setup_heading'),
+                'quickSetupIntro' => __('claudetask.quick_setup_intro'),
+                'setupPromptWin' => __('claudetask.setup_prompt_win'),
+                'setupPromptMac' => __('claudetask.setup_prompt_mac'),
+
                 'windowsHeading' => __('claudetask.windows_heading'),
                 'windowsStep1' => __('claudetask.windows_step_1'),
                 'windowsStep2' => __('claudetask.windows_step_2'),

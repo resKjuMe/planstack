@@ -8,6 +8,26 @@ return [
     'intro_2' => 'With no handler registered, nothing happens on click. Planstack notices the missing focus change, puts the prompt on the clipboard and points here. That detection is a heuristic: if the shell starts very slowly or in the background, the hint may show up even though the launch worked.',
     'prerequisite' => 'Prerequisite: Claude Code is installed and the claude command is on your PATH.',
 
+    'quick_setup_heading' => 'Quick setup with Claude',
+    'quick_setup_intro' => 'Paste this prompt into a Claude Code session — Claude creates the script and the registration for you. The steps below are the manual route.',
+
+    'setup_prompt_win' => 'Set up the claudetask: protocol handler on this Windows PC so Planstack can start Claude with a prompt directly:
+1. Check whether the claude command is on the PATH ((Get-Command claude).Source). If it is missing, tell me and stop.
+2. Create %USERPROFILE%\planstack\claude-task.ps1. The script takes the full URI as a parameter, strips the "claudetask:" prefix (optionally with //), decodes the rest with [System.Uri]::UnescapeDataString and runs claude <prompt> with it. Print the prompt first for control. Add the auto-mode variant as a comment line: claude --permission-mode auto $prompt
+3. Register the protocol for the current user only (no admin): key HKCU:\SOFTWARE\Classes\claudetask with default value "URL:Claude Task Protocol" and an empty "URL Protocol" value; below it shell\open\command with
+   powershell.exe -NoExit -ExecutionPolicy Bypass -File "<path to the script>" "%1"
+4. Test with Start-Process "claudetask:%2Fhelp" whether a PowerShell with Claude opens.
+5. Show me the registered command value and remind me that Chrome asks for permission on the first click (tick “always allow”).
+Ask me first if you would have to overwrite an existing file or registration along the way.',
+
+    'setup_prompt_mac' => 'Set up the claudetask: protocol handler on this Mac so Planstack can start Claude with a prompt directly:
+1. Check whether the claude command is on the PATH (command -v claude). If it is missing, tell me and stop.
+2. Create ~/bin/claude-task.sh (executable). It takes the full URI as an argument, strips the claudetask: prefix (optionally with //), URL-decodes the rest (python3, urllib.parse.unquote), writes a temporary .command script running claude --permission-mode auto <prompt> and opens it via open -a Terminal.
+3. Build /Applications/ClaudeTask.app as an app that registers the scheme: an AppleScript with “on open location this_URL” calling ~/bin/claude-task.sh with the URI (osacompile or Automator).
+4. Add CFBundleURLTypes with CFBundleURLSchemes = claudetask to the app’s Info.plist (PlistBuddy) and register the app with LaunchServices (lsregister -f).
+5. Test with open "claudetask:%2Fhelp" whether a Terminal with Claude opens, and report the result.
+Ask me first if you would have to overwrite an existing file, app or registration along the way.',
+
     'windows_heading' => 'Windows (PowerShell, no admin rights)',
     'windows_step_1' => 'Create the handler script — this block writes %USERPROFILE%\planstack\claude-task.ps1:',
     'windows_step_2' => 'Register the protocol (current user only, hence no admin needed):',

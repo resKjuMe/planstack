@@ -78,7 +78,7 @@ const MAC_PLIST = [
     '    -f /Applications/ClaudeTask.app',
 ].join('\n');
 
-function CodeBlock({ code, strings }) {
+function CodeBlock({ code, strings, wrap = false }) {
     const [copied, setCopied] = useState(false);
 
     useEffect(() => {
@@ -100,7 +100,13 @@ function CodeBlock({ code, strings }) {
             >
                 {copied ? strings.copied : strings.copy}
             </button>
-            <pre className="overflow-x-auto rounded-lg bg-gray-900 p-4 pr-20 text-[12px] leading-relaxed text-gray-100">
+            <pre
+                className={[
+                    'overflow-x-auto rounded-lg bg-gray-900 p-4 pr-20 text-[12px] leading-relaxed text-gray-100',
+                    // Prompt-Blöcke sind Prosa und dürfen umbrechen; Kommandos nicht.
+                    wrap ? 'whitespace-pre-wrap' : '',
+                ].join(' ')}
+            >
                 <code>{code}</code>
             </pre>
         </div>
@@ -119,9 +125,21 @@ export default function ClaudetaskSetup({ strings }) {
         if (navigator.platform && /Mac/i.test(navigator.platform)) setMacFirst(true);
     }, []);
 
+    // Jede Plattform-Anleitung beginnt mit dem Claude-Prompt, der die Einrichtung
+    // erledigt; die Einzelschritte darunter sind der manuelle Weg.
+    const quickSetup = (prompt) => (
+        <div className="mt-1 rounded-md bg-indigo-50 dark:bg-indigo-900/20 p-4">
+            <p className="text-sm font-semibold text-indigo-900 dark:text-indigo-200">{strings.quickSetupHeading}</p>
+            <p className="mt-1 text-xs text-indigo-800/80 dark:text-indigo-300/80 leading-relaxed">{strings.quickSetupIntro}</p>
+            <CodeBlock code={prompt} strings={strings} wrap />
+        </div>
+    );
+
     const windows = (
         <div className={card} key="windows">
             <h3 className={h3}>{strings.windowsHeading}</h3>
+
+            {quickSetup(strings.setupPromptWin)}
 
             <p className={step}>{strings.windowsStep1}</p>
             <CodeBlock code={WIN_SCRIPT} strings={strings} />
@@ -137,6 +155,8 @@ export default function ClaudetaskSetup({ strings }) {
     const mac = (
         <div className={card} key="mac">
             <h3 className={h3}>{strings.macHeading}</h3>
+
+            {quickSetup(strings.setupPromptMac)}
 
             <p className={step}>{strings.macStep1}</p>
             <CodeBlock code={MAC_SCRIPT} strings={strings} />

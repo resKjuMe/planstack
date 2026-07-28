@@ -8,6 +8,26 @@ return [
     'intro_2' => 'Ist kein Handler registriert, passiert beim Klick nichts. Planstack erkennt das an einem ausbleibenden Fokuswechsel, legt den Prompt in die Zwischenablage und verweist auf diese Seite. Die Erkennung ist eine Heuristik: startet die Shell sehr langsam oder im Hintergrund, kann der Hinweis auch fälschlich erscheinen.',
     'prerequisite' => 'Voraussetzung: Claude Code ist installiert und der Befehl claude liegt im PATH.',
 
+    'quick_setup_heading' => 'Schnell-Einrichtung mit Claude',
+    'quick_setup_intro' => 'Diesen Prompt in eine Claude-Code-Sitzung einfügen — Claude legt Skript und Registrierung selbst an. Die Schritte darunter sind der manuelle Weg.',
+
+    'setup_prompt_win' => 'Richte auf diesem Windows-PC den claudetask:-Protokoll-Handler ein, damit Planstack Claude direkt mit einem Prompt starten kann:
+1. Prüfe, ob der Befehl claude im PATH liegt ((Get-Command claude).Source). Fehlt er, sag mir das und brich ab.
+2. Lege %USERPROFILE%\planstack\claude-task.ps1 an. Das Skript nimmt die komplette URI als Parameter, schneidet das Präfix "claudetask:" (optional mit //) ab, dekodiert den Rest mit [System.Uri]::UnescapeDataString und ruft damit claude <Prompt> auf. Gib den Prompt vorher zur Kontrolle aus. Ergänze als Kommentarzeile die Auto-Mode-Variante: claude --permission-mode auto $prompt
+3. Registriere das Protokoll nur für den aktuellen Nutzer (kein Admin): Schlüssel HKCU:\SOFTWARE\Classes\claudetask mit dem Standardwert "URL:Claude Task Protocol" und einem leeren Wert "URL Protocol"; darunter shell\open\command mit
+   powershell.exe -NoExit -ExecutionPolicy Bypass -File "<Pfad zum Skript>" "%1"
+4. Teste mit Start-Process "claudetask:%2Fhelp", ob sich eine PowerShell mit Claude öffnet.
+5. Zeig mir den registrierten Befehlswert und erinnere mich daran, dass Chrome beim ersten Klick um Erlaubnis fragt ("Immer erlauben" setzen).
+Frag nach, falls du dabei eine bestehende Datei oder Registrierung überschreiben müsstest.',
+
+    'setup_prompt_mac' => 'Richte auf diesem Mac den claudetask:-Protokoll-Handler ein, damit Planstack Claude direkt mit einem Prompt starten kann:
+1. Prüfe, ob der Befehl claude im PATH liegt (command -v claude). Fehlt er, sag mir das und brich ab.
+2. Lege ~/bin/claude-task.sh an (ausführbar). Es nimmt die komplette URI als Argument, schneidet das Präfix claudetask: (optional mit //) ab, dekodiert den Rest URL-mäßig (python3, urllib.parse.unquote), schreibt ein temporäres .command-Skript mit claude --permission-mode auto <Prompt> und öffnet es per open -a Terminal.
+3. Baue /Applications/ClaudeTask.app als App, die das Schema registriert: ein AppleScript mit "on open location this_URL", das ~/bin/claude-task.sh mit der URI aufruft (osacompile oder Automator).
+4. Ergänze in der Info.plist der App CFBundleURLTypes mit CFBundleURLSchemes = claudetask (PlistBuddy) und melde die App bei LaunchServices an (lsregister -f).
+5. Teste mit open "claudetask:%2Fhelp", ob ein Terminal mit Claude aufgeht, und melde mir das Ergebnis.
+Frag nach, falls du dabei eine bestehende Datei, App oder Registrierung überschreiben müsstest.',
+
     'windows_heading' => 'Windows (PowerShell, ohne Admin-Rechte)',
     'windows_step_1' => 'Handler-Skript anlegen — dieser Block schreibt %USERPROFILE%\planstack\claude-task.ps1:',
     'windows_step_2' => 'Protokoll registrieren (nur für den aktuellen Nutzer, deshalb kein Admin nötig):',
