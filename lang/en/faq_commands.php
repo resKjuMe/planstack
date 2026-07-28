@@ -194,4 +194,30 @@ return [
     'ev_approved' => 'The recommendation was `APPROVE`.',
     'ev_changes_requested' => 'The recommendation was `REQUEST_CHANGES`.',
     'events_default_note' => 'The "effect" column shows the default configuration. What actually sets a status in this organization is laid down in the status rules.',
+    // Event-driven steps of the lifecycle
+    'lc_polishing' => 'Polishing begins: merge conflicts, open comments, red CI. `/planstack fix` works exactly here.',
+    'lc_polished' => 'Polishing done — CI green, comments answered and resolved. This moves the task into the review pool.',
+    'lc_approved' => 'The review recommends the merge. Reported by `/planstack review` after an `APPROVE` recommendation.',
+    'lc_changes_requested' => 'The review asks for changes — the task goes back into implementation, the PR stays.',
+    'lc_deployed' => 'Deployed. The final step after the merge, if the organization uses it.',
+
+    // Further events
+    'ev_unclaimed' => 'The claim was handed back — the task is free again.',
+    'ev_merged' => 'PR merged. Not reported by the skill but by the server during the PR sync.',
+    'ev_deployed' => 'Deployed.',
+    'events_target_none' => 'log only',
+
+    // Section: allowed status transitions
+    'transitions_title' => 'Allowed status transitions',
+    'transitions_hint' => 'A guarded state machine: only these transitions are permitted. Both dragging a card on the board and every action via API and MCP are checked against it.',
+    'th_from' => 'from',
+    'th_to' => 'allowed to',
+    'transitions_note' => 'A forbidden transition is rejected with `409` — not silently dropped. From "blocked" and "concerned" almost every path leads back on purpose, so a task can never get stuck. Event-driven assignments run through their own guard set, not through this table.',
+
+    // Section: field automations
+    'fields_title' => 'Fields the server fills itself',
+    'fields_hint' => 'On entering these statuses, fields are populated automatically — each only while still empty.',
+    'th_on_status' => 'on entering',
+    'th_fields' => 'fields set',
+    'fields_note' => '`@actor` is the user behind the token, `@now` the moment of the transition. Because only empty fields are filled, entering the same status a second time overwrites nothing — the first claimer and the first reviewer are preserved.',
 ];

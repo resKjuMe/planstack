@@ -55,7 +55,7 @@ const TH = 'px-6 py-2 font-medium';
 const HEAD_ROW = 'text-left text-xs text-gray-400 dark:text-gray-500 border-b border-gray-100 dark:border-gray-700';
 const BODY_ROW = 'border-b border-gray-50 dark:border-gray-700/50 last:border-0 align-top';
 
-export default function FaqCommands({ tabs, badges, lifecycle, commands, statuses, events, strings }) {
+export default function FaqCommands({ tabs, badges, lifecycle, commands, statuses, events, transitions, fieldAutomations, strings }) {
     return (
         <>
             <Head><title>{strings.title}</title></Head>
@@ -190,11 +190,9 @@ export default function FaqCommands({ tabs, badges, lifecycle, commands, statuse
                                             <td className="px-6 py-3"><Call>{e.event}</Call></td>
                                             <td className="px-6 py-3 text-gray-700 dark:text-gray-300">{e.when}</td>
                                             <td className="px-6 py-3 whitespace-nowrap">
-                                                <span className={'inline-flex items-center rounded px-1.5 py-0.5 text-[11px] font-medium ' + (e.drivesStatus
-                                                    ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 ring-1 ring-indigo-200 dark:ring-indigo-800'
-                                                    : 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400')}>
-                                                    {e.drivesStatus ? strings.effectStatus : strings.effectInfo}
-                                                </span>
+                                                {e.target
+                                                    ? <Badge name={e.target} badges={badges} />
+                                                    : <span className="text-xs text-gray-400 dark:text-gray-500">{strings.eventsTargetNone}</span>}
                                             </td>
                                         </tr>
                                     ))}
@@ -207,6 +205,59 @@ export default function FaqCommands({ tabs, badges, lifecycle, commands, statuse
                             <li className="px-6 py-3 text-xs text-gray-500 dark:text-gray-400">{strings.eventsMergedNote}</li>
                             <li className="px-6 py-3 text-xs text-gray-500 dark:text-gray-400">{strings.eventsDefaultNote}</li>
                         </ul>
+                    </Card>
+
+
+                    {/* 5) Erlaubte Statuswechsel */}
+                    <Card title={strings.transitionsTitle} hint={strings.transitionsHint}>
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-sm">
+                                <thead>
+                                    <tr className={HEAD_ROW}>
+                                        <th className={TH}>{strings.thFrom}</th>
+                                        <th className={TH}>{strings.thTo}</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {transitions.map((row) => (
+                                        <tr key={row.from} className={BODY_ROW}>
+                                            <td className="px-6 py-3 whitespace-nowrap"><Badge name={row.from} badges={badges} /></td>
+                                            <td className="px-6 py-3">
+                                                <div className="flex flex-wrap gap-1.5">
+                                                    {row.to.map((target) => (
+                                                        <Badge key={target} name={target} badges={badges} />
+                                                    ))}
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                        <p className="border-t border-gray-100 dark:border-gray-700 px-6 py-3 text-xs text-gray-500 dark:text-gray-400">{strings.transitionsNote}</p>
+                    </Card>
+
+                    {/* 6) Felder, die der Server selbst fuellt */}
+                    <Card title={strings.fieldsTitle} hint={strings.fieldsHint}>
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-sm">
+                                <thead>
+                                    <tr className={HEAD_ROW}>
+                                        <th className={TH}>{strings.thOnStatus}</th>
+                                        <th className={TH}>{strings.thFields}</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {fieldAutomations.map((row) => (
+                                        <tr key={row.status} className={BODY_ROW}>
+                                            <td className="px-6 py-3 whitespace-nowrap"><Badge name={row.status} badges={badges} /></td>
+                                            <td className="px-6 py-3"><Call>{row.fields}</Call></td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                        <p className="border-t border-gray-100 dark:border-gray-700 px-6 py-3 text-xs text-gray-500 dark:text-gray-400">{strings.fieldsNote}</p>
                     </Card>
 
                 </div>

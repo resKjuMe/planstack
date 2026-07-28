@@ -194,4 +194,30 @@ return [
     'ev_approved' => 'Empfehlung war `APPROVE`.',
     'ev_changes_requested' => 'Empfehlung war `REQUEST_CHANGES`.',
     'events_default_note' => 'Die Spalte „Wirkung" zeigt die Standard-Konfiguration. Was in dieser Organisation tatsächlich einen Status setzt, steht verbindlich in den Statusregeln.',
+    // Ereignisgesteuerte Schritte des Lebenszyklus
+    'lc_polishing' => 'Politur beginnt: Merge-Konflikte, offene Kommentare, rote CI. `/planstack fix` arbeitet genau hier.',
+    'lc_polished' => 'Politur fertig — CI grün, Kommentare beantwortet und aufgelöst. Damit wandert der Task in den Review-Pool.',
+    'lc_approved' => 'Das Review empfiehlt den Merge. Meldet `/planstack review` nach der Empfehlung `APPROVE`.',
+    'lc_changes_requested' => 'Das Review verlangt Änderungen — der Task geht zurück in die Bearbeitung, der PR bleibt.',
+    'lc_deployed' => 'Ausgerollt. Der letzte Schritt nach dem Merge, sofern die Organisation ihn nutzt.',
+
+    // Weitere Events
+    'ev_unclaimed' => 'Beanspruchung zurückgegeben — der Task ist wieder frei.',
+    'ev_merged' => 'PR gemerged. Meldet nicht das Skill, sondern der Server beim PR-Abgleich.',
+    'ev_deployed' => 'Ausgerollt.',
+    'events_target_none' => 'nur Protokoll',
+
+    // Abschnitt: erlaubte Statuswechsel
+    'transitions_title' => 'Erlaubte Statuswechsel',
+    'transitions_hint' => 'Eine geschützte Zustandsmaschine: nur diese Wechsel sind zugelassen. Geprüft wird sowohl das Ziehen einer Karte auf dem Board als auch jede Aktion über API und MCP.',
+    'th_from' => 'von',
+    'th_to' => 'erlaubt nach',
+    'transitions_note' => 'Ein unerlaubter Wechsel wird mit `409` abgewiesen — nicht still verworfen. Aus „blockiert" und „problematisch" führt bewusst fast jeder Weg zurück, damit ein Task nie feststeckt. Ereignisgesteuerte Zuweisungen laufen über ihre eigene Guard-Menge und nicht über diese Tabelle.',
+
+    // Abschnitt: Feld-Automationen
+    'fields_title' => 'Felder, die der Server selbst füllt',
+    'fields_hint' => 'Beim Eintritt in diese Status werden Felder automatisch belegt — jeweils nur, wenn sie noch leer sind.',
+    'th_on_status' => 'beim Eintritt in',
+    'th_fields' => 'gesetzte Felder',
+    'fields_note' => '`@actor` ist der Nutzer des Tokens, `@now` der Zeitpunkt des Wechsels. Weil nur leere Felder befüllt werden, überschreibt ein zweiter Eintritt in denselben Status nichts — der erste Beansprucher und der erste Reviewer bleiben erhalten.',
 ];

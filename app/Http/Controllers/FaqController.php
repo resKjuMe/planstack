@@ -62,37 +62,41 @@ class FaqController extends Controller
             ['GET /projects/{p}/board', 'lc_board', null, '⚙ Auto (Wähle) DCE · — Board lesen'],
             ['POST /projects/{p}/claim-next', 'lc_claim_next', 'CLAIMED', '⚙ Auto (Wähle) DCE · C27 — beansprucht'],
             ['GET /projects/{p}/tasks/{t}?fields=full', 'lc_details', null, '⚙ Auto (Lade Details) DCE · C27 — Aufgabe lesen'],
-            ['POST …/tasks/{t}/status {analyze}', 'lc_analyze', 'ANALYZING', '⚙ Auto (Analyse) DCE · C27 — Untersuche den Umfang'],
-            ['POST …/tasks/{t}/status {in_progress}', 'lc_in_progress', 'IN_PROGRESS', '⚙ Auto (Bearbeite) DCE · C27 — Führe Code-Änderungen durch'],
+            ['POST …/tasks/{t}/events {ANALYZING}', 'lc_analyze', 'ANALYZING', '⚙ Auto (Analyse 60 %) DCE · C27 — 3/5 Teilschritte'],
+            ['POST …/tasks/{t}/events {PROCESSING}', 'lc_in_progress', 'IN_PROGRESS', '⚙ Auto (Bearbeite 44 %) DCE · C27 — 4/9 Dateien'],
             ['POST …/tasks/{t}/concern', 'lc_concern', 'CONCERNED', '⚙ Auto (Concern) DCE · C27 — Concern gemeldet'],
             ['gh pr create', 'lc_pr_create', null, '⚙ Auto (Erstelle PR) DCE · C27'],
             ['POST …/tasks/{t}/pr {pr_number}', 'lc_pr_set', null, '⚙ Auto (Hinterlege PR) DCE · C27 — PR #418'],
-            ['POST …/tasks/{t}/status {done}', 'lc_done', 'IN_REVIEW', '⚙ Auto (Fertigstellung) DCE · C27 — fertig melden'],
-            ['POST …/tasks/{t}/review-claim', 'lc_review_claim', null, '⚙ Auto (Review) DCE · A1 — Diff prüfen'],
-            ['POST …/tasks/{t}/review {recommendation,summary}', 'lc_review_result', null, '⚙ Auto (Review) DCE · A1 — Ergebnis erfassen (Approve/Request Changes)'],
+            ['POST …/tasks/{t}/events {POLISHING}', 'lc_polishing', 'BEREINIGEN', '⚙ Auto (Fix 40 %) DCE · C27 — 2/5 Checks'],
+            ['POST …/tasks/{t}/events {POLISHED}', 'lc_polished', 'REVIEWBAR', '⚙ Auto (Fix 100 %) DCE · C27 — 5/5 Checks'],
+            ['POST …/tasks/{t}/review-claim · events {REVIEWING}', 'lc_review_claim', 'IN_REVIEW', '⚙ Auto (Review 25 %) DCE · A1 — 2/8 Dateien im Diff'],
+            ['POST …/tasks/{t}/review {recommendation,summary}', 'lc_review_result', null, '⚙ Auto (Review 100 %) DCE · A1 — Ergebnis erfassen (Approve/Request Changes)'],
+            ['POST …/tasks/{t}/events {APPROVED}', 'lc_approved', 'APPROVED', '⚙ Auto (Review) DCE · A1 — freigegeben'],
+            ['POST …/tasks/{t}/events {CHANGES_REQUESTED}', 'lc_changes_requested', 'IN_PROGRESS', '⚙ Auto (Bearbeite 0 %) DCE · A1 — 0/3 Kommentare'],
             ['POST …/tasks/{t}/merge', 'lc_merge', 'MERGED', '⚙ Auto (Fertigstellung) DCE · C27 — mergen'],
             ['— (PR-Abgleich)', 'lc_sync', 'MERGED', null],
+            ['POST …/tasks/{t}/events {DEPLOYED}', 'lc_deployed', 'COMPLETED', null],
         ];
 
         $commands = [
             ['/planstack work <PROJECT>', 'cmd_work_board_purpose', [
                 ['POST /projects/{p}/claim-next', 'cmd_work_board_1', '⚙ Auto (Wähle) DCE · C27 — beansprucht'],
-                ['POST …/tasks/{t}/status {analyze}', 'cmd_work_board_2', '⚙ Auto (Analyse) DCE · C27 — Untersuche den Umfang'],
-                ['POST …/tasks/{t}/status {in_progress}', 'cmd_work_board_3', '⚙ Auto (Bearbeite) DCE · C27 — Führe Code-Änderungen durch'],
+                ['POST …/tasks/{t}/events {ANALYZING}', 'cmd_work_board_2', '⚙ Auto (Analyse 60 %) DCE · C27 — 3/5 Teilschritte'],
+                ['POST …/tasks/{t}/events {PROCESSING}', 'cmd_work_board_3', '⚙ Auto (Bearbeite 44 %) DCE · C27 — 4/9 Dateien'],
                 ['gh pr create · POST …/tasks/{t}/pr', 'cmd_work_board_4', '⚙ Auto (Hinterlege PR) DCE · C27 — PR #418'],
-                ['POST …/tasks/{t}/status {done} · /merge', 'cmd_work_board_5', '⚙ Auto (Fertigstellung) DCE · C27 — mergen'],
+                ['POST …/tasks/{t}/events {POLISHED} · /merge', 'cmd_work_board_5', '⚙ Auto (Fertigstellung) DCE · C27 — mergen'],
                 ['GET /projects/{p}/board', 'cmd_work_board_6', '⚙ Auto (Wähle) DCE · — Board lesen'],
             ]],
             ['/planstack work <PROJECT> <TASK>', 'cmd_work_task_purpose', [
                 ['POST /projects/{p}/tasks/{t}/claim', 'cmd_work_task_1', '⚙ Auto (Wähle) DCE · C27 — beansprucht'],
                 ['GET /projects/{p}/tasks/{t}', 'cmd_work_task_2', '⚙ Auto (Lade Details) DCE · C27 — Aufgabe lesen'],
-                ['—', 'cmd_work_task_3', '⚙ Auto (Bearbeite) DCE · C27 — Führe Code-Änderungen durch'],
+                ['—', 'cmd_work_task_3', '⚙ Auto (Bearbeite 44 %) DCE · C27 — 4/9 Dateien'],
             ]],
             ['/planstack auto <PROJECT>', 'cmd_auto_purpose', [
                 ['~/.claude/planstack-status-<session_id>.txt', 'cmd_auto_1', '⏳ Auto (Wähle) DCE · — Arbeit suchen'],
-                ['POST /projects/{p}/review-next', 'cmd_auto_2', '⚙ Auto (Review) DCE · A1 — Diff prüfen'],
-                ['GET /projects/{p}/tasks', 'cmd_auto_3', '⚙ Auto (Bearbeite) DCE · C27 — Führe Code-Änderungen durch'],
-                ['POST /projects/{p}/claim-next', 'cmd_auto_4', '⚙ Auto (Analyse) DCE · C27 — Untersuche den Umfang'],
+                ['POST /projects/{p}/review-next', 'cmd_auto_2', '⚙ Auto (Review 25 %) DCE · A1 — 2/8 Dateien im Diff'],
+                ['GET /projects/{p}/tasks', 'cmd_auto_3', '⚙ Auto (Bearbeite 44 %) DCE · C27 — 4/9 Dateien'],
+                ['POST /projects/{p}/claim-next', 'cmd_auto_4', '⚙ Auto (Analyse 60 %) DCE · C27 — 3/5 Teilschritte'],
                 ['POST /projects/{p}/next-action', 'cmd_auto_5', null],
                 ['—', 'cmd_auto_6', '⏳ Auto (Idle) DCE · — warte 5 min'],
             ]],
@@ -100,19 +104,19 @@ class FaqController extends Controller
                 ['POST /projects/{p}/tasks/{t}/review-claim', 'cmd_review_1', '⚙ Auto (Review) DCE · A1 — Review übernommen'],
                 ['POST /projects/{p}/review-next', 'cmd_review_2', null],
                 ['GET /projects', 'cmd_review_3', null],
-                ['/review', 'cmd_review_4', '⚙ Auto (Review) DCE · A1 — Diff prüfen (PR #418)'],
-                ['POST …/tasks/{t}/review {recommendation,summary}', 'cmd_review_5', '⚙ Auto (Review) DCE · A1 — Ergebnis erfassen'],
+                ['/review', 'cmd_review_4', '⚙ Auto (Review 25 %) DCE · A1 — 2/8 Dateien im Diff (PR #418)'],
+                ['POST …/tasks/{t}/review {recommendation,summary}', 'cmd_review_5', '⚙ Auto (Review 100 %) DCE · A1 — Ergebnis erfassen'],
                 ['gh pr review --approve | --request-changes', 'cmd_review_6', null],
                 ['POST …/tasks/{t}/events {event}', 'cmd_review_7', null],
             ]],
             ['/planstack fix [<PROJECT>] <TASK|PR>', 'cmd_fix_purpose', [
                 ['GET /projects/{p}/tasks/{t}', 'cmd_fix_1', '⚙ Auto (Fix) L2L · G5 — PR #418 bestimmen'],
                 ['POST …/tasks/{t}/events {POLISHING}', 'cmd_fix_2', null],
-                ['git fetch · git merge origin/<base>', 'cmd_fix_3', '⚙ Auto (Fix) L2L · G5 — Konflikte auflösen'],
-                ['gh pr view --comments', 'cmd_fix_4', '⚙ Auto (Fix) L2L · G5 — Kommentare beantworten'],
-                ['gh api …/pulls/{pr}/comments', 'cmd_fix_5', '⚙ Auto (Fix) L2L · G5 — Review-Threads auflösen'],
-                ['gh pr checks', 'cmd_fix_6', '⚙ Auto (Fix) L2L · G5 — CI reparieren'],
-                ['POST …/tasks/{t}/events {POLISHED}', 'cmd_fix_7', '⚙ Auto (Fix) L2L · G5 — poliert'],
+                ['git fetch · git merge origin/<base>', 'cmd_fix_3', '⚙ Auto (Fix 0 %) L2L · G5 — 0/5 Checks'],
+                ['gh pr view --comments', 'cmd_fix_4', '⚙ Auto (Fix 40 %) L2L · G5 — 3/7 Kommentare'],
+                ['gh api …/pulls/{pr}/comments', 'cmd_fix_5', '⚙ Auto (Fix 60 %) L2L · G5 — 1/4 Review-Threads'],
+                ['gh pr checks', 'cmd_fix_6', '⚙ Auto (Fix 80 %) L2L · G5 — 4/5 Checks'],
+                ['POST …/tasks/{t}/events {POLISHED}', 'cmd_fix_7', '⚙ Auto (Fix 100 %) L2L · G5 — 5/5 Checks'],
             ]],
             ['/planstack plan [<PROJECT>]', 'cmd_plan_purpose', [
                 ['GET /projects/{p}/config', 'cmd_plan_1'],
@@ -173,21 +177,52 @@ class FaqController extends Controller
             ];
         })->values()->all();
 
+        // Fortschritts-Events in Ablauf-Reihenfolge. Drittes Feld = Zielstatus der
+        // Standard-Konfiguration (null ⇒ das Event ist reines Protokoll und setzt
+        // keinen Status). Auch hier fest hinterlegt, nicht aus der Org gelesen.
         $events = [
-            ['CLAIMING', 'ev_claiming', false],
-            ['CLAIMED', 'ev_claimed', true],
-            ['ANALYZING', 'ev_analyzing', true],
-            ['ANALYZED', 'ev_analyzed', false],
-            ['PROCESSING', 'ev_processing', true],
-            ['PROCESSED', 'ev_processed', false],
-            ['PUBLISHING', 'ev_publishing', false],
-            ['POLISHING', 'ev_polishing', false],
-            ['POLISHED', 'ev_polished', true],
-            ['CONCERNED', 'ev_concerned', true],
-            ['REVIEWING', 'ev_reviewing', false],
-            ['REVIEWED', 'ev_reviewed', false],
-            ['APPROVED', 'ev_approved', false],
-            ['CHANGES_REQUESTED', 'ev_changes_requested', false],
+            ['CLAIMING', 'ev_claiming', null],
+            ['CLAIMED', 'ev_claimed', 'CLAIMED'],
+            ['ANALYZING', 'ev_analyzing', 'ANALYZING'],
+            ['ANALYZED', 'ev_analyzed', null],
+            ['PROCESSING', 'ev_processing', 'IN_PROGRESS'],
+            ['PROCESSED', 'ev_processed', null],
+            ['PUBLISHING', 'ev_publishing', null],
+            ['POLISHING', 'ev_polishing', 'BEREINIGEN'],
+            ['POLISHED', 'ev_polished', 'REVIEWBAR'],
+            ['REVIEWING', 'ev_reviewing', 'IN_REVIEW'],
+            ['REVIEWED', 'ev_reviewed', null],
+            ['APPROVED', 'ev_approved', 'APPROVED'],
+            ['CHANGES_REQUESTED', 'ev_changes_requested', 'IN_PROGRESS'],
+            ['CONCERNED', 'ev_concerned', 'CONCERNED'],
+            ['UNCLAIMED', 'ev_unclaimed', 'PICKABLE'],
+            ['MERGED', 'ev_merged', 'MERGED'],
+            ['DEPLOYED', 'ev_deployed', 'COMPLETED'],
+        ];
+
+        // Erlaubte Statuswechsel der Standard-Konfiguration. Board-Drag UND
+        // API/MCP-Aktionen werden dagegen geprüft; ein unerlaubter Wechsel → 409.
+        $transitions = [
+            ['PICKABLE', ['CLAIMED', 'BLOCKED', 'CONCERNED']],
+            ['CLAIMED', ['PICKABLE', 'ANALYZING', 'IN_PROGRESS', 'IN_REVIEW', 'BLOCKED', 'CONCERNED']],
+            ['ANALYZING', ['PICKABLE', 'CLAIMED', 'IN_PROGRESS', 'IN_REVIEW', 'BLOCKED', 'CONCERNED']],
+            ['IN_PROGRESS', ['PICKABLE', 'ANALYZING', 'BEREINIGEN', 'REVIEWBAR', 'IN_REVIEW', 'COMPLETED', 'BLOCKED', 'CONCERNED']],
+            ['BEREINIGEN', ['ANALYZING', 'IN_PROGRESS', 'REVIEWBAR', 'IN_REVIEW']],
+            ['REVIEWBAR', ['PICKABLE', 'IN_PROGRESS', 'BEREINIGEN', 'IN_REVIEW', 'BLOCKED', 'CONCERNED']],
+            ['IN_REVIEW', ['PICKABLE', 'IN_PROGRESS', 'REVIEWBAR', 'APPROVED', 'MERGED', 'COMPLETED', 'BLOCKED', 'CONCERNED']],
+            ['APPROVED', ['PICKABLE', 'IN_PROGRESS', 'IN_REVIEW', 'MERGED', 'BLOCKED', 'CONCERNED']],
+            ['MERGED', ['PICKABLE', 'COMPLETED', 'BLOCKED', 'CONCERNED']],
+            ['COMPLETED', ['PICKABLE', 'IN_REVIEW', 'MERGED', 'BLOCKED', 'CONCERNED']],
+            ['BLOCKED', ['PICKABLE', 'CLAIMED', 'ANALYZING', 'IN_PROGRESS', 'REVIEWBAR', 'IN_REVIEW', 'APPROVED', 'MERGED', 'COMPLETED', 'CONCERNED']],
+            ['CONCERNED', ['PICKABLE', 'CLAIMED', 'ANALYZING', 'IN_PROGRESS', 'REVIEWBAR', 'IN_REVIEW', 'APPROVED', 'MERGED', 'COMPLETED', 'BLOCKED']],
+        ];
+
+        // Felder, die der Server beim Eintritt in einen Status selbst füllt —
+        // jeweils nur, wenn das Feld noch leer ist.
+        $fieldAutomations = [
+            ['CLAIMED', 'claimed_by_id = @actor · claimed_at = @now'],
+            ['IN_REVIEW', 'reviewed_by = @actor'],
+            ['MERGED', 'merged_at = @now'],
         ];
 
         $stringKeys = [
@@ -201,7 +236,9 @@ class FaqController extends Controller
             'flag_derived', 'flag_stored', 'flag_counts_done',
             'events_title', 'events_hint', 'events_best_effort', 'events_authoritative',
             'events_merged_note', 'events_default_note',
-            'th_event', 'th_when', 'th_effect', 'effect_status', 'effect_info',
+            'th_event', 'th_when', 'th_effect', 'events_target_none',
+            'transitions_title', 'transitions_hint', 'transitions_note', 'th_from', 'th_to',
+            'fields_title', 'fields_hint', 'fields_note', 'th_on_status', 'th_fields',
         ];
 
         return Inertia::render('FaqCommands', [
@@ -226,7 +263,13 @@ class FaqController extends Controller
             ])->all(),
             'statuses' => $statuses,
             'events' => collect($events)->map(fn ($e) => [
-                'event' => $e[0], 'when' => $t($e[1]), 'drivesStatus' => $e[2],
+                'event' => $e[0], 'when' => $t($e[1]), 'target' => $e[2],
+            ])->all(),
+            'transitions' => collect($transitions)->map(fn ($r) => [
+                'from' => $r[0], 'to' => $r[1],
+            ])->all(),
+            'fieldAutomations' => collect($fieldAutomations)->map(fn ($r) => [
+                'status' => $r[0], 'fields' => $r[1],
             ])->all(),
             'strings' => collect($stringKeys)
                 ->mapWithKeys(fn (string $k) => [

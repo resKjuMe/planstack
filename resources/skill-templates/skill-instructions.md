@@ -178,32 +178,45 @@ Kurz nach dem Start dem Nutzer einmal bestätigen, dass der Auto-Modus für `<PR
 
 Weil der Auto-Modus unbeaufsichtigt läuft, muss **dauerhaft sichtbar** sein, was gerade getan wird — als **Statuszeile** (sticky, unten im Fenster), nicht nur als Fließtext im Verlauf.
 
-**Format** (genau diese Reihenfolge, Phase in Klammern **direkt hinter „Auto"**):
+**Format** (genau diese Reihenfolge, Phase samt Prozentzahl in Klammern **direkt hinter „Auto"**):
 
 ```
-<Symbol> Auto (<Aktion>) <PROJECT> · <TASK> — <kurzer Schritt>
+<Symbol> Auto (<Phase> <%>) <PROJECT> · <TASK> — <kurzer Schritt>
 ```
 
-Beispiele: `⚙ Auto (Analyse) DCE · C27 — Untersuche den Umfang` · `⚙ Auto (Bearbeite) DCE · C27 — Führe Code-Änderungen durch` · `⚙ Auto (Review) DCE · A1 — Diff prüfen` · `⚙ Auto (Fix) L2L · G5 — CI reparieren` · `⏳ Auto (Idle) DCE · — warte 5 min`.
+Beispiele: `⚙ Auto (Analyse 60 %) DCE · C27 — 3/5 Teilschritte` · `⚙ Auto (Bearbeite 44 %) DCE · C27 — 4/9 Dateien` · `⚙ Auto (Fix 40 %) L2L · G5 — 2/5 Checks` · `⚙ Auto (Erstelle PR) DCE · C27` · `⏳ Auto (Idle) DCE · — warte 5 min`.
 
-`<Aktion>` ist die **laufende Phase** in Titelschreibweise — also das, was in diesem Moment tatsächlich passiert, nicht die grobe Arbeitseinheit. Sie ist damit feiner als das `action`-Feld des Ergebnisberichts: eine Arbeitseinheit mit `action: "pick"` durchläuft mehrere Phasen. Verbindliche Phasen:
+`<Phase>` ist die **laufende Phase** in Titelschreibweise — also das, was in diesem Moment tatsächlich passiert, nicht die grobe Arbeitseinheit. Sie ist damit feiner als das `action`-Feld des Ergebnisberichts: eine Arbeitseinheit mit `action: "pick"` durchläuft mehrere Phasen. Verbindliche Phasen, mit der Einheit, in der sich ihr Fortschritt zählen lässt:
 
-| Phase | wann |
-|---|---|
-| `Wähle` | Board lesen, Arbeit suchen, beanspruchen |
-| `Lade Details` | Beschreibung, Akzeptanzkriterien und Voraussetzungen holen |
-| `Analyse` | Umfang untersuchen, noch kein Code |
-| `Bearbeite` | Code-Änderungen durchführen |
-| `Erstelle PR` | PR anlegen |
-| `Hinterlege PR` | PR-Nummer am Task eintragen |
-| `Fertigstellung` | fertig melden, mergen |
-| `Review` | Review übernehmen, Diff prüfen, Ergebnis erfassen |
-| `Fix` | Politur am offenen PR (Konflikte, Kommentare, CI) |
-| `Concern` | Concern gemeldet, Arbeitseinheit endet |
-| `Idle` | nichts zu tun, 5-Minuten-Pause |
-| `Pause` | Modus angehalten |
+| Phase | wann | zählbare Einheit |
+|---|---|---|
+| `Wähle` | Board lesen, Arbeit suchen, beanspruchen | — |
+| `Lade Details` | Beschreibung, Akzeptanzkriterien und Voraussetzungen holen | — |
+| `Analyse` | Umfang untersuchen, noch kein Code | Teilschritte |
+| `Bearbeite` | Code-Änderungen durchführen | Dateien, Teilschritte |
+| `Erstelle PR` | PR anlegen | — |
+| `Hinterlege PR` | PR-Nummer am Task eintragen | — |
+| `Fix` | Politur am offenen PR (Konflikte, Kommentare, CI) | Checks, Kommentare, Review-Threads |
+| `Review` | Review übernehmen, Diff prüfen, Ergebnis erfassen | Dateien im Diff |
+| `Fertigstellung` | fertig melden, mergen | — |
+| `Concern` | Concern gemeldet, Arbeitseinheit endet | — |
+| `Idle` | nichts zu tun, 5-Minuten-Pause | — |
+| `Pause` | Modus angehalten | — |
 
-Passt keine davon, die nächstliegende nehmen statt eine neue zu erfinden — die Zeile soll über Auto-Runs hinweg wiedererkennbar bleiben. Der Ergebnisbericht behält unverändert sein `action`-Feld (`review`/`fix`/`finish`/`pick`/`concern`/`idle`); die Statuszeile ist davon unabhängig.
+Passt keine Phase, die nächstliegende nehmen statt eine neue zu erfinden — die Zeile soll über Auto-Runs hinweg wiedererkennbar bleiben. Der Ergebnisbericht behält unverändert sein `action`-Feld (`review`/`fix`/`finish`/`pick`/`concern`/`idle`); die Statuszeile ist davon unabhängig.
+
+**`<%>` ist der Fortschritt INNERHALB der laufenden Phase — und wird gerechnet, nie geschätzt.** Er entsteht ausschließlich aus einem Zähler mit echtem Nenner: `<%>` = erledigte Einheiten ÷ geplante Einheiten. Der Nenner kommt
+
+1. aus der **natürlichen Einheit** der Phase (Spalte oben): zu ändernde Dateien, offene Kommentare, CI-Checks, Review-Threads, Dateien im Diff;
+2. sonst aus der **eigenen Teilschritt-Liste**: vor Beginn der Phase die geplanten Teilschritte festhalten (das passiert beim Planen ohnehin) und danach abzählen.
+
+Steht kein Nenner fest, **entfällt die Prozentzahl** — dann nur die Phase, ohne Zahl (`⚙ Auto (Erstelle PR) DCE · C27`). Eine geratene Zahl („73 %", weil es sich nach zwei Dritteln anfühlt) ist eine erfundene Angabe und schlimmer als keine. Bei `Concern`, `Idle` und `Pause` gibt es grundsätzlich keine.
+
+Der zugrundeliegende Bruch gehört **zusätzlich** in den `<kurzer Schritt>`-Text, damit die Zahl nachvollziehbar ist: `4/9 Dateien`, `3/7 Kommentare`, `2/5 Checks`, `1/4 Review-Threads`, `3/5 Teilschritte`. Gerundet wird auf ganze Prozent.
+
+**Der Nenner darf wachsen.** Stellt sich mitten in der Phase heraus, dass aus 7 geplanten Teilschritten 10 werden, wird der Nenner korrigiert — auch wenn die Prozentzahl dadurch **zurückgeht**. Eine zurückgehende Zahl ist ehrlich; eine künstlich monotone wäre gelogen. Den Nenner also nie kleinhalten, nur damit die Anzeige steigt.
+
+Innerhalb einer Phase wird die Zeile bei **jeder** gezählten Einheit neu geschrieben (also z. B. nach jeder fertigen Datei) — das ist der einzige Fall, in dem sie mehrfach pro Phase wandert.
 
 **Einrichtung (einmalig, zu Beginn des Auto-Modus prüfen und bei Bedarf anlegen):**
 

@@ -189,6 +189,81 @@ class FaqCommandsPageTest extends TestCase
     }
 
     /**
+     * Die Standard-Konfiguration ist ereignisgesteuert: der Status folgt den
+     * Fortschritts-Events, direkte status-Calls ignoriert der Server. Der Artikel
+     * muss deshalb je Event den Zielstatus zeigen — und bei den rein
+     * protokollierenden Events ausdrücklich keinen.
+     */
+    public function test_events_carry_their_target_status(): void
+    {
+        $events = collect($this->actingAs($this->member())
+            ->get(route('faq.commands'))
+            ->assertOk()
+            ->inertiaProps('events'))->keyBy('event');
+
+        $drives = [
+            'CLAIMED' => 'CLAIMED',
+            'ANALYZING' => 'ANALYZING',
+            'PROCESSING' => 'IN_PROGRESS',
+            'POLISHING' => 'BEREINIGEN',
+            'POLISHED' => 'REVIEWBAR',
+            'REVIEWING' => 'IN_REVIEW',
+            'APPROVED' => 'APPROVED',
+            'CHANGES_REQUESTED' => 'IN_PROGRESS',
+            'CONCERNED' => 'CONCERNED',
+            'UNCLAIMED' => 'PICKABLE',
+            'MERGED' => 'MERGED',
+            'DEPLOYED' => 'COMPLETED',
+        ];
+
+        foreach ($drives as $event => $target) {
+            $this->assertSame($target, $events[$event]['target'] ?? null, $event.' ohne Zielstatus');
+        }
+
+        // Reines Protokoll — kein Zielstatus, sonst wäre die Tabelle irreführend.
+        foreach (['CLAIMING', 'ANALYZED', 'PROCESSED', 'PUBLISHING', 'REVIEWED'] as $event) {
+            $this->assertNull($events[$event]['target'], $event.' sollte kein Status setzen');
+        }
+    }
+
+    /**
+     * Die erlaubten Wechsel sind eine geschützte Zustandsmaschine (unerlaubt →
+     * 409). Aus den Ausnahme-Status muss ein Rückweg bestehen, sonst steckt ein
+     * Task fest.
+     */
+    public function test_lists_transitions_and_field_automations(): void
+    {
+        $props = $this->actingAs($this->member())
+            ->get(route('faq.commands'))
+            ->assertOk()
+            ->inertiaPage()['props'];
+
+        $transitions = collect($props['transitions'])->keyBy('from');
+
+        $this->assertContains('CLAIMED', $transitions['PICKABLE']['to']);
+        $this->assertContains('REVIEWBAR', $transitions['BEREINIGEN']['to']);
+        $this->assertContains('APPROVED', $transitions['IN_REVIEW']['to']);
+
+        foreach (['BLOCKED', 'CONCERNED'] as $exception) {
+            $this->assertContains('PICKABLE', $transitions[$exception]['to'], $exception.' ohne Rückweg');
+        }
+
+        // Jede Zeile nennt nur Status, die die Tabelle oben auch erklärt.
+        $known = collect($props['statuses'])->pluck('name')->all();
+        foreach ($props['transitions'] as $row) {
+            $this->assertContains($row['from'], $known);
+            foreach ($row['to'] as $target) {
+                $this->assertContains($target, $known, $target.' ist kein erklärter Status');
+            }
+        }
+
+        $fields = collect($props['fieldAutomations'])->keyBy('status');
+        $this->assertStringContainsString('claimed_at', $fields['CLAIMED']['fields']);
+        $this->assertStringContainsString('reviewed_by', $fields['IN_REVIEW']['fields']);
+        $this->assertStringContainsString('merged_at', $fields['MERGED']['fields']);
+    }
+
+    /**
      * @return array<int, array{0: string}>
      */
     public static function locales(): array
