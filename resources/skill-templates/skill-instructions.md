@@ -174,6 +174,27 @@ Kurz nach dem Start dem Nutzer einmal bestätigen, dass der Auto-Modus für `<PR
 
 **Warten (5 Minuten):** Nach einem `idle`-Auto-Run 300 s echt pausieren (nicht mit Arbeit „totlaufen"), bevor der nächste startet. Kommt vorher ein Nutzer-Input, diesen bevorzugt behandeln.
 
+### Sticky-Statuszeile (Pflicht im Auto-Modus)
+
+Weil der Auto-Modus unbeaufsichtigt läuft, muss **dauerhaft sichtbar** sein, was gerade getan wird — als **Statuszeile** (sticky, unten im Fenster), nicht nur als Fließtext im Verlauf.
+
+**Format** (genau diese Reihenfolge, Aktion in Klammern **direkt hinter „Auto"**):
+
+```
+<Symbol> Auto (<Aktion>) <PROJECT> · <TASK> — <kurzer Schritt>
+```
+
+Beispiele: `⚙ Auto (Review) DCE · A1 — Diff prüfen` · `⚙ Auto (Fix) L2L · G5 — CI reparieren` · `⚙ Auto (Pick) LOG · C27 — Umsetzung` · `⏳ Auto (Idle) DCE · — warte 5 min`.
+`<Aktion>` ist die Arbeitseinheit in Titelschreibweise (`Review`, `Fix`, `Finish`, `Pick`, `Concern`, `Idle`, `Pause`) und entspricht dem `action`-Feld des Ergebnisberichts.
+
+**Einrichtung (einmalig, zu Beginn des Auto-Modus prüfen und bei Bedarf anlegen):**
+
+1. **Zustandsdatei je Session:** `~/.claude/planstack-status-<session_id>.txt` — enthält genau **eine** Zeile. Die Datei ist **session-gebunden**: die Statuszeile darf **nur im laufenden Fenster** erscheinen, nie in anderen Sessions des Nutzers.
+2. **Statusline-Skript:** ein kleines Skript, das das Session-JSON von stdin liest, daraus `session_id` zieht und den Inhalt von `~/.claude/planstack-status-<session_id>.txt` ausgibt — existiert die Datei nicht, gibt es **keine** Ausgabe (leere Statuszeile). Ausgabe in UTF-8, damit Umlaute und Symbole stimmen.
+3. **`statusLine`-Eintrag** in den Claude-Code-Settings (`~/.claude/settings.json`, `{"type":"command","command":"…"}`) auf dieses Skript zeigen lassen. Der Eintrag ist zwangsläufig global — die Session-Bindung aus Schritt 1/2 sorgt dafür, dass er trotzdem nur hier etwas anzeigt. Dem Nutzer sagen, dass eine **neu** angelegte `statusLine`-Konfiguration erst nach einem Neustart von Claude Code greift.
+
+**Pflege:** Der **Supervisor** setzt die Zeile vor dem Start eines Auto-Runs (`⏳ Auto (Wähle) <PROJECT> · …`), während der 5-Minuten-Pause (`⏳ Auto (Idle) …`) und beim Anhalten (`⏳ Auto (Pause) …`). Der **Auto-Run** überschreibt sie, sobald er seine Arbeit gewählt hat, und dann bei jedem größeren Schritt (Analyse, Umsetzung, PR, Politur, Review). Immer **überschreiben**, nie anhängen. Das Schreiben ist **best-effort**: Fehler ignorieren, den Ablauf nie blockieren und das Setzen der Zeile nicht in Prosa berichten.
+
 **Auto-Run (ein Subagent, genau eine Arbeitseinheit):** Der Subagent **wählt** anhand des Boards die erste zutreffende Arbeit und **ruft dafür das passende bestehende `/planstack`-Sub-Kommando** auf — jeweils mit **explizitem** `<PROJECT>` **und** `<TASK>` (kein Auto-Pick im Sub-Kommando) —, führt es vollständig aus, meldet das Ergebnis zurück und beendet sich; er startet **keine** weiteren Auto-Runs (das macht der Supervisor). Priorität:
 
 1. **Reviewbar?** Liegt mindestens ein Task zum Review bereit (`REVIEWBAR`-Pool bzw. noch nicht übernommener `IN_REVIEW`, mit PR, nicht selbst umgesetzt), den **ersten** davon per **`/planstack review <PROJECT> <TASK>`** reviewen. → `action: "review"`.
@@ -182,6 +203,8 @@ Kurz nach dem Start dem Nutzer einmal bestätigen, dass der Auto-Modus für `<PR
    - sonst → **`/planstack work <PROJECT> <TASK>`** (der Ein-Task-Modus führt den Zyklus ab dem aktuellen Status weiter, bis ein polierter PR steht). → `action: "finish"`.
 3. **Sonst: pickbar?** Ist ein Task pickbar, den **besten** (höchste `unlocks`) bestimmen und per **`/planstack work <PROJECT> <TASK>`** bis zum erstellten PR umsetzen. → `action: "pick"`.
 4. **Sonst:** nichts zu tun, kein Sub-Kommando aufrufen. → `action: "idle"`.
+
+Sobald die Arbeit gewählt ist, schreibt der Auto-Run die **Sticky-Statuszeile** (Format und Pfad siehe oben) und hält sie bei jedem größeren Schritt aktuell. Der Supervisor gibt ihm dazu den Pfad `~/.claude/planstack-status-<session_id>.txt` seiner Session mit in den Prompt.
 
 Der Subagent ermittelt den konkreten `<TASK>` (Name) zuerst aus dem Board bzw. `GET /tasks` (Schritt 2 gefiltert auf die eigene Beanspruchung — Identität = der Board-Nutzer dieses Tokens — und einen Arbeits-Status) und ruft das Sub-Kommando dann gezielt mit diesem Namen auf. Das jeweilige Sub-Kommando bringt seinen eigenen (ereignisgesteuerten) Zyklus, seine lokalen Checks/Einstellungen und seine Selbst-Update-Prüfung selbst mit — der Auto-Run baut nichts davon nach. Meldet die Umsetzung einen **Concern** statt einer Änderung, gilt der Auto-Run als „hat etwas getan" (`action: "concern"`, nicht `idle`). Nicht pickbare/übernehmbare Tasks nie erzwingen.
 
