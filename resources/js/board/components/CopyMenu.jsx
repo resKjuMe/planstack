@@ -41,6 +41,10 @@ async function writeClipboard(text) {
 
 const MENU_WIDTH = 288; // = w-72, für die Kanten-Korrektur der fixen Position
 
+// Claude-Bildmarke (dieselbe Kontur wie in PrSequenceView/TaskShowPresenter).
+const CLAUDE_LOGO =
+    'M4.709 15.955l4.72-2.647.08-.23-.08-.128H9.2l-.79-.048-2.698-.073-2.339-.097-2.266-.122-.571-.121L0 11.784l.055-.352.48-.321.686.06 1.52.103 2.278.158 1.652.097 2.449.255h.389l.055-.157-.134-.098-.103-.097-2.358-1.596-2.552-1.688-1.336-.972-.724-.491-.364-.462-.158-1.008.656-.722.881.06.225.061.893.686 1.908 1.476 2.491 1.833.365.304.145-.103.019-.073-.164-.274-1.355-2.446-1.446-2.49-.644-1.032-.17-.619a2.97 2.97 0 01-.104-.729L6.283.134 6.696 0l.996.134.42.364.62 1.414 1.002 2.229 1.555 3.03.456.898.243.832.091.255h.158V9.01l.128-1.706.237-2.095.23-2.695.08-.76.376-.91.747-.492.583.28.48.685-.067.444-.286 1.851-.559 2.903-.364 1.942h.212l.243-.242.985-1.306 1.652-2.064.73-.82.85-.904.547-.431h1.033l.76 1.129-.34 1.166-1.064 1.347-.881 1.142-1.264 1.7-.79 1.36.073.11.188-.02 2.856-.606 1.543-.28 1.841-.315.833.388.091.395-.328.807-1.969.486-2.309.462-3.439.813-.042.03.049.061 1.549.146.662.036h1.622l3.02.225.79.522.474.638-.079.485-1.215.62-1.64-.389-3.829-.91-1.312-.329h-.182v.11l1.093 1.068 2.006 1.81 2.509 2.33.127.578-.322.455-.34-.049-2.205-1.657-.851-.747-1.926-1.62h-.128v.17l.444.649 2.345 3.521.122 1.08-.17.353-.608.213-.668-.122-1.374-1.925-1.415-2.167-1.143-1.943-.14.08-.674 7.254-.316.37-.729.28-.607-.461-.322-.747.322-1.476.389-1.924.315-1.53.286-1.9.17-.632-.012-.042-.14.018-1.434 1.967-2.18 2.945-1.726 1.845-.414.164-.717-.37.067-.662.401-.589 2.388-3.036 1.44-1.882.93-1.086-.006-.158h-.055L4.132 18.56l-1.13.146-.487-.456.061-.746.231-.243 1.908-1.312-.006.006z';
+
 export default function CopyMenu({ task, t, projectAlias }) {
     const [open, setOpen] = useState(false);
     const [pos, setPos] = useState(null); // { top, left } in Viewport-Koordinaten
@@ -56,9 +60,9 @@ export default function CopyMenu({ task, t, projectAlias }) {
         { key: 'name', label: t('copy_task_name'), value: task.name },
         { key: 'ticket', label: t('copy_project_task_name'), value: ticket },
         { key: 'url', label: t('copy_task_url'), value: task.url },
-        { key: 'work', label: t('copy_work_command'), value: `/planstack work ${ticket}` },
-        { key: 'fix', label: t('copy_fix_command'), value: `/planstack fix ${ticket}` },
-        { key: 'review', label: t('copy_review_command'), value: `/planstack review ${ticket}` },
+        { key: 'work', label: t('copy_work_command'), value: `/planstack work ${ticket}`, command: true },
+        { key: 'fix', label: t('copy_fix_command'), value: `/planstack fix ${ticket}`, command: true },
+        { key: 'review', label: t('copy_review_command'), value: `/planstack review ${ticket}`, command: true },
     ];
 
     const close = useCallback(() => {
@@ -121,6 +125,17 @@ export default function CopyMenu({ task, t, projectAlias }) {
         closeTimer.current = setTimeout(close, 900);
     };
 
+    // Claude-Icon der Kommando-Zeilen: startet den registrierten Protokoll-Handler
+    // claudetask: (öffnet eine PowerShell mit `claude "<Prompt>"`) — dasselbe
+    // Verfahren wie in der PR-Sequenz und im Concern-Assistenten der Task-Seite.
+    // Der Prompt landet zusätzlich in der Zwischenablage, damit er sich einfügen
+    // lässt, wenn auf dem Rechner kein Handler registriert ist.
+    const launch = async (item) => {
+        await writeClipboard(item.value);
+        window.location.href = `claudetask:${encodeURIComponent(item.value)}`;
+        close();
+    };
+
     return (
         <>
             <button
@@ -165,27 +180,45 @@ export default function CopyMenu({ task, t, projectAlias }) {
                     className="fixed z-50 overflow-hidden rounded-lg bg-white dark:bg-gray-800 p-1 shadow-lg ring-1 ring-gray-200 dark:ring-gray-700"
                 >
                     {items.map((item) => (
-                        <button
-                            key={item.key}
-                            type="button"
-                            role="menuitem"
-                            onClick={() => copy(item)}
-                            className="block w-full rounded px-2 py-1.5 text-left hover:bg-gray-50 dark:hover:bg-gray-700/60"
-                        >
-                            <span className="flex items-center justify-between gap-2">
-                                <span className="truncate text-xs font-medium text-gray-700 dark:text-gray-200">
-                                    {item.label}
-                                </span>
-                                {copiedKey === item.key && (
-                                    <span className="shrink-0 text-[10px] font-semibold text-green-600 dark:text-green-500">
-                                        {t('copied')}
+                        <div key={item.key} className="flex items-center rounded hover:bg-gray-50 dark:hover:bg-gray-700/60">
+                            <button
+                                type="button"
+                                role="menuitem"
+                                onClick={() => copy(item)}
+                                className="min-w-0 flex-1 rounded px-2 py-1.5 text-left"
+                            >
+                                <span className="flex items-center justify-between gap-2">
+                                    <span className="truncate text-xs font-medium text-gray-700 dark:text-gray-200">
+                                        {item.label}
                                     </span>
-                                )}
-                            </span>
-                            <span className="block truncate font-mono text-[10px] text-gray-400 dark:text-gray-500">
-                                {item.value}
-                            </span>
-                        </button>
+                                    {copiedKey === item.key && (
+                                        <span className="shrink-0 text-[10px] font-semibold text-green-600 dark:text-green-500">
+                                            {t('copied')}
+                                        </span>
+                                    )}
+                                </span>
+                                <span className="block truncate font-mono text-[10px] text-gray-400 dark:text-gray-500">
+                                    {item.value}
+                                </span>
+                            </button>
+
+                            {/* Nur an den Kommando-Zeilen: direkt in Claude starten
+                                statt nur kopieren. */}
+                            {item.command && (
+                                <button
+                                    type="button"
+                                    role="menuitem"
+                                    onClick={() => launch(item)}
+                                    title={t('start_with_claude', { command: item.value })}
+                                    aria-label={t('start_with_claude', { command: item.value })}
+                                    className="mr-1 shrink-0 rounded-full p-1.5 text-[#D97757] hover:bg-[#D97757]/10"
+                                >
+                                    <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="currentColor" aria-hidden="true">
+                                        <path d={CLAUDE_LOGO} />
+                                    </svg>
+                                </button>
+                            )}
+                        </div>
                     ))}
                 </div>,
                 document.body,

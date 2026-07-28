@@ -59,6 +59,7 @@ return [
     'copy_work_command' => 'Work command',
     'copy_fix_command' => 'Fix command',
     'copy_review_command' => 'Review command',
+    'start_with_claude' => 'Start in Claude (:command)',
 
     // Drag-and-drop
     'move_error' => 'Status change rejected: :message',
