@@ -344,9 +344,10 @@ export default function Board({ meta }) {
                 columnOrder={workflow.columnOrder}
                 exceptionStatuses={workflow.exceptionStatuses}
                 onMove={performMove}
+                projectAlias={meta.projectAlias}
             />
         ),
-        [t, csrf, endpoints, filters.highlightBlocked, highlightedIds, workflow.transitions, workflow.labels, workflow.columnOrder, workflow.exceptionStatuses, performMove],
+        [t, csrf, endpoints, filters.highlightBlocked, highlightedIds, workflow.transitions, workflow.labels, workflow.columnOrder, workflow.exceptionStatuses, performMove, meta.projectAlias],
     );
 
     const draggingTask = dragging ? tasks.find((tk) => tk.id === dragging.taskId) : null;

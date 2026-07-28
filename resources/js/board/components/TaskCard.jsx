@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useDraggable } from '@dnd-kit/core';
+import CopyMenu from './CopyMenu';
 
 // CI-Rollup des PR (task.ciStatus, aus planstack:sync-pr-status) → Icon + Farbe +
 // Titel-Key. SUCCESS=Haken (grün), FAILURE/ERROR=Kreuz (rot), PENDING/EXPECTED=Uhr
@@ -35,6 +36,7 @@ export function TaskCardView({
     rest = [],
     labels = {},
     onMove,
+    projectAlias = null,
 }) {
     const [open, setOpen] = useState(false);
     const stop = (e) => e.stopPropagation();
@@ -100,6 +102,10 @@ export function TaskCardView({
                             </svg>
                         </span>
                     )}
+                    {/* Kopier-Menü (Task-Name, Projekt + Task-Name, URL, die drei
+                        /planstack-Kommandos). Im Drag-Overlay weggelassen — dort
+                        ist die Karte nicht bedienbar. */}
+                    {! overlay && <CopyMenu task={task} t={t} projectAlias={projectAlias} />}
                 </div>
             </div>
 
@@ -278,7 +284,7 @@ export function TaskCardView({
 
 // Draggable wrapper (@dnd-kit). The whole card is the drag source; interactive
 // children stop pointer propagation so links/buttons stay usable.
-export default function TaskCard({ task, t, csrf, endpoints, dimmed, highlightClass, transitions = {}, labels = {}, columnOrder = [], exceptionStatuses = [], onMove }) {
+export default function TaskCard({ task, t, csrf, endpoints, dimmed, highlightClass, transitions = {}, labels = {}, columnOrder = [], exceptionStatuses = [], onMove, projectAlias = null }) {
     const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
         id: task.id,
         data: { from: task.displayStatus },
@@ -319,6 +325,7 @@ export default function TaskCard({ task, t, csrf, endpoints, dimmed, highlightCl
             rest={rest}
             labels={labels}
             onMove={onMove}
+            projectAlias={projectAlias}
         />
     );
 }

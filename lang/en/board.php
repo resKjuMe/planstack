@@ -50,6 +50,16 @@ return [
     'claim' => 'Claim',
     'release' => 'Release',
 
+    // Card copy menu
+    'copy' => 'Copy',
+    'copied' => 'Copied',
+    'copy_task_name' => 'Task name',
+    'copy_project_task_name' => 'Project + task name',
+    'copy_task_url' => 'Task URL',
+    'copy_work_command' => 'Work command',
+    'copy_fix_command' => 'Fix command',
+    'copy_review_command' => 'Review command',
+
     // Drag-and-drop
     'move_error' => 'Status change rejected: :message',
     'move_forbidden' => 'Transition from :from to :to is not allowed.',

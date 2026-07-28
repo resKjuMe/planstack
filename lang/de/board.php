@@ -50,6 +50,16 @@ return [
     'claim' => 'Beanspruchen',
     'release' => 'Freigeben',
 
+    // Kopier-Menü der Karte
+    'copy' => 'Kopieren',
+    'copied' => 'Kopiert',
+    'copy_task_name' => 'Task-Name',
+    'copy_project_task_name' => 'Projekt + Task-Name',
+    'copy_task_url' => 'Task-URL',
+    'copy_work_command' => 'Work-Command',
+    'copy_fix_command' => 'Fix-Command',
+    'copy_review_command' => 'Review-Command',
+
     // Drag-and-drop
     'move_error' => 'Statuswechsel abgelehnt: :message',
     'move_forbidden' => 'Übergang von :from nach :to ist nicht erlaubt.',
