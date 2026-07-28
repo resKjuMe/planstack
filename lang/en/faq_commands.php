@@ -87,7 +87,7 @@ return [
     'cmd_update_config_3' => 'Only then write the returned `skill_revision` as the baseline into `config.json`.',
 
     'status_line_label' => 'Status line',
-    'status_line_note' => 'The sticky status line belongs to the auto mode: mandatory there, dropped for a single manual invocation. It is always written BEFORE the step it announces — as soon as task, action or step are foreseeable, not once the step is finished. It lives as a single line in `~/.claude/planstack-status-<session_id>.txt`; task and PR number are clickable. For it to update at all while an auto run is working, the `statusLine` entry needs a `refreshInterval` (5–10 s).',
+    'status_line_note' => 'The sticky status line belongs to the auto mode: mandatory there, dropped for a single manual invocation. It is always written as the FIRST action of the step — ahead of the call next to it, not after it and not batched up at the end. Per step: write the line, then do the work. It lives as a single line in `~/.claude/planstack-status-<session_id>.txt`; task and PR number are clickable. For it to update at all while an auto run is working, the `statusLine` entry needs a `refreshInterval` (5–10 s).',
 
     // Section 3: statuses
     'statuses_title' => 'What each status does exactly',

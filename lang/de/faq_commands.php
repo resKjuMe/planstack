@@ -87,7 +87,7 @@ return [
     'cmd_update_config_3' => 'Erst danach die gelieferte `skill_revision` als Baseline in `config.json` schreiben.',
 
     'status_line_label' => 'Statuszeile',
-    'status_line_note' => 'Die Sticky-Statuszeile gehört zum Auto-Modus: dort ist sie Pflicht, bei einem einzelnen Aufruf von Hand entfällt sie. Geschrieben wird immer VOR dem Schritt, den sie ankündigt — sobald Task, Aktion oder Schritt absehbar sind, nicht erst wenn der Schritt fertig ist. Sie steht als eine Zeile in `~/.claude/planstack-status-<session_id>.txt`; Task und PR-Nummer sind klickbar. Damit sie sich während eines laufenden Auto-Runs überhaupt aktualisiert, braucht der `statusLine`-Eintrag ein `refreshInterval` (5–10 s).',
+    'status_line_note' => 'Die Sticky-Statuszeile gehört zum Auto-Modus: dort ist sie Pflicht, bei einem einzelnen Aufruf von Hand entfällt sie. Sie wird immer als ERSTE Handlung des Schritts geschrieben — vor dem Aufruf daneben, nicht danach und nicht gebündelt am Ende. Ablauf je Schritt: Zeile schreiben, dann arbeiten. Sie steht als eine Zeile in `~/.claude/planstack-status-<session_id>.txt`; Task und PR-Nummer sind klickbar. Damit sie sich während eines laufenden Auto-Runs überhaupt aktualisiert, braucht der `statusLine`-Eintrag ein `refreshInterval` (5–10 s).',
 
     // Abschnitt 3: Status
     'statuses_title' => 'Was jeder Status genau macht',
