@@ -178,14 +178,32 @@ Kurz nach dem Start dem Nutzer einmal bestätigen, dass der Auto-Modus für `<PR
 
 Weil der Auto-Modus unbeaufsichtigt läuft, muss **dauerhaft sichtbar** sein, was gerade getan wird — als **Statuszeile** (sticky, unten im Fenster), nicht nur als Fließtext im Verlauf.
 
-**Format** (genau diese Reihenfolge, Aktion in Klammern **direkt hinter „Auto"**):
+**Format** (genau diese Reihenfolge, Phase in Klammern **direkt hinter „Auto"**):
 
 ```
 <Symbol> Auto (<Aktion>) <PROJECT> · <TASK> — <kurzer Schritt>
 ```
 
-Beispiele: `⚙ Auto (Review) DCE · A1 — Diff prüfen` · `⚙ Auto (Fix) L2L · G5 — CI reparieren` · `⚙ Auto (Pick) LOG · C27 — Umsetzung` · `⏳ Auto (Idle) DCE · — warte 5 min`.
-`<Aktion>` ist die Arbeitseinheit in Titelschreibweise (`Review`, `Fix`, `Finish`, `Pick`, `Concern`, `Idle`, `Pause`) und entspricht dem `action`-Feld des Ergebnisberichts.
+Beispiele: `⚙ Auto (Analyse) DCE · C27 — Untersuche den Umfang` · `⚙ Auto (Bearbeite) DCE · C27 — Führe Code-Änderungen durch` · `⚙ Auto (Review) DCE · A1 — Diff prüfen` · `⚙ Auto (Fix) L2L · G5 — CI reparieren` · `⏳ Auto (Idle) DCE · — warte 5 min`.
+
+`<Aktion>` ist die **laufende Phase** in Titelschreibweise — also das, was in diesem Moment tatsächlich passiert, nicht die grobe Arbeitseinheit. Sie ist damit feiner als das `action`-Feld des Ergebnisberichts: eine Arbeitseinheit mit `action: "pick"` durchläuft mehrere Phasen. Verbindliche Phasen:
+
+| Phase | wann |
+|---|---|
+| `Wähle` | Board lesen, Arbeit suchen, beanspruchen |
+| `Lade Details` | Beschreibung, Akzeptanzkriterien und Voraussetzungen holen |
+| `Analyse` | Umfang untersuchen, noch kein Code |
+| `Bearbeite` | Code-Änderungen durchführen |
+| `Erstelle PR` | PR anlegen |
+| `Hinterlege PR` | PR-Nummer am Task eintragen |
+| `Fertigstellung` | fertig melden, mergen |
+| `Review` | Review übernehmen, Diff prüfen, Ergebnis erfassen |
+| `Fix` | Politur am offenen PR (Konflikte, Kommentare, CI) |
+| `Concern` | Concern gemeldet, Arbeitseinheit endet |
+| `Idle` | nichts zu tun, 5-Minuten-Pause |
+| `Pause` | Modus angehalten |
+
+Passt keine davon, die nächstliegende nehmen statt eine neue zu erfinden — die Zeile soll über Auto-Runs hinweg wiedererkennbar bleiben. Der Ergebnisbericht behält unverändert sein `action`-Feld (`review`/`fix`/`finish`/`pick`/`concern`/`idle`); die Statuszeile ist davon unabhängig.
 
 **Einrichtung (einmalig, zu Beginn des Auto-Modus prüfen und bei Bedarf anlegen):**
 
@@ -212,9 +230,9 @@ Beispiele: `⚙ Auto (Review) DCE · A1 — Diff prüfen` · `⚙ Auto (Fix) L2L
 
 `\e` und `\a` müssen als **echte** Steuerzeichen in der Datei landen (z. B. per `printf`, nicht als Literal `\e`). Die Anweisung ist bewusst **robust**: Terminals ohne Hyperlink-Unterstützung (klassisches conhost) zeigen einfach den Text ohne Link — sichtbare Escape-Reste wie `]8;;https…` sind aber ein **Fehler**. Lässt sich das nicht sauber schreiben, die Zeile **ohne** Links ausgeben; eine lesbare Zeile ohne Link ist besser als eine kaputte mit. Wer sich das Skript-Basteln sparen will: `footerLinksRegexes` in den Settings blendet aus erkannten Mustern (Task-Namen, PR-Nummern) klickbare Footer-Badges ein — ganz ohne eigenes Statusline-Skript, dafür ohne den frei formulierten Schritt-Text.
 
-**Pflege:** Der **Supervisor** setzt die Zeile vor dem Start eines Auto-Runs (`⏳ Auto (Wähle) <PROJECT> · …`), während der 5-Minuten-Pause (`⏳ Auto (Idle) …`) und beim Anhalten (`⏳ Auto (Pause) …`). Der **Auto-Run** überschreibt sie, sobald er seine Arbeit gewählt hat, und dann bei jedem größeren Schritt (Analyse, Umsetzung, PR, Politur, Review). Immer **überschreiben**, nie anhängen. Das Schreiben ist **best-effort**: Fehler ignorieren, den Ablauf nie blockieren und das Setzen der Zeile nicht in Prosa berichten.
+**Pflege:** Der **Supervisor** setzt die Zeile vor dem Start eines Auto-Runs (`⏳ Auto (Wähle) <PROJECT> · …`), während der 5-Minuten-Pause (`⏳ Auto (Idle) …`) und beim Anhalten (`⏳ Auto (Pause) …`). Der **Auto-Run** überschreibt sie, sobald er seine Arbeit gewählt hat, und dann bei **jedem Phasenwechsel** (`Lade Details` → `Analyse` → `Bearbeite` → `Erstelle PR` → `Hinterlege PR` → `Fertigstellung`, bzw. `Review`/`Fix`). Immer **überschreiben**, nie anhängen. Das Schreiben ist **best-effort**: Fehler ignorieren, den Ablauf nie blockieren und das Setzen der Zeile nicht in Prosa berichten.
 
-**Immer als ERSTE Handlung des Schritts (Grundregel):** Jeder Schritt beginnt mit dem Schreiben der Statuszeile — sie ist die **erste** Aktion im Schritt, vor dem Tool-Aufruf, vor dem Lesen, vor dem Editieren. Nicht danach, nicht „wenn gerade Zeit ist" und nicht gebündelt am Ende. Konkret: Schritt beginnt → Zeile schreiben → Arbeit tun. So früh wie möglich heißt auch: der Task-Name, sobald er aus dem Board bekannt ist (auch schon vor dem Claim), die Aktion, sobald die Priorität entschieden ist, die PR-Nummer als Link, sobald `pr_url` vorliegt. Lieber einmal zu oft schreiben als einmal zu spät — die Datei ist eine Zeile, das Schreiben kostet nichts. Eine Zeile, die erst nach Abschluss eines Schritts nachgezogen wird, zeigt dauerhaft die Vergangenheit und macht den ganzen Zweck zunichte. Ist ein Feld noch unbekannt, mit einem Platzhalter beginnen (`⚙ Auto (Wähle) DCE · — Board lesen`) und verfeinern, statt mit dem Schreiben zu warten.
+**Immer als ERSTE Handlung des Schritts (Grundregel):** Jeder Schritt beginnt mit dem Schreiben der Statuszeile — sie ist die **erste** Aktion im Schritt, vor dem Tool-Aufruf, vor dem Lesen, vor dem Editieren. Nicht danach, nicht „wenn gerade Zeit ist" und nicht gebündelt am Ende. Konkret: Schritt beginnt → Zeile schreiben → Arbeit tun. So früh wie möglich heißt auch: der Task-Name, sobald er aus dem Board bekannt ist (auch schon vor dem Claim), die neue Phase beim Wechsel, die PR-Nummer als Link, sobald `pr_url` vorliegt. Lieber einmal zu oft schreiben als einmal zu spät — die Datei ist eine Zeile, das Schreiben kostet nichts. Eine Zeile, die erst nach Abschluss eines Schritts nachgezogen wird, zeigt dauerhaft die Vergangenheit und macht den ganzen Zweck zunichte. Ist ein Feld noch unbekannt, mit einem Platzhalter beginnen (`⚙ Auto (Wähle) DCE · — Board lesen`) und verfeinern, statt mit dem Schreiben zu warten.
 
 **Auto-Run (ein Subagent, genau eine Arbeitseinheit):** Der Subagent **wählt** anhand des Boards die erste zutreffende Arbeit und **ruft dafür das passende bestehende `/planstack`-Sub-Kommando** auf — jeweils mit **explizitem** `<PROJECT>` **und** `<TASK>` (kein Auto-Pick im Sub-Kommando) —, führt es vollständig aus, meldet das Ergebnis zurück und beendet sich; er startet **keine** weiteren Auto-Runs (das macht der Supervisor). Priorität:
 

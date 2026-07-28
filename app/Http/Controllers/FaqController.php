@@ -51,45 +51,48 @@ class FaqController extends Controller
 
         // Ein Task von Anfang bis Ende — mit dem Status, in dem er danach steht
         // (null = dieser Schritt ändert den Status nicht) und, wo der Auto-Modus
-        // sie neu schreibt, dem Inhalt der Sticky-Statuszeile. Die Zeilen sind
-        // Beispiele dessen, was das Skill schreibt, und deshalb — wie die Aufrufe
-        // — Literale: das Skill formuliert sie deutsch, unabhängig von der
-        // UI-Sprache. Geschrieben wird VOR dem Schritt, nicht danach.
+        // sie neu schreibt, dem Inhalt der Sticky-Statuszeile. Die Klammer trägt
+        // die laufende Phase (Wähle/Lade Details/Analyse/Bearbeite/… —
+        // verbindliche Liste im skill-instructions-Abschnitt „Sticky-Statuszeile"),
+        // nicht das gröbere `action`-Feld. Die Zeilen sind Beispiele dessen, was
+        // das Skill schreibt, und deshalb — wie die Aufrufe — Literale: das Skill
+        // formuliert sie deutsch, unabhängig von der UI-Sprache. Geschrieben wird
+        // als ERSTE Handlung des Schritts, nicht danach.
         $lifecycle = [
             ['GET /projects/{p}/board', 'lc_board', null, '⚙ Auto (Wähle) DCE · — Board lesen'],
-            ['POST /projects/{p}/claim-next', 'lc_claim_next', 'CLAIMED', '⚙ Auto (Pick) DCE · C27 — beansprucht'],
+            ['POST /projects/{p}/claim-next', 'lc_claim_next', 'CLAIMED', '⚙ Auto (Wähle) DCE · C27 — beansprucht'],
             ['GET /projects/{p}/tasks/{t}?fields=full', 'lc_details', null, '⚙ Auto (Lade Details) DCE · C27 — Aufgabe lesen'],
             ['POST …/tasks/{t}/status {analyze}', 'lc_analyze', 'ANALYZING', '⚙ Auto (Analyse) DCE · C27 — Untersuche den Umfang'],
             ['POST …/tasks/{t}/status {in_progress}', 'lc_in_progress', 'IN_PROGRESS', '⚙ Auto (Bearbeite) DCE · C27 — Führe Code-Änderungen durch'],
             ['POST …/tasks/{t}/concern', 'lc_concern', 'CONCERNED', '⚙ Auto (Concern) DCE · C27 — Concern gemeldet'],
-            ['gh pr create', 'lc_pr_create', null, '⚙ Auto (Hinterlege PR) DCE · C27'],
-            ['POST …/tasks/{t}/pr {pr_number}', 'lc_pr_set', null, '⚙ Auto (Erstelle PR) DCE · C27 — PR #418'],
+            ['gh pr create', 'lc_pr_create', null, '⚙ Auto (Erstelle PR) DCE · C27'],
+            ['POST …/tasks/{t}/pr {pr_number}', 'lc_pr_set', null, '⚙ Auto (Hinterlege PR) DCE · C27 — PR #418'],
             ['POST …/tasks/{t}/status {done}', 'lc_done', 'IN_REVIEW', '⚙ Auto (Fertigstellung) DCE · C27 — fertig melden'],
             ['POST …/tasks/{t}/review-claim', 'lc_review_claim', null, '⚙ Auto (Review) DCE · A1 — Diff prüfen'],
             ['POST …/tasks/{t}/review {recommendation,summary}', 'lc_review_result', null, '⚙ Auto (Review) DCE · A1 — Ergebnis erfassen (Approve/Request Changes)'],
-            ['POST …/tasks/{t}/merge', 'lc_merge', 'MERGED', '⚙ Auto (Pick) DCE · C27 — mergen'],
+            ['POST …/tasks/{t}/merge', 'lc_merge', 'MERGED', '⚙ Auto (Fertigstellung) DCE · C27 — mergen'],
             ['— (PR-Abgleich)', 'lc_sync', 'MERGED', null],
         ];
 
         $commands = [
             ['/planstack work <PROJECT>', 'cmd_work_board_purpose', [
-                ['POST /projects/{p}/claim-next', 'cmd_work_board_1', '⚙ Auto (Pick) DCE · C27 — beansprucht'],
-                ['POST …/tasks/{t}/status {analyze}', 'cmd_work_board_2', '⚙ Auto (Pick) DCE · C27 — Analyse'],
-                ['POST …/tasks/{t}/status {in_progress}', 'cmd_work_board_3', '⚙ Auto (Pick) DCE · C27 — Umsetzung'],
-                ['gh pr create · POST …/tasks/{t}/pr', 'cmd_work_board_4', '⚙ Auto (Pick) DCE · C27 — PR #418'],
-                ['POST …/tasks/{t}/status {done} · /merge', 'cmd_work_board_5', '⚙ Auto (Finish) DCE · C27 — mergen'],
+                ['POST /projects/{p}/claim-next', 'cmd_work_board_1', '⚙ Auto (Wähle) DCE · C27 — beansprucht'],
+                ['POST …/tasks/{t}/status {analyze}', 'cmd_work_board_2', '⚙ Auto (Analyse) DCE · C27 — Untersuche den Umfang'],
+                ['POST …/tasks/{t}/status {in_progress}', 'cmd_work_board_3', '⚙ Auto (Bearbeite) DCE · C27 — Führe Code-Änderungen durch'],
+                ['gh pr create · POST …/tasks/{t}/pr', 'cmd_work_board_4', '⚙ Auto (Hinterlege PR) DCE · C27 — PR #418'],
+                ['POST …/tasks/{t}/status {done} · /merge', 'cmd_work_board_5', '⚙ Auto (Fertigstellung) DCE · C27 — mergen'],
                 ['GET /projects/{p}/board', 'cmd_work_board_6', '⚙ Auto (Wähle) DCE · — Board lesen'],
             ]],
             ['/planstack work <PROJECT> <TASK>', 'cmd_work_task_purpose', [
-                ['POST /projects/{p}/tasks/{t}/claim', 'cmd_work_task_1', '⚙ Auto (Finish) DCE · C27 — beansprucht'],
-                ['GET /projects/{p}/tasks/{t}', 'cmd_work_task_2', null],
-                ['—', 'cmd_work_task_3', '⚙ Auto (Finish) DCE · C27 — Umsetzung'],
+                ['POST /projects/{p}/tasks/{t}/claim', 'cmd_work_task_1', '⚙ Auto (Wähle) DCE · C27 — beansprucht'],
+                ['GET /projects/{p}/tasks/{t}', 'cmd_work_task_2', '⚙ Auto (Lade Details) DCE · C27 — Aufgabe lesen'],
+                ['—', 'cmd_work_task_3', '⚙ Auto (Bearbeite) DCE · C27 — Führe Code-Änderungen durch'],
             ]],
             ['/planstack auto <PROJECT>', 'cmd_auto_purpose', [
                 ['~/.claude/planstack-status-<session_id>.txt', 'cmd_auto_1', '⏳ Auto (Wähle) DCE · — Arbeit suchen'],
                 ['POST /projects/{p}/review-next', 'cmd_auto_2', '⚙ Auto (Review) DCE · A1 — Diff prüfen'],
-                ['GET /projects/{p}/tasks', 'cmd_auto_3', '⚙ Auto (Finish) DCE · C27 — Umsetzung'],
-                ['POST /projects/{p}/claim-next', 'cmd_auto_4', '⚙ Auto (Pick) DCE · C27 — Analyse'],
+                ['GET /projects/{p}/tasks', 'cmd_auto_3', '⚙ Auto (Bearbeite) DCE · C27 — Führe Code-Änderungen durch'],
+                ['POST /projects/{p}/claim-next', 'cmd_auto_4', '⚙ Auto (Analyse) DCE · C27 — Untersuche den Umfang'],
                 ['POST /projects/{p}/next-action', 'cmd_auto_5', null],
                 ['—', 'cmd_auto_6', '⏳ Auto (Idle) DCE · — warte 5 min'],
             ]],
