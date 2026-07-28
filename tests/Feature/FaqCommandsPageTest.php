@@ -118,6 +118,42 @@ class FaqCommandsPageTest extends TestCase
     }
 
     /**
+     * Der Artikel muss zeigen, WANN die Sticky-Statuszeile geschrieben wird —
+     * sonst steht nur da, dass es sie gibt. Die Kommandos, die ein Auto-Run
+     * ausführt, tragen die Zeile deshalb an den einzelnen Schritten; `plan`,
+     * `settings` und `update-config` laufen nicht im Auto-Modus und bewusst ohne.
+     */
+    public function test_shows_when_the_sticky_status_line_is_written(): void
+    {
+        $props = $this->actingAs($this->member())
+            ->get(route('faq.commands'))
+            ->assertOk()
+            ->inertiaPage()['props'];
+
+        $lifecycleLines = collect($props['lifecycle'])->pluck('statusLine')->filter();
+        $this->assertGreaterThan(1, $lifecycleLines->count(), 'Lebenszyklus ohne Statuszeilen');
+        foreach ($lifecycleLines as $line) {
+            $this->assertStringContainsString('Auto (', $line);
+        }
+
+        $byName = collect($props['commands'])->keyBy('name');
+        $driven = ['/planstack work <PROJECT>', '/planstack auto <PROJECT>', '/planstack review [<PROJECT>] [<TASK>]', '/planstack fix [<PROJECT>] <TASK|PR>'];
+
+        foreach ($driven as $name) {
+            $lines = collect($byName[$name]['steps'])->pluck('statusLine')->filter();
+            $this->assertGreaterThan(1, $lines->count(), $name.' ohne Statuszeilen an den Schritten');
+        }
+
+        foreach (['/planstack plan [<PROJECT>]', '/planstack update-config [<PROJECT>]'] as $name) {
+            $this->assertCount(
+                0,
+                collect($byName[$name]['steps'])->pluck('statusLine')->filter(),
+                $name.' läuft nicht im Auto-Modus und sollte keine Statuszeile zeigen'
+            );
+        }
+    }
+
+    /**
      * @return array<int, array{0: string}>
      */
     public static function locales(): array

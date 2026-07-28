@@ -26,6 +26,19 @@ function Call({ children }) {
     );
 }
 
+// Inhalt der Sticky-Statuszeile zu genau diesem Schritt — im Auto-Modus wird sie
+// VOR dem Schritt geschrieben, den sie ankündigt. Fehlt sie, gibt es an dieser
+// Stelle keine Aktualisierung.
+function StatusLine({ line, label }) {
+    if (!line) return null;
+    return (
+        <div className="mt-2 flex flex-wrap items-baseline gap-x-2 gap-y-1">
+            <span className="shrink-0 text-[10px] font-semibold uppercase tracking-wide text-indigo-500 dark:text-indigo-400">{label}</span>
+            <code className="break-words rounded bg-indigo-50 dark:bg-indigo-900/30 px-1.5 py-0.5 font-mono text-xs text-indigo-800 dark:text-indigo-200 ring-1 ring-inset ring-indigo-100 dark:ring-indigo-900/60">{line}</code>
+        </div>
+    );
+}
+
 function Card({ title, hint, children }) {
     return (
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
@@ -76,7 +89,10 @@ export default function FaqCommands({ tabs, badges, lifecycle, commands, statuse
                                                 <span className="flex h-6 w-6 items-center justify-center rounded-full bg-gray-100 dark:bg-gray-700 text-xs font-semibold text-gray-600 dark:text-gray-400">{i + 1}</span>
                                             </td>
                                             <td className="px-6 py-3"><Call>{row.call}</Call></td>
-                                            <td className="px-6 py-3 text-gray-700 dark:text-gray-300">{row.what}</td>
+                                            <td className="px-6 py-3 text-gray-700 dark:text-gray-300">
+                                                {row.what}
+                                                <StatusLine line={row.statusLine} label={strings.statusLineLabel} />
+                                            </td>
                                             <td className="px-6 py-3 whitespace-nowrap">
                                                 {row.status
                                                     ? <Badge name={row.status} badges={badges} />
@@ -87,6 +103,7 @@ export default function FaqCommands({ tabs, badges, lifecycle, commands, statuse
                                 </tbody>
                             </table>
                         </div>
+                        <p className="border-t border-gray-100 dark:border-gray-700 px-6 py-3 text-xs text-gray-500 dark:text-gray-400">{strings.statusLineNote}</p>
                     </Card>
 
                     {/* 2) Die Kommandos, je mit chronologischer Aufruf-Kette */}
@@ -107,6 +124,7 @@ export default function FaqCommands({ tabs, badges, lifecycle, commands, statuse
                                                     <div className="min-w-0 text-sm">
                                                         <Call>{step.call}</Call>
                                                         <p className="mt-1 text-gray-600 dark:text-gray-400">{step.what}</p>
+                                                        <StatusLine line={step.statusLine} label={strings.statusLineLabel} />
                                                     </div>
                                                 </li>
                                             ))}
