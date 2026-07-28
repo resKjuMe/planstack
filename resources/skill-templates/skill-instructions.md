@@ -190,8 +190,27 @@ Beispiele: `⚙ Auto (Review) DCE · A1 — Diff prüfen` · `⚙ Auto (Fix) L2L
 **Einrichtung (einmalig, zu Beginn des Auto-Modus prüfen und bei Bedarf anlegen):**
 
 1. **Zustandsdatei je Session:** `~/.claude/planstack-status-<session_id>.txt` — enthält genau **eine** Zeile. Die Datei ist **session-gebunden**: die Statuszeile darf **nur im laufenden Fenster** erscheinen, nie in anderen Sessions des Nutzers.
-2. **Statusline-Skript:** ein kleines Skript, das das Session-JSON von stdin liest, daraus `session_id` zieht und den Inhalt von `~/.claude/planstack-status-<session_id>.txt` ausgibt — existiert die Datei nicht, gibt es **keine** Ausgabe (leere Statuszeile). Ausgabe in UTF-8, damit Umlaute und Symbole stimmen.
-3. **`statusLine`-Eintrag** in den Claude-Code-Settings (`~/.claude/settings.json`, `{"type":"command","command":"…"}`) auf dieses Skript zeigen lassen. Der Eintrag ist zwangsläufig global — die Session-Bindung aus Schritt 1/2 sorgt dafür, dass er trotzdem nur hier etwas anzeigt. Dem Nutzer sagen, dass eine **neu** angelegte `statusLine`-Konfiguration erst nach einem Neustart von Claude Code greift.
+2. **Statusline-Skript:** ein kleines Skript, das das Session-JSON von **stdin** liest, daraus `session_id` zieht und **nur** den Inhalt von `~/.claude/planstack-status-<session_id>.txt` ausgibt — existiert die Datei nicht, gibt es **keine** Ausgabe (leere Statuszeile). Ausgabe in **UTF-8**, damit Umlaute und Symbole stimmen. Die Session-Bindung ist **Pflicht**, kein Feinschliff: liest das Skript eine feste Datei ohne `session_id`, erscheint die Zeile in **allen** Sessions des Nutzers — genau dieser Fehler wurde behoben.
+3. **`statusLine`-Eintrag** in den Claude-Code-Settings (`~/.claude/settings.json`) auf dieses Skript zeigen lassen, **mit** `refreshInterval` (siehe unten):
+
+   ```json
+   { "statusLine": { "type": "command", "command": "…", "refreshInterval": 5 } }
+   ```
+
+   Der Eintrag ist zwangsläufig global — die Session-Bindung aus Schritt 1/2 sorgt dafür, dass er trotzdem nur hier etwas anzeigt. Dem Nutzer sagen, dass eine **neu** angelegte `statusLine`-Konfiguration erst nach einem **Neustart** von Claude Code greift (eine bereits vorhandene wird sofort übernommen).
+
+**`refreshInterval` (der zentrale Praxis-Hinweis):** Die Statusline wird normalerweise **ereignisgesteuert** neu berechnet — bei Prompt, Tool-Ende und Moduswechsel, 300 ms entprellt. Während ein Auto-Run als Subagent arbeitet, passiert davon minutenlang **nichts**, die Zeile friert also mitten in der Arbeitseinheit ein und zeigt einen längst überholten Schritt. Deshalb im `statusLine`-Eintrag **immer** `refreshInterval` setzen (Sekunden, Minimum `1`, Empfehlung **5–10**) — nur dann pollt Claude Code die Zustandsdatei von selbst weiter.
+
+**Klickbare Links (OSC 8):** `<TASK>` und eine PR-Nummer im Schritt-Text als **OSC-8-Hyperlink** ausgeben, damit man aus der Statuszeile direkt ins Board bzw. in den PR springt (**Ctrl+Klick** unter Windows/Linux, **Cmd+Klick** unter macOS):
+
+```
+\e]8;;<URL>\a<Text>\e]8;;\a
+```
+
+- **`<TASK>`** → Task-/Board-Ansicht der Instanz: `<WEB>/projects/<PROJECT>`, wobei `<WEB>` die `base_url` aus `config.json` **ohne** das abschließende `/api` ist (eine Deep-Link-URL auf einen einzelnen Task gibt es nicht — die Board-Ansicht des Projekts ist das Ziel).
+- **PR-Nummer** → der GitHub-PR über `pr_url`. Das Feld liefert die API bereits mit, u. a. in den Antworten von `review-claim`/`review-next` und an jedem dekorierten Task — **nie** selbst eine URL zusammenbauen.
+
+`\e` und `\a` müssen als **echte** Steuerzeichen in der Datei landen (z. B. per `printf`, nicht als Literal `\e`). Die Anweisung ist bewusst **robust**: Terminals ohne Hyperlink-Unterstützung (klassisches conhost) zeigen einfach den Text ohne Link — sichtbare Escape-Reste wie `]8;;https…` sind aber ein **Fehler**. Lässt sich das nicht sauber schreiben, die Zeile **ohne** Links ausgeben; eine lesbare Zeile ohne Link ist besser als eine kaputte mit. Wer sich das Skript-Basteln sparen will: `footerLinksRegexes` in den Settings blendet aus erkannten Mustern (Task-Namen, PR-Nummern) klickbare Footer-Badges ein — ganz ohne eigenes Statusline-Skript, dafür ohne den frei formulierten Schritt-Text.
 
 **Pflege:** Der **Supervisor** setzt die Zeile vor dem Start eines Auto-Runs (`⏳ Auto (Wähle) <PROJECT> · …`), während der 5-Minuten-Pause (`⏳ Auto (Idle) …`) und beim Anhalten (`⏳ Auto (Pause) …`). Der **Auto-Run** überschreibt sie, sobald er seine Arbeit gewählt hat, und dann bei jedem größeren Schritt (Analyse, Umsetzung, PR, Politur, Review). Immer **überschreiben**, nie anhängen. Das Schreiben ist **best-effort**: Fehler ignorieren, den Ablauf nie blockieren und das Setzen der Zeile nicht in Prosa berichten.
 
@@ -204,7 +223,7 @@ Beispiele: `⚙ Auto (Review) DCE · A1 — Diff prüfen` · `⚙ Auto (Fix) L2L
 3. **Sonst: pickbar?** Ist ein Task pickbar, den **besten** (höchste `unlocks`) bestimmen und per **`/planstack work <PROJECT> <TASK>`** bis zum erstellten PR umsetzen. → `action: "pick"`.
 4. **Sonst:** nichts zu tun, kein Sub-Kommando aufrufen. → `action: "idle"`.
 
-Sobald die Arbeit gewählt ist, schreibt der Auto-Run die **Sticky-Statuszeile** (Format und Pfad siehe oben) und hält sie bei jedem größeren Schritt aktuell. Der Supervisor gibt ihm dazu den Pfad `~/.claude/planstack-status-<session_id>.txt` seiner Session mit in den Prompt.
+Sobald die Arbeit gewählt ist, schreibt der Auto-Run die **Sticky-Statuszeile** (Format, Links und Pfad siehe oben) und hält sie bei jedem größeren Schritt aktuell — inklusive der PR-Nummer als Link, sobald `pr_url` bekannt ist. Der Supervisor gibt ihm dazu den Pfad `~/.claude/planstack-status-<session_id>.txt` **seiner** Session mit in den Prompt (der Subagent hat keine eigene `session_id`, die die Statusline lesen würde).
 
 Der Subagent ermittelt den konkreten `<TASK>` (Name) zuerst aus dem Board bzw. `GET /tasks` (Schritt 2 gefiltert auf die eigene Beanspruchung — Identität = der Board-Nutzer dieses Tokens — und einen Arbeits-Status) und ruft das Sub-Kommando dann gezielt mit diesem Namen auf. Das jeweilige Sub-Kommando bringt seinen eigenen (ereignisgesteuerten) Zyklus, seine lokalen Checks/Einstellungen und seine Selbst-Update-Prüfung selbst mit — der Auto-Run baut nichts davon nach. Meldet die Umsetzung einen **Concern** statt einer Änderung, gilt der Auto-Run als „hat etwas getan" (`action: "concern"`, nicht `idle`). Nicht pickbare/übernehmbare Tasks nie erzwingen.
 
