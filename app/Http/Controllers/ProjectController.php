@@ -41,11 +41,15 @@ class ProjectController extends Controller
                 'progress' => __('common.progress'),
                 'tasks' => __('common.tasks'),
                 'loading' => __('status.loading'),
-                // Kategorie-Labels (Karten-Badge)
+                // Kategorie-Labels (Karten-Badge). „archived" ist keine Kategorie,
+                // sondern überschreibt das Badge archivierter Projekte — sonst trüge
+                // ein archiviertes, abgeschlossenes Projekt unter der Pill
+                // „Archiviert" das Badge „Abgeschlossen".
                 'notStarted' => __('projects.not_started'),
                 'inProgress' => __('projects.in_progress'),
                 'almostDone' => __('projects.almost_done'),
                 'completed' => __('projects.completed'),
+                'archived' => __('projects.archived'),
                 // Kopfzeile + Karte (Roh-Templates / Singular-Plural)
                 'projectSingular' => __('projects.project'),
                 'projectsPlural' => __('common.projects'),

@@ -10,6 +10,8 @@ const BADGE = {
     in_arbeit: 'bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300',
     fast_fertig: 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300',
     completed: 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300',
+    // Kein Kategorie-Eintrag: überschreibt das Badge archivierter Projekte.
+    archived: 'bg-gray-200 dark:bg-gray-900/60 text-gray-700 dark:text-gray-300 ring-1 ring-inset ring-gray-300 dark:ring-gray-600',
 };
 const BAR = {
     nicht_gestartet: 'bg-gray-300',
@@ -72,6 +74,7 @@ export function deriveProjectCards({ projects, statusConfig, currentUserId, stri
         const doneSp = p.done_sp || 0;
         const pct = totalSp > 0 ? (doneSp / totalSp) * 100 : 0;
         const isCompleted = p.completed_at != null;
+        const isArchived = p.archived_at != null;
         const category = isCompleted
             ? 'completed'
             : pct <= 0
@@ -85,9 +88,12 @@ export function deriveProjectCards({ projects, statusConfig, currentUserId, stri
             name: p.name,
             description: p.description || null,
             diagramUrl: `/projects/${encodeURIComponent(p.alias)}/diagram`,
+            // `category` bleibt der Filter-Schlüssel (Pills „In Arbeit"/„Fast
+            // fertig"/„Abgeschlossen"); das Badge zeigt bei archivierten Projekten
+            // „Archiviert", weil sie ausschließlich unter dieser Pill erscheinen.
             category,
-            categoryLabel: categoryLabels[category],
-            badgeClass: BADGE[category],
+            categoryLabel: isArchived ? strings.archived : categoryLabels[category],
+            badgeClass: isArchived ? BADGE.archived : BADGE[category],
             barClass: BAR[category],
             pct: Math.round(pct * 10) / 10,
             pctLabel: deComma(pct),
@@ -101,7 +107,7 @@ export function deriveProjectCards({ projects, statusConfig, currentUserId, stri
             tasksLabel: interpolate(strings.countTasks, { count: p.tasks_count || 0 }),
             sp: totalSp,
             mine: p.created_by_id === currentUserId,
-            archived: p.archived_at != null,
+            archived: isArchived,
             searchText: `${p.alias} ${p.name}`.toLowerCase(),
         };
     });
