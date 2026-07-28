@@ -113,6 +113,7 @@ export default function FaqCommands({ tabs, badges, lifecycle, commands, statuse
                                 <li key={cmd.name} className="px-6 py-5">
                                     <Call>{cmd.name}</Call>
                                     <p className="mt-2 text-sm text-gray-700 dark:text-gray-300">{cmd.purpose}</p>
+                                    <StatusLine line={cmd.statusLine} label={strings.statusLineLabel} />
 
                                     {cmd.steps.length === 0 ? (
                                         <p className="mt-3 text-xs text-gray-400 dark:text-gray-500">{strings.noCalls}</p>

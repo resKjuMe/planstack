@@ -153,10 +153,11 @@ class FaqCommandsPageTest extends TestCase
     }
 
     /**
-     * Der Artikel muss zeigen, WANN die Sticky-Statuszeile geschrieben wird —
-     * sonst steht nur da, dass es sie gibt. Die Kommandos, die ein Auto-Run
-     * ausführt, tragen die Zeile deshalb an den einzelnen Schritten; `plan`,
-     * `settings` und `update-config` laufen nicht im Auto-Modus und bewusst ohne.
+     * Die Statuszeile gilt für JEDES Kommando, nicht nur den Auto-Modus — auch für
+     * `plan`, `update-config` und das Nachziehen des Skills selbst. Der Artikel
+     * muss deshalb überall zeigen, wann sie geschrieben wird: je Kommando eine
+     * Beispielzeile (auch `settings`, das gar keine API-Aufrufe hat) und zusätzlich
+     * an den einzelnen Schritten.
      */
     public function test_shows_when_the_sticky_status_line_is_written(): void
     {
@@ -165,27 +166,47 @@ class FaqCommandsPageTest extends TestCase
             ->assertOk()
             ->inertiaPage()['props'];
 
+        // Das erste Wort ist das laufende Kommando; im Auto-Modus zwei Ebenen.
+        $commandTokens = ['Work', 'Auto', 'Review', 'Fix', 'Plan', 'Settings', 'Update'];
+        $prefix = fn (string $line) => (bool) preg_match(
+            '/^[⚙⏳] ('.implode('|', $commandTokens).')( › ('.implode('|', $commandTokens).'))? \(/u',
+            $line
+        );
+
         $lifecycleLines = collect($props['lifecycle'])->pluck('statusLine')->filter();
         $this->assertGreaterThan(1, $lifecycleLines->count(), 'Lebenszyklus ohne Statuszeilen');
-        foreach ($lifecycleLines as $line) {
-            $this->assertStringContainsString('Auto (', $line);
-        }
 
         $byName = collect($props['commands'])->keyBy('name');
-        $driven = ['/planstack work <PROJECT>', '/planstack auto <PROJECT>', '/planstack review [<PROJECT>] [<TASK>]', '/planstack fix [<PROJECT>] <TASK|PR>'];
 
-        foreach ($driven as $name) {
-            $lines = collect($byName[$name]['steps'])->pluck('statusLine')->filter();
-            $this->assertGreaterThan(1, $lines->count(), $name.' ohne Statuszeilen an den Schritten');
+        // Kein Kommando ohne eigene Beispielzeile — „immer" heißt ausnahmslos.
+        foreach ($byName as $name => $command) {
+            $this->assertNotEmpty($command['statusLine'], $name.' ohne Beispiel-Statuszeile');
         }
 
-        foreach (['/planstack plan [<PROJECT>]', '/planstack update-config [<PROJECT>]'] as $name) {
-            $this->assertCount(
-                0,
-                collect($byName[$name]['steps'])->pluck('statusLine')->filter(),
-                $name.' läuft nicht im Auto-Modus und sollte keine Statuszeile zeigen'
-            );
+        // Kommandos mit Aufruf-Kette zeigen die Zeile zusätzlich je Schritt.
+        foreach ($byName as $name => $command) {
+            if ($command['steps'] === []) {
+                continue;
+            }
+
+            $lines = collect($command['steps'])->pluck('statusLine')->filter();
+            $this->assertGreaterThan(0, $lines->count(), $name.' ohne Statuszeilen an den Schritten');
         }
+
+        // Jede Zeile folgt dem Format — sonst wäre der Artikel kein Vorbild.
+        $all = $lifecycleLines
+            ->merge($byName->pluck('statusLine'))
+            ->merge($byName->flatMap(fn ($c) => collect($c['steps'])->pluck('statusLine')))
+            ->filter();
+
+        foreach ($all as $line) {
+            $this->assertTrue($prefix($line), 'Statuszeile ohne Kommando-Prefix: '.$line);
+        }
+
+        // Das Nachziehen des Skills ist sichtbar — sonst passiert es unbemerkt.
+        $update = collect($byName['/planstack update-config [<PROJECT>]']['steps'])->pluck('statusLine')->implode(' ');
+        $this->assertStringContainsString('Update (', $update);
+        $this->assertStringContainsString('Schreibe Skill', $update);
     }
 
     /**
