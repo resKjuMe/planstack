@@ -239,6 +239,10 @@ class TaskStatusDurationsTest extends TestCase
         );
         $this->assertNotEmpty($breakdown['segments'][0]['label'], 'Tooltip braucht das Label');
         $this->assertNotEmpty($breakdown['segments'][0]['bar'], 'Balken braucht die Farbklasse');
+
+        // Die Balkenbreite trägt den MEDIAN der Aufenthalte, nicht die Summe:
+        // 2 h und 1 h → 1,5 h.
+        $this->assertEqualsWithDelta($this->hours(1.5), $breakdown['medianDays'], $this->hours(0.05));
     }
 
     /** Die Aufschlüsselung je Projekt bündelt alle Tasks des Projekts. */

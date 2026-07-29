@@ -195,35 +195,48 @@ function StatusDurations({ rows, strings }) {
 }
 
 // Gestapelter Balken „wo lag die Zeit" für eine Tabellenzeile (Projekt oder Task).
-// Jedes Segment ist ein Bearbeitungs-Status, die Breite seine Verweildauer; der
-// Tooltip nennt Status und Wert. `scale` ist die längste Gesamtdauer der Tabelle,
-// damit die Zeilen untereinander vergleichbar sind — eine Zeile mit doppelt so
-// viel Zeit hat auch einen doppelt so langen Balken.
+//
+// Die BREITE trägt den Median der Status-Aufenthalte dieser Zeile, nicht deren
+// Summe: ein einzelner Status, in dem etwas liegen geblieben ist, würde sonst die
+// ganze Zeile lang aussehen lassen. `scale` ist der größte Median der Tabelle,
+// damit die Zeilen untereinander vergleichbar bleiben. Die Segmente innerhalb des
+// Balkens behalten ihr Verhältnis zueinander, sodass die Zusammensetzung sichtbar
+// bleibt. Zahlen stehen bewusst nur im Tooltip — die Spalte soll auf einen Blick
+// wirken, nicht gelesen werden.
 function DurationBar({ durations, scale, strings }) {
     if (!durations || !durations.segments.length) {
         return <span className="text-gray-300 dark:text-gray-600">{strings.none}</span>;
     }
 
-    const total = formatDuration(durations.totalDays, strings);
-    const widthPct = scale > 0 ? Math.max(2, (durations.totalDays / scale) * 100) : 0;
+    const widthPct = scale > 0 && durations.medianDays > 0
+        ? Math.max(2, (durations.medianDays / scale) * 100)
+        : 0;
+
+    // EIN Tooltip für die ganze Zelle: Kopfzeile mit Median und Summe, darunter je
+    // Status eine Zeile. Die Segmente tragen bewusst KEINEN eigenen title — sonst
+    // gewänne beim Überfahren eines Segments dessen Tooltip und man sähe nur den
+    // einen Wert statt der ganzen Aufschlüsselung.
+    const tip = [
+        [
+            interpolate(strings.durationsMedian, { value: formatDuration(durations.medianDays, strings) }),
+            interpolate(strings.durationsTotal, { value: formatDuration(durations.totalDays, strings) }),
+        ].join(' · '),
+        ...durations.segments.map((seg) => `${seg.label}: ${formatDuration(seg.days, strings)}`),
+    ].join('\n');
 
     return (
-        <div className="flex items-center justify-end gap-2" title={interpolate(strings.durationsTotal, { value: total })}>
+        <div className="flex items-center justify-end" title={tip}>
             <span className="h-2.5 w-full max-w-[10rem] overflow-hidden rounded-full bg-gray-100 dark:bg-gray-900">
-                {/* Äußere Breite = Anteil an der längsten Zeile, innen die
-                    Status-Segmente im Verhältnis zueinander. */}
                 <span className="flex h-full" style={{ width: `${widthPct}%` }}>
                     {durations.segments.map((seg) => (
                         <span
                             key={seg.key}
                             className={'h-full ' + seg.bar}
                             style={{ width: `${durations.totalDays > 0 ? (seg.days / durations.totalDays) * 100 : 0}%` }}
-                            title={`${seg.label}: ${formatDuration(seg.days, strings)}`}
                         />
                     ))}
                 </span>
             </span>
-            <span className="whitespace-nowrap text-xs tabular-nums text-gray-500 dark:text-gray-400">{total}</span>
         </div>
     );
 }
@@ -276,9 +289,10 @@ export default function Statistics({ stats, person, strings, urls }) {
 
     const openTotal = statusBuckets.reduce((a, b) => a + b.count, 0);
 
-    // Balken-Maßstab je Tabelle: die längste Gesamtdauer der jeweiligen Zeilen.
-    const projectScale = Math.max(0, ...projects.map((p) => p.durations?.totalDays ?? 0));
-    const recentScale = Math.max(0, ...recent.map((t) => t.durations?.totalDays ?? 0));
+    // Balken-Maßstab je Tabelle: der größte Median der jeweiligen Zeilen (die
+    // Balkenbreite trägt den Median, siehe DurationBar).
+    const projectScale = Math.max(0, ...projects.map((p) => p.durations?.medianDays ?? 0));
+    const recentScale = Math.max(0, ...recent.map((t) => t.durations?.medianDays ?? 0));
 
     return (
         <>

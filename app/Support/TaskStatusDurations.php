@@ -181,6 +181,11 @@ class TaskStatusDurations
             $result[$group] = [
                 'segments' => $parts,
                 'totalDays' => array_sum(array_column($parts, 'days')),
+                // Median der Status-Aufenthalte dieser Zeile — er trägt die
+                // Balkenbreite in den Tabellen. Die Summe wäre dort irreführend:
+                // ein einzelner Status, in dem etwas liegen geblieben ist, würde die
+                // ganze Zeile lang aussehen lassen.
+                'medianDays' => $this->median(array_values($byStatus)),
             ];
         }
 
