@@ -162,7 +162,7 @@ class ChangelogPresenter
     }
 
     /**
-     * @param  int|\Illuminate\Support\Collection<int, int>  $scopeValue
+     * @param  int|Collection<int, int>  $scopeValue
      */
     private function deletedEntityIds(string $class, string $scopeColumn, $scopeValue): Collection
     {
@@ -377,9 +377,23 @@ class ChangelogPresenter
         $id = (int) $log->entity_id;
         $values = $log->new_values ?: ($log->old_values ?: []);
         $verb = $this->auditActionVerb($log->action);
-        $taskLabel = fn (mixed $taskId) => $taskId ? ($tasksById[$taskId] ?? __('changelog.task_ref', ['id' => $taskId])) : '?';
         $text = fn (string $v) => ['t' => 'text', 'v' => $v];
         $tag = fn (string $v) => ['t' => 'tag', 'v' => $v];
+
+        // Task-Tag mit Link auf die Detailseite — aber nur, solange die Task noch
+        // existiert ($tasksById kennt sie): nach dem Löschen bliebe die Zeile im
+        // Protokoll stehen und der Link liefe in einen 404. Der Client rendert ein
+        // Tag mit `url` als <a>, ohne `url` als reinen Text.
+        $taskTag = function (mixed $taskId, ?string $fallback = null) use ($tasksById, $project) {
+            $known = $taskId !== null && isset($tasksById[$taskId]);
+            $label = $known
+                ? $tasksById[$taskId]
+                : ($fallback ?? ($taskId ? __('changelog.task_ref', ['id' => $taskId]) : '?'));
+
+            return $known
+                ? ['t' => 'tag', 'v' => $label, 'url' => route('projects.tasks.show', [$project, $taskId])]
+                : ['t' => 'tag', 'v' => $label];
+        };
 
         if ($log->entity_class === Task::class) {
             $new = $log->new_values ?? [];
@@ -393,7 +407,7 @@ class ChangelogPresenter
                         $statusLabel .= ' ('.$this->initials($claimer).')';
                     }
                 }
-                $segments = [$tag($tasksById[$id] ?? ($values['name'] ?? __('changelog.task_ref', ['id' => $id]))), $text(' · ')];
+                $segments = [$taskTag($id, $values['name'] ?? null), $text(' · ')];
                 if ($old !== null) {
                     $segments[] = ['t' => 'status', 'v' => $this->orgStatusLabelById($statusesById, $old), 'cls' => $this->orgStatusBadgeById($statusesById, $old)];
                     $segments[] = $text(' → ');
@@ -407,12 +421,12 @@ class ChangelogPresenter
                 return $segments;
             }
 
-            return [$tag($tasksById[$id] ?? ($values['name'] ?? __('changelog.task_ref', ['id' => $id]))), $text(' · '.$verb)];
+            return [$taskTag($id, $values['name'] ?? null), $text(' · '.$verb)];
         }
 
         if ($log->entity_class === TaskConcern::class) {
             $taskId = $values['task_id'] ?? $concernTaskById[$id] ?? null;
-            $segments = [$text(__('changelog.concern_prefix')), $tag($taskLabel($taskId))];
+            $segments = [$text(__('changelog.concern_prefix')), $taskTag($taskId)];
 
             if ($merged) {
                 $segments[] = $text(__('changelog.status_arrow'));
@@ -434,9 +448,9 @@ class ChangelogPresenter
             Project::class => [$text(__('changelog.project_prefix')), $tag($project->alias), $text(' '.$verb)],
             Phase::class => [$text(__('changelog.phase_prefix')), $tag($phasesById[$id] ?? ($values['name'] ?? __('changelog.entity_ref', ['id' => $id]))), $text(' '.$verb)],
             TaskRequirement::class => [
-                $tag($taskLabel($values['task_id'] ?? $requirementsById[$id]->task_id ?? null)),
+                $taskTag($values['task_id'] ?? $requirementsById[$id]->task_id ?? null),
                 $text(' ← '),
-                $tag($taskLabel($values['parent_id'] ?? $requirementsById[$id]->parent_id ?? null)),
+                $taskTag($values['parent_id'] ?? $requirementsById[$id]->parent_id ?? null),
                 $text(' '.$verb),
             ],
             ProjectMembership::class => [

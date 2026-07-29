@@ -4,11 +4,23 @@ import { useChangelog } from '../../changelog/useChangelog.js';
 import { interpolate } from '../../summary/i18n.js';
 import { ChangelogSkeleton } from '../components/Skeleton.jsx';
 
-// Ein Headline-Segment (text / tag / status-Badge / Zitat).
+// Ein Headline-Segment (text / tag / status-Badge / Zitat). Ein Tag mit `url`
+// (Tasknamen) wird zum Link: der Klick darf NICHT bis zur Karte durchblubbern,
+// sonst würde er zusätzlich das Aufklappen auslösen.
 function Segment({ seg }) {
     switch (seg.t) {
         case 'tag':
-            return <span className="font-mono font-medium text-indigo-600 dark:text-indigo-400">{seg.v}</span>;
+            return seg.url ? (
+                <a
+                    href={seg.url}
+                    onClick={(e) => e.stopPropagation()}
+                    className="font-mono font-medium text-indigo-600 hover:underline dark:text-indigo-400"
+                >
+                    {seg.v}
+                </a>
+            ) : (
+                <span className="font-mono font-medium text-indigo-600 dark:text-indigo-400">{seg.v}</span>
+            );
         case 'status':
             return <span className={'inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ' + (seg.cls || '')}>{seg.v}</span>;
         case 'quote':
@@ -59,7 +71,12 @@ function Entry({ entry, strings }) {
 
     return (
         <div className="rounded-xl bg-white dark:bg-gray-800 p-3 ring-1 ring-gray-200 dark:ring-gray-700">
-            <button type="button" onClick={() => setOpen((v) => !v)} className="flex w-full items-center gap-3 text-left">
+            {/* Die Kopfzeile ist ein div, kein button: sie enthält den Task-Link,
+                und ein <a> in einem <button> ist ungültiges Markup. Klick auf die
+                Zeile klappt auf, der Link stoppt seinen Klick vorher. Der Chevron
+                bleibt ein echter Button — damit ist das Aufklappen weiterhin per
+                Tastatur erreichbar. */}
+            <div onClick={() => setOpen((v) => !v)} className="flex w-full cursor-pointer items-center gap-3 text-left">
                 <span className="w-10 shrink-0 text-xs text-gray-400 dark:text-gray-500">{entry.timeLabel}</span>
                 <span className="flex-1 text-sm text-gray-800 dark:text-gray-100">
                     {entry.headline.map((seg, i) => (
@@ -67,8 +84,19 @@ function Entry({ entry, strings }) {
                     ))}
                 </span>
                 <span className="shrink-0 text-xs text-gray-400 dark:text-gray-500">{entry.causerShort}</span>
-                <svg className={'h-4 w-4 shrink-0 text-gray-400 dark:text-gray-500 transition-transform ' + (open ? 'rotate-90' : '')} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M9 6l6 6l-6 6" /></svg>
-            </button>
+                <button
+                    type="button"
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        setOpen((v) => !v);
+                    }}
+                    aria-expanded={open}
+                    aria-label={strings.showHideExplanation}
+                    className="shrink-0 text-gray-400 dark:text-gray-500"
+                >
+                    <svg className={'h-4 w-4 transition-transform ' + (open ? 'rotate-90' : '')} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M9 6l6 6l-6 6" /></svg>
+                </button>
+            </div>
 
             {open && (
                 <div className="mt-3 space-y-3 border-t border-gray-100 dark:border-gray-700 pt-3">
