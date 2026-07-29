@@ -100,27 +100,37 @@ function WeeklyChart({ weekly, strings }) {
     const max = Math.max(1, ...weekly.map((w) => w.sp));
 
     return (
-        <div className="mt-4 flex h-40 items-end gap-1.5">
-            {weekly.map((w) => {
-                const pct = w.sp > 0 ? Math.max(4, (w.sp / max) * 100) : 2;
-                return (
-                    <div key={w.key} className="flex min-w-0 flex-1 flex-col items-center gap-1">
-                        <div className="flex w-full flex-1 items-end">
-                            <div
-                                className={
-                                    'w-full rounded-t ' +
-                                    (w.sp > 0 ? 'bg-indigo-500 dark:bg-indigo-400' : 'bg-gray-200 dark:bg-gray-700')
-                                }
-                                style={{ height: `${pct}%` }}
-                                title={`${w.label}: ${w.sp} ${strings.storyPoints} · ${w.tasks} ${strings.tasks}`}
-                            />
+        <div className="mt-4">
+            {/* Skalenmarke oben, sonst sagt die Balkenhöhe nichts. */}
+            <div className="mb-1 text-[10px] text-gray-400 dark:text-gray-500">
+                {max} {strings.storyPoints}
+            </div>
+            <div className="flex items-end gap-1.5">
+                {weekly.map((w) => {
+                    const pct = w.sp > 0 ? Math.max(4, (w.sp / max) * 100) : 0;
+                    const tip = `${w.label}: ${w.sp} ${strings.storyPoints} · ${w.tasks} ${strings.tasks}`;
+                    return (
+                        <div key={w.key} className="flex min-w-0 flex-1 flex-col items-center gap-1">
+                            {/* Die Spur hat eine FESTE Höhe und ist der
+                                Bezugsrahmen des Balkens. Prozenthöhen brauchen
+                                einen Elternteil mit definiter Höhe — in einer per
+                                flex-1 gewachsenen Box kollabieren sie auf 0, was
+                                das Diagramm leer aussehen ließ. */}
+                            <div className="relative h-32 w-full rounded-t bg-gray-100 dark:bg-gray-900/50" title={tip}>
+                                {w.sp > 0 && (
+                                    <div
+                                        className="absolute bottom-0 w-full rounded-t bg-indigo-500 dark:bg-indigo-400"
+                                        style={{ height: `${pct}%` }}
+                                    />
+                                )}
+                            </div>
+                            <div className="w-full truncate text-center text-[10px] text-gray-400 dark:text-gray-500">
+                                {w.label}
+                            </div>
                         </div>
-                        <div className="w-full truncate text-center text-[10px] text-gray-400 dark:text-gray-500">
-                            {w.label}
-                        </div>
-                    </div>
-                );
-            })}
+                    );
+                })}
+            </div>
         </div>
     );
 }
