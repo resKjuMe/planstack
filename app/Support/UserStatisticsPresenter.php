@@ -61,7 +61,7 @@ class UserStatisticsPresenter
         $reviewed = Task::query()
             ->whereIn('project_id', $projectIds)
             ->where('reviewed_by', $user->id)
-            ->get(['id', 'claimed_by_id', 'last_reviewed_at']);
+            ->get(['id', 'claimed_by_id', 'last_reviewed_at', 'effort_story_points']);
 
         $delivered = $own->filter(fn (Task $t) => (bool) $t->orgStatus?->counts_as_done);
         $open = $own->reject(fn (Task $t) => (bool) $t->orgStatus?->counts_as_done);
@@ -79,7 +79,7 @@ class UserStatisticsPresenter
             'kpis' => $this->kpis($own, $delivered, $open, $reviewed),
             'quality' => $this->quality($own, $this->rework->forTaskIds($own->pluck('id'))),
             'volume' => $this->volume($own),
-            'weekly' => $this->weekly($delivered),
+            'weekly' => $this->weekly($delivered, $reviewed),
             'statusBuckets' => $this->statusBuckets($open),
             'statusDurations' => $durations['statuses'],
             'projects' => $this->perProject($own, $durations['perProject']),
@@ -265,14 +265,24 @@ class UserStatisticsPresenter
     }
 
     /**
-     * Gelieferte Tasks/SP je Kalenderwoche, lückenlos über die letzten Wochen
-     * (Wochen ohne Lieferung stehen als 0 im Diagramm — sonst täuschte die
-     * Kurve Kontinuität vor).
+     * Wochenleistung, lückenlos über die letzten Wochen (Wochen ohne Aktivität
+     * stehen als 0 im Diagramm — sonst täuschte die Kurve Kontinuität vor). Zwei
+     * gestapelte Reihen, weil beides Arbeit ist:
+     *
+     *  - `sp`/`tasks`: selbst GELIEFERTE Tasks, einsortiert nach Merge-Zeitpunkt.
+     *  - `reviewedSp`/`reviewedTasks`: Tasks, die die Person GEREVIEWT hat,
+     *    einsortiert nach `last_reviewed_at`. Die Story Points sind die des
+     *    Autors — sie stehen hier für den Umfang des Reviewten, nicht für eigene
+     *    Lieferung, und werden deshalb getrennt ausgewiesen statt addiert.
+     *
+     * Grenze der Review-Reihe: `last_reviewed_at` hält nur das LETZTE Review, ein
+     * mehrfach gereviewter Task erscheint also einmal.
      *
      * @param  Collection<int, Task>  $delivered
+     * @param  Collection<int, Task>  $reviewed
      * @return array<int, array<string, mixed>>
      */
-    private function weekly(Collection $delivered): array
+    private function weekly(Collection $delivered, Collection $reviewed): array
     {
         $buckets = [];
         $start = CarbonImmutable::now()->startOfWeek();
@@ -284,6 +294,8 @@ class UserStatisticsPresenter
                 'label' => 'KW '.$week->isoWeek(),
                 'sp' => 0,
                 'tasks' => 0,
+                'reviewedSp' => 0,
+                'reviewedTasks' => 0,
             ];
         }
 
@@ -298,6 +310,18 @@ class UserStatisticsPresenter
             }
             $buckets[$key]['sp'] += (int) $task->effort_story_points;
             $buckets[$key]['tasks']++;
+        }
+
+        foreach ($reviewed as $task) {
+            if ($task->last_reviewed_at === null) {
+                continue;
+            }
+            $key = CarbonImmutable::parse($task->last_reviewed_at)->format('o-W');
+            if (! isset($buckets[$key])) {
+                continue;
+            }
+            $buckets[$key]['reviewedSp'] += (int) $task->effort_story_points;
+            $buckets[$key]['reviewedTasks']++;
         }
 
         return array_values($buckets);

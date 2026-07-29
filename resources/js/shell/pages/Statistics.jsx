@@ -93,36 +93,70 @@ function Metric({ label, value, sub, tone }) {
     );
 }
 
-// Gelieferte SP je Kalenderwoche als Säulen. Reines SVG-freies Flex-Diagramm —
-// die Höhe skaliert auf die stärkste Woche, leere Wochen bleiben als Grundlinie
-// sichtbar (sonst täuschte die Kurve Kontinuität vor).
+// Wochenleistung als gestapelte Säulen: unten die selbst gelieferten SP, darüber
+// die SP der gereviewten Tasks. Getrennt gestapelt und nicht addiert, weil die SP
+// eines gereviewten Tasks dem Autor gehören — sie stehen für den Umfang des
+// Reviewten, nicht für eigene Lieferung.
+//
+// Reines Flex-Diagramm ohne SVG; die Höhe skaliert auf die stärkste Woche
+// (Summe beider Reihen), leere Wochen bleiben als Grundlinie sichtbar, sonst
+// täuschte die Kurve Kontinuität vor.
+const WEEKLY_SERIES = {
+    delivered: 'bg-indigo-500 dark:bg-indigo-400',
+    reviewed: 'bg-teal-400 dark:bg-teal-500',
+};
+
 function WeeklyChart({ weekly, strings }) {
-    const max = Math.max(1, ...weekly.map((w) => w.sp));
+    const max = Math.max(1, ...weekly.map((w) => w.sp + w.reviewedSp));
 
     return (
         <div className="mt-4">
-            {/* Skalenmarke oben, sonst sagt die Balkenhöhe nichts. */}
-            <div className="mb-1 text-[10px] text-gray-400 dark:text-gray-500">
-                {max} {strings.storyPoints}
+            <div className="mb-1 flex items-center justify-between text-[10px] text-gray-400 dark:text-gray-500">
+                {/* Skalenmarke, sonst sagt die Balkenhöhe nichts. */}
+                <span>{max} {strings.storyPoints}</span>
+                <span className="flex items-center gap-3">
+                    <span className="flex items-center gap-1">
+                        <span className={'inline-block h-2 w-2 rounded-sm ' + WEEKLY_SERIES.delivered} />
+                        {strings.weeklyDelivered}
+                    </span>
+                    <span className="flex items-center gap-1">
+                        <span className={'inline-block h-2 w-2 rounded-sm ' + WEEKLY_SERIES.reviewed} />
+                        {strings.weeklyReviewed}
+                    </span>
+                </span>
             </div>
             <div className="flex items-end gap-1.5">
                 {weekly.map((w) => {
-                    const pct = w.sp > 0 ? Math.max(4, (w.sp / max) * 100) : 0;
-                    const tip = `${w.label}: ${w.sp} ${strings.storyPoints} · ${w.tasks} ${strings.tasks}`;
+                    const share = (value) => (value > 0 ? Math.max(3, (value / max) * 100) : 0);
+                    const tip = [
+                        w.label,
+                        interpolate(strings.weeklyTipDelivered, { sp: w.sp, tasks: w.tasks }),
+                        interpolate(strings.weeklyTipReviewed, { sp: w.reviewedSp, tasks: w.reviewedTasks }),
+                    ].join('\n');
+
                     return (
                         <div key={w.key} className="flex min-w-0 flex-1 flex-col items-center gap-1">
                             {/* Die Spur hat eine FESTE Höhe und ist der
-                                Bezugsrahmen des Balkens. Prozenthöhen brauchen
+                                Bezugsrahmen der Segmente. Prozenthöhen brauchen
                                 einen Elternteil mit definiter Höhe — in einer per
                                 flex-1 gewachsenen Box kollabieren sie auf 0, was
                                 das Diagramm leer aussehen ließ. */}
                             <div className="relative h-32 w-full rounded-t bg-gray-100 dark:bg-gray-900/50" title={tip}>
-                                {w.sp > 0 && (
-                                    <div
-                                        className="absolute bottom-0 w-full rounded-t bg-indigo-500 dark:bg-indigo-400"
-                                        style={{ height: `${pct}%` }}
-                                    />
-                                )}
+                                {/* inset-0, NICHT nur bottom-0: die Segmente tragen
+                                    Prozenthöhen und brauchen dafür einen Elternteil
+                                    mit definiter Höhe. flex-col-reverse stapelt sie
+                                    von unten. */}
+                                <div className="absolute inset-0 flex flex-col-reverse">
+                                    {w.sp > 0 && (
+                                        <div className={WEEKLY_SERIES.delivered} style={{ height: `${share(w.sp)}%` }} />
+                                    )}
+                                    {w.reviewedSp > 0 && (
+                                        <div
+                                            className={'rounded-t ' + WEEKLY_SERIES.reviewed}
+                                            style={{ height: `${share(w.reviewedSp)}%` }}
+                                        />
+                                    )}
+                                </div>
                             </div>
                             <div className="w-full truncate text-center text-[10px] text-gray-400 dark:text-gray-500">
                                 {w.label}
@@ -194,39 +228,48 @@ function StatusDurations({ rows, strings }) {
     );
 }
 
-// Gestapelter Balken „wo lag die Zeit" für eine Tabellenzeile (Projekt oder Task).
+// Gestapelter Balken „wo lag die Zeit" für eine Tabellenzeile.
 //
-// Die BREITE trägt den Median der Status-Aufenthalte dieser Zeile, nicht deren
-// Summe: ein einzelner Status, in dem etwas liegen geblieben ist, würde sonst die
-// ganze Zeile lang aussehen lassen. `scale` ist der größte Median der Tabelle,
-// damit die Zeilen untereinander vergleichbar bleiben. Die Segmente innerhalb des
-// Balkens behalten ihr Verhältnis zueinander, sodass die Zusammensetzung sichtbar
-// bleibt. Zahlen stehen bewusst nur im Tooltip — die Spalte soll auf einen Blick
-// wirken, nicht gelesen werden.
-function DurationBar({ durations, scale, strings }) {
+// Was die BREITE trägt, hängt davon ab, was die Zeile ist:
+//  - `variant="project"`: der Median über die Gesamtzeiten der TASKS des Projekts
+//    — die typische Task. Die Summe wüchse einfach mit der Zahl der Tasks.
+//  - `variant="task"`: die Gesamtzeit dieser einen Task. Ein Median über ihre
+//    Status wäre keine sinnvolle Größe (unvergleichbare Posten), deshalb steht in
+//    dieser Tabelle auch keine Median-Zeile im Tooltip.
+//
+// `scale` ist der größte Wert derselben Art in der Tabelle, damit die Zeilen
+// untereinander vergleichbar bleiben. Die Segmente behalten ihr Verhältnis
+// zueinander, sodass die Zusammensetzung sichtbar bleibt. Zahlen stehen nur im
+// Tooltip — die Spalte soll auf einen Blick wirken, nicht gelesen werden.
+function DurationBar({ durations, scale, variant, strings }) {
     if (!durations || !durations.segments.length) {
         return <span className="text-gray-300 dark:text-gray-600">{strings.none}</span>;
     }
 
-    const widthPct = scale > 0 && durations.medianDays > 0
-        ? Math.max(2, (durations.medianDays / scale) * 100)
-        : 0;
+    const isProject = variant === 'project';
+    const value = isProject ? durations.medianTaskDays : durations.totalDays;
+    const widthPct = scale > 0 && value > 0 ? Math.max(2, (value / scale) * 100) : 0;
 
-    // EIN Tooltip für die ganze Zelle: Kopfzeile mit Median und Summe, darunter je
-    // Status eine Zeile. Die Segmente tragen bewusst KEINEN eigenen title — sonst
-    // gewänne beim Überfahren eines Segments dessen Tooltip und man sähe nur den
-    // einen Wert statt der ganzen Aufschlüsselung.
+    // EIN Tooltip für die ganze Zelle: Kopfzeile, darunter je Status eine Zeile.
+    // Die Segmente tragen bewusst KEINEN eigenen title — sonst gewänne beim
+    // Überfahren eines Segments dessen Tooltip und man sähe nur den einen Wert
+    // statt der ganzen Aufschlüsselung.
+    const total = interpolate(strings.durationsTotal, { value: formatDuration(durations.totalDays, strings) });
+    const head = isProject
+        ? [interpolate(strings.durationsMedianTask, { value: formatDuration(durations.medianTaskDays, strings) }), total].join(' · ')
+        : total;
+
     const tip = [
-        [
-            interpolate(strings.durationsMedian, { value: formatDuration(durations.medianDays, strings) }),
-            interpolate(strings.durationsTotal, { value: formatDuration(durations.totalDays, strings) }),
-        ].join(' · '),
+        head,
         ...durations.segments.map((seg) => `${seg.label}: ${formatDuration(seg.days, strings)}`),
     ].join('\n');
 
+    // Feste Spurbreite (w-40 statt w-full): so ist der Balken in „Nach Projekt" und
+    // „Zuletzt geliefert" gleich breit, obwohl die Tabellen unterschiedlich viele
+    // Spalten haben und das Tabellenlayout sonst je Tabelle anders aufteilt.
     return (
         <div className="flex items-center justify-end" title={tip}>
-            <span className="h-2.5 w-full max-w-[10rem] overflow-hidden rounded-full bg-gray-100 dark:bg-gray-900">
+            <span className="h-2.5 w-40 overflow-hidden rounded-full bg-gray-100 dark:bg-gray-900">
                 <span className="flex h-full" style={{ width: `${widthPct}%` }}>
                     {durations.segments.map((seg) => (
                         <span
@@ -289,10 +332,11 @@ export default function Statistics({ stats, person, strings, urls }) {
 
     const openTotal = statusBuckets.reduce((a, b) => a + b.count, 0);
 
-    // Balken-Maßstab je Tabelle: der größte Median der jeweiligen Zeilen (die
-    // Balkenbreite trägt den Median, siehe DurationBar).
-    const projectScale = Math.max(0, ...projects.map((p) => p.durations?.medianDays ?? 0));
-    const recentScale = Math.max(0, ...recent.map((t) => t.durations?.medianDays ?? 0));
+    // Balken-Maßstab je Tabelle — jeweils der größte Wert DERSELBEN Art, die die
+    // Breite trägt: beim Projekt der Median je Task, bei der einzelnen Task ihre
+    // Gesamtzeit (siehe DurationBar).
+    const projectScale = Math.max(0, ...projects.map((p) => p.durations?.medianTaskDays ?? 0));
+    const recentScale = Math.max(0, ...recent.map((t) => t.durations?.totalDays ?? 0));
 
     return (
         <>
@@ -545,7 +589,7 @@ export default function Statistics({ stats, person, strings, urls }) {
                                                     <th className="px-4 py-2 font-medium">{strings.colOpen}</th>
                                                     <th className="px-4 py-2 font-medium">{strings.colCycle}</th>
                                                     <th className="px-4 py-2 text-right font-medium">{strings.colVolume}</th>
-                                                    <th className="px-4 py-2 text-right font-medium">{strings.colDuration}</th>
+                                                    <th className="w-44 px-4 py-2 text-right font-medium">{strings.colDuration}</th>
                                                 </tr>
                                             </thead>
                                             <tbody>
@@ -575,8 +619,8 @@ export default function Statistics({ stats, person, strings, urls }) {
                                                             <div>{p.files} {strings.mFiles}</div>
                                                             <div>{p.commits} {strings.mCommits}</div>
                                                         </td>
-                                                        <td className="px-4 py-3">
-                                                            <DurationBar durations={p.durations} scale={projectScale} strings={strings} />
+                                                        <td className="w-44 px-4 py-3">
+                                                            <DurationBar durations={p.durations} scale={projectScale} variant="project" strings={strings} />
                                                         </td>
                                                     </tr>
                                                 ))}
@@ -600,7 +644,7 @@ export default function Statistics({ stats, person, strings, urls }) {
                                                     <th className="px-4 py-2 font-medium">{strings.colCycle}</th>
                                                     <th className="px-4 py-2 font-medium">{strings.colFiles}</th>
                                                     <th className="px-4 py-2 text-right font-medium">{strings.colDeviation}</th>
-                                                    <th className="px-4 py-2 text-right font-medium">{strings.colDuration}</th>
+                                                    <th className="w-44 px-4 py-2 text-right font-medium">{strings.colDuration}</th>
                                                 </tr>
                                             </thead>
                                             <tbody>
@@ -632,8 +676,8 @@ export default function Statistics({ stats, person, strings, urls }) {
                                                                 </span>
                                                             )}
                                                         </td>
-                                                        <td className="px-4 py-3">
-                                                            <DurationBar durations={t.durations} scale={recentScale} strings={strings} />
+                                                        <td className="w-44 px-4 py-3">
+                                                            <DurationBar durations={t.durations} scale={recentScale} variant="task" strings={strings} />
                                                         </td>
                                                     </tr>
                                                 ))}

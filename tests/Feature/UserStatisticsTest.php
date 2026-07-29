@@ -262,6 +262,73 @@ class UserStatisticsTest extends TestCase
     }
 
     /**
+     * Die Wochenleistung stapelt zwei Reihen: selbst geliefert (nach Merge) und
+     * gereviewt (nach Zeitpunkt des letzten Reviews). Getrennt, nicht addiert — die
+     * Story Points eines gereviewten Tasks gehören seinem Autor.
+     */
+    public function test_weekly_counts_reviewed_tasks_as_a_separate_series(): void
+    {
+        $organization = Organization::factory()->create();
+        $ada = $this->member($organization, 'Ada Lovelace');
+        $grace = $this->member($organization, 'Grace Hopper');
+        $project = $this->project($organization, $ada);
+
+        // Eigene Lieferung von Ada.
+        Task::factory()->create([
+            'project_id' => $project->id,
+            'claimed_by_id' => $ada->id,
+            'claimed_at' => now()->subHours(4),
+            'merged_at' => now(),
+            'status' => TaskStatus::MERGED,
+            'effort_story_points' => 3,
+        ]);
+
+        // Task von Grace, den ADA gereviewt hat — zählt in die Review-Reihe.
+        Task::factory()->create([
+            'project_id' => $project->id,
+            'claimed_by_id' => $grace->id,
+            'reviewed_by' => $ada->id,
+            'last_reviewed_at' => now(),
+            'effort_story_points' => 8,
+        ]);
+
+        $weekly = $this->actingAs($ada)
+            ->get(route('statistics', $ada))
+            ->assertOk()
+            ->inertiaProps('stats.weekly');
+
+        $current = end($weekly);
+        $this->assertSame(3, $current['sp'], 'eigene Lieferung');
+        $this->assertSame(1, $current['tasks']);
+        $this->assertSame(8, $current['reviewedSp'], 'gereviewter Umfang, getrennt ausgewiesen');
+        $this->assertSame(1, $current['reviewedTasks']);
+    }
+
+    /** Ohne datiertes Review bleibt die Review-Reihe leer statt zu raten. */
+    public function test_review_without_timestamp_is_not_bucketed(): void
+    {
+        $organization = Organization::factory()->create();
+        $ada = $this->member($organization, 'Ada Lovelace');
+        $grace = $this->member($organization, 'Grace Hopper');
+        $project = $this->project($organization, $ada);
+
+        Task::factory()->create([
+            'project_id' => $project->id,
+            'claimed_by_id' => $grace->id,
+            'reviewed_by' => $ada->id,
+            'last_reviewed_at' => null,
+            'effort_story_points' => 8,
+        ]);
+
+        $weekly = $this->actingAs($ada)
+            ->get(route('statistics', $ada))
+            ->assertOk()
+            ->inertiaProps('stats.weekly');
+
+        $this->assertSame(0, collect($weekly)->sum('reviewedSp'));
+    }
+
+    /**
      * Die Qualitätskennzahlen sind bis auf die Nacharbeit Momentaufnahmen. Dieser
      * Test hält beides zugleich fest: „aktuell Änderungen erbeten" fällt nach der
      * Freigabe auf 0, die Nacharbeit bleibt stehen.

@@ -80,11 +80,48 @@ class TaskStatusDurations
 
         $projectByTask = $tasks->pluck('project_id', 'id');
 
+        $perTask = $this->breakdown($segments, $statuses, fn (array $s) => $s['task_id']);
+        $perProject = $this->breakdown($segments, $statuses, fn (array $s) => $projectByTask[$s['task_id']] ?? null);
+
         return [
             'statuses' => $this->statusRows($segments, $statuses),
-            'perTask' => $this->breakdown($segments, $statuses, fn (array $s) => $s['task_id']),
-            'perProject' => $this->breakdown($segments, $statuses, fn (array $s) => $projectByTask[$s['task_id']] ?? null),
+            'perTask' => $perTask,
+            'perProject' => $this->withTaskMedian($perProject, $perTask, $projectByTask),
         ];
+    }
+
+    /**
+     * Ergänzt je Projekt den Median über die Gesamt-Bearbeitungszeiten seiner
+     * TASKS — die „typische Task dieses Projekts".
+     *
+     * Nicht der Median über die Status-Zeilen: das wären unvergleichbare Größen
+     * („die mittlere Dauer eines beliebigen Status") und beantwortet keine Frage.
+     * Und nicht die Summe: die wächst einfach mit der Zahl der Tasks.
+     *
+     * @param  array<int|string, array<string, mixed>>  $perProject
+     * @param  array<int|string, array<string, mixed>>  $perTask
+     * @param  Collection<int, int|null>  $projectByTask
+     * @return array<int|string, array<string, mixed>>
+     */
+    private function withTaskMedian(array $perProject, array $perTask, Collection $projectByTask): array
+    {
+        $secondsByProject = [];
+        foreach ($perTask as $taskId => $breakdown) {
+            $projectId = $projectByTask[$taskId] ?? null;
+            if ($projectId === null) {
+                continue;
+            }
+            // median() erwartet Sekunden und rechnet selbst in Tage um.
+            $secondsByProject[$projectId][] = $breakdown['totalDays'] * 86400;
+        }
+
+        foreach ($perProject as $projectId => $row) {
+            $totals = $secondsByProject[$projectId] ?? [];
+            $perProject[$projectId]['medianTaskDays'] = $this->median($totals);
+            $perProject[$projectId]['taskCount'] = count($totals);
+        }
+
+        return $perProject;
     }
 
     /**
@@ -181,11 +218,6 @@ class TaskStatusDurations
             $result[$group] = [
                 'segments' => $parts,
                 'totalDays' => array_sum(array_column($parts, 'days')),
-                // Median der Status-Aufenthalte dieser Zeile — er trägt die
-                // Balkenbreite in den Tabellen. Die Summe wäre dort irreführend:
-                // ein einzelner Status, in dem etwas liegen geblieben ist, würde die
-                // ganze Zeile lang aussehen lassen.
-                'medianDays' => $this->median(array_values($byStatus)),
             ];
         }
 
