@@ -49,6 +49,10 @@ class BoardPresenter
                 'claudetaskSetup' => route('claudetask.setup'),
             ],
             'csrf' => csrf_token(),
+            // Ab welchem Alter des Heartbeats die Karte eine Worker-Session als
+            // verwaist markiert. Der Client leitet das selbst ab (reiner
+            // Zeitverlauf, kein Server-Event) und braucht dafür die Schwelle.
+            'claimSessionTtlMinutes' => (int) config('planstack.claim_session_ttl_minutes', 30),
             'strings' => $this->strings(),
         ];
     }
@@ -101,6 +105,13 @@ class BoardPresenter
             'displayStatus' => $displayKey,
             'claimerId' => $task->claimed_by_id,
             'claimerName' => $task->claimer?->name,
+            // Wie in mapApiTask(): welche Worker-Session hält den Task, wann war
+            // sie zuletzt zu sehen, und ab wann gilt sie als verwaist. Muss auch
+            // hier mit, weil die Antwort des Move-Endpunkts (DnD) die Karte
+            // ersetzt — ohne die Felder verlöre sie beim Ziehen ihr Badge.
+            'claimSession' => $task->claim_session_label,
+            'claimSeenAt' => $task->claim_seen_at?->toIso8601String(),
+            'claimTtlMinutes' => (int) config('planstack.claim_session_ttl_minutes', 30),
             'storyPoints' => (int) $task->effort_story_points,
             'prNumber' => $task->pr_number,
             'prUrl' => $task->x_pr_url,

@@ -27,6 +27,21 @@ use App\Models\User;
  */
 class TaskStatusService
 {
+    public function __construct(private readonly ClaimSession $claimSession) {}
+
+    /**
+     * Hängt das Session-Lease an eine HANDGEBAUTE Claim-Änderung. Nur für die
+     * Fallback-Pfade nötig, die ohne OrgStatus (unseeded Organisation) arbeiten
+     * und deshalb nicht durch attributesFor() laufen.
+     *
+     * @param  array<string, mixed>  $attrs
+     * @return array<string, mixed>
+     */
+    public function withClaimSession(array $attrs): array
+    {
+        return $this->claimSession->stamp($attrs);
+    }
+
     /**
      * The "progress" roles a direct status call may target (POST .../status:
      * analyze/in_progress/in_review/done). These — and only these — are
@@ -131,10 +146,15 @@ class TaskStatusService
      */
     public function attributesFor(Task $task, OrgStatus $status, ?User $actor = null, array $extra = []): array
     {
-        return array_merge(
+        // Die On-Enter-Effekte sind bereits gestempelt (StatusEffects). Hier noch
+        // einmal, weil $extra die Effekte überschreibt und den Claim damit auch
+        // NACH dem Stempeln setzen oder räumen kann — der äußere Aufruf sieht das
+        // Endergebnis. stamp() ist eine reine Funktion auf dem Array und für
+        // unveränderte Claims ein No-op, doppeltes Anwenden also unschädlich.
+        return $this->claimSession->stamp(array_merge(
             ['status_id' => $status->id],
             StatusEffects::resolve($task, $status, $actor),
             $extra,
-        );
+        ));
     }
 }

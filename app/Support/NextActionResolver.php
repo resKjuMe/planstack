@@ -146,7 +146,9 @@ class NextActionResolver
         foreach ($candidates as $candidate) {
             $attrs = $claimedStatus !== null
                 ? $this->statuses->attributesFor($candidate, $claimedStatus, $user)
-                : ['claimed_by_id' => $user->id, 'claimed_at' => now(), 'status' => TaskStatus::CLAIMED->value];
+                : $this->statuses->withClaimSession(
+                    ['claimed_by_id' => $user->id, 'claimed_at' => now(), 'status' => TaskStatus::CLAIMED->value]
+                );
 
             $claimed = Task::whereKey($candidate->id)
                 ->whereNull('claimed_by_id')

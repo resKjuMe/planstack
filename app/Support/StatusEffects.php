@@ -64,6 +64,13 @@ class StatusEffects
             };
         }
 
-        return $attrs;
+        // Das Session-Lease hängt am Claim und wird deshalb HIER mitgezogen — an
+        // der Stelle, an der Claim-Änderungen entstehen, nicht in den Endpunkten.
+        // Alle Wege laufen hier durch: Status-Wechsel (TaskStatusService),
+        // Event-Automationen (TaskEventService) und der Board-Move per DnD. Ohne
+        // das würde ein Zug auf „Pickable" den Assignee räumen, aber Label und
+        // Heartbeat stehen lassen — die Karte behauptete weiter eine Session.
+        // Effekte, die claimed_by_id nicht anfassen, bleiben unberührt.
+        return app(ClaimSession::class)->stamp($attrs);
     }
 }

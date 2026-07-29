@@ -80,6 +80,8 @@ class Task extends Model
         'status',
         'status_id',
         'claimed_at',
+        'claim_session_label',
+        'claim_seen_at',
         'merged_at',
     ];
 
@@ -115,6 +117,7 @@ class Task extends Model
             'last_reviewed_at' => 'datetime',
             'last_review_recommendation' => \App\Enums\ReviewRecommendation::class,
             'claimed_at' => 'datetime',
+            'claim_seen_at' => 'datetime',
             'merged_at' => 'datetime',
         ];
     }

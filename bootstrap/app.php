@@ -27,6 +27,11 @@ return Application::configure(basePath: dirname(__DIR__))
         // every API response (drift detection without an extra round-trip).
         $middleware->appendToGroup('api', \App\Http\Middleware\AttachPlanstackConfig::class);
 
+        // Nimmt X-Planstack-Session entgegen (welche Worker-Session ruft?) und
+        // frischt nach der Antwort den Heartbeat des Claims auf. Ebenfalls nach
+        // SubstituteBindings, damit {task} in terminate() ein Modell ist.
+        $middleware->appendToGroup('api', \App\Http\Middleware\TrackClaimSession::class);
+
         // Applies the authenticated user's stored locale to every web request.
         // Appended so it runs after the auth middleware and $request->user() is set.
         // Also on the api group so same-origin browser fetches (shared React store,

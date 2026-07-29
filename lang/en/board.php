@@ -36,6 +36,8 @@ return [
 
     // Card
     'unassigned' => '—',
+    'session_active' => 'Session is working on it',
+    'session_stale' => 'Session stopped reporting in — claim may be orphaned',
     'reviewer' => 'Reviewer',
     'approver' => 'Approver',
     'stacked' => 'Stacked on unfinished tasks',

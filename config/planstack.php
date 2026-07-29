@@ -66,5 +66,21 @@ return [
 
     'fix_lease_minutes' => (int) env('PLANSTACK_FIX_LEASE_MINUTES', 15),
 
+    /*
+    |--------------------------------------------------------------------------
+    | Claim-Session: Heartbeat-TTL
+    |--------------------------------------------------------------------------
+    |
+    | Nach wie vielen Minuten ohne Lebenszeichen (claim_seen_at) die Session,
+    | die einen Task hält, als verwaist gilt — z. B. weil der Worker hart
+    | gekillt wurde. Der Claim selbst bleibt bestehen (nur ein explizites
+    | release gibt ihn frei); das Board markiert ihn lediglich als verwaist.
+    | Großzügiger als das fix-Lease, da ein einzelner Task-Lauf lange ohne
+    | API-Zugriff arbeiten kann.
+    |
+    */
+
+    'claim_session_ttl_minutes' => (int) env('PLANSTACK_CLAIM_SESSION_TTL_MINUTES', 30),
+
 ];
 

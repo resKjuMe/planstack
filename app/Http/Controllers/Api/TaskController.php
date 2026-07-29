@@ -256,7 +256,9 @@ class TaskController extends ApiController
             // attributesFor: status_id + enum-Spiegel + On-Enter-Effekte).
             $attrs = $claimedStatus !== null
                 ? $this->statuses->attributesFor($candidate, $claimedStatus, $request->user())
-                : ['claimed_by_id' => $request->user()->id, 'claimed_at' => now(), 'status' => TaskStatus::CLAIMED->value];
+                : $this->statuses->withClaimSession(
+                    ['claimed_by_id' => $request->user()->id, 'claimed_at' => now(), 'status' => TaskStatus::CLAIMED->value]
+                );
 
             $claimed = Task::whereKey($candidate->id)
                 ->whereNull('claimed_by_id')

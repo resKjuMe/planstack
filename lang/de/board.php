@@ -36,6 +36,8 @@ return [
 
     // Karte
     'unassigned' => '—',
+    'session_active' => 'Session arbeitet daran',
+    'session_stale' => 'Session hat sich nicht mehr gemeldet — Claim evtl. verwaist',
     'reviewer' => 'Reviewer',
     'approver' => 'Approver',
     'stacked' => 'Gestapelt auf noch nicht abgeschlossene Tasks',

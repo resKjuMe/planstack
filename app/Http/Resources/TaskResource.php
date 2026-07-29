@@ -40,6 +40,10 @@ class TaskResource extends JsonResource
         'pr_ci_status', 'pr_ci_failed', 'pr_ci_running', 'pr_ci_success', 'pr_ci_waiting',
         'pr_in_merge_queue', 'pr_merge_queue_state', 'pr_mergeable', 'pr_unresolved_threads', 'pr_review_decision',
         'claimed_by_id', 'prerequisites', 'concern', 'stacking',
+        // Welche Worker-Session hält den Task und wann war sie zuletzt zu sehen —
+        // gehört zum Claim-Zustand: ohne beides sieht ein Client einen fremden
+        // Claim, aber nicht, ob dahinter noch etwas läuft.
+        'claim_session', 'claim_seen_at',
         // Reviewer gehört zum Review-Zustand wie last_review_* — ohne ihn kann ein
         // Client nicht erkennen, dass ein Review (auch sein eigener) schon läuft.
         'reviewed_by', 'reviewed_by_name',
@@ -169,6 +173,8 @@ class TaskResource extends JsonResource
             'claimed_by_id' => $this->claimed_by_id,
             'claimed_by' => $this->whenLoaded('claimer', fn () => $this->claimer?->name),
             'claimed_at' => $this->claimed_at,
+            'claim_session' => $this->claim_session_label,
+            'claim_seen_at' => $this->claim_seen_at,
             'merged_at' => $this->merged_at,
             'last_reviewed_at' => $this->last_reviewed_at,
             'last_review_recommendation' => $this->last_review_recommendation?->value,

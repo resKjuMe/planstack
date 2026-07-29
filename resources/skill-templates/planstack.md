@@ -43,6 +43,13 @@ read -r A1 A2 A3 <<<"$ARGUMENTS"
 if [ "$A1" = "work" ] || [ "$A1" = "do" ]; then PROJ=$A2; TASK=$A3
 elif [ "$A1" = "auto" ]; then MODE=auto; PROJ=$A2
 else PROJ=$A1; TASK=$A2; fi   # <- veraltete Kurzform (ohne work), bis v3.0.0
+
+# Sprechende Kennung DIESER Session fuers Board. Mehrere Sessions arbeiten unter
+# demselben Token; ohne das Label zeigt das Board nur den Nutzer und man sieht
+# nicht, welche Session welchen Task haelt. Ab hier tragen alle Aufrufe mit
+# "${AUTH[@]}" die Kennung automatisch mit.
+case "$A1" in work|do|auto) CMD=$A1 ;; *) CMD=work ;; esac
+AUTH+=(-H "X-Planstack-Session: $CMD ${PROJ}${TASK:+/$TASK}")
 ```
 
 Alle Endpunkte laufen unter `$BASE/projects/$PROJ` (siehe Betriebshandbuch). Fehler: `401` Token · `403` kein Zugriff aufs Projekt · `404` unbekannter Alias.

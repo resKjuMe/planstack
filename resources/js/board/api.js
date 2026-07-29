@@ -60,6 +60,14 @@ export function mapApiTask(apiTask, meta) {
         displayStatus,
         claimerId: apiTask.claimed_by_id ?? null,
         claimerName: apiTask.claimed_by ?? null,
+        // Welche Worker-Session den Task hält (Label) und wann sie zuletzt gesehen
+        // wurde. Ob sie noch lebt, leitet die Karte selbst aus dem Alter ab —
+        // Ablauf ist reiner Zeitverlauf und kommt bewusst ohne Server-Event.
+        claimSession: apiTask.claim_session ?? null,
+        claimSeenAt: apiTask.claim_seen_at ?? null,
+        // TTL board-weit konstant, wird aber an der Karte mitgeführt: sonst müsste
+        // sie durch BoardColumn/GroupColumn bis zur Karte durchgereicht werden.
+        claimTtlMinutes: meta.claimSessionTtlMinutes ?? 30,
         reviewerId: apiTask.reviewed_by ?? null,
         reviewerName: apiTask.reviewed_by_name ?? null,
         storyPoints: Number(apiTask.effort?.story_points ?? 0),
