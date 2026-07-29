@@ -299,6 +299,62 @@ class DashboardTest extends TestCase
         $this->assertSame([$own->alias], collect($data['projects'])->pluck('alias')->all());
     }
 
+    /**
+     * Die Filter-Pills listen nur Projekte, in denen wirklich etwas bei mir liegt —
+     * ein Filter, der garantiert leer bleibt, ist keine Hilfe. Die Zahlen kommen
+     * aus der vollen Menge, nicht aus den je Gruppe gelieferten Einträgen.
+     */
+    public function test_project_filters_only_list_projects_with_actionable_items(): void
+    {
+        [$organization, $ada, $first] = $this->scenario();
+        $second = $this->project($organization, $ada);
+        $quiet = $this->project($organization, $ada);
+
+        Task::factory()->create([
+            'project_id' => $first->id,
+            'claimed_by_id' => $ada->id,
+            'status' => TaskStatus::IN_PROGRESS,
+            'effort_story_points' => 5,
+        ]);
+        Task::factory()->create([
+            'project_id' => $first->id,
+            'claimed_by_id' => $ada->id,
+            'status' => TaskStatus::IN_PROGRESS,
+            'effort_story_points' => 3,
+        ]);
+        Task::factory()->create([
+            'project_id' => $second->id,
+            'claimed_by_id' => $ada->id,
+            'reviewed_by' => $ada->id,
+            'status' => TaskStatus::IN_REVIEW,
+            'effort_story_points' => 2,
+        ]);
+        // Nichts, was bei mir liegt — bekommt keine Pille.
+        Task::factory()->create([
+            'project_id' => $quiet->id,
+            'claimed_by_id' => null,
+            'status' => TaskStatus::PICKABLE,
+        ]);
+
+        $data = $this->dashboard($ada);
+
+        $this->assertSame(
+            [$first->alias, $second->alias],
+            collect($data['projectFilters'])->pluck('alias')->all(),
+            'nach Anzahl sortiert, ohne das stille Projekt'
+        );
+        $this->assertSame([2, 1], collect($data['projectFilters'])->pluck('count')->all());
+
+        // Anzahl und SP je Gruppe UND Projekt — die Grundlage der gefilterten
+        // Gruppenkopfzeile.
+        $work = collect($data['buckets'])->firstWhere('key', 'work');
+        $this->assertSame(['count' => 2, 'sp' => 8], $work['byProject'][$first->alias]);
+        $this->assertArrayNotHasKey($second->alias, $work['byProject']);
+
+        $review = collect($data['buckets'])->firstWhere('key', 'review');
+        $this->assertSame(['count' => 1, 'sp' => 2], $review['byProject'][$second->alias]);
+    }
+
     // --- Nebenpanels ----------------------------------------------------------
 
     /**

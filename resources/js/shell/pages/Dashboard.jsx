@@ -1,8 +1,8 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Head, router } from '@inertiajs/react';
 import AppShell from '../AppShell.jsx';
 import PageBands from '../components/PageBands.jsx';
-import { interpolate } from '../../summary/i18n.js';
+import { interpolate, transChoice } from '../../summary/i18n.js';
 import { formatDuration, relativeTime } from '../../stats/format.js';
 
 // Startseite (Ziel des Logos): die Ich-Sicht über ALLE sichtbaren Projekte. Kern
@@ -47,6 +47,38 @@ function Tile({ label, value, unit, sub }) {
                 {unit && <span className="ms-1 text-lg font-semibold text-gray-400 dark:text-gray-500">{unit}</span>}
             </div>
             {sub && <div className="mt-1 text-sm text-gray-500 dark:text-gray-400">{sub}</div>}
+        </div>
+    );
+}
+
+// Projekt-Filter der „Bei mir"-Liste. Auf der Pille steht nur das Kürzel — mehr
+// braucht es nicht, wer das Projekt kennt, und die Reihe bleibt auch bei vielen
+// Projekten schmal. Name und Anzahl stehen im Tooltip. Pillen gibt es nur für
+// Projekte, in denen wirklich etwas bei mir liegt.
+function ProjectPills({ filters, active, onChange, strings }) {
+    const pill = (isActive) =>
+        'rounded-full px-3 py-1 text-xs font-medium transition ' +
+        (isActive
+            ? 'bg-gray-900 text-white dark:bg-gray-100 dark:text-gray-900'
+            : 'bg-white text-gray-600 ring-1 ring-gray-300 hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-400 dark:ring-gray-600 dark:hover:bg-gray-700/50');
+
+    return (
+        <div className="mt-3 flex flex-wrap gap-2">
+            <button type="button" onClick={() => onChange('all')} className={pill(active === 'all')} aria-pressed={active === 'all'}>
+                {strings.filterAll}
+            </button>
+            {filters.map((filter) => (
+                <button
+                    key={filter.alias}
+                    type="button"
+                    onClick={() => onChange(filter.alias)}
+                    aria-pressed={active === filter.alias}
+                    title={`${filter.name} · ${transChoice(strings.filterCount, filter.count)}`}
+                    className={pill(active === filter.alias) + ' font-mono'}
+                >
+                    {filter.alias}
+                </button>
+            ))}
         </div>
     );
 }
@@ -150,6 +182,7 @@ function TaskRow({ item, strings, locale }) {
 
 function Group({ bucket, label, hint, strings, locale }) {
     const accent = GROUP[bucket.key];
+    const hidden = bucket.count - bucket.items.length;
 
     return (
         <section>
@@ -169,9 +202,9 @@ function Group({ bucket, label, hint, strings, locale }) {
                     {bucket.items.map((item) => (
                         <TaskRow key={`${item.projectAlias}-${item.id}`} item={item} strings={strings} locale={locale} />
                     ))}
-                    {bucket.count > bucket.items.length && (
+                    {hidden > 0 && (
                         <p className="text-xs text-gray-400 dark:text-gray-500">
-                            {interpolate(strings.moreItems, { count: bucket.count - bucket.items.length })}
+                            {interpolate(strings.moreItems, { count: hidden })}
                         </p>
                     )}
                 </div>
@@ -283,6 +316,11 @@ const headerLink =
 
 export default function Dashboard({ person, data, urls, strings }) {
     const locale = (typeof document !== 'undefined' && document.documentElement.getAttribute('lang')) || 'de';
+    // Projekt-Filter der „Bei mir"-Liste, rein clientseitig (die Einträge liegen
+    // alle schon vor). Verschwindet das gewählte Projekt aus der Liste — weil dort
+    // nichts mehr bei mir liegt —, fällt der Filter auf „Alle" zurück, statt eine
+    // leere Liste zu zeigen.
+    const [projectFilter, setProjectFilter] = useState('all');
 
     // Task-Änderungen ziehen NUR die Auswertung nach (Labels und Shell bleiben).
     // Entkoppelt über eine kurze Wartezeit: auf einem aktiven Board kommen die
@@ -300,6 +338,27 @@ export default function Dashboard({ person, data, urls, strings }) {
             window.removeEventListener('planstack:entity-changed', onEntity);
         };
     }, []);
+
+    const filters = data.projectFilters ?? [];
+    const active = filters.some((f) => f.alias === projectFilter) ? projectFilter : 'all';
+
+    // Anzahl und SP der gefilterten Gruppe kommen aus `byProject` und nicht aus den
+    // gefilterten Einträgen: die Einträge sind je Gruppe gekappt, die Zahlen nicht.
+    const buckets = useMemo(
+        () =>
+            data.buckets.map((bucket) => {
+                if (active === 'all') return bucket;
+                const perProject = bucket.byProject?.[active] ?? { count: 0, sp: 0 };
+
+                return {
+                    ...bucket,
+                    count: perProject.count,
+                    sp: perProject.sp,
+                    items: bucket.items.filter((item) => item.projectAlias === active),
+                };
+            }),
+        [data.buckets, active],
+    );
 
     const groupLabels = {
         work: { label: strings.groupWork, hint: strings.groupWorkHint },
@@ -391,6 +450,17 @@ export default function Dashboard({ person, data, urls, strings }) {
                                 <div className={`${CARD} self-start p-5 lg:col-span-2`}>
                                     <PanelHead title={strings.myWorkTitle} sub={strings.myWorkSub} />
 
+                                    {/* Erst ab zwei Projekten: eine einzelne Pille
+                                        neben „Alle" filtert nichts. */}
+                                    {filters.length > 1 && (
+                                        <ProjectPills
+                                            filters={filters}
+                                            active={active}
+                                            onChange={setProjectFilter}
+                                            strings={strings}
+                                        />
+                                    )}
+
                                     {data.kpis.actionable === 0 ? (
                                         <div className="mt-6 rounded-lg bg-gray-50 px-6 py-8 text-center dark:bg-gray-900/40">
                                             <p className="font-semibold text-gray-900 dark:text-gray-100">{strings.allClearTitle}</p>
@@ -398,7 +468,7 @@ export default function Dashboard({ person, data, urls, strings }) {
                                         </div>
                                     ) : (
                                         <div className="mt-4 space-y-6">
-                                            {data.buckets
+                                            {buckets
                                                 .filter((bucket) => bucket.count > 0)
                                                 .map((bucket) => (
                                                     <Group

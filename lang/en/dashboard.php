@@ -28,6 +28,7 @@ return [
     'group_blocked_hint' => 'Your own tasks in an exception — blocked or with a reported concern',
     'group_empty' => 'Nothing open.',
     'more_items' => '+ :count more',
+    'filter_count' => ':count item|:count items',
     'all_clear_title' => 'Nothing on your plate.',
     'all_clear_text' => 'No work steps of your own, no open reviews, no exceptions. Unclaimed tasks are listed under “Free to pick”.',
 

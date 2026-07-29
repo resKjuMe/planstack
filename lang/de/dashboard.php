@@ -28,6 +28,7 @@ return [
     'group_blocked_hint' => 'Eigene Tasks in einer Ausnahme — blockiert oder mit gemeldetem Concern',
     'group_empty' => 'Nichts offen.',
     'more_items' => '+ :count weitere',
+    'filter_count' => ':count Eintrag|:count Einträge',
     'all_clear_title' => 'Nichts liegt bei dir.',
     'all_clear_text' => 'Keine eigenen Arbeitsschritte, keine offenen Reviews, keine Ausnahmen. Unbeanspruchte Tasks stehen im Panel „Frei zum Ziehen“.',
 

@@ -67,6 +67,7 @@ class DashboardPresenter
         return [
             'hasProjects' => true,
             'buckets' => $this->buckets($items),
+            'projectFilters' => $this->projectFilters($items),
             'kpis' => $this->kpis($user, $projectIds, $items),
             'pickable' => $this->pickable($activeIds),
             'projects' => $this->projects($user, $activeIds, $items),
@@ -227,6 +228,10 @@ class DashboardPresenter
      * eine org-weite Review-Warteschlange kann lang sein, die Seite soll trotzdem
      * eine Seite bleiben.
      *
+     * `byProject` hält Anzahl und SP je Projekt-Kürzel. Die Filter-Pills rechnen
+     * damit statt aus den gelieferten Einträgen: bei gekappter Liste wären die
+     * clientseitig gezählten Werte zu niedrig.
+     *
      * @param  Collection<int, array<string, mixed>>  $items
      * @return array<int, array<string, mixed>>
      */
@@ -243,12 +248,43 @@ class DashboardPresenter
                     'key' => $key,
                     'count' => $group->count(),
                     'sp' => (int) $group->sum('sp'),
+                    'byProject' => $group
+                        ->groupBy('projectAlias')
+                        ->map(fn (Collection $perProject) => [
+                            'count' => $perProject->count(),
+                            'sp' => (int) $perProject->sum('sp'),
+                        ])
+                        ->all(),
                     'items' => $group->take(self::PER_BUCKET)
                         ->map(fn (array $item) => collect($item)->except('sinceTs')->all())
                         ->values()
                         ->all(),
                 ];
             })
+            ->all();
+    }
+
+    /**
+     * Projekte, in denen etwas bei mir liegt — Grundlage der Filter-Pills über der
+     * „Bei mir"-Liste. Gezählt wird über ALLE Einträge, nicht nur die je Gruppe
+     * angezeigten, damit die Pille die Wahrheit sagt. Projekte ohne Handlungsbedarf
+     * bekommen keine Pille: ein Filter, der garantiert eine leere Liste liefert,
+     * ist keine Hilfe.
+     *
+     * @param  Collection<int, array<string, mixed>>  $items
+     * @return array<int, array<string, mixed>>
+     */
+    private function projectFilters(Collection $items): array
+    {
+        return $items
+            ->groupBy('projectAlias')
+            ->map(fn (Collection $group, string $alias) => [
+                'alias' => $alias,
+                'name' => $group->first()['projectName'],
+                'count' => $group->count(),
+            ])
+            ->sortBy([['count', 'desc'], ['alias', 'asc']])
+            ->values()
             ->all();
     }
 
@@ -459,9 +495,10 @@ class DashboardPresenter
         return [
             'hasProjects' => false,
             'buckets' => array_map(
-                fn (string $key) => ['key' => $key, 'count' => 0, 'sp' => 0, 'items' => []],
+                fn (string $key) => ['key' => $key, 'count' => 0, 'sp' => 0, 'byProject' => [], 'items' => []],
                 ['work', 'review', 'blocked'],
             ),
+            'projectFilters' => [],
             'kpis' => [
                 'actionable' => 0, 'actionableSp' => 0,
                 'reviewsFree' => 0, 'reviewsMine' => 0,

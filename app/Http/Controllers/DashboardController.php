@@ -75,6 +75,8 @@ class DashboardController extends Controller
             'groupBlockedHint' => __('dashboard.group_blocked_hint'),
             'groupEmpty' => __('dashboard.group_empty'),
             'moreItems' => __('dashboard.more_items'),
+            'filterAll' => __('common.all'),
+            'filterCount' => __('dashboard.filter_count'),
             'allClearTitle' => __('dashboard.all_clear_title'),
             'allClearText' => __('dashboard.all_clear_text'),
 
