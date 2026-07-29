@@ -134,6 +134,10 @@ class TaskResource extends JsonResource
             'pr_mergeable' => $this->pr_mergeable,
             'pr_unresolved_threads' => $this->pr_unresolved_threads,
             'pr_review_decision' => $this->pr_review_decision,
+            // Wann der PR-Zustand zuletzt von GitHub geholt wurde. Die Auswertungen
+            // brauchen das, um „0 rote CI-Läufe" von „nie gemessen" zu unterscheiden
+            // — ohne Sync sähe fehlende Datenbasis wie ein gutes Ergebnis aus.
+            'pr_status_synced_at' => $this->pr_status_synced_at,
             // Aggregierte Ist-Kennzahlen der (gesyncten) Pull-Requests — Grundlage
             // der Kalibrierung (Ist-Dateien vs. Schätzung affected_files). Nur wenn
             // die Relation geladen ist; null, wenn die Task keine PRs hat.
@@ -152,6 +156,10 @@ class TaskResource extends JsonResource
                     'updated_at' => $prs->pluck('updated_at')->filter()->max(),
                 ];
             }),
+            // Zahl der protokollierten REQUEST_CHANGES (Audit-Log), gesetzt vom
+            // Board-Endpunkt. Anders als last_review_recommendation überlebt sie ein
+            // späteres Approve — Grundlage der Rework-Quote der Performance-Seite.
+            'rework_count' => $this->x_rework_count ?? null,
             'reviewed_by' => $this->reviewed_by,
             'reviewed_by_name' => $this->whenLoaded('reviewer', fn () => $this->reviewer?->name),
             'claimed_by_id' => $this->claimed_by_id,

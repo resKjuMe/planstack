@@ -2,6 +2,8 @@
 
 namespace Tests\Feature;
 
+use App\Enums\Criticality;
+use App\Enums\ReviewRecommendation;
 use App\Enums\TaskStatus;
 use App\Models\Organization;
 use App\Models\Project;
@@ -257,6 +259,87 @@ class UserStatisticsTest extends TestCase
         $this->assertCount(12, $weekly);
         $this->assertSame(3, collect($weekly)->sum('sp'));
         $this->assertSame(3, end($weekly)['sp'], 'Der frische Merge muss in der laufenden Woche stehen');
+    }
+
+    /**
+     * Die Qualitätskennzahlen sind bis auf die Nacharbeit Momentaufnahmen. Dieser
+     * Test hält beides zugleich fest: „aktuell Änderungen erbeten" fällt nach der
+     * Freigabe auf 0, die Nacharbeit bleibt stehen.
+     */
+    public function test_quality_keeps_the_rework_count_after_an_approval(): void
+    {
+        $organization = Organization::factory()->create();
+        $ada = $this->member($organization);
+        $project = $this->project($organization, $ada);
+
+        $task = Task::factory()->claimedBy($ada)->create(['project_id' => $project->id]);
+        $task->update(['last_review_recommendation' => ReviewRecommendation::REQUEST_CHANGES]);
+        $task->update(['last_review_recommendation' => ReviewRecommendation::APPROVE]);
+
+        $quality = $this->actingAs($ada)
+            ->get(route('statistics', $ada))
+            ->assertOk()
+            ->inertiaProps('stats.quality');
+
+        $this->assertSame(0, $quality['requestChanges'], 'Momentaufnahme: nach der Freigabe nichts mehr offen');
+        $this->assertSame(1, $quality['approved']);
+        $this->assertSame(1, $quality['reworkTasks'], 'Verlauf: die Nacharbeit bleibt sichtbar');
+        $this->assertSame(0, $quality['reworkMultiple']);
+    }
+
+    /**
+     * Ohne PR-Status-Sync gibt es keine CI-Messung. Dann muss `null` kommen (der
+     * Client zeigt „—"), nicht 0 — sonst sähe fehlende Datenbasis wie ein grünes
+     * Ergebnis aus. Dasselbe für das optionale Pflegefeld `criticality`.
+     */
+    public function test_unmeasured_values_are_null_not_zero(): void
+    {
+        $organization = Organization::factory()->create();
+        $ada = $this->member($organization);
+        $project = $this->project($organization, $ada);
+
+        Task::factory()->claimedBy($ada)->create([
+            'project_id' => $project->id,
+            'criticality' => null,
+            'pr_status_synced_at' => null,
+        ]);
+
+        $quality = $this->actingAs($ada)
+            ->get(route('statistics', $ada))
+            ->assertOk()
+            ->inertiaProps('stats.quality');
+
+        $this->assertNull($quality['ciFailed']);
+        $this->assertNull($quality['openThreads']);
+        $this->assertSame(0, $quality['prSynced']);
+        $this->assertNull($quality['critical']);
+        $this->assertSame(0, $quality['criticalityKnown']);
+    }
+
+    /** Mit Sync-Zeitstempel werden die CI-Werte wieder zu echten Zahlen. */
+    public function test_synced_pr_status_yields_real_numbers(): void
+    {
+        $organization = Organization::factory()->create();
+        $ada = $this->member($organization);
+        $project = $this->project($organization, $ada);
+
+        Task::factory()->claimedBy($ada)->create([
+            'project_id' => $project->id,
+            'pr_status_synced_at' => now(),
+            'pr_ci_failed' => 2,
+            'pr_unresolved_threads' => 3,
+            'criticality' => Criticality::HIGH,
+        ]);
+
+        $quality = $this->actingAs($ada)
+            ->get(route('statistics', $ada))
+            ->assertOk()
+            ->inertiaProps('stats.quality');
+
+        $this->assertSame(1, $quality['ciFailed']);
+        $this->assertSame(3, $quality['openThreads']);
+        $this->assertSame(1, $quality['critical']);
+        $this->assertSame(1, $quality['criticalityKnown']);
     }
 
     /**

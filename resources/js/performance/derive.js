@@ -168,16 +168,39 @@ export function derivePerformance({ tasks, statusConfig, strings, taskUrlTemplat
         const accuracyPct = accuracyTotal ? Math.round((accuracyHits / accuracyTotal) * 100) : null;
         const medianDeviation = median(deviations);
 
-        // Qualität: Review-Ergebnis, CI, offene Kommentare, Concerns.
+        // --- Qualität -----------------------------------------------------------
+        // WICHTIG: last_review_recommendation, pr_ci_failed, pr_unresolved_threads
+        // und das Vorhandensein eines Concerns sind MOMENTAUFNAHMEN. Wird nach
+        // „Änderungen erbeten" nachgearbeitet und freigegeben, steht dort APPROVE;
+        // ein behobener CI-Fehler, ein aufgelöster Kommentar-Thread und ein
+        // aufgelöster Concern (die Zeile wird gelöscht) verschwinden ebenso. Die
+        // Labels sagen das deshalb ausdrücklich („aktuell …", „offene …").
         const reviewed = own.filter((t) => t.last_review_recommendation);
         const requestChanges = reviewed.filter((t) => t.last_review_recommendation === 'REQUEST_CHANGES').length;
         const approved = reviewed.filter((t) => t.last_review_recommendation === 'APPROVE').length;
         const firstPassPct = reviewed.length ? Math.round((approved / reviewed.length) * 100) : null;
-        const ciFailed = own.filter((t) => Number(t.pr_ci_failed || 0) > 0).length;
-        const openThreads = sum(own, (t) => Number(t.pr_unresolved_threads || 0));
+
+        // Der VERLAUF dagegen kommt aus dem Audit-Log (rework_count, gesetzt vom
+        // Board-Endpunkt): wie oft je Änderungen erbeten wurden. Überlebt Approve.
+        const reworkTasks = own.filter((t) => Number(t.rework_count || 0) > 0).length;
+        const reworkMultiple = own.filter((t) => Number(t.rework_count || 0) > 1).length;
+        const reworkTotal = sum(own, (t) => Number(t.rework_count || 0));
+
+        // CI und Review-Threads stehen nur, wenn der PR-Status je gesynct wurde —
+        // sonst wäre „0" kein Befund, sondern fehlende Messung.
+        const prSynced = own.filter((t) => t.pr_status_synced_at).length;
+        const ciFailed = prSynced ? own.filter((t) => Number(t.pr_ci_failed || 0) > 0).length : null;
+        const openThreads = prSynced ? sum(own, (t) => Number(t.pr_unresolved_threads || 0)) : null;
+
         const concerns = own.filter((t) => t.concern).length;
         const exceptions = own.filter((t) => kindOf(t) === 'exception').length;
-        const critical = own.filter((t) => t.criticality === 'high' || t.criticality === 'critical').length;
+
+        // criticality ist ein optionales Pflegefeld: ohne einen einzigen gesetzten
+        // Wert sagt „0 kritische Tasks" nichts über Risiko, nur über die Pflege.
+        const criticalityKnown = own.filter((t) => t.criticality).length;
+        const critical = criticalityKnown
+            ? own.filter((t) => t.criticality === 'high' || t.criticality === 'critical').length
+            : null;
 
         // Umfang: Ist-Kennzahlen der PRs + geplante Tokens.
         const prTasks = own.filter((t) => t.pr_stats);
@@ -268,11 +291,16 @@ export function derivePerformance({ tasks, statusConfig, strings, taskUrlTemplat
             approved,
             firstPassPct,
             firstPassPill: PILL[fpClass],
+            reworkTasks,
+            reworkMultiple,
+            reworkTotal,
+            prSynced,
             ciFailed,
             openThreads,
             concerns,
             exceptions,
             critical,
+            criticalityKnown,
 
             files,
             additions,
@@ -323,6 +351,8 @@ export function derivePerformance({ tasks, statusConfig, strings, taskUrlTemplat
         accuracyTotal: teamAccTotal,
         accuracyPct: teamAccTotal ? Math.round((teamAccHits / teamAccTotal) * 100) : null,
         reviewsGiven: rows.reduce((a, r) => a + r.reviewsGiven, 0),
+        reworkTasks: rows.reduce((a, r) => a + r.reworkTasks, 0),
+        tasksTotal: rows.reduce((a, r) => a + r.tasksTotal, 0),
     };
     team.accuracyClass = shareClass(team.accuracyPct);
 

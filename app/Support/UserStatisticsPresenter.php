@@ -35,6 +35,8 @@ class UserStatisticsPresenter
     /** Zuletzt gelieferte Tasks in der Liste. */
     private const RECENT = 8;
 
+    public function __construct(private readonly TaskReworkCounts $rework) {}
+
     /**
      * @return array<string, mixed>
      */
@@ -63,7 +65,7 @@ class UserStatisticsPresenter
 
         return [
             'kpis' => $this->kpis($own, $delivered, $open, $reviewed),
-            'quality' => $this->quality($own),
+            'quality' => $this->quality($own, $this->rework->forTaskIds($own->pluck('id'))),
             'volume' => $this->volume($own),
             'weekly' => $this->weekly($delivered),
             'statusBuckets' => $this->statusBuckets($open),
@@ -186,21 +188,45 @@ class UserStatisticsPresenter
     }
 
     /**
+     * Qualitätskennzahlen. Die meisten davon sind MOMENTAUFNAHMEN des aktuellen
+     * Zustands: `last_review_recommendation` hält nur das letzte Review, die
+     * CI-/Thread-Zahlen den letzten gesyncten PR-Stand, und ein aufgelöster Concern
+     * wird gelöscht. Nur `reworkTasks` ist ein Verlaufswert (Audit-Log).
+     *
+     * Wo die Datenbasis fehlt, wird `null` geliefert statt 0 — der Client zeigt
+     * dann „—". Sonst sähe „nie gemessen" wie „alles in Ordnung" aus.
+     *
      * @param  Collection<int, Task>  $own
-     * @return array<string, int>
+     * @param  array<int, int>  $reworkCounts  Task-ID → protokollierte REQUEST_CHANGES
+     * @return array<string, int|null>
      */
-    private function quality(Collection $own): array
+    private function quality(Collection $own, array $reworkCounts): array
     {
         $reviewed = $own->filter(fn (Task $t) => $t->last_review_recommendation !== null);
+
+        // CI und Review-Threads sind nur aussagekräftig, wenn der PR-Status je
+        // geholt wurde (planstack:sync-pr-status).
+        $prSynced = $own->filter(fn (Task $t) => $t->pr_status_synced_at !== null)->count();
+
+        // criticality ist ein optionales Pflegefeld.
+        $criticalityKnown = $own->filter(fn (Task $t) => $t->criticality !== null)->count();
 
         return [
             'reviewedCount' => $reviewed->count(),
             'approved' => $reviewed->filter(fn (Task $t) => $t->last_review_recommendation?->value === 'APPROVE')->count(),
             'requestChanges' => $reviewed->filter(fn (Task $t) => $t->last_review_recommendation?->value === 'REQUEST_CHANGES')->count(),
-            'ciFailed' => $own->filter(fn (Task $t) => (int) $t->pr_ci_failed > 0)->count(),
-            'openThreads' => (int) $own->sum('pr_unresolved_threads'),
+            'reworkTasks' => $own->filter(fn (Task $t) => ($reworkCounts[$t->id] ?? 0) > 0)->count(),
+            'reworkMultiple' => $own->filter(fn (Task $t) => ($reworkCounts[$t->id] ?? 0) > 1)->count(),
+            'reworkTotal' => array_sum($reworkCounts),
+            'tasksTotal' => $own->count(),
+            'prSynced' => $prSynced,
+            'ciFailed' => $prSynced > 0 ? $own->filter(fn (Task $t) => (int) $t->pr_ci_failed > 0)->count() : null,
+            'openThreads' => $prSynced > 0 ? (int) $own->sum('pr_unresolved_threads') : null,
             'concerns' => $own->filter(fn (Task $t) => $t->concern !== null)->count(),
-            'critical' => $own->filter(fn (Task $t) => in_array($t->criticality?->value, ['high', 'critical'], true))->count(),
+            'criticalityKnown' => $criticalityKnown,
+            'critical' => $criticalityKnown > 0
+                ? $own->filter(fn (Task $t) => in_array($t->criticality?->value, ['high', 'critical'], true))->count()
+                : null,
         ];
     }
 
@@ -460,7 +486,9 @@ class UserStatisticsPresenter
             ],
             'quality' => [
                 'reviewedCount' => 0, 'approved' => 0, 'requestChanges' => 0,
-                'ciFailed' => 0, 'openThreads' => 0, 'concerns' => 0, 'critical' => 0,
+                'reworkTasks' => 0, 'reworkMultiple' => 0, 'reworkTotal' => 0, 'tasksTotal' => 0,
+                'prSynced' => 0, 'ciFailed' => null, 'openThreads' => null,
+                'concerns' => 0, 'criticalityKnown' => 0, 'critical' => null,
             ],
             'volume' => [
                 'prs' => 0, 'files' => 0, 'additions' => 0, 'deletions' => 0,

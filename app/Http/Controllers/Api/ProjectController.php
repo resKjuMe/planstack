@@ -11,6 +11,7 @@ use App\Models\Task;
 use App\Support\ProjectConfig;
 use App\Support\ProjectOverviewPresenter;
 use App\Support\TaskBoardService;
+use App\Support\TaskReworkCounts;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
@@ -20,7 +21,10 @@ use Symfony\Component\HttpFoundation\Response;
 
 class ProjectController extends ApiController
 {
-    public function __construct(private readonly TaskBoardService $board) {}
+    public function __construct(
+        private readonly TaskBoardService $board,
+        private readonly TaskReworkCounts $rework,
+    ) {}
 
     /**
      * GET /api/projects — projects the token user can access.
@@ -96,6 +100,16 @@ class ProjectController extends ApiController
         // Kalibrierung (Ist-Kennzahlen). Der geteilte React-Store leitet ALLE
         // Unterseiten aus dieser einen Antwort ab.
         $tasks->loadMissing(['phase', 'claimer', 'reviewer', 'concern', 'prerequisites.orgStatus', 'pullRequests']);
+
+        // Rework-Zähler aus dem Audit-Log (EINE gruppierte Abfrage für alle Tasks):
+        // wie oft je „Änderungen erbeten" wurde. Der aktuelle Zustand
+        // (last_review_recommendation) verliert das nach einem Approve, die
+        // Performance-Seite braucht es aber als Verlauf.
+        $reworkCounts = $this->rework->forTaskIds($tasks->pluck('id'));
+        foreach ($tasks as $task) {
+            $task->x_rework_count = $reworkCounts[$task->id] ?? 0;
+        }
+
         $project->setRelation('tasks', $tasks);
 
         return new ProjectResource($project);

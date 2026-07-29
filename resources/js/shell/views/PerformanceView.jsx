@@ -165,6 +165,14 @@ function PersonDetails({ person, strings }) {
                             tone={tileText(person.accuracyClass)}
                         />
                         <Metric label={s.mMedianDeviation} value={person.medianDeviationLabel || s.none} />
+                        {/* Verlaufskennzahl aus dem Audit-Log — bleibt erhalten,
+                            auch wenn danach freigegeben wurde. */}
+                        <Metric
+                            label={s.mRework}
+                            value={`${person.reworkTasks} / ${person.tasksTotal}`}
+                            sub={person.reworkMultiple > 0 ? interpolate(s.mReworkMultiple, { count: person.reworkMultiple }) : null}
+                            tone={person.reworkTasks > 0 ? tileText('amber') : undefined}
+                        />
                         <Metric
                             label={s.mApproved}
                             value={person.reviewedCount ? `${person.approved} / ${person.reviewedCount}` : s.none}
@@ -176,12 +184,25 @@ function PersonDetails({ person, strings }) {
                         />
                         <Metric
                             label={s.mCiFailed}
-                            value={person.ciFailed}
+                            value={person.ciFailed === null ? s.none : person.ciFailed}
+                            sub={person.ciFailed === null ? s.neverSynced : null}
                             tone={person.ciFailed > 0 ? tileText('red') : undefined}
                         />
-                        <Metric label={s.mOpenThreads} value={person.openThreads} />
+                        <Metric
+                            label={s.mOpenThreads}
+                            value={person.openThreads === null ? s.none : person.openThreads}
+                            sub={person.openThreads === null ? s.neverSynced : null}
+                        />
                         <Metric label={s.mConcerns} value={person.concerns} />
-                        <Metric label={s.mCriticality} value={person.critical} />
+                        <Metric
+                            label={s.mCriticality}
+                            value={person.critical === null ? s.none : person.critical}
+                            sub={
+                                person.critical === null
+                                    ? s.criticalityUnset
+                                    : interpolate(s.criticalityKnown, { known: person.criticalityKnown, total: person.tasksTotal })
+                            }
+                        />
                     </div>
                 </div>
 
@@ -495,6 +516,16 @@ export default function PerformanceView({ project, strings }) {
                                                     </td>
                                                     <td className="px-4 py-3">
                                                         <div className="flex flex-wrap gap-1">
+                                                            {/* Nacharbeit zuerst: die einzige Verlaufszahl der
+                                                                Spalte, alles andere ist Momentaufnahme. */}
+                                                            {p.reworkTasks > 0 && (
+                                                                <span
+                                                                    className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800 dark:bg-amber-900/40 dark:text-amber-300"
+                                                                    title={strings.mRework}
+                                                                >
+                                                                    {p.reworkTasks}× ↻
+                                                                </span>
+                                                            )}
                                                             {p.reviewedCount > 0 && (
                                                                 <span className={'rounded-full px-2 py-0.5 text-xs font-medium ' + p.firstPassPill}>
                                                                     {p.approved}/{p.reviewedCount} ✓
@@ -515,7 +546,17 @@ export default function PerformanceView({ project, strings }) {
                                                                     {p.exceptions} ⚠
                                                                 </span>
                                                             )}
-                                                            {p.reviewedCount === 0 && p.ciFailed === 0 && p.openThreads === 0 && p.exceptions === 0 && (
+                                                            {/* Ohne PR-Sync ist die Spalte nicht „sauber",
+                                                                sondern ungemessen — das muss sichtbar sein. */}
+                                                            {p.prSynced === 0 && (
+                                                                <span
+                                                                    className="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-500 dark:bg-gray-700 dark:text-gray-400"
+                                                                    title={strings.neverSynced}
+                                                                >
+                                                                    {strings.none} CI
+                                                                </span>
+                                                            )}
+                                                            {p.reworkTasks === 0 && p.reviewedCount === 0 && !p.ciFailed && !p.openThreads && p.exceptions === 0 && p.prSynced > 0 && (
                                                                 <span className="text-gray-300 dark:text-gray-600">{strings.none}</span>
                                                             )}
                                                         </div>

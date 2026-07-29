@@ -298,7 +298,17 @@ export default function Statistics({ stats, person, strings, urls }) {
                                 {/* Qualität */}
                                 <div className={`${CARD} p-5`}>
                                     <h2 className="font-semibold text-gray-900 dark:text-gray-100">{strings.qualityTitle}</h2>
+                                    <p className="text-xs text-gray-400 dark:text-gray-500">{strings.qualitySub}</p>
                                     <div className="mt-3">
+                                        {/* Der einzige Verlaufswert des Panels (Audit-Log) —
+                                            steht deshalb oben und bleibt nach einer
+                                            Freigabe erhalten. */}
+                                        <Metric
+                                            label={strings.mRework}
+                                            value={`${quality.reworkTasks} / ${quality.tasksTotal}`}
+                                            sub={quality.reworkMultiple > 0 ? interpolate(strings.mReworkMultiple, { count: quality.reworkMultiple }) : null}
+                                            tone={quality.reworkTasks > 0 ? TILE_TEXT.amber : undefined}
+                                        />
                                         <Metric
                                             label={strings.mApproved}
                                             value={quality.reviewedCount ? `${quality.approved} / ${quality.reviewedCount}` : strings.none}
@@ -310,14 +320,33 @@ export default function Statistics({ stats, person, strings, urls }) {
                                             value={quality.requestChanges}
                                             tone={quality.requestChanges > 0 ? TILE_TEXT.amber : undefined}
                                         />
+                                        {/* Ohne PR-Sync liefert der Server null — dann „—"
+                                            plus Grund, damit fehlende Messung nicht wie ein
+                                            gutes Ergebnis aussieht. */}
                                         <Metric
                                             label={strings.mCiFailed}
-                                            value={quality.ciFailed}
+                                            value={quality.ciFailed === null ? strings.none : quality.ciFailed}
+                                            sub={quality.ciFailed === null ? strings.neverSynced : null}
                                             tone={quality.ciFailed > 0 ? TILE_TEXT.red : undefined}
                                         />
-                                        <Metric label={strings.mOpenThreads} value={quality.openThreads} />
+                                        <Metric
+                                            label={strings.mOpenThreads}
+                                            value={quality.openThreads === null ? strings.none : quality.openThreads}
+                                            sub={quality.openThreads === null ? strings.neverSynced : null}
+                                        />
                                         <Metric label={strings.mConcerns} value={quality.concerns} />
-                                        <Metric label={strings.mCritical} value={quality.critical} />
+                                        <Metric
+                                            label={strings.mCritical}
+                                            value={quality.critical === null ? strings.none : quality.critical}
+                                            sub={
+                                                quality.critical === null
+                                                    ? strings.criticalityUnset
+                                                    : interpolate(strings.criticalityKnown, {
+                                                        known: quality.criticalityKnown,
+                                                        total: quality.tasksTotal,
+                                                    })
+                                            }
+                                        />
                                         <Metric
                                             label={strings.mMedianDeviation}
                                             value={deviationLabel(kpis.medianDeviationPct) || strings.none}
