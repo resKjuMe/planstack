@@ -4,6 +4,11 @@ import React from 'react';
 // individually clearable. "Only mine" and the assignee select are the same axis
 // (assignee); "only mine" is the shortcut for the current user. "Highlight
 // blocked" does not remove cards — it dims the non-blocked ones.
+//
+// "On my plate" is its own VIEW rather than another dimension: own tasks in a
+// working step plus reviews that are yours or still unassigned. It therefore
+// switches the assignee axis off (and disables its controls) — combining it with
+// "only mine" would filter out exactly the unassigned reviews it exists to show.
 export default function QuickFilterBar({
     t,
     filters,
@@ -19,9 +24,15 @@ export default function QuickFilterBar({
     const set = (patch) => setFilters((f) => ({ ...f, ...patch }));
 
     const anyActive =
+        filters.myWork ||
         filters.onlyMine ||
         filters.highlightBlocked ||
         filters.assignee !== 'all';
+
+    // Titel als zweites Argument: der Chip erklärt sich sonst nicht von selbst.
+    const chipWithHint = (active, onClick, label, hint) => (
+        <span title={hint}>{chip(active, onClick, label)}</span>
+    );
 
     const chip = (active, onClick, label) => (
         <button
@@ -46,9 +57,16 @@ export default function QuickFilterBar({
                 {t('filters')}
             </span>
 
+            {chipWithHint(
+                filters.myWork,
+                () => set({ myWork: !filters.myWork, onlyMine: false, assignee: 'all' }),
+                t('my_work'),
+                t('my_work_hint'),
+            )}
+
             {chip(
                 filters.onlyMine,
-                () => set({ onlyMine: !filters.onlyMine }),
+                () => set({ onlyMine: !filters.onlyMine, myWork: false }),
                 t('only_mine'),
             )}
 
@@ -64,8 +82,8 @@ export default function QuickFilterBar({
                 <span>{t('assignee')}</span>
                 <select
                     value={filters.onlyMine ? String(currentUserId) : filters.assignee}
-                    disabled={filters.onlyMine}
-                    onChange={(e) => set({ assignee: e.target.value })}
+                    disabled={filters.onlyMine || filters.myWork}
+                    onChange={(e) => set({ assignee: e.target.value, myWork: false })}
                     className="rounded-md border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 py-1 pl-2 pr-7 text-xs disabled:opacity-50"
                 >
                     <option value="all">{t('assignee_all')}</option>
@@ -96,7 +114,7 @@ export default function QuickFilterBar({
                 <button
                     type="button"
                     onClick={() =>
-                        set({ onlyMine: false, highlightBlocked: false, assignee: 'all' })
+                        set({ myWork: false, onlyMine: false, highlightBlocked: false, assignee: 'all' })
                     }
                     className="ml-auto text-xs font-medium text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 underline"
                 >

@@ -38,7 +38,7 @@ export default function Board({ meta }) {
     // geladen. Die statischen Render-Metadaten (workflow, strings, endpoints,
     // csrf, roleKeys) bleiben Prop (meta). Der Store hält die rohen API-Tasks
     // (snake_case); hier werden sie auf die flache Board-Form gemappt.
-    const { tasks: apiTasks, status: dataStatus, error: dataError } = useProjectData(meta.projectAlias);
+    const { tasks: apiTasks, statusConfig, status: dataStatus, error: dataError } = useProjectData(meta.projectAlias);
     const tasks = useMemo(() => apiTasks.map((tk) => mapApiTask(tk, meta)), [apiTasks, meta]);
     const loadStatus = dataStatus === 'ready' ? 'ready' : dataStatus === 'error' ? 'error' : 'loading';
     const loadError = dataError;
@@ -74,21 +74,65 @@ export default function Board({ meta }) {
         }
     }, [ungroupKey, ungrouped]);
     const [filters, setFilters] = useState({
+        myWork: false,
         onlyMine: false,
         highlightBlocked: false,
         assignee: 'all',
         showStaleMerged: false,
     });
 
+    // Status-Key → Familie (active/review/…) aus der Org-Status-Konfiguration.
+    // Nötig für den „Bei mir"-Filter, der Arbeitsschritte und Review-Status
+    // unterschiedlich behandelt — und zwar per FAMILIE, damit auch eigene,
+    // rollenlose Status einer Organisation mitgenommen werden (APPROVED ist so
+    // ein Fall) statt nur die kanonischen.
+    const kindByStatus = useMemo(() => {
+        const map = new Map();
+        for (const st of statusConfig?.statuses || []) map.set(st.key, st.kind);
+        return map;
+    }, [statusConfig]);
+
+    // Waiting-Tasks tragen in displayStatus den ROLLEN-Namen (siehe
+    // BoardPresenter), alle anderen den Status-Key — erst über roleKeys wird
+    // daraus in beiden Fällen der Key.
+    const kindOf = useCallback(
+        (task) => kindByStatus.get(meta.roleKeys?.[task.displayStatus] || task.displayStatus) ?? null,
+        [kindByStatus, meta.roleKeys],
+    );
+
+    /**
+     * „Bei mir": was gerade wirklich an mir hängt.
+     *  - eigene Tasks in einem ARBEITSSCHRITT (Familie active: beansprucht,
+     *    in Analyse, in Arbeit)
+     *  - Tasks im REVIEW (Familie review: Review-Pool und in Review), die mich als
+     *    Reviewer haben ODER noch keinen Reviewer haben — letztere sind die, die
+     *    ich mir holen könnte.
+     * Alles andere (pickbar, fertig, blockiert, problematisch) bleibt außen vor.
+     */
+    const isMyWork = useCallback(
+        (task) => {
+            const kind = kindOf(task);
+            if (kind === 'active') return task.claimerId === currentUserId;
+            if (kind === 'review') return task.reviewerId === currentUserId || task.reviewerId == null;
+
+            return false;
+        },
+        [kindOf, currentUserId],
+    );
+
     // --- Filtering (assignee axis removes cards; highlightBlocked only dims) ---
+    // „Bei mir" ist eine eigene Sicht, keine weitere Dimension: er schließt die
+    // Zuständigen-Achse aus, weil „nur meine" die freien Reviews wieder
+    // herausfiltern würde — genau die soll die Sicht zeigen.
     const matchesFilters = useCallback(
         (task) => {
+            if (filters.myWork) return isMyWork(task);
             if (filters.onlyMine) return task.claimerId === currentUserId;
             if (filters.assignee === 'all') return true;
             if (filters.assignee === 'unassigned') return task.claimerId == null;
             return task.claimerId === Number(filters.assignee);
         },
-        [filters.onlyMine, filters.assignee, currentUserId],
+        [filters.myWork, filters.onlyMine, filters.assignee, currentUserId, isMyWork],
     );
 
     const staleMs = workflow.mergedStaleDays * 24 * 60 * 60 * 1000;

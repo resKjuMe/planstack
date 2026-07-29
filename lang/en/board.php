@@ -21,6 +21,8 @@ return [
     // Quick filters
     'filters' => 'Filters',
     'only_mine' => 'Only mine',
+    'my_work' => 'On my plate',
+    'my_work_hint' => 'Your own tasks in a working step, plus reviews that are yours or still unassigned',
     'highlight_blocked' => 'Highlight blocked',
     'assignee' => 'Assignee',
     'assignee_all' => 'All',
