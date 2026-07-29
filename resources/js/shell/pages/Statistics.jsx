@@ -106,14 +106,45 @@ const WEEKLY_SERIES = {
     reviewed: 'bg-teal-400 dark:bg-teal-500',
 };
 
-function WeeklyChart({ weekly, strings }) {
-    const max = Math.max(1, ...weekly.map((w) => w.sp + w.reviewedSp));
+// Umschalter Story Points ↔ Anzahl Tasks. Beide Größen stehen weiterhin im
+// Tooltip jeder Säule — der Toggle bestimmt nur, was die Höhe trägt.
+function WeeklyToggle({ value, onChange, strings }) {
+    return (
+        <div className="inline-flex items-center gap-1 rounded-full bg-gray-100 p-1 dark:bg-gray-700">
+            {[
+                { key: 'sp', label: strings.storyPoints },
+                { key: 'tasks', label: strings.tasks },
+            ].map((option) => (
+                <button
+                    key={option.key}
+                    type="button"
+                    onClick={() => onChange(option.key)}
+                    aria-pressed={value === option.key}
+                    className={
+                        'rounded-full px-3 py-1 text-xs font-medium ' +
+                        (value === option.key
+                            ? 'bg-white text-gray-900 shadow-sm dark:bg-gray-600 dark:text-gray-100'
+                            : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200')
+                    }
+                >
+                    {option.label}
+                </button>
+            ))}
+        </div>
+    );
+}
+
+function WeeklyChart({ weekly, metric, strings }) {
+    const isSp = metric === 'sp';
+    const own = (w) => (isSp ? w.sp : w.tasks);
+    const rev = (w) => (isSp ? w.reviewedSp : w.reviewedTasks);
+    const max = Math.max(1, ...weekly.map((w) => own(w) + rev(w)));
 
     return (
         <div className="mt-4">
             <div className="mb-1 flex items-center justify-between text-[10px] text-gray-400 dark:text-gray-500">
                 {/* Skalenmarke, sonst sagt die Balkenhöhe nichts. */}
-                <span>{max} {strings.storyPoints}</span>
+                <span>{max} {isSp ? strings.storyPoints : strings.tasks}</span>
                 <span className="flex items-center gap-3">
                     <span className="flex items-center gap-1">
                         <span className={'inline-block h-2 w-2 rounded-sm ' + WEEKLY_SERIES.delivered} />
@@ -128,6 +159,7 @@ function WeeklyChart({ weekly, strings }) {
             <div className="flex items-end gap-1.5">
                 {weekly.map((w) => {
                     const share = (value) => (value > 0 ? Math.max(3, (value / max) * 100) : 0);
+                    // Der Tooltip nennt beide Größen, unabhängig vom Toggle.
                     const tip = [
                         w.label,
                         interpolate(strings.weeklyTipDelivered, { sp: w.sp, tasks: w.tasks }),
@@ -147,13 +179,13 @@ function WeeklyChart({ weekly, strings }) {
                                     mit definiter Höhe. flex-col-reverse stapelt sie
                                     von unten. */}
                                 <div className="absolute inset-0 flex flex-col-reverse">
-                                    {w.sp > 0 && (
-                                        <div className={WEEKLY_SERIES.delivered} style={{ height: `${share(w.sp)}%` }} />
+                                    {own(w) > 0 && (
+                                        <div className={WEEKLY_SERIES.delivered} style={{ height: `${share(own(w))}%` }} />
                                     )}
-                                    {w.reviewedSp > 0 && (
+                                    {rev(w) > 0 && (
                                         <div
                                             className={'rounded-t ' + WEEKLY_SERIES.reviewed}
-                                            style={{ height: `${share(w.reviewedSp)}%` }}
+                                            style={{ height: `${share(rev(w))}%` }}
                                         />
                                     )}
                                 </div>
@@ -296,6 +328,8 @@ function Group({ label }) {
 
 export default function Statistics({ stats, person, strings, urls }) {
     const [help, setHelp] = useState(false);
+    // Wochenleistung: Höhe nach Story Points oder nach Anzahl Tasks.
+    const [weeklyMetric, setWeeklyMetric] = useState('sp');
 
     // Eigene Seite vs. die eines Kollegen (nur der Organisations-Owner kommt dort
     // hin): Titel und Untertitel nennen dann die Person, damit niemand fremde
@@ -411,10 +445,15 @@ export default function Statistics({ stats, person, strings, urls }) {
 
                             {/* Verlauf je Kalenderwoche */}
                             <div className={`${CARD} p-5`}>
-                                <h2 className="font-semibold text-gray-900 dark:text-gray-100">{strings.weeklyTitle}</h2>
-                                <p className="text-xs text-gray-400 dark:text-gray-500">{strings.weeklySub}</p>
+                                <div className="flex flex-wrap items-start justify-between gap-3">
+                                    <div>
+                                        <h2 className="font-semibold text-gray-900 dark:text-gray-100">{strings.weeklyTitle}</h2>
+                                        <p className="text-xs text-gray-400 dark:text-gray-500">{strings.weeklySub}</p>
+                                    </div>
+                                    <WeeklyToggle value={weeklyMetric} onChange={setWeeklyMetric} strings={strings} />
+                                </div>
                                 {weekly.length > 0 ? (
-                                    <WeeklyChart weekly={weekly} strings={strings} />
+                                    <WeeklyChart weekly={weekly} metric={weeklyMetric} strings={strings} />
                                 ) : (
                                     <p className="mt-6 text-sm text-gray-400 dark:text-gray-500">{strings.noDeliveries}</p>
                                 )}
@@ -650,12 +689,23 @@ export default function Statistics({ stats, person, strings, urls }) {
                                             <tbody>
                                                 {recent.map((t) => (
                                                     <tr key={`${t.projectAlias}-${t.name}`} className="border-b border-gray-50 last:border-0 dark:border-gray-700">
-                                                        <td className="px-4 py-3">
-                                                            <a href={t.url} className="font-mono font-semibold text-indigo-700 hover:underline dark:text-indigo-400">
-                                                                {t.name}
-                                                            </a>
-                                                            <span className="ms-2 font-mono text-xs text-gray-400 dark:text-gray-500">{t.projectAlias}</span>
-                                                            <div className="truncate text-xs text-gray-400 dark:text-gray-500">{t.summary}</div>
+                                                        {/* w-full max-w-0: die Task-Spalte nimmt den Platz, den
+                                                            die übrigen Spalten übrig lassen, und klemmt ihn
+                                                            fest. Ohne die Klemme dehnt das auto-Tabellenlayout
+                                                            die Spalte bis zum längsten Text aus und `truncate`
+                                                            greift nie — die Tabelle wurde dadurch breit. */}
+                                                        <td className="w-full max-w-0 px-4 py-3">
+                                                            <div className="truncate">
+                                                                <a href={t.url} className="font-mono font-semibold text-indigo-700 hover:underline dark:text-indigo-400">
+                                                                    {t.name}
+                                                                </a>
+                                                                <span className="ms-2 font-mono text-xs text-gray-400 dark:text-gray-500">{t.projectAlias}</span>
+                                                            </div>
+                                                            {/* Volltext im Tooltip, damit die Kürzung nichts
+                                                                unerreichbar macht. */}
+                                                            <div className="truncate text-xs text-gray-400 dark:text-gray-500" title={t.summary}>
+                                                                {t.summary}
+                                                            </div>
                                                         </td>
                                                         <td className="px-4 py-3 text-gray-700 dark:text-gray-300">{t.sp ?? strings.none}</td>
                                                         <td className="px-4 py-3 whitespace-nowrap text-gray-600 dark:text-gray-400">
