@@ -160,6 +160,10 @@ class TaskResource extends JsonResource
             // Board-Endpunkt. Anders als last_review_recommendation überlebt sie ein
             // späteres Approve — Grundlage der Rework-Quote der Performance-Seite.
             'rework_count' => $this->x_rework_count ?? null,
+            // Aufenthalte je Status aus dem Protokoll (Status-KEY, Tage, Zahl der
+            // Aufenthalte, laufende): Grundlage der Verweildauern auf der
+            // Performance-Seite. Styling/Reihenfolge löst der Client auf.
+            'status_durations' => $this->x_status_durations ?? null,
             'reviewed_by' => $this->reviewed_by,
             'reviewed_by_name' => $this->whenLoaded('reviewer', fn () => $this->reviewer?->name),
             'claimed_by_id' => $this->claimed_by_id,

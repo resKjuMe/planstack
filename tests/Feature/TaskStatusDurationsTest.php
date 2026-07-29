@@ -266,6 +266,46 @@ class TaskStatusDurationsTest extends TestCase
         $this->assertEqualsWithDelta($this->hours(5), $perProject[$other->id]['totalDays'], $this->hours(0.05));
     }
 
+    /**
+     * Rohdaten für die clientseitige Auswertung (Projekt-Performance): je Task die
+     * Aufenthalte je Status-KEY, ohne Styling. Rückläufer müssen auch hier einzeln
+     * zählen, sonst stimmt der Balken je Mitarbeiter nicht.
+     */
+    public function test_per_task_totals_carry_keys_days_and_visits(): void
+    {
+        $start = now()->startOfSecond();
+        $task = $this->task(TaskStatus::IN_REVIEW);
+
+        $this->travelTo($start->copy()->addHours(2));
+        $task->update(['status' => TaskStatus::IN_PROGRESS]);   // Review #1: 2 h
+
+        $this->travelTo($start->copy()->addHours(3));
+        $task->update(['status' => TaskStatus::IN_REVIEW]);     // in Arbeit: 1 h
+
+        $this->travelTo($start->copy()->addHours(7));
+        $task->update(['status' => TaskStatus::MERGED]);        // Review #2: 4 h
+
+        $totals = app(TaskStatusDurations::class)->perTaskStatusTotals(
+            collect([$task]),
+            $this->organization->statuses()->get()->keyBy('id'),
+        );
+
+        $byKey = collect($totals[$task->id])->keyBy('key');
+
+        $this->assertSame(2, $byKey['IN_REVIEW']['visits'], 'beide Review-Aufenthalte');
+        $this->assertEqualsWithDelta($this->hours(6), $byKey['IN_REVIEW']['days'], $this->hours(0.05));
+        $this->assertSame(0, $byKey['IN_REVIEW']['open'], 'beide Review-Aufenthalte sind abgeschlossen');
+        $this->assertEqualsWithDelta($this->hours(1), $byKey['IN_PROGRESS']['days'], $this->hours(0.05));
+
+        // Abschluss-Status bleibt draußen, auch in den Rohdaten.
+        $this->assertFalse($byKey->has('MERGED'));
+    }
+
+    public function test_per_task_totals_are_empty_without_tasks(): void
+    {
+        $this->assertSame([], app(TaskStatusDurations::class)->perTaskStatusTotals(collect(), collect()));
+    }
+
     public function test_no_tasks_yields_no_rows(): void
     {
         $result = app(TaskStatusDurations::class)->aggregate(collect(), collect());

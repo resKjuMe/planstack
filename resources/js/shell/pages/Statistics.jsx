@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Head, router } from '@inertiajs/react';
 import AppShell from '../AppShell.jsx';
 import PageBands from '../components/PageBands.jsx';
+import { DurationBar, StatusDurations } from '../components/Durations.jsx';
 import { interpolate, transChoice } from '../../summary/i18n.js';
 import {
     PILL,
@@ -201,120 +202,6 @@ function WeeklyChart({ weekly, metric, strings }) {
     );
 }
 
-// Verweildauer je Status. Führend ist der MEDIAN der kumulierten Zeit je Task —
-// er bestimmt auch die Balkenbreite, weil ein einzelner liegen gebliebener Task
-// den Durchschnitt verzerrt und den Engpass damit falsch anzeigen würde. Der
-// Durchschnitt steht als Zusatzwert daneben. Die Reihenfolge folgt dem
-// Lebenszyklus (der Server sortiert nach Status-Position), damit die Liste als
-// Trichter lesbar bleibt.
-function StatusDurations({ rows, strings }) {
-    const max = Math.max(...rows.map((r) => r.medianPerTaskDays ?? 0), 0.0001);
-
-    return (
-        <div className="mt-4 space-y-3">
-            {rows.map((r) => {
-                const median = formatDuration(r.medianPerTaskDays, strings);
-                const pct = r.medianPerTaskDays > 0 ? Math.max(2, (r.medianPerTaskDays / max) * 100) : 0;
-                const meta = [
-                    interpolate(strings.durationsMeta, { tasks: r.tasks, visits: r.visits }),
-                    // visits > tasks ⇒ es gab Rückläufer; genau der Fall, den die
-                    // Zählung getrennt erfassen muss.
-                    r.visits > r.tasks
-                        ? interpolate(strings.durationsReturnsHint, { count: r.visits - r.tasks })
-                        : null,
-                    r.openVisits > 0 ? interpolate(strings.durationsOpenHint, { count: r.openVisits }) : null,
-                ].filter(Boolean).join(' · ');
-
-                const detail = [
-                    r.avgPerTaskDays !== null
-                        ? interpolate(strings.durationsAvg, { value: formatDuration(r.avgPerTaskDays, strings) })
-                        : null,
-                    r.visits > r.tasks && r.avgPerVisitDays !== null
-                        ? interpolate(strings.durationsPerVisit, { value: formatDuration(r.avgPerVisitDays, strings) })
-                        : null,
-                    interpolate(strings.durationsTotal, { value: formatDuration(r.totalDays, strings) }),
-                ].filter(Boolean).join(' · ');
-
-                return (
-                    <div key={r.key}>
-                        <div className="flex flex-wrap items-baseline justify-between gap-2">
-                            <span className={'rounded-full px-2 py-0.5 text-xs font-medium ' + r.badge}>{r.label}</span>
-                            <span
-                                className="text-sm font-semibold text-gray-800 dark:text-gray-200"
-                                title={interpolate(strings.durationsMedian, { value: median ?? strings.none })}
-                            >
-                                {median || strings.none}
-                            </span>
-                        </div>
-                        <div className="mt-1 h-2 overflow-hidden rounded-full bg-gray-100 dark:bg-gray-900">
-                            <div className={'h-full ' + r.bar} style={{ width: `${pct}%` }} />
-                        </div>
-                        <div className="mt-1 flex flex-wrap justify-between gap-2 text-xs text-gray-400 dark:text-gray-500">
-                            <span>{meta}</span>
-                            <span>{detail}</span>
-                        </div>
-                    </div>
-                );
-            })}
-        </div>
-    );
-}
-
-// Gestapelter Balken „wo lag die Zeit" für eine Tabellenzeile.
-//
-// Was die BREITE trägt, hängt davon ab, was die Zeile ist:
-//  - `variant="project"`: der Median über die Gesamtzeiten der TASKS des Projekts
-//    — die typische Task. Die Summe wüchse einfach mit der Zahl der Tasks.
-//  - `variant="task"`: die Gesamtzeit dieser einen Task. Ein Median über ihre
-//    Status wäre keine sinnvolle Größe (unvergleichbare Posten), deshalb steht in
-//    dieser Tabelle auch keine Median-Zeile im Tooltip.
-//
-// `scale` ist der größte Wert derselben Art in der Tabelle, damit die Zeilen
-// untereinander vergleichbar bleiben. Die Segmente behalten ihr Verhältnis
-// zueinander, sodass die Zusammensetzung sichtbar bleibt. Zahlen stehen nur im
-// Tooltip — die Spalte soll auf einen Blick wirken, nicht gelesen werden.
-function DurationBar({ durations, scale, variant, strings }) {
-    if (!durations || !durations.segments.length) {
-        return <span className="text-gray-300 dark:text-gray-600">{strings.none}</span>;
-    }
-
-    const isProject = variant === 'project';
-    const value = isProject ? durations.medianTaskDays : durations.totalDays;
-    const widthPct = scale > 0 && value > 0 ? Math.max(2, (value / scale) * 100) : 0;
-
-    // EIN Tooltip für die ganze Zelle: Kopfzeile, darunter je Status eine Zeile.
-    // Die Segmente tragen bewusst KEINEN eigenen title — sonst gewänne beim
-    // Überfahren eines Segments dessen Tooltip und man sähe nur den einen Wert
-    // statt der ganzen Aufschlüsselung.
-    const total = interpolate(strings.durationsTotal, { value: formatDuration(durations.totalDays, strings) });
-    const head = isProject
-        ? [interpolate(strings.durationsMedianTask, { value: formatDuration(durations.medianTaskDays, strings) }), total].join(' · ')
-        : total;
-
-    const tip = [
-        head,
-        ...durations.segments.map((seg) => `${seg.label}: ${formatDuration(seg.days, strings)}`),
-    ].join('\n');
-
-    // Feste Spurbreite (w-40 statt w-full): so ist der Balken in „Nach Projekt" und
-    // „Zuletzt geliefert" gleich breit, obwohl die Tabellen unterschiedlich viele
-    // Spalten haben und das Tabellenlayout sonst je Tabelle anders aufteilt.
-    return (
-        <div className="flex items-center justify-end" title={tip}>
-            <span className="h-2.5 w-40 overflow-hidden rounded-full bg-gray-100 dark:bg-gray-900">
-                <span className="flex h-full" style={{ width: `${widthPct}%` }}>
-                    {durations.segments.map((seg) => (
-                        <span
-                            key={seg.key}
-                            className={'h-full ' + seg.bar}
-                            style={{ width: `${durations.totalDays > 0 ? (seg.days / durations.totalDays) * 100 : 0}%` }}
-                        />
-                    ))}
-                </span>
-            </span>
-        </div>
-    );
-}
 
 // Zwischenüberschrift innerhalb eines Panels — trennt im Qualitäts-Panel die
 // eigenen Tasks von der eigenen Review-Arbeit, die sonst leicht verwechselt wird.
@@ -659,7 +546,7 @@ export default function Statistics({ stats, person, strings, urls }) {
                                                             <div>{p.commits} {strings.mCommits}</div>
                                                         </td>
                                                         <td className="w-44 px-4 py-3">
-                                                            <DurationBar durations={p.durations} scale={projectScale} variant="project" strings={strings} />
+                                                            <DurationBar durations={p.durations} scale={projectScale} variant="group" strings={strings} />
                                                         </td>
                                                     </tr>
                                                 ))}

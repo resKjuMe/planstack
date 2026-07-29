@@ -100,6 +100,22 @@ return [
     'show_details' => 'Show details',
     'hide_details' => 'Hide details',
 
+    'col_duration' => 'Time spent',
+    'sort_duration' => 'Time spent',
+    'durations_title' => 'Time spent per status',
+    'durations_sub' => 'median cumulative time per task, reconstructed from the change log — returns included, across all tasks of the project',
+    'durations_meta' => ':tasks tasks · :visits stays',
+    'durations_open_hint' => ':count of them ongoing',
+    'durations_returns_hint' => ':count returns',
+    'durations_median' => 'median :value',
+    'durations_median_task' => 'median per task :value',
+    'durations_avg' => 'avg :value',
+    'durations_per_visit' => 'per stay :value',
+    'durations_total' => 'total :value',
+    'durations_empty' => 'No status changes logged yet — time spent starts accruing with the first change.',
+    'help_durations' => 'Time spent',
+    'help_durations_text' => 'Reconstructed from the change log: every status change is a timestamp, the time spent is the gap to the next one. If a task falls back ("in review → changes requested → in review"), EVERY stay is counted separately and added up. Only working statuses are shown; waiting time (pickable), the time after completion (merged) and exceptions (blocked/concerned) are not working time. The bar per person carries the median over the total times of THEIR tasks — the typical task; the tooltip names each status separately.',
+
     // Units / formats
     'unit_sp_week' => 'SP/wk',
     'unit_min' => 'min',

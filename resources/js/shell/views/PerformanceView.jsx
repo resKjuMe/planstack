@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import PageHead from '../components/PageHead.jsx';
 import { useProjectData } from '../../data/useProjectData';
+import { DurationBar, StatusDurations } from '../components/Durations.jsx';
 import { derivePerformance } from '../../performance/derive.js';
 import { interpolate } from '../../summary/i18n.js';
 import { KpiTilesSkeleton, CardsSkeleton, TableSkeleton } from '../components/Skeleton.jsx';
@@ -308,6 +309,7 @@ export default function PerformanceView({ project, strings }) {
             accuracy: 'sortAccuracy',
             open: 'sortOpen',
             reviews: 'sortReviews',
+            duration: 'sortDuration',
             name: 'sortName',
         }[sort];
         const rows = data.people.slice();
@@ -417,6 +419,18 @@ export default function PerformanceView({ project, strings }) {
                         </div>
                     )}
 
+                    {/* Verweildauer je Status (Verlauf aus dem Änderungsprotokoll,
+                        projektweit über alle Tasks) */}
+                    <div className={`${CARD} p-5`}>
+                        <h2 className="font-semibold text-gray-900 dark:text-gray-100">{strings.durationsTitle}</h2>
+                        <p className="text-xs text-gray-400 dark:text-gray-500">{strings.durationsSub}</p>
+                        {data.statusDurations.length > 0 ? (
+                            <StatusDurations rows={data.statusDurations} strings={strings} />
+                        ) : (
+                            <p className="mt-6 text-sm text-gray-400 dark:text-gray-500">{strings.durationsEmpty}</p>
+                        )}
+                    </div>
+
                     {/* Sortierung */}
                     <div className="flex flex-wrap items-center justify-between gap-3">
                         <h2 className="font-semibold text-gray-900 dark:text-gray-100">{strings.tableTitle}</h2>
@@ -433,6 +447,7 @@ export default function PerformanceView({ project, strings }) {
                                 <option value="accuracy">{strings.sortAccuracy}</option>
                                 <option value="open">{strings.sortOpen}</option>
                                 <option value="reviews">{strings.sortReviews}</option>
+                                <option value="duration">{strings.sortDuration}</option>
                                 <option value="name">{strings.sortName}</option>
                             </select>
                         </label>
@@ -452,6 +467,7 @@ export default function PerformanceView({ project, strings }) {
                                         <th className="px-4 py-2 font-medium">{strings.colQuality}</th>
                                         <th className="px-4 py-2 font-medium">{strings.colVolume}</th>
                                         <th className="px-4 py-2 text-right font-medium">{strings.colReviews}</th>
+                                        <th className="w-44 px-4 py-2 text-right font-medium">{strings.colDuration}</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -569,10 +585,18 @@ export default function PerformanceView({ project, strings }) {
                                                     <td className="px-4 py-3 text-right font-medium text-gray-700 dark:text-gray-300">
                                                         {p.reviewsGiven}
                                                     </td>
+                                                    <td className="w-44 px-4 py-3">
+                                                        <DurationBar
+                                                            durations={p.durations}
+                                                            scale={data.scales.maxDuration}
+                                                            variant="group"
+                                                            strings={strings}
+                                                        />
+                                                    </td>
                                                 </tr>
                                                 {open && (
                                                     <tr className="border-b border-gray-50 last:border-0 dark:border-gray-700">
-                                                        <td colSpan={8} className="p-0">
+                                                        <td colSpan={9} className="p-0">
                                                             <PersonDetails person={p} strings={strings} />
                                                         </td>
                                                     </tr>

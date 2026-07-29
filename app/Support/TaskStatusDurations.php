@@ -45,6 +45,62 @@ class TaskStatusDurations
     private const WORK_KINDS = ['active', 'review'];
 
     /**
+     * Rohdaten je Task für CLIENTSEITIGE Auswertung: pro Task die Aufenthalte je
+     * Status, mit Status-KEY statt Styling. Genutzt vom Board-Endpunkt, damit die
+     * Projekt-Performance-Seite (die alles aus dem geteilten Store ableitet) die
+     * Verweildauern je Mitarbeiter selbst bilden kann — Label, Farbe und
+     * Reihenfolge löst der Client über die ohnehin geladene Status-Konfiguration
+     * auf, was die Antwort klein hält.
+     *
+     * @param  Collection<int, Task>  $tasks
+     * @param  Collection<int, OrgStatus>  $statuses  nach id indiziert
+     * @return array<int, array<int, array{key: string, days: float, visits: int, open: int}>>
+     */
+    public function perTaskStatusTotals(Collection $tasks, Collection $statuses): array
+    {
+        if ($tasks->isEmpty()) {
+            return [];
+        }
+
+        $workStatusIds = $this->workStatusIds($statuses);
+        $keyById = $statuses->map(fn (OrgStatus $s) => $s->key);
+
+        $result = [];
+        foreach ($this->segments($tasks) as $segment) {
+            if (! in_array($segment['status_id'], $workStatusIds, true)) {
+                continue;
+            }
+            $key = $keyById[$segment['status_id']] ?? null;
+            if ($key === null) {
+                continue;
+            }
+
+            $bucket = &$result[$segment['task_id']][$key];
+            $bucket ??= ['key' => $key, 'days' => 0.0, 'visits' => 0, 'open' => 0];
+            $bucket['days'] += $segment['seconds'] / 86400;
+            $bucket['visits']++;
+            $bucket['open'] += $segment['open'] ? 1 : 0;
+            unset($bucket);
+        }
+
+        // Die Status-Reihenfolge stellt der Client her (er kennt die Positionen);
+        // hier nur die Verschachtelung auf Listen glätten.
+        return array_map('array_values', $result);
+    }
+
+    /**
+     * @param  Collection<int, OrgStatus>  $statuses
+     * @return array<int, int>
+     */
+    private function workStatusIds(Collection $statuses): array
+    {
+        return $statuses
+            ->filter(fn (OrgStatus $s) => in_array($s->kind, self::WORK_KINDS, true))
+            ->keys()
+            ->all();
+    }
+
+    /**
      * Verweildauern über die übergebenen Tasks — in EINER Abfrage, weil dieselben
      * Aufenthalte drei Auswertungen speisen:
      *  - `statuses`: Aggregat je Status (Panel „Verweildauer je Status")
@@ -64,10 +120,7 @@ class TaskStatusDurations
         }
 
         // Nur Bearbeitungs-Status; siehe WORK_KINDS.
-        $workStatusIds = $statuses
-            ->filter(fn (OrgStatus $s) => in_array($s->kind, self::WORK_KINDS, true))
-            ->keys()
-            ->all();
+        $workStatusIds = $this->workStatusIds($statuses);
 
         $segments = array_values(array_filter(
             $this->segments($tasks),

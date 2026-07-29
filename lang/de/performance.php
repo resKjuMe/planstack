@@ -100,6 +100,22 @@ return [
     'show_details' => 'Details einblenden',
     'hide_details' => 'Details ausblenden',
 
+    'col_duration' => 'Verweildauer',
+    'sort_duration' => 'Verweildauer',
+    'durations_title' => 'Verweildauer je Status',
+    'durations_sub' => 'Median der kumulierten Zeit je Task, rekonstruiert aus dem Änderungsprotokoll — Rückläufer zählen mit, projektweit über alle Tasks',
+    'durations_meta' => ':tasks Tasks · :visits Aufenthalte',
+    'durations_open_hint' => 'davon :count laufend',
+    'durations_returns_hint' => ':count Rückläufer',
+    'durations_median' => 'Median :value',
+    'durations_median_task' => 'Median je Task :value',
+    'durations_avg' => 'Ø :value',
+    'durations_per_visit' => 'je Aufenthalt :value',
+    'durations_total' => 'gesamt :value',
+    'durations_empty' => 'Noch keine protokollierten Statuswechsel — die Verweildauer entsteht erst mit dem ersten Wechsel.',
+    'help_durations' => 'Verweildauer',
+    'help_durations_text' => 'Aus dem Änderungsprotokoll rekonstruiert: jede Statusänderung ist ein Zeitstempel, die Verweildauer der Abstand zur nächsten. Fällt ein Task zurück („in Review → Änderungen erbeten → in Review"), wird JEDER Aufenthalt einzeln gezählt und aufaddiert. Gezeigt werden nur Bearbeitungs-Status; Wartezeit (pickbar), die Zeit nach der Fertigstellung (gemergt) und Ausnahmen (blockiert/problematisch) sind keine Bearbeitungsdauer. Der Balken je Mitarbeiter trägt den Median über die Gesamtzeiten SEINER Tasks — die typische Task; der Tooltip nennt jeden Status einzeln.',
+
     // Einheiten / Formate
     'unit_sp_week' => 'SP/Wo',
     'unit_min' => 'Min',

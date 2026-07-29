@@ -18,6 +18,7 @@
 // wird zusätzlich über reviewed_by gezählt, damit sie überhaupt sichtbar ist.
 
 import { transChoice } from '../summary/i18n.js';
+import { aggregateDurations, statusDurationRows, statusLookup } from '../stats/durations.js';
 import { BAR, PILL, deTrim, deviationLabel, formatDuration, formatTokens, shareClass } from '../stats/format.js';
 
 function median(values) {
@@ -64,6 +65,10 @@ export function derivePerformance({ tasks, statusConfig, strings, taskUrlTemplat
     const byKey = new Map((statusConfig?.statuses || []).map((st) => [st.key, st]));
 
     const taskUrl = (id) => (taskUrlTemplate ? taskUrlTemplate.replace('__ID__', String(id)) : '#');
+
+    // Status-KEY → Label/Farbe/Position für die Verweildauern (der Server schickt
+    // je Task nur die nackten Aufenthalte, siehe TaskResource.status_durations).
+    const lookup = statusLookup(statusConfig);
 
     // Board-Anzeigeschlüssel (Waiting-Tasks tragen den ROLLEN-Namen, siehe
     // BoardPresenter) → Org-Status und damit dessen done/delivered-Flags + Styling.
@@ -241,6 +246,10 @@ export function derivePerformance({ tasks, statusConfig, strings, taskUrlTemplat
             })
             .sort((a, b) => (b.ageDays ?? -1) - (a.ageDays ?? -1));
 
+        // Verweildauern der eigenen Tasks (Verlauf aus dem Protokoll, Rückläufer
+        // zählen einzeln) — Grundlage des Balkens in der Tabellenspalte.
+        const durations = aggregateDurations(own, lookup);
+
         // Review-Beitrag (als Reviewer, unabhängig davon, wer geclaimt hat).
         const reviewsGiven = p.reviewed.length;
         const reviewedAuthors = new Set(
@@ -320,6 +329,8 @@ export function derivePerformance({ tasks, statusConfig, strings, taskUrlTemplat
             reviewedAuthors,
             lastReview,
 
+            durations: durations.segments.length ? durations : null,
+
             // Sortierschlüssel (fehlende Werte sortieren nach unten).
             sortName: p.name.toLocaleLowerCase(),
             sortDeliveredSp: deliveredSp,
@@ -328,6 +339,7 @@ export function derivePerformance({ tasks, statusConfig, strings, taskUrlTemplat
             sortAccuracy: accuracyPct ?? -1,
             sortOpen: open.length,
             sortReviews: reviewsGiven,
+            sortDuration: durations.medianTaskDays ?? -1,
         };
     });
 
@@ -366,7 +378,15 @@ export function derivePerformance({ tasks, statusConfig, strings, taskUrlTemplat
     const scales = {
         maxSp: Math.max(1, ...rows.map((r) => r.totalSp)),
         maxCycle: Math.max(...rows.map((r) => r.cycleMedian ?? 0), 0.0001),
+        // Balkenbreite der Verweildauer-Spalte trägt den Median je Task, der
+        // Maßstab entsprechend den größten dieser Mediane.
+        maxDuration: Math.max(0, ...rows.map((r) => r.durations?.medianTaskDays ?? 0)),
     };
 
-    return { people: rows, team, unassigned, scales };
+    // Projektweite Verweildauer je Status — dasselbe Panel wie in der
+    // persönlichen Statistik, hier über ALLE Tasks des Projekts (auch die ohne
+    // Zuordnung, denn die Zeit ist trotzdem vergangen).
+    const statusDurations = statusDurationRows(tasks, lookup);
+
+    return { people: rows, team, unassigned, scales, statusDurations };
 }

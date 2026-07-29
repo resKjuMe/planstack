@@ -12,6 +12,7 @@ use App\Support\ProjectConfig;
 use App\Support\ProjectOverviewPresenter;
 use App\Support\TaskBoardService;
 use App\Support\TaskReworkCounts;
+use App\Support\TaskStatusDurations;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
@@ -24,6 +25,7 @@ class ProjectController extends ApiController
     public function __construct(
         private readonly TaskBoardService $board,
         private readonly TaskReworkCounts $rework,
+        private readonly TaskStatusDurations $durations,
     ) {}
 
     /**
@@ -106,8 +108,18 @@ class ProjectController extends ApiController
         // (last_review_recommendation) verliert das nach einem Approve, die
         // Performance-Seite braucht es aber als Verlauf.
         $reworkCounts = $this->rework->forTaskIds($tasks->pluck('id'));
+
+        // Verweildauer je Status aus demselben Protokoll (eine weitere Abfrage für
+        // das ganze Board). Der Client aggregiert daraus die Verweildauern je
+        // Mitarbeiter — Label/Farbe löst er über die Status-Konfiguration auf.
+        $statusDurations = $this->durations->perTaskStatusTotals(
+            $tasks,
+            $project->organization->statuses()->get()->keyBy('id'),
+        );
+
         foreach ($tasks as $task) {
             $task->x_rework_count = $reworkCounts[$task->id] ?? 0;
+            $task->x_status_durations = $statusDurations[$task->id] ?? [];
         }
 
         $project->setRelation('tasks', $tasks);
@@ -253,7 +265,7 @@ class ProjectController extends ApiController
 
     /**
      * @param  Collection<int, Task>  $tasks
-     * @return \Illuminate\Support\Collection<int, array<string, mixed>>
+     * @return Collection<int, array<string, mixed>>
      */
     private function phaseAggregates(Project $project, Collection $tasks): Collection
     {
