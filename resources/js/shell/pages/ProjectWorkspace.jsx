@@ -11,6 +11,7 @@ import DiagramView from '../views/DiagramView.jsx';
 import PrSequenceView from '../views/PrSequenceView.jsx';
 import CalibrationView from '../views/CalibrationView.jsx';
 import ChangelogView from '../views/ChangelogView.jsx';
+import PerformanceView from '../views/PerformanceView.jsx';
 
 // EINE Inertia-Seite für die Projekt-Unterseiten. Board und Summary werden rein
 // clientseitig umgeschaltet — 0 Server-Calls beim Tab-Wechsel: die statischen
@@ -20,7 +21,7 @@ import ChangelogView from '../views/ChangelogView.jsx';
 //
 // Weitere Unterseiten (Diagramm, PR-Sequence, …) laufen bis zu ihrer Migration
 // weiter über den normalen Inertia-Visit (globaler Klick-Interceptor in app.jsx).
-const CLIENT_TABS = ['board', 'summary', 'diagram', 'pr-sequence', 'calibration', 'changelog'];
+const CLIENT_TABS = ['board', 'summary', 'diagram', 'pr-sequence', 'calibration', 'changelog', 'performance'];
 
 function tabForPath(pathname, tabs) {
     for (const t of tabs) {
@@ -33,7 +34,7 @@ function tabForPath(pathname, tabs) {
     return null;
 }
 
-export default function ProjectWorkspace({ activeTab, currentUserId, project, can, tabs, flash, board, summary, diagram, sequence, calibration, changelog }) {
+export default function ProjectWorkspace({ activeTab, currentUserId, project, can, tabs, flash, board, summary, diagram, sequence, calibration, changelog, performance }) {
     const { errors } = usePage().props;
 
     // Aktiven Tab autoritativ aus der BROWSER-URL ableiten (nicht aus dem
@@ -93,18 +94,25 @@ export default function ProjectWorkspace({ activeTab, currentUserId, project, ca
     // Die Kopfzeile (Sync/Einstellungen/+Task) ist projektweit identisch — immer
     // board.strings (enthält diese Labels), unabhängig vom aktiven Tab.
     const headerStrings = board.strings;
-    const title =
-        tab === 'summary'
-            ? `${project.name} · ${summary.strings.title}`
-            : tab === 'diagram'
-                ? `${project.name} · ${diagram.strings.title}`
-                : tab === 'pr-sequence'
-                    ? `${project.name} · ${sequence.strings.title}`
-                    : tab === 'calibration'
-                        ? `${project.name} · ${calibration.strings.title}`
-                        : tab === 'changelog'
-                            ? `${project.name} · ${changelog.strings.title}`
-                            : `${project.name} · ${board.strings.boardTitle}`;
+
+    // Titel + Inhalt je Tab an einer Stelle. `performance` ist nur für den
+    // Organisations-Owner gesetzt (der Server schickt es anderen nicht mit und
+    // rendert den Tab nicht) — fehlt es, fällt der Workspace aufs Board zurück.
+    const views = {
+        summary: { title: summary.strings.title, render: () => <SummaryView project={project} strings={summary.strings} /> },
+        diagram: { title: diagram.strings.title, render: () => <DiagramView project={project} currentUserId={currentUserId} strings={diagram.strings} /> },
+        'pr-sequence': { title: sequence.strings.title, render: () => <PrSequenceView project={project} strings={sequence.strings} /> },
+        calibration: { title: calibration.strings.title, render: () => <CalibrationView project={project} strings={calibration.strings} /> },
+        changelog: { title: changelog.strings.title, render: () => <ChangelogView project={project} strings={changelog.strings} /> },
+        ...(performance
+            ? { performance: { title: performance.strings.title, render: () => <PerformanceView project={project} strings={performance.strings} /> } }
+            : {}),
+    };
+    const view = views[tab] ?? {
+        title: board.strings.boardTitle,
+        render: () => <BoardView meta={board.meta} strings={board.strings} />,
+    };
+    const title = `${project.name} · ${view.title}`;
 
     return (
         <>
@@ -122,19 +130,7 @@ export default function ProjectWorkspace({ activeTab, currentUserId, project, ca
                     {/* key={tab} → beim Umschalten neu gemountet, sodass die
                         Einblend-Animation (.ps-view-enter) je View einmal laeuft. */}
                     <div key={tab} className="ps-view-enter">
-                        {tab === 'summary' ? (
-                            <SummaryView project={project} strings={summary.strings} />
-                        ) : tab === 'diagram' ? (
-                            <DiagramView project={project} currentUserId={currentUserId} strings={diagram.strings} />
-                        ) : tab === 'pr-sequence' ? (
-                            <PrSequenceView project={project} strings={sequence.strings} />
-                        ) : tab === 'calibration' ? (
-                            <CalibrationView project={project} strings={calibration.strings} />
-                        ) : tab === 'changelog' ? (
-                            <ChangelogView project={project} strings={changelog.strings} />
-                        ) : (
-                            <BoardView meta={board.meta} strings={board.strings} />
-                        )}
+                        {view.render()}
                     </div>
                 </div>
             </div>

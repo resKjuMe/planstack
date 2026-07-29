@@ -19,6 +19,7 @@ use App\Http\Controllers\OrganizationCustomFieldController;
 use App\Http\Controllers\OrganizationEventController;
 use App\Http\Controllers\OrganizationTaskStatusController;
 use App\Http\Controllers\ProjectMemberController;
+use App\Http\Controllers\ProjectPerformanceController;
 use App\Http\Controllers\ProjectPhaseController;
 use App\Http\Controllers\ProjectPrSequenceController;
 use App\Http\Controllers\ProjectPrSyncController;
@@ -175,6 +176,10 @@ Route::middleware('auth')->group(function () {
         ->name('projects.changelog');
     Route::get('projects/{project}/kalibrierung', ProjectCalibrationController::class)
         ->name('projects.calibration');
+    // Nur für den Organisations-Owner (personenbezogene Leistungsdaten) — der
+    // Controller prüft das, der Tab wird für andere nicht gerendert.
+    Route::get('projects/{project}/performance', ProjectPerformanceController::class)
+        ->name('projects.performance');
     Route::get('projects/{project}/access', [ProjectController::class, 'access'])
         ->name('projects.access');
 

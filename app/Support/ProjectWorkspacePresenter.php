@@ -25,6 +25,10 @@ class ProjectWorkspacePresenter
     public function props(Project $project, string $activeTab): array
     {
         $user = Auth::user();
+        // Personenbezogene Leistungsdaten sind Owner-Sache: der Performance-Tab
+        // erscheint nur für den Organisations-Owner, und die Route prüft dasselbe
+        // noch einmal serverseitig (ProjectPerformanceController).
+        $isOrgOwner = $user?->organization?->isOwner($user) === true;
 
         return [
             'activeTab' => $activeTab,
@@ -44,8 +48,9 @@ class ProjectWorkspacePresenter
             'can' => [
                 'update' => $user->can('update', $project),
                 'contribute' => $user->can('contribute', $project),
+                'viewPerformance' => $isOrgOwner,
             ],
-            'tabs' => $this->tabs($project),
+            'tabs' => $this->tabs($project, $isOrgOwner),
             'flash' => [
                 'status' => session('status'),
                 'error' => session('error'),
@@ -69,13 +74,18 @@ class ProjectWorkspacePresenter
             'changelog' => [
                 'strings' => $this->changelogStrings(),
             ],
+            // Owner-only: für andere gar nicht mitschicken, damit die Labels nicht
+            // in einer Antwort landen, die die Seite nie rendert.
+            'performance' => $isOrgOwner ? [
+                'strings' => $this->performanceStrings(),
+            ] : null,
         ];
     }
 
     /**
      * @return array<int, array<string, mixed>>
      */
-    private function tabs(Project $project): array
+    private function tabs(Project $project, bool $isOrgOwner): array
     {
         return collect([
             'diagram' => ['label' => __('common.diagram'), 'route' => 'projects.diagram'],
@@ -84,6 +94,9 @@ class ProjectWorkspacePresenter
             'board' => ['label' => __('common.board'), 'route' => 'projects.show'],
             'changelog' => ['label' => __('common.changelog'), 'route' => 'projects.changelog'],
             'calibration' => ['label' => __('common.calibration'), 'route' => 'projects.calibration'],
+            ...($isOrgOwner
+                ? ['performance' => ['label' => __('common.performance'), 'route' => 'projects.performance']]
+                : []),
         ])->map(fn (array $t, string $key) => [
             'key' => $key,
             'label' => $t['label'],
@@ -309,6 +322,122 @@ class ProjectWorkspacePresenter
             'unitMin' => __('calibration.unit_min'),
             'unitHours' => __('calibration.unit_hours'),
             'unitDays' => __('calibration.unit_days'),
+        ];
+    }
+
+    /**
+     * Labels der Performance-Unterseite. Templates mit :platzhaltern bleiben roh
+     * (der Client interpoliert sie, siehe resources/js/summary/i18n.js).
+     *
+     * @return array<string, mixed>
+     */
+    private function performanceStrings(): array
+    {
+        return [
+            'title' => __('common.performance'),
+            'subtitle' => __('performance.subtitle'),
+            'ownerOnlyNote' => __('performance.owner_only_note'),
+            'showHideExplanation' => __('common.show_hide_explanation'),
+            'loading' => __('status.loading'),
+            'loadError' => __('status.load_error'),
+            'tasks' => __('common.tasks'),
+
+            // Hilfe-Infobox
+            'helpAttribution' => __('performance.help_attribution'),
+            'helpAttributionText' => __('performance.help_attribution_text'),
+            'helpMetrics' => __('performance.help_metrics'),
+            'helpMetricBullets' => [
+                ['strong' => __('performance.help_delivered'), 'text' => __('performance.help_delivered_text')],
+                ['strong' => __('performance.help_cycle'), 'text' => __('performance.help_cycle_text')],
+                ['strong' => __('performance.help_wip'), 'text' => __('performance.help_wip_text')],
+                ['strong' => __('performance.help_accuracy'), 'text' => __('performance.help_accuracy_text')],
+                ['strong' => __('performance.help_quality'), 'text' => __('performance.help_quality_text')],
+            ],
+            'helpReviews' => __('performance.help_reviews'),
+            'helpReviewsText' => __('performance.help_reviews_text'),
+            'helpLimits' => __('performance.help_limits'),
+            'helpLimitsText' => __('performance.help_limits_text'),
+
+            // Team-Kacheln
+            'teamPeople' => __('performance.team_people'),
+            'teamPeopleSub' => __('performance.team_people_sub'),
+            'teamDelivered' => __('performance.team_delivered'),
+            'teamDeliveredSub' => __('performance.team_delivered_sub'),
+            'teamCycle' => __('performance.team_cycle'),
+            'teamCycleSub' => __('performance.team_cycle_sub'),
+            'teamAccuracy' => __('performance.team_accuracy'),
+            'teamAccuracySub' => __('performance.team_accuracy_sub'),
+
+            // Vergleichsdiagramme
+            'chartDeliveredSp' => __('performance.chart_delivered_sp'),
+            'chartDeliveredSpSub' => __('performance.chart_delivered_sp_sub'),
+            'chartCycle' => __('performance.chart_cycle'),
+            'chartCycleSub' => __('performance.chart_cycle_sub'),
+            'chartOpen' => __('performance.chart_open'),
+
+            // Tabelle
+            'tableTitle' => __('performance.table_title'),
+            'colPerson' => __('performance.col_person'),
+            'colDelivered' => __('performance.col_delivered'),
+            'colOpen' => __('performance.col_open'),
+            'colCycle' => __('performance.col_cycle'),
+            'colAccuracy' => __('performance.col_accuracy'),
+            'colQuality' => __('performance.col_quality'),
+            'colVolume' => __('performance.col_volume'),
+            'colReviews' => __('performance.col_reviews'),
+            'sort' => __('performance.sort'),
+            'sortDeliveredSp' => __('performance.sort_delivered_sp'),
+            'sortDelivered' => __('performance.sort_delivered'),
+            'sortCycle' => __('performance.sort_cycle'),
+            'sortAccuracy' => __('performance.sort_accuracy'),
+            'sortOpen' => __('performance.sort_open'),
+            'sortReviews' => __('performance.sort_reviews'),
+            'sortName' => __('performance.sort_name'),
+            'noPeople' => __('performance.no_people'),
+            'unassigned' => __('performance.unassigned'),
+            'unassignedSub' => __('performance.unassigned_sub'),
+
+            // Detailkarte
+            'detailsDelivery' => __('performance.details_delivery'),
+            'detailsQuality' => __('performance.details_quality'),
+            'detailsVolume' => __('performance.details_volume'),
+            'detailsReviews' => __('performance.details_reviews'),
+            'mDeliveredTasks' => __('performance.m_delivered_tasks'),
+            'mDeliveredSp' => __('performance.m_delivered_sp'),
+            'mVelocity' => __('performance.m_velocity'),
+            'mCycleMedian' => __('performance.m_cycle_median'),
+            'mCycleAvg' => __('performance.m_cycle_avg'),
+            'mTimePerSp' => __('performance.m_time_per_sp'),
+            'mWip' => __('performance.m_wip'),
+            'mOldestClaim' => __('performance.m_oldest_claim'),
+            'mBlocked' => __('performance.m_blocked'),
+            'mConcerns' => __('performance.m_concerns'),
+            'mAccuracy' => __('performance.m_accuracy'),
+            'mMedianDeviation' => __('performance.m_median_deviation'),
+            'mRequestChanges' => __('performance.m_request_changes'),
+            'mApproved' => __('performance.m_approved'),
+            'mCiFailed' => __('performance.m_ci_failed'),
+            'mOpenThreads' => __('performance.m_open_threads'),
+            'mCriticality' => __('performance.m_criticality'),
+            'mFiles' => __('performance.m_files'),
+            'mLines' => __('performance.m_lines'),
+            'mCommits' => __('performance.m_commits'),
+            'mTokens' => __('performance.m_tokens'),
+            'mReviewsGiven' => __('performance.m_reviews_given'),
+            'mReviewsAuthors' => __('performance.m_reviews_authors'),
+            'mLastReview' => __('performance.m_last_review'),
+            'mUnlocks' => __('performance.m_unlocks'),
+            'openTasksTitle' => __('performance.open_tasks_title'),
+            'showDetails' => __('performance.show_details'),
+            'hideDetails' => __('performance.hide_details'),
+
+            // Einheiten
+            'unitSpWeek' => __('performance.unit_sp_week'),
+            'unitMin' => __('performance.unit_min'),
+            'unitHours' => __('performance.unit_hours'),
+            'unitDays' => __('performance.unit_days'),
+            'ofTotal' => __('performance.of_total'),
+            'none' => __('performance.none'),
         ];
     }
 

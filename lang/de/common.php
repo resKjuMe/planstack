@@ -31,6 +31,7 @@ return [
     'organization' => 'Organisation',
     'overview' => 'Übersicht',
     'password' => 'Passwort',
+    'performance' => 'Performance',
     'phases' => 'Phasen',
     'pickable' => 'pickbar',
     'pr_sequence' => 'PR-Sequenz',
