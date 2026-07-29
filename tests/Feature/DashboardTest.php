@@ -142,6 +142,28 @@ class DashboardTest extends TestCase
             );
     }
 
+    /**
+     * Die Task-Zeilen zeigen dasselbe Kopier-Menü wie die Board-Karten. Dessen
+     * Labels sind eine Teilmenge der board-Sprachdatei — fehlt einer, stünde im
+     * Menü der rohe Schlüssel.
+     */
+    public function test_ships_the_copy_menu_labels_and_setup_url(): void
+    {
+        [, $ada] = $this->scenario();
+
+        $response = $this->actingAs($ada)->get(route('dashboard'))->assertOk();
+
+        $copyStrings = $response->inertiaProps('copyStrings');
+
+        foreach (['copy', 'copied', 'copy_task_name', 'copy_work_command', 'start_with_claude', 'claudetask_setup_link'] as $key) {
+            $this->assertArrayHasKey($key, $copyStrings);
+            $this->assertNotSame("board.$key", $copyStrings[$key], 'Unaufgelöster Übersetzungsschlüssel');
+        }
+
+        // Verweis auf die Handler-Anleitung, falls der Claude-Start ins Leere läuft.
+        $this->assertSame(route('claudetask.setup'), $response->inertiaProps('urls')['claudetaskSetup']);
+    }
+
     // --- Auswahlregel „Bei mir" ------------------------------------------------
 
     /** Eigener Arbeitsschritt ja, fremder nein. */

@@ -21,6 +21,29 @@ use Inertia\Response as InertiaResponse;
  */
 class DashboardController extends Controller
 {
+    /**
+     * Schlüssel des Kopier-Menüs, die aus dem Board übernommen werden: die
+     * Task-Zeilen zeigen dasselbe Menü (resources/js/board/components/CopyMenu.jsx),
+     * also braucht es dieselben Labels. Bewusst nur diese Teilmenge statt der
+     * ganzen board-Sprachdatei — der Rest hat auf dem Dashboard nichts zu suchen.
+     *
+     * @var array<int, string>
+     */
+    private const COPY_MENU_KEYS = [
+        'copy',
+        'copied',
+        'copy_task_name',
+        'copy_project_task_name',
+        'copy_task_url',
+        'copy_work_command',
+        'copy_fix_command',
+        'copy_review_command',
+        'start_with_claude',
+        'claudetask_not_registered',
+        'claudetask_clipboard_fallback',
+        'claudetask_setup_link',
+    ];
+
     public function __invoke(Request $request, DashboardPresenter $presenter): InertiaResponse
     {
         $user = $request->user();
@@ -36,8 +59,14 @@ class DashboardController extends Controller
                 'projects' => route('projects.index'),
                 'newProject' => route('projects.create'),
                 'statistics' => route('statistics', $user),
+                // Anleitung für den claudetask:-Handler — das Kopier-Menü verlinkt
+                // sie, wenn der Claude-Start fehlzuschlagen scheint.
+                'claudetaskSetup' => route('claudetask.setup'),
             ],
             'strings' => $this->strings(),
+            'copyStrings' => collect(self::COPY_MENU_KEYS)
+                ->mapWithKeys(fn (string $key) => [$key => __("board.$key")])
+                ->all(),
         ]);
     }
 

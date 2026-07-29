@@ -8,6 +8,10 @@ import { createPortal } from 'react-dom';
 // Das Menü hängt in einem Portal mit fixer Position am Icon: die Kartenliste der
 // Spalte scrollt (overflow-y-auto), ein absolut positioniertes Menü innerhalb der
 // Karte würde dort abgeschnitten.
+//
+// Nicht nur das Board nutzt es: die Task-Zeilen des Dashboards binden dasselbe
+// Menü ein (resources/js/shell/pages/Dashboard.jsx) und bekommen die Labels als
+// Teilmenge der board-Sprachdatei geliefert. `task` braucht nur `name` und `url`.
 
 // navigator.clipboard braucht einen Secure Context (https/localhost). Fällt sonst
 // auf das alte execCommand-Verfahren zurück, damit das Kopieren auch hinter

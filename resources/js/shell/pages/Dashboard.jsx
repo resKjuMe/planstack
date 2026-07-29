@@ -2,6 +2,8 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Head, router } from '@inertiajs/react';
 import AppShell from '../AppShell.jsx';
 import PageBands from '../components/PageBands.jsx';
+import CopyMenu from '../../board/components/CopyMenu.jsx';
+import { makeT } from '../../board/i18n.js';
 import { interpolate, transChoice } from '../../summary/i18n.js';
 import { formatDuration, relativeTime } from '../../stats/format.js';
 
@@ -99,15 +101,19 @@ function PanelHead({ title, sub, right }) {
 // Eine Zeile der „Bei mir"-Liste. Die ganze Karte führt zum Task (wie auf der
 // Projektliste: Klicks auf echte Links darin bleiben unberührt), damit der
 // Sprung in die Arbeit ein Klick ist.
-function TaskRow({ item, strings, locale }) {
+//
+// `a, button` in der Ausnahme, nicht nur `a`: das Kopier-Menü ist ein Button, und
+// ein Klick darauf soll das Menü öffnen statt zum Task zu navigieren. Das Menü
+// selbst hängt in einem Portal am body — seine Klicks erreichen die Zeile nie.
+function TaskRow({ item, strings, copy, locale }) {
     const open = (e) => {
-        if (item.url && !e.target.closest('a')) router.visit(item.url);
+        if (item.url && !e.target.closest('a, button')) router.visit(item.url);
     };
 
     return (
         <div
             onClick={open}
-            className="cursor-pointer rounded-lg p-3 ring-1 ring-gray-100 transition hover:bg-gray-50 hover:ring-gray-200 dark:ring-gray-700/60 dark:hover:bg-gray-700/30 dark:hover:ring-gray-600"
+            className="group cursor-pointer rounded-lg p-3 ring-1 ring-gray-100 transition hover:bg-gray-50 hover:ring-gray-200 dark:ring-gray-700/60 dark:hover:bg-gray-700/30 dark:hover:ring-gray-600"
         >
             <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
@@ -170,17 +176,23 @@ function TaskRow({ item, strings, locale }) {
                         )}
                     </div>
                 </div>
-                {item.sp !== null && item.sp !== undefined && (
-                    <span className="shrink-0 whitespace-nowrap text-sm font-semibold text-gray-700 dark:text-gray-300">
-                        {item.sp} SP
-                    </span>
-                )}
+                <div className="flex shrink-0 items-center gap-2">
+                    {item.sp !== null && item.sp !== undefined && (
+                        <span className="whitespace-nowrap text-sm font-semibold text-gray-700 dark:text-gray-300">
+                            {item.sp} SP
+                        </span>
+                    )}
+                    {/* Dasselbe Kopier-Menü wie auf den Board-Karten (Task-Name,
+                        Projekt + Task-Name, URL, die drei /planstack-Kommandos samt
+                        Direktstart in Claude). */}
+                    <CopyMenu task={item} t={copy.t} projectAlias={item.projectAlias} setupUrl={copy.setupUrl} />
+                </div>
             </div>
         </div>
     );
 }
 
-function Group({ bucket, label, hint, strings, locale }) {
+function Group({ bucket, label, hint, strings, copy, locale }) {
     const accent = GROUP[bucket.key];
     const hidden = bucket.count - bucket.items.length;
 
@@ -200,7 +212,13 @@ function Group({ bucket, label, hint, strings, locale }) {
             ) : (
                 <div className="mt-2 space-y-2">
                     {bucket.items.map((item) => (
-                        <TaskRow key={`${item.projectAlias}-${item.id}`} item={item} strings={strings} locale={locale} />
+                        <TaskRow
+                            key={`${item.projectAlias}-${item.id}`}
+                            item={item}
+                            strings={strings}
+                            copy={copy}
+                            locale={locale}
+                        />
                     ))}
                     {hidden > 0 && (
                         <p className="text-xs text-gray-400 dark:text-gray-500">
@@ -213,7 +231,7 @@ function Group({ bucket, label, hint, strings, locale }) {
     );
 }
 
-function Pickable({ rows, strings }) {
+function Pickable({ rows, strings, copy }) {
     if (rows.length === 0) {
         return <p className="mt-4 text-sm text-gray-400 dark:text-gray-500">{strings.pickableEmpty}</p>;
     }
@@ -221,7 +239,7 @@ function Pickable({ rows, strings }) {
     return (
         <div className="mt-3 space-y-2">
             {rows.map((task) => (
-                <div key={`${task.projectAlias}-${task.id}`} className="rounded-lg p-2.5 ring-1 ring-gray-100 dark:ring-gray-700/60">
+                <div key={`${task.projectAlias}-${task.id}`} className="group rounded-lg p-2.5 ring-1 ring-gray-100 dark:ring-gray-700/60">
                     <div className="flex items-center gap-2">
                         <span className="shrink-0 rounded bg-gray-800 px-1.5 py-0.5 font-mono text-[11px] font-semibold text-white dark:bg-gray-700">
                             {task.projectAlias}
@@ -229,9 +247,14 @@ function Pickable({ rows, strings }) {
                         <a href={task.url} className="truncate font-mono text-sm font-semibold text-indigo-700 hover:underline dark:text-indigo-400">
                             {task.name}
                         </a>
-                        {task.sp !== null && task.sp !== undefined && (
-                            <span className="ms-auto shrink-0 text-xs font-semibold text-gray-600 dark:text-gray-400">{task.sp} SP</span>
-                        )}
+                        <span className="ms-auto flex shrink-0 items-center gap-1.5">
+                            {task.sp !== null && task.sp !== undefined && (
+                                <span className="text-xs font-semibold text-gray-600 dark:text-gray-400">{task.sp} SP</span>
+                            )}
+                            {/* Hier ist das Menü besonders nützlich: freier Task →
+                                „/planstack work" kopieren oder direkt starten. */}
+                            <CopyMenu task={task} t={copy.t} projectAlias={task.projectAlias} setupUrl={copy.setupUrl} />
+                        </span>
                     </div>
                     {task.summary && (
                         <p className="mt-1 truncate text-xs text-gray-500 dark:text-gray-400" title={task.summary}>
@@ -314,7 +337,7 @@ function Activity({ rows, strings, locale }) {
 const headerLink =
     'text-sm font-medium text-gray-500 hover:text-indigo-600 dark:text-gray-400 dark:hover:text-indigo-400';
 
-export default function Dashboard({ person, data, urls, strings }) {
+export default function Dashboard({ person, data, urls, strings, copyStrings }) {
     const locale = (typeof document !== 'undefined' && document.documentElement.getAttribute('lang')) || 'de';
     // Projekt-Filter der „Bei mir"-Liste, rein clientseitig (die Einträge liegen
     // alle schon vor). Verschwindet das gewählte Projekt aus der Liste — weil dort
@@ -338,6 +361,14 @@ export default function Dashboard({ person, data, urls, strings }) {
             window.removeEventListener('planstack:entity-changed', onEntity);
         };
     }, []);
+
+    // Kopier-Menü: dieselben Labels wie auf dem Board (Teilmenge der board-
+    // Sprachdatei, siehe DashboardController::COPY_MENU_KEYS) über denselben
+    // Mini-i18n-Helfer.
+    const copy = useMemo(
+        () => ({ t: makeT(copyStrings ?? {}), setupUrl: urls.claudetaskSetup ?? null }),
+        [copyStrings, urls.claudetaskSetup],
+    );
 
     const filters = data.projectFilters ?? [];
     const active = filters.some((f) => f.alias === projectFilter) ? projectFilter : 'all';
@@ -477,6 +508,7 @@ export default function Dashboard({ person, data, urls, strings }) {
                                                         label={groupLabels[bucket.key].label}
                                                         hint={groupLabels[bucket.key].hint}
                                                         strings={strings}
+                                                        copy={copy}
                                                         locale={locale}
                                                     />
                                                 ))}
@@ -487,7 +519,7 @@ export default function Dashboard({ person, data, urls, strings }) {
                                 <div className="space-y-6">
                                     <div className={`${CARD} p-5`}>
                                         <PanelHead title={strings.pickableTitle} sub={strings.pickableSub} />
-                                        <Pickable rows={data.pickable} strings={strings} />
+                                        <Pickable rows={data.pickable} strings={strings} copy={copy} />
                                     </div>
 
                                     <div className={`${CARD} p-5`}>
