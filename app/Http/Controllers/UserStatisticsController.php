@@ -90,6 +90,8 @@ class UserStatisticsController extends Controller
             // Abschnitte
             'weeklyTitle' => __('statistics.weekly_title'),
             'weeklySub' => __('statistics.weekly_sub'),
+            'weeklyTotal' => __('statistics.weekly_total'),
+            'weeklyTotalStacked' => __('statistics.weekly_total_stacked'),
             'weeklyDelivered' => __('statistics.weekly_delivered'),
             'weeklyReviewed' => __('statistics.weekly_reviewed'),
             'weeklyTipDelivered' => __('statistics.weekly_tip_delivered'),

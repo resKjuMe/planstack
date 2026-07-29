@@ -48,6 +48,8 @@ return [
     'durations_returns_hint' => ':count returns',
     'durations_median' => 'median :value',
     'durations_median_task' => 'median per task :value',
+    'weekly_total' => 'total :total :unit',
+    'weekly_total_stacked' => 'total :total :unit (delivered + reviewed)',
     'weekly_delivered' => 'delivered',
     'weekly_reviewed' => 'reviewed',
     'weekly_tip_delivered' => 'delivered: :sp SP · :tasks tasks',

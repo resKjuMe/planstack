@@ -48,6 +48,8 @@ return [
     'durations_returns_hint' => ':count Rückläufer',
     'durations_median' => 'Median :value',
     'durations_median_task' => 'Median je Task :value',
+    'weekly_total' => 'Summe :total :unit',
+    'weekly_total_stacked' => 'Summe :total :unit (geliefert + gereviewt)',
     'weekly_delivered' => 'geliefert',
     'weekly_reviewed' => 'gereviewt',
     'weekly_tip_delivered' => 'geliefert: :sp SP · :tasks Tasks',

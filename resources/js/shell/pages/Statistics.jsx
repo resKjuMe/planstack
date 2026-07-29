@@ -141,11 +141,23 @@ function WeeklyChart({ weekly, metric, strings }) {
     const rev = (w) => (isSp ? w.reviewedSp : w.reviewedTasks);
     const max = Math.max(1, ...weekly.map((w) => own(w) + rev(w)));
 
+    // Beschriftung über dem Diagramm: die SUMME über das ganze Fenster, nicht das
+    // Maximum. Ein Maximum steht zwangsläufig über dem größten Balkenabschnitt
+    // (50 geliefert + 4 gereviewt = 54) und liest sich dann als falsche Zahl; die
+    // Summe ist eine Aussage über den Zeitraum und lädt nicht zum Vergleich mit
+    // einer einzelnen Säule ein. Die Balkenhöhen skalieren weiter auf `max`.
+    // Der Zusatz „(geliefert + gereviewt)" nur, wenn die Review-Reihe überhaupt
+    // Werte hat — sonst wäre er im Normalfall bloß Rauschen.
+    const total = weekly.reduce((sum, w) => sum + own(w) + rev(w), 0);
+    const totalLabel = interpolate(
+        weekly.some((w) => rev(w) > 0) ? strings.weeklyTotalStacked : strings.weeklyTotal,
+        { total, unit: isSp ? strings.storyPoints : strings.tasks },
+    );
+
     return (
         <div className="mt-4">
             <div className="mb-1 flex items-center justify-between text-[10px] text-gray-400 dark:text-gray-500">
-                {/* Skalenmarke, sonst sagt die Balkenhöhe nichts. */}
-                <span>{max} {isSp ? strings.storyPoints : strings.tasks}</span>
+                <span>{totalLabel}</span>
                 <span className="flex items-center gap-3">
                     <span className="flex items-center gap-1">
                         <span className={'inline-block h-2 w-2 rounded-sm ' + WEEKLY_SERIES.delivered} />
