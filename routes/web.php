@@ -31,6 +31,7 @@ use App\Http\Controllers\TaskConcernController;
 use App\Http\Controllers\TaskController;
 use App\Http\Controllers\TeamController;
 use App\Http\Controllers\TeamMemberController;
+use App\Http\Controllers\UserStatisticsController;
 use App\Http\Middleware\EnsureUserHasOrganization;
 use Illuminate\Support\Facades\Route;
 
@@ -263,6 +264,15 @@ Route::middleware('auth')->group(function () {
     Route::post('projects/{project}/tasks/{task}/checklist/convert', [TaskChecklistController::class, 'convert'])
         ->scopeBindings()
         ->name('projects.tasks.checklist.convert');
+
+    // „Statistik" aus dem Benutzermenü: die eigene Bilanz über alle sichtbaren
+    // Projekte unter sprechender URL (/christian-mietze/stats). Fremde Bilanzen
+    // sieht nur der Organisations-Owner (Prüfung im Controller) — dieselbe Regel
+    // wie auf der Projekt-Unterseite „Performance".
+    //
+    // Steht bewusst AM ENDE der Gruppe: das erste Segment ist ein Platzhalter, und
+    // eine spätere feste Route der Form /<etwas>/stats würde sonst nie greifen.
+    Route::get('/{user:slug}/stats', UserStatisticsController::class)->name('statistics');
     }); // Ende: erfordert Organisation
 });
 

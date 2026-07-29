@@ -18,37 +18,13 @@
 // wird zusätzlich über reviewed_by gezählt, damit sie überhaupt sichtbar ist.
 
 import { transChoice } from '../summary/i18n.js';
-
-// --- Formatierungs-Helfer (Spiegel von summary/calibration) ---------------------
-
-const deComma = (v, digits = 1) => Number(v || 0).toFixed(digits).replace('.', ',');
-
-// 2.0 → "2", 2.5 → "2,5"
-function deTrim(value) {
-    return Number(value || 0).toFixed(1).replace('.', ',').replace(/,0$/, '');
-}
-
-function formatTokens(tokens) {
-    if (!tokens) return '0';
-    return tokens >= 1_000_000
-        ? (tokens / 1_000_000).toFixed(1).replace('.', ',') + 'M'
-        : Math.round(tokens / 1000) + 'k';
-}
+import { BAR, PILL, deTrim, deviationLabel, formatDuration, formatTokens, shareClass } from '../stats/format.js';
 
 function median(values) {
     if (!values.length) return null;
     const v = [...values].sort((a, b) => a - b);
     const mid = Math.floor(v.length / 2);
     return v.length % 2 === 1 ? v[mid] : (v[mid - 1] + v[mid]) / 2;
-}
-
-function formatDuration(days, strings) {
-    if (days === null || days === undefined) return null;
-    const minutes = days * 24 * 60;
-    if (minutes < 60) return `${Math.round(Math.max(0, minutes))} ${strings.unitMin}`;
-    const hours = minutes / 60;
-    if (hours < 24) return `${deComma(hours)} ${strings.unitHours}`;
-    return `${deComma(days)} ${strings.unitDays}`;
 }
 
 function initialsOf(name) {
@@ -71,26 +47,6 @@ const AVATARS = [
 function avatarClass(id) {
     return AVATARS[Math.abs(Number(id) || 0) % AVATARS.length];
 }
-
-// Ampel für „Anteil im Ziel" (Schätzgüte, Review-Freigaben): hoch = gut.
-function shareClass(pct) {
-    if (pct === null) return 'gray';
-    return pct >= 75 ? 'green' : pct >= 50 ? 'amber' : 'red';
-}
-
-const PILL = {
-    green: 'bg-green-50 text-green-700 dark:bg-green-900/30 dark:text-green-300',
-    amber: 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300',
-    red: 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300',
-    gray: 'bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400',
-};
-
-const BAR = {
-    green: 'bg-green-500',
-    amber: 'bg-amber-400',
-    red: 'bg-red-400',
-    gray: 'bg-gray-300 dark:bg-gray-600',
-};
 
 const DAY_MS = 86400000;
 
@@ -305,12 +261,7 @@ export function derivePerformance({ tasks, statusConfig, strings, taskUrlTemplat
             accuracyPill: PILL[accClass],
             accuracyBar: BAR[accClass],
             medianDeviation,
-            medianDeviationLabel:
-                medianDeviation === null
-                    ? null
-                    : medianDeviation > 0
-                        ? `+${Math.round(medianDeviation)} %`
-                        : `${Math.round(medianDeviation)} %`,
+            medianDeviationLabel: deviationLabel(medianDeviation),
 
             reviewedCount: reviewed.length,
             requestChanges,

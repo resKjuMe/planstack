@@ -1,0 +1,92 @@
+<?php
+
+return [
+    'title' => 'Statistik',
+    'subtitle' => 'Deine eigene Bilanz über alle Projekte, die du sehen darfst.',
+    'title_other' => 'Statistik: :name',
+    'subtitle_other' => 'Bilanz von :name über alle Projekte, die diese Person sehen darf.',
+
+    // Hilfe
+    'help_scope' => 'Umfang',
+    'help_scope_text' => 'Gezählt werden die Tasks, die AKTUELL der Person zugeordnet sind (Feld „geclaimt von"), über alle für sie sichtbaren Projekte hinweg. Wird ein Task freigegeben, verliert er die Zuordnung — die Seite zeigt den aktuellen Stand, keine Historie.',
+    'help_delivered' => 'Geliefert',
+    'help_delivered_text' => 'Tasks in einem Status, der als „fertig" zählt (org-weit konfiguriert), plus deren Story Points.',
+    'help_cycle' => 'Zykluszeit',
+    'help_cycle_text' => 'Median der Zeit von Claim bis Merge. Median statt Durchschnitt, damit ein liegen gebliebener Task nicht alles verzerrt.',
+    'help_accuracy' => 'Schätzgüte',
+    'help_accuracy_text' => 'Anteil der gelieferten Tasks, deren tatsächlich geänderte Dateizahl höchstens 25 % von der Schätzung im Feld „betroffene Dateien" abweicht.',
+    'help_volume' => 'Umfang',
+    'help_volume_text' => 'Ist-Werte aus den gesyncten Pull Requests: Dateien, Zeilen, Commits, Kommentare. Ohne PR-Sync bleiben sie leer.',
+    'help_limits' => 'Grenzen',
+    'help_limits_text' => 'Kennzahlen ohne Datenbasis stehen als „—" da. Story Points sind Schätzungen, keine Arbeitszeit — die Zahlen sind Gesprächsgrundlage, kein Zeugnis.',
+
+    // KPI-Kacheln
+    'kpi_delivered' => 'Geliefert',
+    'kpi_delivered_sub' => ':tasks Task in :projects Projekt|:tasks Tasks in :projects Projekten',
+    'kpi_open' => 'In Arbeit',
+    'kpi_open_sub' => ':sp SP offen',
+    'kpi_cycle' => 'Zykluszeit',
+    'kpi_cycle_sub' => 'Median Claim → Merge',
+    'kpi_accuracy' => 'Schätzgüte ±25 %',
+    'kpi_accuracy_sub' => ':hits von :total gelieferten Tasks',
+
+    // Abschnitte
+    'weekly_title' => 'Lieferung je Kalenderwoche',
+    'weekly_sub' => 'gelieferte Story Points der letzten 12 Wochen',
+    'status_title' => 'Meine offenen Tasks',
+    'status_sub' => 'nach Status',
+    'quality_title' => 'Qualität',
+    'volume_title' => 'Umfang',
+    'projects_title' => 'Nach Projekt',
+    'recent_title' => 'Zuletzt geliefert',
+
+    // Kennzahlen
+    'm_velocity' => 'Velocity',
+    'm_cycle_avg' => 'Zykluszeit (Ø)',
+    'm_time_per_sp' => 'Zeit je SP',
+    'm_last_delivery' => 'Letzte Lieferung',
+    'm_oldest_claim' => 'Ältester offener Claim',
+    'm_median_deviation' => 'Median-Abweichung',
+    'm_approved' => 'Review freigegeben',
+    'm_request_changes' => 'Änderungen erbeten',
+    'm_ci_failed' => 'Rote CI-Läufe',
+    'm_open_threads' => 'Offene Review-Kommentare',
+    'm_concerns' => 'Gemeldete Concerns',
+    'm_critical' => 'Kritische Tasks',
+    'm_reviews_given' => 'Reviews übernommen',
+    'm_reviewed_authors' => 'für Personen',
+    'm_prs' => 'Pull Requests',
+    'm_files' => 'Geänderte Dateien',
+    'm_lines' => 'Zeilen',
+    'm_commits' => 'Commits',
+    'm_comments' => 'PR-Kommentare',
+    'm_review_comments' => 'Review-Kommentare',
+    'm_tokens' => 'Tokens',
+    'm_man_days' => 'Personentage',
+
+    // Tabellen
+    'col_project' => 'Projekt',
+    'col_delivered' => 'Geliefert',
+    'col_open' => 'Offen',
+    'col_cycle' => 'Zykluszeit',
+    'col_volume' => 'Umfang',
+    'col_task' => 'Task',
+    'col_merged' => 'Gemergt',
+    'col_files' => 'Dateien (Schätzung → Ist)',
+    'col_deviation' => 'Abweichung',
+
+    // Leerzustände
+    'empty_title' => 'Noch keine Zahlen',
+    'empty_text' => 'Sobald der erste Task geclaimt ist, sammelt sich hier die Bilanz.',
+    'empty_to_projects' => 'Zu den Projekten',
+    'no_open_tasks' => 'Kein offener Task — alles abgegeben.',
+    'no_deliveries' => 'Noch keine gelieferten Tasks.',
+
+    // Einheiten
+    'unit_sp_week' => 'SP/Wo',
+    'unit_min' => 'Min',
+    'unit_hours' => 'Std',
+    'unit_days' => 'Tage',
+    'of_total' => ':part von :total',
+    'none' => '—',
+];

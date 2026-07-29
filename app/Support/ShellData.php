@@ -48,7 +48,7 @@ final class ShellData
                     'icon' => 'skill',
                 ],
                 [
-                    'label' => 'v' . $changelogVersion,
+                    'label' => 'v'.$changelogVersion,
                     'href' => route('changelog'),
                     'active' => request()->routeIs('changelog'),
                     'icon' => 'changelog',
@@ -66,12 +66,22 @@ final class ShellData
                     'href' => route('profile.edit'),
                     'icon' => 'profile',
                 ],
+                // Eigene Bilanz über alle sichtbaren Projekte, unter sprechender
+                // URL (/christian-mietze/stats). orgOnly: die Seite liegt hinter
+                // EnsureUserHasOrganization — ohne Organisation gibt es keine
+                // Projekte und damit nichts zu zählen.
+                [
+                    'label' => __('statistics.title'),
+                    'href' => $user !== null ? route('statistics', $user) : '#',
+                    'icon' => 'stats',
+                    'orgOnly' => true,
+                ],
                 [
                     'label' => __('nav.tampermonkey_script'),
                     'href' => url('/planstack-ci/setup'),
                     'icon' => 'ci',
                     'orgOnly' => true,
-                    'badge' => 'v' . $ciVersion,
+                    'badge' => 'v'.$ciVersion,
                 ],
             ],
             'labels' => [

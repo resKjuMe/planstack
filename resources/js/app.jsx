@@ -17,6 +17,7 @@ import TeamsIndex from './shell/pages/TeamsIndex.jsx';
 import TeamCreate from './shell/pages/TeamCreate.jsx';
 import TeamShow from './shell/pages/TeamShow.jsx';
 import Profile from './shell/pages/Profile.jsx';
+import Statistics from './shell/pages/Statistics.jsx';
 import FaqIndex from './shell/pages/FaqIndex.jsx';
 import FaqStatusLogic from './shell/pages/FaqStatusLogic.jsx';
 import FaqCommands from './shell/pages/FaqCommands.jsx';
@@ -52,6 +53,7 @@ const pages = {
     TeamCreate,
     TeamShow,
     Profile,
+    Statistics,
     FaqIndex,
     FaqStatusLogic,
     FaqCommands,

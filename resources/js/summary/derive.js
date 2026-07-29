@@ -46,6 +46,29 @@ function isoWeek(date) {
     return { week, year };
 }
 
+// Kalendertag mit Wochentag, z. B. "Di., 06.10.2026" — für die Fertigstellungs-
+// Prognose, bei der der Wochentag mitentscheidet, ob das Datum realistisch ist.
+function dateWithWeekday(date, locale) {
+    return new Intl.DateTimeFormat(locale || 'de', {
+        weekday: 'short',
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+    }).format(date);
+}
+
+// True, wenn der Zeitstempel auf den heutigen lokalen Kalendertag fällt.
+function isToday(dateStr) {
+    if (!dateStr) return false;
+    const d = new Date(dateStr);
+    const now = new Date();
+    return (
+        d.getFullYear() === now.getFullYear() &&
+        d.getMonth() === now.getMonth() &&
+        d.getDate() === now.getDate()
+    );
+}
+
 function relativeTime(dateStr, locale) {
     const rtf = new Intl.RelativeTimeFormat(locale || 'de', { numeric: 'auto' });
     const diffSec = (new Date(dateStr).getTime() - Date.now()) / 1000;
@@ -189,10 +212,17 @@ export function deriveSummary({ tasks, phases, statusConfig, strings, taskUrlTem
 
         if (merged.length) {
             const last = merged[merged.length - 1];
+            // Wie viele Tasks heute (lokaler Kalendertag) gemergt wurden — zeigt
+            // neben dem „wann zuletzt" auch den Durchsatz des laufenden Tages.
+            const todayCount = merged.filter((t) => isToday(t.merged_at)).length;
             lastMerge = {
                 title: s.lastMergeTitle,
                 when: relativeTime(last.merged_at, locale),
                 pr: last.pr_number ? '#' + last.pr_number : last.name,
+                today:
+                    todayCount > 0
+                        ? transChoice(s.mergedToday, todayCount, { count: todayCount })
+                        : s.mergedTodayNone,
             };
 
             const days = (Date.now() - new Date(merged[0].merged_at).getTime()) / 86400000;
@@ -200,13 +230,18 @@ export function deriveSummary({ tasks, phases, statusConfig, strings, taskUrlTem
             const rate = sum(merged, sp) / weeks;
 
             if (rate > 0) {
-                const eta = new Date(Date.now() + Math.ceil(sum(remaining, sp) / rate) * 7 * 86400000);
+                // Prognose aus der Rest-Arbeit und der gemessenen Rate. Der genaue
+                // TAG kommt aus der ungerundeten Rechnung; die Kalenderwoche wird
+                // aus DIESEM Datum abgeleitet, damit Tag und KW nicht auseinander
+                // laufen (früher wurde auf ganze Wochen aufgerundet).
+                const eta = new Date(Date.now() + (sum(remaining, sp) / rate) * 7 * 86400000);
                 const iso = isoWeek(eta);
                 velocity = {
                     title: s.velocityTitle,
                     rate: deTrim(round1(rate)),
                     unit: s.spWk,
                     sub: interpolate(s.forecastEta, { eta: `KW ${iso.week}/${iso.year}` }),
+                    etaDay: interpolate(s.forecastEtaDay, { date: dateWithWeekday(eta, locale) }),
                 };
             }
         }

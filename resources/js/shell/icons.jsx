@@ -109,6 +109,15 @@ const MENU_ICON_PATHS = {
             <circle cx="12" cy="7" r="4" />
         </>
     ),
+    // Statistik (Balkendiagramm)
+    stats: (
+        <>
+            <line x1="3" x2="21" y1="20" y2="20" />
+            <rect x="6" y="12" width="3" height="8" />
+            <rect x="11" y="8" width="3" height="12" />
+            <rect x="16" y="4" width="3" height="16" />
+        </>
+    ),
     // CI-Setup (Code-Klammern)
     ci: (
         <>

@@ -75,6 +75,9 @@ export default function SummaryView({ project, strings }) {
                                 {summary.kpis.velocity.sub && (
                                     <div className="mt-1 text-sm text-gray-500 dark:text-gray-400">{summary.kpis.velocity.sub}</div>
                                 )}
+                                {summary.kpis.velocity.etaDay && (
+                                    <div className="text-sm text-gray-400 dark:text-gray-500">{summary.kpis.velocity.etaDay}</div>
+                                )}
                             </div>
                         )}
 
@@ -83,6 +86,9 @@ export default function SummaryView({ project, strings }) {
                                 <div className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide">{summary.kpis.lastMerge.title}</div>
                                 <div className="mt-1 text-2xl font-bold text-gray-900 dark:text-gray-100">{summary.kpis.lastMerge.when}</div>
                                 <div className="mt-1 text-sm font-mono text-gray-500 dark:text-gray-400">{summary.kpis.lastMerge.pr}</div>
+                                {summary.kpis.lastMerge.today && (
+                                    <div className="text-sm text-gray-400 dark:text-gray-500">{summary.kpis.lastMerge.today}</div>
+                                )}
                             </div>
                         )}
                     </div>
