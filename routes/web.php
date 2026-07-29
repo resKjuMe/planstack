@@ -4,6 +4,7 @@ use App\Http\Controllers\ApiDocsController;
 use App\Http\Controllers\ApiTokenController;
 use App\Http\Controllers\ChangelogController;
 use App\Http\Controllers\ClaudetaskSetupController;
+use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\FaqController;
 use App\Http\Controllers\GitWebhookController;
 use App\Http\Controllers\PlanstackCiSetupController;
@@ -35,7 +36,7 @@ use App\Http\Controllers\UserStatisticsController;
 use App\Http\Middleware\EnsureUserHasOrganization;
 use Illuminate\Support\Facades\Route;
 
-Route::get('/', fn () => redirect()->route(auth()->check() ? 'projects.index' : 'login'));
+Route::get('/', fn () => redirect()->route(auth()->check() ? 'dashboard' : 'login'));
 
 // Öffentliche API-Dokumentation (kein Login erforderlich)
 Route::get('/api-docs', ApiDocsController::class)->name('api.docs');
@@ -44,10 +45,6 @@ Route::get('/api-docs', ApiDocsController::class)->name('api.docs');
 // CSRF (Ausnahme in bootstrap/app.php) — Authentizität wird optional über die
 // HMAC-Signatur geprüft. Vorerst wird jeder Aufruf nur protokolliert.
 Route::post('/hooks/git', GitWebhookController::class)->name('hooks.git');
-
-Route::get('/dashboard', fn () => redirect()->route('projects.index'))
-    ->middleware(['auth', 'verified'])
-    ->name('dashboard');
 
 Route::middleware('auth')->group(function () {
     // ---- Immer erreichbar, auch ohne Organisation ----
@@ -127,6 +124,14 @@ Route::middleware('auth')->group(function () {
 
     // ---- Erfordert die Zugehörigkeit zu einer Organisation ----
     Route::middleware(EnsureUserHasOrganization::class)->group(function () {
+    // Startseite nach dem Login und Ziel des Logos: die eigene Sicht über alle
+    // sichtbaren Projekte (was liegt bei mir an). Liegt in dieser Gruppe, weil es
+    // ohne Organisation keine Projekte und damit nichts anzuzeigen gibt — wer
+    // keiner angehört, landet wie bisher auf der Organisationsseite.
+    Route::get('/dashboard', DashboardController::class)
+        ->middleware('verified')
+        ->name('dashboard');
+
     // Nutzer-Changelog der Website (Versionsübersicht in der Hauptnavi)
     Route::get('/changelog', ChangelogController::class)->name('changelog');
 

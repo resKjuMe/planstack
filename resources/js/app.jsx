@@ -2,6 +2,7 @@ import React from 'react';
 import { createRoot } from 'react-dom/client';
 import { createInertiaApp, router } from '@inertiajs/react';
 import BladePage from './shell/pages/BladePage.jsx';
+import Dashboard from './shell/pages/Dashboard.jsx';
 import ProjectWorkspace from './shell/pages/ProjectWorkspace.jsx';
 import ProjectsIndex from './shell/pages/ProjectsIndex.jsx';
 import ProjectCreate from './shell/pages/ProjectCreate.jsx';
@@ -34,10 +35,12 @@ import OrganizationEventsEffects from './shell/pages/OrganizationEventsEffects.j
 
 // Seiten-Registry: „BladePage" bettet noch nicht migrierte Blade-Seiten ein,
 // echte React-Seiten werden namentlich aufgelöst. Unbekannte Namen fallen auf
-// BladePage zurück. ProjectWorkspace hostet die Projekt-Unterseiten (clientseitig
-// umgeschaltet, 0 Server-Calls beim Tab-Wechsel); ProjectsIndex ist die Liste.
+// BladePage zurück. Dashboard ist die Startseite (Ziel des Logos);
+// ProjectWorkspace hostet die Projekt-Unterseiten (clientseitig umgeschaltet,
+// 0 Server-Calls beim Tab-Wechsel); ProjectsIndex ist die Liste.
 const pages = {
     BladePage,
+    Dashboard,
     ProjectWorkspace,
     ProjectsIndex,
     ProjectCreate,
