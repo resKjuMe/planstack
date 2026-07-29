@@ -253,11 +253,6 @@ export default function Statistics({ stats, person, strings, urls }) {
 
     const openTotal = statusBuckets.reduce((a, b) => a + b.count, 0);
 
-    // Balken-Maßstab je Tabelle — jeweils der größte Wert DERSELBEN Art, die die
-    // Breite trägt: beim Projekt der Median je Task, bei der einzelnen Task ihre
-    // Gesamtzeit (siehe DurationBar).
-    const projectScale = Math.max(0, ...projects.map((p) => p.durations?.medianTaskDays ?? 0));
-    const recentScale = Math.max(0, ...recent.map((t) => t.durations?.totalDays ?? 0));
 
     return (
         <>
@@ -546,7 +541,7 @@ export default function Statistics({ stats, person, strings, urls }) {
                                                             <div>{p.commits} {strings.mCommits}</div>
                                                         </td>
                                                         <td className="w-44 px-4 py-3">
-                                                            <DurationBar durations={p.durations} scale={projectScale} variant="group" strings={strings} />
+                                                            <DurationBar durations={p.durations} variant="group" strings={strings} />
                                                         </td>
                                                     </tr>
                                                 ))}
@@ -614,7 +609,7 @@ export default function Statistics({ stats, person, strings, urls }) {
                                                             )}
                                                         </td>
                                                         <td className="w-44 px-4 py-3">
-                                                            <DurationBar durations={t.durations} scale={recentScale} variant="task" strings={strings} />
+                                                            <DurationBar durations={t.durations} variant="task" strings={strings} />
                                                         </td>
                                                     </tr>
                                                 ))}

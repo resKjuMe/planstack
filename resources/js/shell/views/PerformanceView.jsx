@@ -586,12 +586,7 @@ export default function PerformanceView({ project, strings }) {
                                                         {p.reviewsGiven}
                                                     </td>
                                                     <td className="w-44 px-4 py-3">
-                                                        <DurationBar
-                                                            durations={p.durations}
-                                                            scale={data.scales.maxDuration}
-                                                            variant="group"
-                                                            strings={strings}
-                                                        />
+                                                        <DurationBar durations={p.durations} variant="group" strings={strings} />
                                                     </td>
                                                 </tr>
                                                 {open && (

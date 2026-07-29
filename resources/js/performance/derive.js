@@ -378,9 +378,6 @@ export function derivePerformance({ tasks, statusConfig, strings, taskUrlTemplat
     const scales = {
         maxSp: Math.max(1, ...rows.map((r) => r.totalSp)),
         maxCycle: Math.max(...rows.map((r) => r.cycleMedian ?? 0), 0.0001),
-        // Balkenbreite der Verweildauer-Spalte trägt den Median je Task, der
-        // Maßstab entsprechend den größten dieser Mediane.
-        maxDuration: Math.max(0, ...rows.map((r) => r.durations?.medianTaskDays ?? 0)),
     };
 
     // Projektweite Verweildauer je Status — dasselbe Panel wie in der

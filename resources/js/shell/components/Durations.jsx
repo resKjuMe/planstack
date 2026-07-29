@@ -15,27 +15,23 @@ import { formatDuration } from '../../stats/format.js';
 /**
  * Gestapelter Balken „wo lag die Zeit" für eine Tabellenzeile.
  *
- * Was die BREITE trägt, hängt davon ab, was die Zeile ist:
- *  - `variant="group"` (Projekt, Mitarbeiter): der Median über die Gesamtzeiten
- *    der TASKS der Gruppe — die typische Task. Die Summe wüchse einfach mit der
- *    Zahl der Tasks.
- *  - `variant="task"`: die Gesamtzeit dieser einen Task. Ein Median über ihre
- *    Status wäre keine sinnvolle Größe (unvergleichbare Posten), deshalb steht
- *    dort auch keine Median-Zeile im Tooltip.
+ * Der Balken füllt die Spur IMMER vollständig: die Segmente zeigen die
+ * Zusammensetzung (welcher Status wie viel Anteil hatte), nicht die absolute
+ * Größe. Ein teilgefüllter Stapel liest sich als Defekt — und der
+ * Größenvergleich zwischen den Zeilen steckt ohnehin in den Zahlen des Tooltips.
  *
- * `scale` ist der größte Wert derselben Art in der Tabelle, damit die Zeilen
- * untereinander vergleichbar bleiben. Die Segmente behalten ihr Verhältnis
- * zueinander, sodass die Zusammensetzung sichtbar bleibt. Zahlen stehen nur im
- * Tooltip — die Spalte soll auf einen Blick wirken, nicht gelesen werden.
+ * `variant` steuert nur noch die Kopfzeile des Tooltips:
+ *  - `group` (Projekt, Mitarbeiter): Median über die Gesamtzeiten der TASKS der
+ *    Gruppe — die typische Task; die Summe wüchse mit der Zahl der Tasks.
+ *  - `task`: nur die Gesamtzeit. Ein Median über die Status EINER Task wäre keine
+ *    sinnvolle Größe (unvergleichbare Posten).
  */
-export function DurationBar({ durations, scale, variant = 'group', strings }) {
+export function DurationBar({ durations, variant = 'group', strings }) {
     if (!durations || !durations.segments?.length) {
         return <span className="text-gray-300 dark:text-gray-600">{strings.none}</span>;
     }
 
     const isGroup = variant === 'group';
-    const value = isGroup ? durations.medianTaskDays : durations.totalDays;
-    const widthPct = scale > 0 && value > 0 ? Math.max(2, (value / scale) * 100) : 0;
 
     // EIN Tooltip für die ganze Zelle: Kopfzeile, darunter je Status eine Zeile.
     // Die Segmente tragen bewusst KEINEN eigenen title — sonst gewänne beim
@@ -55,16 +51,19 @@ export function DurationBar({ durations, scale, variant = 'group', strings }) {
     // gleich breit, obwohl das auto-Tabellenlayout je Tabelle anders aufteilt.
     return (
         <div className="flex items-center justify-end" title={tip}>
-            <span className="h-2.5 w-40 overflow-hidden rounded-full bg-gray-100 dark:bg-gray-900">
-                <span className="flex h-full" style={{ width: `${widthPct}%` }}>
-                    {durations.segments.map((seg) => (
-                        <span
-                            key={seg.key}
-                            className={'h-full ' + seg.bar}
-                            style={{ width: `${durations.totalDays > 0 ? (seg.days / durations.totalDays) * 100 : 0}%` }}
-                        />
-                    ))}
-                </span>
+            <span className="flex h-2.5 w-40 overflow-hidden rounded-full bg-gray-100 dark:bg-gray-900">
+                {durations.segments.map((seg) => (
+                    <span
+                        key={seg.key}
+                        className={'h-full ' + seg.bar}
+                        style={{
+                            width: `${durations.totalDays > 0 ? (seg.days / durations.totalDays) * 100 : 0}%`,
+                            // Sehr kurze Aufenthalte (Minuten neben Tagen) wären
+                            // sonst unsichtbar und der Status fehlte im Balken.
+                            minWidth: seg.days > 0 ? '2px' : 0,
+                        }}
+                    />
+                ))}
             </span>
         </div>
     );
