@@ -135,6 +135,109 @@ function WeeklyChart({ weekly, strings }) {
     );
 }
 
+// Verweildauer je Status. Führend ist der MEDIAN der kumulierten Zeit je Task —
+// er bestimmt auch die Balkenbreite, weil ein einzelner liegen gebliebener Task
+// den Durchschnitt verzerrt und den Engpass damit falsch anzeigen würde. Der
+// Durchschnitt steht als Zusatzwert daneben. Die Reihenfolge folgt dem
+// Lebenszyklus (der Server sortiert nach Status-Position), damit die Liste als
+// Trichter lesbar bleibt.
+function StatusDurations({ rows, strings }) {
+    const max = Math.max(...rows.map((r) => r.medianPerTaskDays ?? 0), 0.0001);
+
+    return (
+        <div className="mt-4 space-y-3">
+            {rows.map((r) => {
+                const median = formatDuration(r.medianPerTaskDays, strings);
+                const pct = r.medianPerTaskDays > 0 ? Math.max(2, (r.medianPerTaskDays / max) * 100) : 0;
+                const meta = [
+                    interpolate(strings.durationsMeta, { tasks: r.tasks, visits: r.visits }),
+                    // visits > tasks ⇒ es gab Rückläufer; genau der Fall, den die
+                    // Zählung getrennt erfassen muss.
+                    r.visits > r.tasks
+                        ? interpolate(strings.durationsReturnsHint, { count: r.visits - r.tasks })
+                        : null,
+                    r.openVisits > 0 ? interpolate(strings.durationsOpenHint, { count: r.openVisits }) : null,
+                ].filter(Boolean).join(' · ');
+
+                const detail = [
+                    r.avgPerTaskDays !== null
+                        ? interpolate(strings.durationsAvg, { value: formatDuration(r.avgPerTaskDays, strings) })
+                        : null,
+                    r.visits > r.tasks && r.avgPerVisitDays !== null
+                        ? interpolate(strings.durationsPerVisit, { value: formatDuration(r.avgPerVisitDays, strings) })
+                        : null,
+                    interpolate(strings.durationsTotal, { value: formatDuration(r.totalDays, strings) }),
+                ].filter(Boolean).join(' · ');
+
+                return (
+                    <div key={r.key}>
+                        <div className="flex flex-wrap items-baseline justify-between gap-2">
+                            <span className={'rounded-full px-2 py-0.5 text-xs font-medium ' + r.badge}>{r.label}</span>
+                            <span
+                                className="text-sm font-semibold text-gray-800 dark:text-gray-200"
+                                title={interpolate(strings.durationsMedian, { value: median ?? strings.none })}
+                            >
+                                {median || strings.none}
+                            </span>
+                        </div>
+                        <div className="mt-1 h-2 overflow-hidden rounded-full bg-gray-100 dark:bg-gray-900">
+                            <div className={'h-full ' + r.bar} style={{ width: `${pct}%` }} />
+                        </div>
+                        <div className="mt-1 flex flex-wrap justify-between gap-2 text-xs text-gray-400 dark:text-gray-500">
+                            <span>{meta}</span>
+                            <span>{detail}</span>
+                        </div>
+                    </div>
+                );
+            })}
+        </div>
+    );
+}
+
+// Gestapelter Balken „wo lag die Zeit" für eine Tabellenzeile (Projekt oder Task).
+// Jedes Segment ist ein Bearbeitungs-Status, die Breite seine Verweildauer; der
+// Tooltip nennt Status und Wert. `scale` ist die längste Gesamtdauer der Tabelle,
+// damit die Zeilen untereinander vergleichbar sind — eine Zeile mit doppelt so
+// viel Zeit hat auch einen doppelt so langen Balken.
+function DurationBar({ durations, scale, strings }) {
+    if (!durations || !durations.segments.length) {
+        return <span className="text-gray-300 dark:text-gray-600">{strings.none}</span>;
+    }
+
+    const total = formatDuration(durations.totalDays, strings);
+    const widthPct = scale > 0 ? Math.max(2, (durations.totalDays / scale) * 100) : 0;
+
+    return (
+        <div className="flex items-center justify-end gap-2" title={interpolate(strings.durationsTotal, { value: total })}>
+            <span className="h-2.5 w-full max-w-[10rem] overflow-hidden rounded-full bg-gray-100 dark:bg-gray-900">
+                {/* Äußere Breite = Anteil an der längsten Zeile, innen die
+                    Status-Segmente im Verhältnis zueinander. */}
+                <span className="flex h-full" style={{ width: `${widthPct}%` }}>
+                    {durations.segments.map((seg) => (
+                        <span
+                            key={seg.key}
+                            className={'h-full ' + seg.bar}
+                            style={{ width: `${durations.totalDays > 0 ? (seg.days / durations.totalDays) * 100 : 0}%` }}
+                            title={`${seg.label}: ${formatDuration(seg.days, strings)}`}
+                        />
+                    ))}
+                </span>
+            </span>
+            <span className="whitespace-nowrap text-xs tabular-nums text-gray-500 dark:text-gray-400">{total}</span>
+        </div>
+    );
+}
+
+// Zwischenüberschrift innerhalb eines Panels — trennt im Qualitäts-Panel die
+// eigenen Tasks von der eigenen Review-Arbeit, die sonst leicht verwechselt wird.
+function Group({ label }) {
+    return (
+        <div className="mt-3 pb-1 text-[11px] font-semibold uppercase tracking-wide text-gray-400 first:mt-0 dark:text-gray-500">
+            {label}
+        </div>
+    );
+}
+
 export default function Statistics({ stats, person, strings, urls }) {
     const [help, setHelp] = useState(false);
 
@@ -162,7 +265,7 @@ export default function Statistics({ stats, person, strings, urls }) {
         };
     }, []);
 
-    const { kpis, quality, volume, weekly, statusBuckets, projects, recent } = stats;
+    const { kpis, quality, volume, weekly, statusBuckets, statusDurations, projects, recent } = stats;
     const locale = (typeof document !== 'undefined' && document.documentElement.getAttribute('lang')) || 'de';
 
     const accuracyPct = kpis.accuracyTotal ? Math.round((kpis.accuracyHits / kpis.accuracyTotal) * 100) : null;
@@ -172,6 +275,10 @@ export default function Statistics({ stats, person, strings, urls }) {
     const hasAnything = kpis.totalTasks > 0;
 
     const openTotal = statusBuckets.reduce((a, b) => a + b.count, 0);
+
+    // Balken-Maßstab je Tabelle: die längste Gesamtdauer der jeweiligen Zeilen.
+    const projectScale = Math.max(0, ...projects.map((p) => p.durations?.totalDays ?? 0));
+    const recentScale = Math.max(0, ...recent.map((t) => t.durations?.totalDays ?? 0));
 
     return (
         <>
@@ -255,6 +362,17 @@ export default function Statistics({ stats, person, strings, urls }) {
                                 )}
                             </div>
 
+                            {/* Verweildauer je Status (Verlauf aus dem Protokoll) */}
+                            <div className={`${CARD} p-5`}>
+                                <h2 className="font-semibold text-gray-900 dark:text-gray-100">{strings.durationsTitle}</h2>
+                                <p className="text-xs text-gray-400 dark:text-gray-500">{strings.durationsSub}</p>
+                                {statusDurations.length > 0 ? (
+                                    <StatusDurations rows={statusDurations} strings={strings} />
+                                ) : (
+                                    <p className="mt-6 text-sm text-gray-400 dark:text-gray-500">{strings.durationsEmpty}</p>
+                                )}
+                            </div>
+
                             <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
                                 {/* Offene Tasks nach Status */}
                                 <div className={`${CARD} p-5`}>
@@ -300,6 +418,11 @@ export default function Statistics({ stats, person, strings, urls }) {
                                     <h2 className="font-semibold text-gray-900 dark:text-gray-100">{strings.qualityTitle}</h2>
                                     <p className="text-xs text-gray-400 dark:text-gray-500">{strings.qualitySub}</p>
                                     <div className="mt-3">
+                                        {/* Die Trennung ist nötig, weil sonst unklar bleibt,
+                                            WESSEN Review gemeint ist: alles hier bis auf die
+                                            letzte Gruppe betrifft die EIGENEN Tasks (fremdes
+                                            Review über eigene Arbeit). */}
+                                        <Group label={strings.groupOwnTasks} />
                                         {/* Der einzige Verlaufswert des Panels (Audit-Log) —
                                             steht deshalb oben und bleibt nach einer
                                             Freigabe erhalten. */}
@@ -352,6 +475,7 @@ export default function Statistics({ stats, person, strings, urls }) {
                                             value={deviationLabel(kpis.medianDeviationPct) || strings.none}
                                             tone={TILE_TEXT[deviationClass(kpis.medianDeviationPct)]}
                                         />
+                                        <Group label={strings.groupAsReviewer} />
                                         <Metric
                                             label={strings.mReviewsGiven}
                                             value={kpis.reviewsGiven}
@@ -407,6 +531,7 @@ export default function Statistics({ stats, person, strings, urls }) {
                                                     <th className="px-4 py-2 font-medium">{strings.colOpen}</th>
                                                     <th className="px-4 py-2 font-medium">{strings.colCycle}</th>
                                                     <th className="px-4 py-2 text-right font-medium">{strings.colVolume}</th>
+                                                    <th className="px-4 py-2 text-right font-medium">{strings.colDuration}</th>
                                                 </tr>
                                             </thead>
                                             <tbody>
@@ -436,6 +561,9 @@ export default function Statistics({ stats, person, strings, urls }) {
                                                             <div>{p.files} {strings.mFiles}</div>
                                                             <div>{p.commits} {strings.mCommits}</div>
                                                         </td>
+                                                        <td className="px-4 py-3">
+                                                            <DurationBar durations={p.durations} scale={projectScale} strings={strings} />
+                                                        </td>
                                                     </tr>
                                                 ))}
                                             </tbody>
@@ -458,6 +586,7 @@ export default function Statistics({ stats, person, strings, urls }) {
                                                     <th className="px-4 py-2 font-medium">{strings.colCycle}</th>
                                                     <th className="px-4 py-2 font-medium">{strings.colFiles}</th>
                                                     <th className="px-4 py-2 text-right font-medium">{strings.colDeviation}</th>
+                                                    <th className="px-4 py-2 text-right font-medium">{strings.colDuration}</th>
                                                 </tr>
                                             </thead>
                                             <tbody>
@@ -488,6 +617,9 @@ export default function Statistics({ stats, person, strings, urls }) {
                                                                     {deviationLabel(t.deviationPct)}
                                                                 </span>
                                                             )}
+                                                        </td>
+                                                        <td className="px-4 py-3">
+                                                            <DurationBar durations={t.durations} scale={recentScale} strings={strings} />
                                                         </td>
                                                     </tr>
                                                 ))}

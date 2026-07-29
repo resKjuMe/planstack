@@ -35,7 +35,10 @@ class UserStatisticsPresenter
     /** Zuletzt gelieferte Tasks in der Liste. */
     private const RECENT = 8;
 
-    public function __construct(private readonly TaskReworkCounts $rework) {}
+    public function __construct(
+        private readonly TaskReworkCounts $rework,
+        private readonly TaskStatusDurations $durations,
+    ) {}
 
     /**
      * @return array<string, mixed>
@@ -63,14 +66,24 @@ class UserStatisticsPresenter
         $delivered = $own->filter(fn (Task $t) => (bool) $t->orgStatus?->counts_as_done);
         $open = $own->reject(fn (Task $t) => (bool) $t->orgStatus?->counts_as_done);
 
+        // Verweildauern aus dem Änderungsprotokoll — anders als statusBuckets
+        // (Momentaufnahme der offenen Tasks) ein Verlaufswert über ALLE Tasks der
+        // Person, inklusive Rückläufer. EINE Abfrage speist das eigene Panel und
+        // die Balken in den beiden Tabellen.
+        $durations = $this->durations->aggregate(
+            $own,
+            $user->organization?->statuses()->get()->keyBy('id') ?? collect(),
+        );
+
         return [
             'kpis' => $this->kpis($own, $delivered, $open, $reviewed),
             'quality' => $this->quality($own, $this->rework->forTaskIds($own->pluck('id'))),
             'volume' => $this->volume($own),
             'weekly' => $this->weekly($delivered),
             'statusBuckets' => $this->statusBuckets($open),
-            'projects' => $this->perProject($own),
-            'recent' => $this->recent($delivered),
+            'statusDurations' => $durations['statuses'],
+            'projects' => $this->perProject($own, $durations['perProject']),
+            'recent' => $this->recent($delivered, $durations['perTask']),
         ];
     }
 
@@ -322,13 +335,14 @@ class UserStatisticsPresenter
 
     /**
      * @param  Collection<int, Task>  $own
+     * @param  array<int|string, array<string, mixed>>  $durationsByProject  Verweildauer-Segmente je Projekt
      * @return array<int, array<string, mixed>>
      */
-    private function perProject(Collection $own): array
+    private function perProject(Collection $own, array $durationsByProject): array
     {
         return $own
             ->groupBy('project_id')
-            ->map(function (Collection $group) {
+            ->map(function (Collection $group, $projectId) use ($durationsByProject) {
                 $project = $group->first()->project;
                 $delivered = $group->filter(fn (Task $t) => (bool) $t->orgStatus?->counts_as_done);
                 $prs = $group->flatMap(fn (Task $t) => $t->pullRequests);
@@ -346,6 +360,8 @@ class UserStatisticsPresenter
                     'cycleMedianDays' => $this->median($cycles),
                     'files' => (int) $prs->sum('changed_files'),
                     'commits' => (int) $prs->sum('commits'),
+                    // Balken „wo lag die Zeit": Segmente je Bearbeitungs-Status.
+                    'durations' => $durationsByProject[$projectId] ?? null,
                 ];
             })
             ->sortByDesc('deliveredSp')
@@ -355,15 +371,16 @@ class UserStatisticsPresenter
 
     /**
      * @param  Collection<int, Task>  $delivered
+     * @param  array<int|string, array<string, mixed>>  $durationsByTask  Verweildauer-Segmente je Task
      * @return array<int, array<string, mixed>>
      */
-    private function recent(Collection $delivered): array
+    private function recent(Collection $delivered, array $durationsByTask): array
     {
         return $delivered
             ->filter(fn (Task $t) => $this->mergedAt($t) !== null)
             ->sortByDesc(fn (Task $t) => $this->mergedAt($t)?->getTimestamp() ?? 0)
             ->take(self::RECENT)
-            ->map(function (Task $t) {
+            ->map(function (Task $t) use ($durationsByTask) {
                 $estimated = $t->affected_files !== null ? (int) $t->affected_files : null;
                 $actual = $t->pullRequests->isNotEmpty() ? (int) $t->pullRequests->sum('changed_files') : null;
 
@@ -380,6 +397,8 @@ class UserStatisticsPresenter
                     'deviationPct' => $estimated !== null && $estimated > 0 && $actual !== null
                         ? (int) round((($actual - $estimated) / $estimated) * 100)
                         : null,
+                    // Balken „wo lag die Zeit": Segmente je Bearbeitungs-Status.
+                    'durations' => $durationsByTask[$t->id] ?? null,
                 ];
             })
             ->values()
@@ -496,6 +515,7 @@ class UserStatisticsPresenter
             ],
             'weekly' => [],
             'statusBuckets' => [],
+            'statusDurations' => [],
             'projects' => [],
             'recent' => [],
         ];

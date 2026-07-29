@@ -69,6 +69,7 @@ class UserStatisticsController extends Controller
                 ['strong' => __('statistics.help_delivered'), 'text' => __('statistics.help_delivered_text')],
                 ['strong' => __('statistics.help_cycle'), 'text' => __('statistics.help_cycle_text')],
                 ['strong' => __('statistics.help_accuracy'), 'text' => __('statistics.help_accuracy_text')],
+                ['strong' => __('statistics.help_durations'), 'text' => __('statistics.help_durations_text')],
                 ['strong' => __('statistics.help_snapshot'), 'text' => __('statistics.help_snapshot_text')],
                 ['strong' => __('statistics.help_volume'), 'text' => __('statistics.help_volume_text')],
             ],
@@ -92,6 +93,20 @@ class UserStatisticsController extends Controller
             'statusSub' => __('statistics.status_sub'),
             'qualityTitle' => __('statistics.quality_title'),
             'qualitySub' => __('statistics.quality_sub'),
+            'groupOwnTasks' => __('statistics.group_own_tasks'),
+            'groupAsReviewer' => __('statistics.group_as_reviewer'),
+
+            // Verweildauer je Status
+            'durationsTitle' => __('statistics.durations_title'),
+            'durationsSub' => __('statistics.durations_sub'),
+            'durationsMeta' => __('statistics.durations_meta'),
+            'durationsOpenHint' => __('statistics.durations_open_hint'),
+            'durationsReturnsHint' => __('statistics.durations_returns_hint'),
+            'durationsMedian' => __('statistics.durations_median'),
+            'durationsAvg' => __('statistics.durations_avg'),
+            'durationsPerVisit' => __('statistics.durations_per_visit'),
+            'durationsTotal' => __('statistics.durations_total'),
+            'durationsEmpty' => __('statistics.durations_empty'),
             'volumeTitle' => __('statistics.volume_title'),
             'projectsTitle' => __('statistics.projects_title'),
             'recentTitle' => __('statistics.recent_title'),
@@ -135,6 +150,7 @@ class UserStatisticsController extends Controller
             'colMerged' => __('statistics.col_merged'),
             'colFiles' => __('statistics.col_files'),
             'colDeviation' => __('statistics.col_deviation'),
+            'colDuration' => __('statistics.col_duration'),
 
             // Leerzustände
             'emptyTitle' => __('statistics.empty_title'),

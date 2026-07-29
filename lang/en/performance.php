@@ -63,7 +63,7 @@ return [
 
     // Detail card
     'details_delivery' => 'Delivery',
-    'details_quality' => 'Quality',
+    'details_quality' => 'Quality of own tasks',
     'details_volume' => 'Volume',
     'details_reviews' => 'Review contribution',
     'm_delivered_tasks' => 'Delivered tasks',
@@ -81,7 +81,7 @@ return [
     'm_rework' => 'Rework (ever requested)',
     'm_rework_multiple' => ':count× more than once',
     'm_request_changes' => 'currently changes requested',
-    'm_approved' => 'Review approved',
+    'm_approved' => 'approved (by a reviewer)',
     'm_ci_failed' => 'PRs with red CI',
     'm_open_threads' => 'Open review comments',
     'm_criticality' => 'Critical tasks',

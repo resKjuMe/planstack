@@ -63,7 +63,7 @@ return [
 
     // Detailkarte
     'details_delivery' => 'Lieferung',
-    'details_quality' => 'Qualität',
+    'details_quality' => 'Qualität der eigenen Tasks',
     'details_volume' => 'Umfang',
     'details_reviews' => 'Review-Beitrag',
     'm_delivered_tasks' => 'Gelieferte Tasks',
@@ -81,7 +81,7 @@ return [
     'm_rework' => 'Nacharbeit (je erbeten)',
     'm_rework_multiple' => ':count× mehrfach',
     'm_request_changes' => 'aktuell Änderungen erbeten',
-    'm_approved' => 'Review freigegeben',
+    'm_approved' => 'freigegeben (fremdes Review)',
     'm_ci_failed' => 'PRs mit roter CI',
     'm_open_threads' => 'Offene Review-Kommentare',
     'm_criticality' => 'Kritische Tasks',
