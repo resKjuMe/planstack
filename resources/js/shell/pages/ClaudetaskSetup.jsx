@@ -28,10 +28,14 @@ Write-Host ""
 claude $prompt
 '@`;
 
+// -NoProfile + RemoteSigned statt -ExecutionPolicy Bypass: das lokal erzeugte
+// Skript hat keinen Zone.Identifier und laeuft unter RemoteSigned trotzdem,
+// aber die Kommandozeile schlaegt nicht mehr bei der Defender-Heuristik
+// "Suspicious PowerShell command line" an (Browser startet PowerShell + Bypass).
 const WIN_REGISTER = String.raw`$ps1 = "$env:USERPROFILE\planstack\claude-task.ps1"
 $key = 'HKCU:\SOFTWARE\Classes\claudetask'
 
-$cmd = 'powershell.exe -NoExit -ExecutionPolicy Bypass -File "' + $ps1 + '" "%1"'
+$cmd = 'powershell.exe -NoExit -NoProfile -ExecutionPolicy RemoteSigned -File "' + $ps1 + '" "%1"'
 
 New-Item -Path "$key\shell\open\command" -Force | Out-Null
 Set-ItemProperty $key -Name '(default)' -Value 'URL:Claude Task Protocol'

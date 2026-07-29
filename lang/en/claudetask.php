@@ -15,7 +15,8 @@ return [
 1. Check whether the claude command is on the PATH ((Get-Command claude).Source). If it is missing, tell me and stop.
 2. Create %USERPROFILE%\planstack\claude-task.ps1. The script takes the full URI as a parameter, strips the "claudetask:" prefix (optionally with //), decodes the rest with [System.Uri]::UnescapeDataString and runs claude <prompt> with it. Print the prompt first for control. Add the auto-mode variant as a comment line: claude --permission-mode auto $prompt
 3. Register the protocol for the current user only (no admin): key HKCU:\SOFTWARE\Classes\claudetask with default value "URL:Claude Task Protocol" and an empty "URL Protocol" value; below it shell\open\command with
-   powershell.exe -NoExit -ExecutionPolicy Bypass -File "<path to the script>" "%1"
+   powershell.exe -NoExit -NoProfile -ExecutionPolicy RemoteSigned -File "<path to the script>" "%1"
+   Deliberately use RemoteSigned instead of Bypass: the locally created script still runs, but the command line no longer trips the Defender heuristic "Suspicious PowerShell command line".
 4. Test with Start-Process "claudetask:%2Fhelp" whether a PowerShell with Claude opens.
 5. Show me the registered command value and remind me that Chrome asks for permission on the first click (tick “always allow”).
 Ask me first if you would have to overwrite an existing file or registration along the way.',
