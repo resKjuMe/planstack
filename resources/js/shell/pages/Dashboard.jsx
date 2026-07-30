@@ -9,7 +9,8 @@ import { formatDuration, relativeTime } from '../../stats/format.js';
 
 // Startseite (Ziel des Logos): die Ich-Sicht über ALLE sichtbaren Projekte. Kern
 // ist die projektübergreifende Fassung des Board-Filters „Bei mir" — eigene
-// Arbeitsschritte, Reviews (eigene oder freie) und eigene Ausnahmen.
+// Arbeitsschritte, Reviews fremder Arbeit (eigene oder freie), die eigene Arbeit,
+// die auf ein Review wartet, und eigene Ausnahmen.
 //
 // Die Auswertung kommt fertig vom Server (App\Support\DashboardPresenter); der
 // geteilte React-Store hält immer genau EIN Projekt, projektübergreifend gibt es
@@ -18,7 +19,8 @@ import { formatDuration, relativeTime } from '../../stats/format.js';
 
 const CARD = 'rounded-lg bg-white dark:bg-gray-800 ring-1 ring-gray-200 dark:ring-gray-700';
 
-// Akzent je Gruppe der „Bei mir"-Liste: eigene Arbeit, Review, Ausnahme.
+// Akzent je Gruppe der „Bei mir"-Liste: eigene Arbeit, Review, eigene Lieferung
+// im Review, Ausnahme.
 const GROUP = {
     work: {
         dot: 'bg-indigo-500',
@@ -27,6 +29,10 @@ const GROUP = {
     review: {
         dot: 'bg-purple-500',
         count: 'bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300',
+    },
+    awaiting: {
+        dot: 'bg-amber-500',
+        count: 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300',
     },
     blocked: {
         dot: 'bg-red-500',
@@ -135,11 +141,12 @@ function TaskRow({ item, strings, copy, locale }) {
                         {item.bucket === 'review' && !item.isFreeReview && (
                             <span className={`${PILL_BASE} ${PILL_GRAY}`}>{strings.assignedToMe}</span>
                         )}
-                        {/* Ein freies Review der EIGENEN Arbeit ist kein Auftrag an
-                            mich — der Hinweis verhindert, dass man sich selbst
-                            reviewt, ohne dass die Zeile aus der Board-Logik fällt. */}
-                        {item.bucket === 'review' && item.isMyClaim && (
-                            <span className={`${PILL_BASE} ${PILL_AMBER}`}>{strings.reviewOfOwnWork}</span>
+                        {/* Eigene Arbeit im Review: kein Auftrag an mich, sondern
+                            eine Lieferung, die auf einen fremden Reviewer wartet —
+                            Eigenreview weist die API ab. Die Gruppe sagt das schon,
+                            die Pille nennt den fehlenden Reviewer. */}
+                        {item.bucket === 'awaiting' && !item.reviewerName && (
+                            <span className={`${PILL_BASE} ${PILL_AMBER}`}>{strings.noReviewerYet}</span>
                         )}
                     </div>
                     {item.summary && (
@@ -159,9 +166,22 @@ function TaskRow({ item, strings, copy, locale }) {
                             Tagen". Was der Zeitpunkt bedeutet, sagt der Tooltip. */}
                         <span title={strings.sinceHint}>{relativeTime(item.sinceAt, locale) || strings.none}</span>
                         {item.phase && <span className="truncate">{item.phase}</span>}
+                        {/* Ersteller und Reviewer stehen an JEDER Zeile — auch wenn
+                            noch niemand reviewt: dass ein Review offen ist, ist die
+                            Information. Der Reviewer ist der reservierte, nicht der
+                            fertige (das Ergebnis steht ggf. als „Änderungen
+                            gefordert" daneben). */}
+                        {item.creatorName && (
+                            <span className="truncate">{interpolate(strings.createdBy, { name: item.creatorName })}</span>
+                        )}
                         {item.bucket !== 'work' && item.claimerName && !item.isMyClaim && (
                             <span>{interpolate(strings.claimedFrom, { name: item.claimerName })}</span>
                         )}
+                        <span className="truncate">
+                            {item.reviewerName
+                                ? interpolate(strings.reviewerIs, { name: item.reviewerName })
+                                : strings.reviewerOpen}
+                        </span>
                         {item.prUrl && (
                             <a href={item.prUrl} target="_blank" rel="noopener" data-native className="font-mono hover:text-indigo-600 hover:underline dark:hover:text-indigo-400">
                                 #{item.prNumber}
@@ -394,6 +414,7 @@ export default function Dashboard({ person, data, urls, strings, copyStrings }) 
     const groupLabels = {
         work: { label: strings.groupWork, hint: strings.groupWorkHint },
         review: { label: strings.groupReview, hint: strings.groupReviewHint },
+        awaiting: { label: strings.groupAwaiting, hint: strings.groupAwaitingHint },
         blocked: { label: strings.groupBlocked, hint: strings.groupBlockedHint },
     };
 

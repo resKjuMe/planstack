@@ -17,11 +17,12 @@ use Tests\TestCase;
  * des Board-Filters „Bei mir". Festgenagelt wird vor allem die Auswahlregel, denn
  * sie ist die ganze Aussage der Seite:
  *
- *  - `work`    — Tasks in einem Arbeitsschritt, die ICH beansprucht habe;
- *  - `review`  — Reviews, die mir gehören oder noch frei sind;
- *  - `blocked` — eigene Tasks in einer Ausnahme (blockiert / Concern).
+ *  - `work`     — Tasks in einem Arbeitsschritt, die ICH beansprucht habe;
+ *  - `review`   — Reviews FREMDER Arbeit, die mir gehören oder noch frei sind;
+ *  - `awaiting` — eigene Arbeit im Review (Eigenreview ist nicht erlaubt);
+ *  - `blocked`  — eigene Tasks in einer Ausnahme (blockiert / Concern).
  *
- * Fremde Arbeit gehört in keine der drei Gruppen, und Projekte, die ich nicht
+ * Fremde Arbeit gehört in keine der eigenen Gruppen, und Projekte, die ich nicht
  * sehen darf, tauchen nirgends auf.
  */
 class DashboardTest extends TestCase
@@ -136,7 +137,7 @@ class DashboardTest extends TestCase
             ->assertInertia(fn (Assert $page) => $page
                 ->component('Dashboard')
                 ->where('shell.logoHref', route('dashboard'))
-                ->has('data.buckets', 3)
+                ->has('data.buckets', 4)
                 ->has('data.kpis')
                 ->has('strings')
             );
@@ -196,7 +197,8 @@ class DashboardTest extends TestCase
 
     /**
      * Reviews: eigene und freie zählen, das Review eines Kollegen nicht — dieselbe
-     * Regel wie der Board-Chip.
+     * Regel wie der Board-Chip. Alle drei Tasks sind FREMDE Arbeit; eigene wandert
+     * in `awaiting` (siehe den Test darunter).
      */
     public function test_review_bucket_holds_mine_and_free_reviews(): void
     {
@@ -234,6 +236,97 @@ class DashboardTest extends TestCase
         $free = collect($this->names($data, 'review'))->firstWhere('name', 'FREE');
         $this->assertTrue($free['isFreeReview']);
         $this->assertFalse($free['isMyClaim']);
+    }
+
+    /**
+     * Eigenreview ist nicht erlaubt — die API weist es hart ab (POST .../review und
+     * .../review-claim antworten 409). Ein freies Review an EIGENER Arbeit ist
+     * deshalb kein holbares Review, sondern eine Lieferung, die auf einen fremden
+     * Reviewer wartet: Gruppe `awaiting`, nicht `review`, und nicht in der
+     * Review-Kachel. „Eigen" heißt Ersteller ODER Beanspruchender.
+     */
+    public function test_own_work_in_review_lands_in_the_awaiting_bucket(): void
+    {
+        [$organization, $ada, $project] = $this->scenario();
+        $grace = $this->member($organization, 'Grace Hopper');
+
+        // Von mir erstellt, von jemand anderem umgesetzt — trotzdem kein neutrales
+        // Review: es ist meine Aufgabenstellung.
+        Task::factory()->create([
+            'project_id' => $project->id,
+            'name' => 'MINEMADE',
+            'created_by_id' => $ada->id,
+            'claimed_by_id' => $grace->id,
+            'reviewed_by' => null,
+            'status' => 'REVIEWBAR',
+        ]);
+        // Von mir umgesetzt (die Regel der API).
+        Task::factory()->create([
+            'project_id' => $project->id,
+            'name' => 'MINEDONE',
+            'claimed_by_id' => $ada->id,
+            'reviewed_by' => null,
+            'status' => 'REVIEWBAR',
+        ]);
+        // Fremde Arbeit, frei — das bleibt ein Review für mich.
+        Task::factory()->create([
+            'project_id' => $project->id,
+            'name' => 'FOREIGN',
+            'claimed_by_id' => $grace->id,
+            'reviewed_by' => null,
+            'status' => 'REVIEWBAR',
+        ]);
+
+        $data = $this->dashboard($ada);
+
+        $this->assertSame(['MINEDONE', 'MINEMADE'], $this->bucketNames($data, 'awaiting'));
+        $this->assertSame(['FOREIGN'], $this->bucketNames($data, 'review'));
+
+        $this->assertSame(1, $data['kpis']['reviewsFree'], 'nur das fremde Review ist holbar');
+        $this->assertSame(0, $data['kpis']['reviewsMine']);
+        // Sichtbar bleibt die eigene Lieferung trotzdem — sie liegt bei mir, nur
+        // nicht als Review-Auftrag.
+        $this->assertSame(3, $data['kpis']['actionable']);
+    }
+
+    /**
+     * Jede Zeile nennt den Ersteller und den (reservierten) Reviewer — ohne beides
+     * ist nicht zu sehen, an wem ein Task hängt, und in `awaiting` nicht, warum er
+     * dort steht.
+     */
+    public function test_task_rows_carry_creator_claimer_and_reviewer_names(): void
+    {
+        [$organization, $ada, $project] = $this->scenario();
+        $grace = $this->member($organization, 'Grace Hopper');
+        $linus = $this->member($organization, 'Linus Torvalds');
+
+        Task::factory()->create([
+            'project_id' => $project->id,
+            'name' => 'REV',
+            'created_by_id' => $linus->id,
+            'claimed_by_id' => $grace->id,
+            'reviewed_by' => $ada->id,
+            'status' => TaskStatus::IN_REVIEW,
+        ]);
+        Task::factory()->create([
+            'project_id' => $project->id,
+            'name' => 'WORK',
+            'created_by_id' => $linus->id,
+            'claimed_by_id' => $ada->id,
+            'status' => TaskStatus::IN_PROGRESS,
+        ]);
+
+        $data = $this->dashboard($ada);
+
+        $review = $this->names($data, 'review')[0];
+        $this->assertSame('Linus Torvalds', $review['creatorName']);
+        $this->assertSame('Grace Hopper', $review['claimerName']);
+        $this->assertSame('Ada Lovelace', $review['reviewerName']);
+
+        // Auch ohne Reviewer steht der Ersteller an der Zeile.
+        $work = $this->names($data, 'work')[0];
+        $this->assertSame('Linus Torvalds', $work['creatorName']);
+        $this->assertNull($work['reviewerName']);
     }
 
     /**
@@ -331,6 +424,7 @@ class DashboardTest extends TestCase
         [$organization, $ada, $first] = $this->scenario();
         $second = $this->project($organization, $ada);
         $quiet = $this->project($organization, $ada);
+        $grace = $this->member($organization, 'Grace Hopper');
 
         Task::factory()->create([
             'project_id' => $first->id,
@@ -344,9 +438,10 @@ class DashboardTest extends TestCase
             'status' => TaskStatus::IN_PROGRESS,
             'effort_story_points' => 3,
         ]);
+        // Fremde Arbeit, ich bin der Reviewer — ein Review, das mir gehört.
         Task::factory()->create([
             'project_id' => $second->id,
-            'claimed_by_id' => $ada->id,
+            'claimed_by_id' => $grace->id,
             'reviewed_by' => $ada->id,
             'status' => TaskStatus::IN_REVIEW,
             'effort_story_points' => 2,
@@ -524,7 +619,7 @@ class DashboardTest extends TestCase
         $data = $this->dashboard($ada);
 
         $this->assertFalse($data['hasProjects']);
-        $this->assertCount(3, $data['buckets']);
+        $this->assertCount(4, $data['buckets']);
         $this->assertSame(0, $data['kpis']['actionable']);
         $this->assertNull($data['kpis']['oldestDays']);
     }

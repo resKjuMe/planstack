@@ -100,6 +100,8 @@ class DashboardController extends Controller
             'groupWorkHint' => __('dashboard.group_work_hint'),
             'groupReview' => __('dashboard.group_review'),
             'groupReviewHint' => __('dashboard.group_review_hint'),
+            'groupAwaiting' => __('dashboard.group_awaiting'),
+            'groupAwaitingHint' => __('dashboard.group_awaiting_hint'),
             'groupBlocked' => __('dashboard.group_blocked'),
             'groupBlockedHint' => __('dashboard.group_blocked_hint'),
             'groupEmpty' => __('dashboard.group_empty'),
@@ -112,12 +114,15 @@ class DashboardController extends Controller
             // Task-Zeile
             'freeReview' => __('dashboard.free_review'),
             'assignedToMe' => __('dashboard.assigned_to_me'),
-            'reviewOfOwnWork' => __('dashboard.review_of_own_work'),
+            'noReviewerYet' => __('dashboard.no_reviewer_yet'),
             'ciFailed' => __('dashboard.ci_failed'),
             'openThreads' => __('dashboard.open_threads'),
             'changesRequested' => __('dashboard.changes_requested'),
             'sinceHint' => __('dashboard.since_hint'),
+            'createdBy' => __('dashboard.created_by'),
             'claimedFrom' => __('dashboard.claimed_from'),
+            'reviewerIs' => __('dashboard.reviewer_is'),
+            'reviewerOpen' => __('dashboard.reviewer_open'),
 
             // Nebenpanels
             'pickableTitle' => __('dashboard.pickable_title'),

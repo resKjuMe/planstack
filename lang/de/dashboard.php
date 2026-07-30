@@ -19,11 +19,13 @@ return [
 
     // „Bei mir"
     'my_work_title' => 'Bei mir',
-    'my_work_sub' => 'Dieselbe Regel wie der Board-Filter „Bei mir" — nur über alle Projekte.',
+    'my_work_sub' => 'Wie der Board-Filter „Bei mir", über alle Projekte — eigene Arbeit im Review steht separat.',
     'group_work' => 'Meine Arbeitsschritte',
     'group_work_hint' => 'Tasks, die du beansprucht hast und die in einem Arbeitsschritt stehen',
     'group_review' => 'Reviews',
-    'group_review_hint' => 'Reviews, die dir gehören oder noch frei sind',
+    'group_review_hint' => 'Reviews fremder Arbeit, die dir gehören oder noch frei sind',
+    'group_awaiting' => 'Wartet auf Review',
+    'group_awaiting_hint' => 'Deine eigene Arbeit im Review — von dir erstellt oder beansprucht. Eigenreview ist nicht erlaubt, sie wartet auf einen fremden Reviewer.',
     'group_blocked' => 'Blockiert & Concerns',
     'group_blocked_hint' => 'Eigene Tasks in einer Ausnahme — blockiert oder mit gemeldetem Concern',
     'group_empty' => 'Nichts offen.',
@@ -35,12 +37,15 @@ return [
     // Task-Zeile
     'free_review' => 'frei',
     'assigned_to_me' => 'mein Review',
-    'review_of_own_work' => 'eigene Arbeit',
+    'no_reviewer_yet' => 'kein Reviewer',
     'ci_failed' => 'CI rot',
     'open_threads' => ':count offene Threads',
     'changes_requested' => 'Änderungen gefordert',
     'since_hint' => 'Beansprucht bzw. zuletzt geändert',
+    'created_by' => 'erstellt von :name',
     'claimed_from' => 'von :name',
+    'reviewer_is' => 'Review: :name',
+    'reviewer_open' => 'Review: offen',
 
     // Nebenpanels
     'pickable_title' => 'Frei zum Ziehen',

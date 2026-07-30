@@ -19,12 +19,25 @@ use Illuminate\Support\Str;
  * components/Board.jsx → isMyWork), nur über alle sichtbaren Projekte statt über
  * eines:
  *
- *  - `work`    — Tasks in einem Arbeitsschritt (kind `active`), die ICH beansprucht habe;
- *  - `review`  — Tasks im Review (kind `review`), die mir gehören oder noch frei sind;
- *  - `blocked` — darüber hinaus: eigene Tasks in einer Ausnahme (kind `exception`,
- *                also blockiert/Concern). Der Board-Chip lässt die aus, weil dort
- *                die Ausnahme-Spalte daneben steht — auf dem Dashboard wäre die
- *                Arbeit sonst unsichtbar.
+ *  - `work`     — Tasks in einem Arbeitsschritt (kind `active`), die ICH beansprucht habe;
+ *  - `review`   — Tasks im Review (kind `review`), die mir gehören oder noch frei sind,
+ *                 aber NUR fremde Arbeit (siehe unten);
+ *  - `awaiting` — meine eigene Arbeit im Review, die auf einen fremden Reviewer wartet;
+ *  - `blocked`  — darüber hinaus: eigene Tasks in einer Ausnahme (kind `exception`,
+ *                 also blockiert/Concern). Der Board-Chip lässt die aus, weil dort
+ *                 die Ausnahme-Spalte daneben steht — auf dem Dashboard wäre die
+ *                 Arbeit sonst unsichtbar.
+ *
+ * Eigenreview ist nicht erlaubt: die API weist ein Review am eigenen Task hart ab
+ * (POST .../review-claim und .../review antworten 409, review-next filtert eigene
+ * Claims heraus). Ein freies Review der eigenen Arbeit ist deshalb KEIN Auftrag an
+ * mich und gehört nicht in die Gruppe `review` — es steht in `awaiting`, damit die
+ * eigene Lieferung sichtbar bleibt, ohne als holbares Review zu zählen. „Eigene
+ * Arbeit" heißt hier Ersteller ODER Beanspruchender: die API kennt nur den Claim,
+ * aber auch ein Task, den ich geschrieben und jemand anderes umgesetzt hat, ist
+ * kein neutrales Review. Hier weicht die Seite bewusst vom Board-Chip „Bei mir" ab
+ * (resources/js/board/components/Board.jsx → isMyWork): der kennt den Ersteller
+ * nicht, weil die Board-Nutzlast ihn nicht mitliefert.
  *
  * Warum serverseitig und nicht aus dem geteilten React-Store: der hält immer genau
  * EIN Projekt (resources/js/data/projectStore.js). Projektübergreifend gibt es
@@ -133,8 +146,9 @@ class DashboardPresenter
                     ->where('claimed_by_id', $userId)
                     ->whereHas('orgStatus', fn (Builder $s) => $s->whereIn('kind', ['active', 'exception'])));
 
-                // Reviews: mir zugewiesen ODER noch frei (dieselbe Regel wie der
-                // Board-Chip „Bei mir" — ein freies Review kann jeder übernehmen).
+                // Reviews: mir zugewiesen ODER noch frei (ein freies Review kann
+                // jeder übernehmen). Ob daraus ein holbares Review (`review`) oder
+                // die eigene Lieferung (`awaiting`) wird, entscheidet {@see item()}.
                 $q->orWhere(fn (Builder $review) => $review
                     ->whereHas('orgStatus', fn (Builder $s) => $s->where('kind', 'review'))
                     ->where(fn (Builder $who) => $who
@@ -145,6 +159,7 @@ class DashboardPresenter
                 'project:id,alias,name,github_repo',
                 'orgStatus',
                 'phase:id,name',
+                'creator:id,name',
                 'claimer:id,name',
                 'reviewer:id,name',
                 'concern:id,task_id,summary',
@@ -159,18 +174,23 @@ class DashboardPresenter
     }
 
     /**
-     * Eine Zeile der „Bei mir"-Liste. `null`, wenn der Status keiner der drei
+     * Eine Zeile der „Bei mir"-Liste. `null`, wenn der Status keiner der vier
      * Gruppen zuzuordnen ist (z. B. ein Status ohne `kind`) — dann wäre die Zeile
      * auf dem Dashboard nicht erklärbar.
+     *
+     * Ein Review an EIGENER Arbeit (ich habe den Task erstellt oder beansprucht)
+     * wird zu `awaiting`: reviewen darf ich es nicht, aber es ist meine Lieferung,
+     * die auf einen Reviewer wartet.
      *
      * @return array<string, mixed>|null
      */
     private function item(Task $task, int $userId): ?array
     {
         $status = $task->orgStatus;
+        $isOwnWork = $task->created_by_id === $userId || $task->claimed_by_id === $userId;
         $bucket = match ($status?->kind) {
             'active' => 'work',
-            'review' => 'review',
+            'review' => $isOwnWork ? 'awaiting' : 'review',
             'exception' => 'blocked',
             default => null,
         };
@@ -214,6 +234,10 @@ class DashboardPresenter
             'openThreads' => $task->pr_status_synced_at !== null ? (int) $task->pr_unresolved_threads : null,
             'reviewRecommendation' => $task->last_review_recommendation?->value,
             'concern' => $task->concern?->summary,
+            // Ersteller und (potenzieller) Reviewer stehen an JEDER Zeile: an wem
+            // ein Task hängt, ist die Frage, die man vor dem Klick hat — und beim
+            // Review erklärt der Ersteller, warum eine Zeile in `awaiting` steht.
+            'creatorName' => $task->creator?->name,
             'claimerName' => $task->claimer?->name,
             'reviewerName' => $task->reviewer?->name,
             'isFreeReview' => $bucket === 'review' && $task->reviewed_by === null,
@@ -224,7 +248,7 @@ class DashboardPresenter
     }
 
     /**
-     * Die drei Gruppen der Liste, je mit gekappten Einträgen plus wahrer Anzahl —
+     * Die Gruppen der Liste, je mit gekappten Einträgen plus wahrer Anzahl —
      * eine org-weite Review-Warteschlange kann lang sein, die Seite soll trotzdem
      * eine Seite bleiben.
      *
@@ -237,7 +261,7 @@ class DashboardPresenter
      */
     private function buckets(Collection $items): array
     {
-        $order = ['work', 'review', 'blocked'];
+        $order = ['work', 'review', 'awaiting', 'blocked'];
         $grouped = $items->groupBy('bucket');
 
         return collect($order)
@@ -318,6 +342,8 @@ class DashboardPresenter
             ->where('last_reviewed_at', '>=', $weekStart)
             ->count();
 
+        // Nur die Gruppe `review` — die eigene Arbeit im Review (`awaiting`) ist
+        // kein Review, das ich holen oder abschließen könnte.
         $reviews = $items->where('bucket', 'review');
         $oldestTs = $items->min('sinceTs');
 
@@ -496,7 +522,7 @@ class DashboardPresenter
             'hasProjects' => false,
             'buckets' => array_map(
                 fn (string $key) => ['key' => $key, 'count' => 0, 'sp' => 0, 'byProject' => [], 'items' => []],
-                ['work', 'review', 'blocked'],
+                ['work', 'review', 'awaiting', 'blocked'],
             ),
             'projectFilters' => [],
             'kpis' => [

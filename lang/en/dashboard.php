@@ -19,11 +19,13 @@ return [
 
     // "On my plate"
     'my_work_title' => 'On my plate',
-    'my_work_sub' => 'Same rule as the board filter "On my plate" — across all projects.',
+    'my_work_sub' => 'Like the board filter "On my plate", across all projects — your own work in review is listed separately.',
     'group_work' => 'My work steps',
     'group_work_hint' => 'Tasks you claimed that sit in a work step',
     'group_review' => 'Reviews',
-    'group_review_hint' => 'Reviews that are yours or still free',
+    'group_review_hint' => "Reviews of other people's work that are yours or still free",
+    'group_awaiting' => 'Awaiting review',
+    'group_awaiting_hint' => 'Your own work in review — created or claimed by you. Reviewing your own work is not allowed, it waits for someone else.',
     'group_blocked' => 'Blocked & concerns',
     'group_blocked_hint' => 'Your own tasks in an exception — blocked or with a reported concern',
     'group_empty' => 'Nothing open.',
@@ -35,12 +37,15 @@ return [
     // Task row
     'free_review' => 'free',
     'assigned_to_me' => 'my review',
-    'review_of_own_work' => 'your own work',
+    'no_reviewer_yet' => 'no reviewer',
     'ci_failed' => 'CI red',
     'open_threads' => ':count open threads',
     'changes_requested' => 'changes requested',
     'since_hint' => 'Claimed or last changed',
+    'created_by' => 'created by :name',
     'claimed_from' => 'by :name',
+    'reviewer_is' => 'review: :name',
+    'reviewer_open' => 'review: open',
 
     // Side panels
     'pickable_title' => 'Free to pick',
