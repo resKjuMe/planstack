@@ -15,13 +15,39 @@ use App\Models\User;
 class StatusEffects
 {
     /**
-     * Task fields an automation may set. Deliberately excludes status/status_id
-     * (to avoid loops) and identity/audit columns.
+     * Task fields an automation may set — the allow-list behind both effect
+     * dropdowns (status on-enter effects and per-event effects) and their
+     * validation.
+     *
+     * Deliberately excluded:
+     *  - status / status_id — a status change triggering status changes loops;
+     *  - id, project_id, created_by_id, name, created_at, updated_at — identity
+     *    and audit columns;
+     *  - claim_session_label, claim_seen_at — derived from claimed_by_id by
+     *    {@see ClaimSession::stamp()}, so setting them by hand would be undone;
+     *  - custom_fields — a JSON map, not a scalar an effect could carry.
+     *
+     * Note: the pr_* fields are also written by the GitHub status sync, which
+     * wins on its next run.
      */
     public const ALLOWED_FIELDS = [
-        'claimed_by_id', 'claimed_at', 'merged_at', 'reviewed_by', 'pr_number',
-        'criticality', 'phase_id', 'effort_story_points', 'effort_man_days',
-        'affected_files',
+        // Zuordnung / Einordnung
+        'claimed_by_id', 'claimed_at', 'merged_at', 'criticality', 'phase_id',
+        // Beschreibungstexte
+        'summary', 'description', 'description_acceptance_criteria',
+        'description_target_actual', 'description_test_cases',
+        // Aufwand
+        'effort_man_days', 'effort_story_points', 'effort_tokens', 'affected_files',
+        // Review
+        'reviewed_by', 'last_reviewed_at', 'last_review_recommendation',
+        'last_review_summary',
+        // Fix-Lease
+        'fix_leased_by', 'fix_lease_expires_at',
+        // Pull Request
+        'pr_number', 'pr_node_id', 'pr_title', 'pr_ci_status', 'pr_ci_failed',
+        'pr_ci_running', 'pr_ci_success', 'pr_ci_waiting', 'pr_in_merge_queue',
+        'pr_merge_queue_state', 'pr_mergeable', 'pr_unresolved_threads',
+        'pr_review_decision', 'pr_last_commit_at', 'pr_status_synced_at',
     ];
 
     /**
