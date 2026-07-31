@@ -173,7 +173,7 @@ function Row({ row, strings, onToggle }) {
 // Zeitachse als Teilansicht des ProjectWorkspace: alle Tasks als Abhängigkeitsbaum,
 // je Task ein Statusbalken über die letzten 30 Tage. Baum aus dem geteilten Store,
 // Balken aus dem Verlaufs-Endpunkt; beides live über entity-changed.
-export default function TimelineView({ project, strings }) {
+export default function TimelineView({ project, strings, viewSwitch = null }) {
     const { tasks, phases, statusConfig, status, error } = useProjectData(project.alias);
     const { history, status: historyStatus, error: historyError } = useTaskTimeline(project.alias, 30);
 
@@ -231,11 +231,14 @@ export default function TimelineView({ project, strings }) {
                 toggleLabel={strings.showHideExplanation}
                 bullets={strings.helpBullets}
                 meta={
-                    data && (
-                        <span className="text-xs text-gray-400 dark:text-gray-500">
-                            {interpolate(strings.windowDays, { days: data.windowDays })}
-                        </span>
-                    )
+                    <>
+                        {viewSwitch}
+                        {data && (
+                            <span className="text-xs text-gray-400 dark:text-gray-500">
+                                {interpolate(strings.windowDays, { days: data.windowDays })}
+                            </span>
+                        )}
+                    </>
                 }
             />
 

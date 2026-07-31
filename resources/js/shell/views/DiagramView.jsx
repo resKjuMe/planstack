@@ -44,7 +44,7 @@ const GraphCanvas = React.memo(
 // clientseitig aus dem geteilten Store abgeleitet (diagram/derive.js) und live über
 // entity-changed aktualisiert; das Mermaid-Rendering übernimmt der lazy geladene
 // DependencyGraph (so kommt Mermaid nur beim Öffnen dieses Tabs in den Bundle).
-export default function DiagramView({ project, currentUserId, strings }) {
+export default function DiagramView({ project, currentUserId, strings, viewSwitch = null }) {
     const { tasks, phases, statusConfig, status, error } = useProjectData(project.alias);
 
     const diagram = useMemo(() => {
@@ -167,6 +167,7 @@ export default function DiagramView({ project, currentUserId, strings }) {
                 title={strings.title}
                 toggleLabel={strings.showHideExplanation}
                 bullets={strings.helpBullets}
+                meta={viewSwitch}
             />
 
             {/* Steuerungs-Card: Darstellungs- und Status-Filter über dem Diagramm. */}

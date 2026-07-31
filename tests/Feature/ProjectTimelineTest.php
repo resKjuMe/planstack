@@ -185,16 +185,29 @@ class ProjectTimelineTest extends TestCase
             ->assertForbidden();
     }
 
-    /** Die Route rendert den Workspace mit aktivem Zeitachsen-Tab. */
-    public function test_page_renders_with_the_timeline_tab_active(): void
+    /**
+     * Die Route rendert den Workspace mit aktiver Zeitachse — und die Zeitachse ist
+     * KEIN eigener Reiter: sie teilt den Diagramm-Tab (beide zeigen dieselben
+     * Abhängigkeiten) und wird dort umgeschaltet. Ihre URL bleibt trotzdem
+     * deep-linkbar, deshalb steht sie als `hidden` in der Tab-Liste — der Client
+     * baut daraus den Umschalter.
+     */
+    public function test_page_renders_the_timeline_without_giving_it_its_own_tab(): void
     {
         $response = $this->actingAs($this->owner())
             ->get(route('projects.timeline', $this->project))
             ->assertOk();
 
         $this->assertSame('timeline', $response->inertiaProps('activeTab'));
-        $this->assertContains('timeline', array_column($response->inertiaProps('tabs'), 'key'));
         $this->assertNotEmpty($response->inertiaProps('timeline.strings.title'));
+
+        $tabs = collect($response->inertiaProps('tabs'))->keyBy('key');
+
+        $this->assertTrue($tabs->has('timeline'), 'die Zeitachse muss mit URL und Label mitkommen');
+        $this->assertTrue($tabs['timeline']['hidden'], 'sie darf keinen eigenen Reiter bekommen');
+        $this->assertStringEndsWith('/timeline', $tabs['timeline']['href']);
+
+        $this->assertFalse($tabs['diagram']['hidden'], 'der tragende Diagramm-Reiter bleibt sichtbar');
     }
 
     /**

@@ -6,10 +6,15 @@ import React from 'react';
 // href)` erlaubt clientseitiges Umschalten ohne Server-Call: gibt es true zurück,
 // wird der Klick abgefangen (preventDefault); sonst führt der globale Interceptor
 // den normalen reload-freien Inertia-Visit aus.
+// `hidden` markierte Tabs haben eine eigene URL, aber keinen Reiter: sie hängen als
+// Darstellung an einem anderen Tab (Zeitachse am Diagramm) und werden dort
+// umgeschaltet. `activeKey` trägt in dem Fall den Key des tragenden Tabs.
 export default function ProjectTabs({ tabs, activeKey, onNavigate }) {
+    const visible = tabs.filter((tab) => !tab.hidden);
+
     return (
         <nav className="flex gap-1 border-b border-gray-200 dark:border-gray-700">
-            {tabs.map((tab, i) => {
+            {visible.map((tab, i) => {
                 const active = activeKey != null ? tab.key === activeKey : tab.active;
                 return (
                     <a

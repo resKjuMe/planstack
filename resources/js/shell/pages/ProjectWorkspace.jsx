@@ -13,6 +13,7 @@ import CalibrationView from '../views/CalibrationView.jsx';
 import ChangelogView from '../views/ChangelogView.jsx';
 import PerformanceView from '../views/PerformanceView.jsx';
 import TimelineView from '../views/TimelineView.jsx';
+import ViewSwitch from '../components/ViewSwitch.jsx';
 
 // EINE Inertia-Seite für die Projekt-Unterseiten. Board und Summary werden rein
 // clientseitig umgeschaltet — 0 Server-Calls beim Tab-Wechsel: die statischen
@@ -23,6 +24,15 @@ import TimelineView from '../views/TimelineView.jsx';
 // Weitere Unterseiten (Diagramm, PR-Sequence, …) laufen bis zu ihrer Migration
 // weiter über den normalen Inertia-Visit (globaler Klick-Interceptor in app.jsx).
 const CLIENT_TABS = ['board', 'summary', 'diagram', 'pr-sequence', 'timeline', 'calibration', 'changelog', 'performance'];
+
+// Zwei Darstellungen derselben Abhängigkeiten (Graph ↔ Zeitachse). Sie teilen einen
+// Reiter — welche gezeigt wird, entscheidet der Umschalter im Seitenkopf; die URL
+// (und damit der Deep-Link) wechselt mit.
+const DEPENDENCY_VIEWS = ['diagram', 'timeline'];
+
+// Reiter, der für den aktiven Tab hervorgehoben wird: die Zeitachse hat keinen
+// eigenen, sie hängt am Diagramm.
+const tabBarKey = (tab) => (tab === 'timeline' ? 'diagram' : tab);
 
 function tabForPath(pathname, tabs) {
     for (const t of tabs) {
@@ -96,14 +106,24 @@ export default function ProjectWorkspace({ activeTab, currentUserId, project, ca
     // board.strings (enthält diese Labels), unabhängig vom aktiven Tab.
     const headerStrings = board.strings;
 
+    // Umschalter Diagramm ↔ Zeitachse: Beschriftung und URL kommen aus derselben
+    // Tab-Liste wie die Reiterleiste (eine Quelle für Labels und Routen).
+    const dependencySwitch = (
+        <ViewSwitch
+            options={DEPENDENCY_VIEWS.map((key) => tabs.find((t) => t.key === key)).filter(Boolean)}
+            activeKey={tab}
+            onSelect={navigate}
+        />
+    );
+
     // Titel + Inhalt je Tab an einer Stelle. `performance` ist nur für den
     // Organisations-Owner gesetzt (der Server schickt es anderen nicht mit und
     // rendert den Tab nicht) — fehlt es, fällt der Workspace aufs Board zurück.
     const views = {
         summary: { title: summary.strings.title, render: () => <SummaryView project={project} strings={summary.strings} /> },
-        diagram: { title: diagram.strings.title, render: () => <DiagramView project={project} currentUserId={currentUserId} strings={diagram.strings} /> },
+        diagram: { title: diagram.strings.title, render: () => <DiagramView project={project} currentUserId={currentUserId} strings={diagram.strings} viewSwitch={dependencySwitch} /> },
         'pr-sequence': { title: sequence.strings.title, render: () => <PrSequenceView project={project} strings={sequence.strings} /> },
-        timeline: { title: timeline.strings.title, render: () => <TimelineView project={project} strings={timeline.strings} /> },
+        timeline: { title: timeline.strings.title, render: () => <TimelineView project={project} strings={timeline.strings} viewSwitch={dependencySwitch} /> },
         calibration: { title: calibration.strings.title, render: () => <CalibrationView project={project} strings={calibration.strings} /> },
         changelog: { title: changelog.strings.title, render: () => <ChangelogView project={project} strings={changelog.strings} /> },
         ...(performance
@@ -122,7 +142,7 @@ export default function ProjectWorkspace({ activeTab, currentUserId, project, ca
 
             <PageBands
                 header={<ProjectHeaderBar project={project} can={can} strings={headerStrings} />}
-                subnav={<ProjectTabs tabs={tabs} activeKey={tab} onNavigate={navigate} />}
+                subnav={<ProjectTabs tabs={tabs} activeKey={tabBarKey(tab)} onNavigate={navigate} />}
             />
 
             <div className="py-8">

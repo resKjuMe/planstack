@@ -92,8 +92,11 @@ class ProjectWorkspacePresenter
     {
         return collect([
             'diagram' => ['label' => __('common.diagram'), 'route' => 'projects.diagram'],
+            // Die Zeitachse zeigt dieselben Abhängigkeiten wie das Diagramm, nur
+            // über die Zeit — sie teilt dessen Tab und wird dort umgeschaltet
+            // (`hidden`: eigene URL/Deep-Link, aber kein eigener Reiter).
+            'timeline' => ['label' => __('common.timeline'), 'route' => 'projects.timeline', 'hidden' => true],
             'pr-sequence' => ['label' => __('common.pr_sequence'), 'route' => 'projects.pr-sequence'],
-            'timeline' => ['label' => __('common.timeline'), 'route' => 'projects.timeline'],
             'summary' => ['label' => __('common.summary'), 'route' => 'projects.summary'],
             'board' => ['label' => __('common.board'), 'route' => 'projects.show'],
             'changelog' => ['label' => __('common.changelog'), 'route' => 'projects.changelog'],
@@ -105,6 +108,9 @@ class ProjectWorkspacePresenter
             'key' => $key,
             'label' => $t['label'],
             'href' => route($t['route'], $project),
+            // Nicht in der Reiterleiste, aber Teil der Liste: der Client löst
+            // daraus URL und Beschriftung des Umschalters auf.
+            'hidden' => $t['hidden'] ?? false,
         ])->values()->all();
     }
 
