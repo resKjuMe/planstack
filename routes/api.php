@@ -10,6 +10,7 @@ use App\Http\Controllers\Api\ProjectController;
 use App\Http\Controllers\Api\SkillController;
 use App\Http\Controllers\Api\StatusConfigController;
 use App\Http\Controllers\Api\TaskController;
+use App\Http\Controllers\Api\TimelineController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -71,6 +72,9 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Paginierter Changelog-Feed für die React-Changelog-Seite.
     Route::get('projects/{project}/changelog', [ChangelogController::class, 'show']);
+
+    // Status-Aufenthalte der letzten N Tage je Task (Balken der Zeitachsen-Seite).
+    Route::get('projects/{project}/timeline', [TimelineController::class, 'show']);
 
     // Board-Protokoll-Konfiguration (token-sparende Schalter)
     Route::get('projects/{project}/config', [ProjectConfigController::class, 'show']);

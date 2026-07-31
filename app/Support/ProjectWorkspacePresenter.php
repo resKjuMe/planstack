@@ -74,6 +74,9 @@ class ProjectWorkspacePresenter
             'changelog' => [
                 'strings' => $this->changelogStrings(),
             ],
+            'timeline' => [
+                'strings' => $this->timelineStrings(),
+            ],
             // Owner-only: für andere gar nicht mitschicken, damit die Labels nicht
             // in einer Antwort landen, die die Seite nie rendert.
             'performance' => $isOrgOwner ? [
@@ -90,6 +93,7 @@ class ProjectWorkspacePresenter
         return collect([
             'diagram' => ['label' => __('common.diagram'), 'route' => 'projects.diagram'],
             'pr-sequence' => ['label' => __('common.pr_sequence'), 'route' => 'projects.pr-sequence'],
+            'timeline' => ['label' => __('common.timeline'), 'route' => 'projects.timeline'],
             'summary' => ['label' => __('common.summary'), 'route' => 'projects.summary'],
             'board' => ['label' => __('common.board'), 'route' => 'projects.show'],
             'changelog' => ['label' => __('common.changelog'), 'route' => 'projects.changelog'],
@@ -463,6 +467,48 @@ class ProjectWorkspacePresenter
             'unitDays' => __('performance.unit_days'),
             'ofTotal' => __('performance.of_total'),
             'none' => __('performance.none'),
+        ];
+    }
+
+    /**
+     * Labels der Zeitachse. Templates mit :platzhaltern bleiben roh (der Client
+     * interpoliert sie, siehe resources/js/summary/i18n.js).
+     *
+     * @return array<string, mixed>
+     */
+    private function timelineStrings(): array
+    {
+        return [
+            'title' => __('common.timeline'),
+            'showHideExplanation' => __('common.show_hide_explanation'),
+            'loading' => __('status.loading'),
+            'loadError' => __('status.load_error'),
+            'helpBullets' => [
+                ['strong' => __('common.timeline'), 'text' => __('status.timeline_help_intro')],
+                ['strong' => __('status.timeline_help_tree'), 'text' => __('status.timeline_help_tree_text')],
+                ['strong' => __('status.timeline_help_bar'), 'text' => __('status.timeline_help_bar_text')],
+                ['text' => __('status.timeline_help_gaps')],
+            ],
+            'task' => __('status.task'),
+            'today' => __('status.timeline_today'),
+            'all' => __('common.all'),
+            'activeOnly' => __('status.timeline_active_only'),
+            'expandAll' => __('status.timeline_expand_all'),
+            'collapseAll' => __('status.timeline_collapse_all'),
+            'dependsOn' => __('status.timeline_depends_on'),
+            'noTasks' => __('status.timeline_no_tasks'),
+            'noActivity' => __('status.timeline_no_activity'),
+            'stillOpen' => __('status.timeline_still_open'),
+            'legend' => __('status.timeline_legend'),
+            // Roh-Templates: der Client interpoliert die :platzhalter bzw. wertet
+            // trans_choice (Singular|Plural über |) selbst aus.
+            'windowDays' => __('status.timeline_window_days'),
+            'barTooltip' => __('status.timeline_bar_tooltip'),
+            'mixedTooltip' => __('status.timeline_mixed_tooltip'),
+            'daysCount' => __('status.timeline_days_count'),
+            'hoursCount' => __('status.timeline_hours_count'),
+            'minutesCount' => __('status.timeline_minutes_count'),
+            'dependentsCount' => __('status.timeline_dependents_count'),
         ];
     }
 

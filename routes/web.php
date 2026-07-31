@@ -25,6 +25,7 @@ use App\Http\Controllers\ProjectPhaseController;
 use App\Http\Controllers\ProjectPrSequenceController;
 use App\Http\Controllers\ProjectPrSyncController;
 use App\Http\Controllers\ProjectSummaryController;
+use App\Http\Controllers\ProjectTimelineController;
 use App\Http\Controllers\SkillDownloadController;
 use App\Http\Controllers\ProjectTeamController;
 use App\Http\Controllers\TaskChecklistController;
@@ -180,6 +181,10 @@ Route::middleware('auth')->group(function () {
         ->name('projects.summary');
     Route::get('projects/{project}/changelog', ProjectChangelogController::class)
         ->name('projects.changelog');
+    // Zeitachse: alle Tasks als Abhängigkeitsbaum, je Task ein Statusbalken über
+    // die letzten 30 Tage.
+    Route::get('projects/{project}/timeline', ProjectTimelineController::class)
+        ->name('projects.timeline');
     Route::get('projects/{project}/kalibrierung', ProjectCalibrationController::class)
         ->name('projects.calibration');
     // Nur für den Organisations-Owner (personenbezogene Leistungsdaten) — der

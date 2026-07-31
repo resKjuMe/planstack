@@ -12,6 +12,7 @@ import PrSequenceView from '../views/PrSequenceView.jsx';
 import CalibrationView from '../views/CalibrationView.jsx';
 import ChangelogView from '../views/ChangelogView.jsx';
 import PerformanceView from '../views/PerformanceView.jsx';
+import TimelineView from '../views/TimelineView.jsx';
 
 // EINE Inertia-Seite für die Projekt-Unterseiten. Board und Summary werden rein
 // clientseitig umgeschaltet — 0 Server-Calls beim Tab-Wechsel: die statischen
@@ -21,7 +22,7 @@ import PerformanceView from '../views/PerformanceView.jsx';
 //
 // Weitere Unterseiten (Diagramm, PR-Sequence, …) laufen bis zu ihrer Migration
 // weiter über den normalen Inertia-Visit (globaler Klick-Interceptor in app.jsx).
-const CLIENT_TABS = ['board', 'summary', 'diagram', 'pr-sequence', 'calibration', 'changelog', 'performance'];
+const CLIENT_TABS = ['board', 'summary', 'diagram', 'pr-sequence', 'timeline', 'calibration', 'changelog', 'performance'];
 
 function tabForPath(pathname, tabs) {
     for (const t of tabs) {
@@ -34,7 +35,7 @@ function tabForPath(pathname, tabs) {
     return null;
 }
 
-export default function ProjectWorkspace({ activeTab, currentUserId, project, can, tabs, flash, board, summary, diagram, sequence, calibration, changelog, performance }) {
+export default function ProjectWorkspace({ activeTab, currentUserId, project, can, tabs, flash, board, summary, diagram, sequence, timeline, calibration, changelog, performance }) {
     const { errors } = usePage().props;
 
     // Aktiven Tab autoritativ aus der BROWSER-URL ableiten (nicht aus dem
@@ -102,6 +103,7 @@ export default function ProjectWorkspace({ activeTab, currentUserId, project, ca
         summary: { title: summary.strings.title, render: () => <SummaryView project={project} strings={summary.strings} /> },
         diagram: { title: diagram.strings.title, render: () => <DiagramView project={project} currentUserId={currentUserId} strings={diagram.strings} /> },
         'pr-sequence': { title: sequence.strings.title, render: () => <PrSequenceView project={project} strings={sequence.strings} /> },
+        timeline: { title: timeline.strings.title, render: () => <TimelineView project={project} strings={timeline.strings} /> },
         calibration: { title: calibration.strings.title, render: () => <CalibrationView project={project} strings={calibration.strings} /> },
         changelog: { title: changelog.strings.title, render: () => <ChangelogView project={project} strings={changelog.strings} /> },
         ...(performance

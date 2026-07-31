@@ -4,35 +4,26 @@ namespace App\Support;
 
 use App\Models\OrgStatus;
 use App\Models\Task;
-use Carbon\CarbonImmutable;
-use iamfarhad\LaravelAuditLog\Models\EloquentAuditLog;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 
 /**
  * Wie lange liegen Tasks in welchem Status? — rekonstruiert aus dem
  * Änderungsprotokoll, nicht aus dem aktuellen Zustand.
  *
- * Der Task selbst kennt nur seinen JETZIGEN Status. Die Verweildauer steckt in den
- * Audit-Zeilen: jede trägt `new_values.status_id` und ihren Zeitstempel, die
- * Aufenthaltsdauer ist der Abstand zur nächsten Statusänderung (beim laufenden
- * Aufenthalt: bis jetzt).
+ * Die Aufenthalte selbst kommen aus {@see TaskStatusHistory} (gemeinsame Basis mit
+ * der Zeitachse der Projekt-Unterseite); hier interessieren nur ihre DAUERN.
  *
  * Wichtig bei Rückläufern („in Review → Änderungen erbeten → … → in Review"):
  * gezählt wird JEDER Aufenthalt getrennt und dann aufsummiert — der zweite
  * Review-Durchgang addiert sich auf den ersten, statt ihn zu ersetzen. Darum
  * werden `visits` (Aufenthalte) und `tasks` getrennt ausgewiesen: visits > tasks
  * heißt, dass Tasks in diesen Status zurückgefallen sind.
- *
- * Grenzen: nur was protokolliert ist. Zeit vor der ersten Audit-Zeile eines Tasks
- * wird dem Status zugeschlagen, den `old_values.status_id` dieser Zeile nennt
- * (gerechnet ab `tasks.created_at`); fehlt auch das, beginnt die Zeitachse mit der
- * ersten Änderung. Statuswechsel per `saveQuietly()` erzeugen keine Audit-Zeile
- * und sind damit unsichtbar.
  */
 class TaskStatusDurations
 {
+    public function __construct(private readonly TaskStatusHistory $history) {}
+
     /**
      * Status-Familien, die als Bearbeitungszeit gelten. Ausgeschlossen sind damit
      * „waiting" (pickbar — Wartezeit vor der Bearbeitung, nicht Bearbeitung),
@@ -287,81 +278,12 @@ class TaskStatusDurations
      */
     private function segments(Collection $tasks): array
     {
-        $log = EloquentAuditLog::forEntity(Task::class);
-
-        if (! Schema::hasTable($log->getTable())) {
-            return [];
-        }
-
-        // LIKE als portabler Vorfilter (MySQL wie SQLite); entscheidend ist danach
-        // der dekodierte Wert.
-        $rowsByTask = $log->newQuery()
-            ->whereIn('entity_id', $tasks->pluck('id'))
-            ->where('new_values', 'like', '%status_id%')
-            ->orderBy('created_at')
-            ->orderBy('id')
-            ->get(['entity_id', 'old_values', 'new_values', 'created_at'])
-            ->filter(fn ($row) => ($row->new_values['status_id'] ?? null) !== null)
-            ->groupBy(fn ($row) => (int) $row->entity_id);
-
-        $now = CarbonImmutable::now();
-        $segments = [];
-
-        foreach ($tasks as $task) {
-            $rows = $rowsByTask->get($task->id, collect())->values();
-
-            // Ohne protokollierte Änderung: der Task liegt seit seiner Anlage im
-            // aktuellen Status — ein laufender Aufenthalt.
-            if ($rows->isEmpty()) {
-                if ($task->status_id !== null && $task->created_at !== null) {
-                    $segments[] = $this->segment($task->id, (int) $task->status_id, CarbonImmutable::parse($task->created_at), $now, true);
-                }
-
-                continue;
-            }
-
-            // Zeit VOR der ersten protokollierten Änderung: sie gehört dem Status,
-            // aus dem heraus gewechselt wurde (old_values), gerechnet ab Anlage.
-            $first = $rows->first();
-            $firstFrom = $task->created_at !== null ? CarbonImmutable::parse($task->created_at) : null;
-            $initialStatus = $first->old_values['status_id'] ?? null;
-
-            if ($initialStatus !== null && $firstFrom !== null) {
-                $firstAt = CarbonImmutable::parse($first->created_at);
-                if ($firstAt->greaterThan($firstFrom)) {
-                    $segments[] = $this->segment($task->id, (int) $initialStatus, $firstFrom, $firstAt, false);
-                }
-            }
-
-            foreach ($rows as $index => $row) {
-                $from = CarbonImmutable::parse($row->created_at);
-                $next = $rows->get($index + 1);
-                $to = $next !== null ? CarbonImmutable::parse($next->created_at) : $now;
-
-                $segments[] = $this->segment(
-                    $task->id,
-                    (int) $row->new_values['status_id'],
-                    $from,
-                    $to,
-                    $next === null,
-                );
-            }
-        }
-
-        return $segments;
-    }
-
-    /**
-     * @return array<string, mixed>
-     */
-    private function segment(int $taskId, int $statusId, CarbonImmutable $from, CarbonImmutable $to, bool $open): array
-    {
-        return [
-            'task_id' => $taskId,
-            'status_id' => $statusId,
-            'seconds' => max(0.0, (float) ($to->getTimestamp() - $from->getTimestamp())),
-            'open' => $open,
-        ];
+        return array_map(fn (array $stay) => [
+            'task_id' => $stay['task_id'],
+            'status_id' => $stay['status_id'],
+            'seconds' => (float) ($stay['to']->getTimestamp() - $stay['from']->getTimestamp()),
+            'open' => $stay['open'],
+        ], $this->history->stays($tasks));
     }
 
     /**

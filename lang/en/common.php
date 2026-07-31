@@ -50,5 +50,6 @@ return [
     'tasks' => 'Tasks',
     'teams' => 'Teams',
     'text' => ').',
+    'timeline' => 'Timeline',
     'update_available_for_the_ci_status' => 'Update available for the CI status indicator',
 ];
