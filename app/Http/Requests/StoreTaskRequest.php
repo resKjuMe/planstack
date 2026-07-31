@@ -2,7 +2,6 @@
 
 namespace App\Http\Requests;
 
-use App\Enums\TaskStatus;
 use App\Models\Project;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -37,7 +36,13 @@ class StoreTaskRequest extends FormRequest
             'affected_files' => ['nullable', 'integer', 'min:0'],
             'pr_number' => ['nullable', 'integer', 'min:1'],
             'reviewed_by' => ['nullable', 'integer', Rule::exists('users', 'id')],
-            'status' => ['nullable', Rule::enum(TaskStatus::class)],
+            // Status = KEY eines Status DIESER Organisation (nicht das Alt-Enum
+            // TaskStatus): nur so sind REVIEWBAR/APPROVED und eigene Status
+            // setzbar. `status_id` ist die Autorität, das Modell löst den Key auf.
+            'status' => [
+                'nullable', 'string',
+                Rule::exists('task_statuses', 'key')->where('organization_id', $project->organization_id),
+            ],
             'prerequisites' => ['nullable', 'array'],
             'prerequisites.*' => [Rule::exists('tasks', 'id')->where('project_id', $project->id)],
         ];

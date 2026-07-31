@@ -29,8 +29,10 @@ export default function TaskCreate({ project, showReview, storeUrl, strings }) {
 
 function CreateForm({ project, showReview, storeUrl, strings }) {
     const { formData } = usePage().props;
+    // Vorbelegter Status kommt vom Server (pickbarer Status der Organisation) —
+    // „UNKNOWN" gibt es in der Auswahl nicht mehr, die Status sind org-konfiguriert.
     const form = useForm({
-        name: '', status: 'UNKNOWN', summary: '', criticality: '',
+        name: '', status: formData.defaultStatus ?? '', summary: '', criticality: '',
         description: '', description_acceptance_criteria: '', description_target_actual: '', description_test_cases: '',
         phase_id: '', effort_man_days: '', effort_story_points: '', effort_tokens: '',
         affected_files: '', pr_number: '', reviewed_by: '',

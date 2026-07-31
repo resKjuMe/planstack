@@ -6,6 +6,7 @@ use App\Enums\StatusRole;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Str;
 
 /**
  * A single, per-organization configurable task status (table `task_statuses`).
@@ -62,5 +63,16 @@ class OrgStatus extends Model
     public function isException(): bool
     {
         return $this->kind === 'exception';
+    }
+
+    /**
+     * Die Bezeichnung in der aktiven Sprache — `label_en`, wenn gesetzt und die
+     * Locale englisch ist, sonst das deutsche `label`.
+     */
+    public function localizedLabel(): string
+    {
+        return Str::startsWith(app()->getLocale(), 'en') && $this->label_en
+            ? $this->label_en
+            : (string) $this->label;
     }
 }

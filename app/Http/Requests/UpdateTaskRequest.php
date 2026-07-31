@@ -3,7 +3,6 @@
 namespace App\Http\Requests;
 
 use App\Enums\ReviewRecommendation;
-use App\Enums\TaskStatus;
 use App\Models\Task;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -42,7 +41,14 @@ class UpdateTaskRequest extends FormRequest
             'last_reviewed_at' => ['nullable', 'date'],
             'last_review_recommendation' => ['nullable', Rule::enum(ReviewRecommendation::class)],
             'last_review_summary' => ['nullable', 'string'],
-            'status' => ['required', Rule::enum(TaskStatus::class)],
+            // Status = KEY eines Status DIESER Organisation (nicht das Alt-Enum
+            // TaskStatus): nur so sind REVIEWBAR/APPROVED und eigene Status
+            // setzbar. `status_id` ist die Autorität, das Modell löst den Key auf.
+            'status' => [
+                'required', 'string',
+                Rule::exists('task_statuses', 'key')
+                    ->where('organization_id', $task->project->organization_id),
+            ],
             'prerequisites' => ['nullable', 'array'],
             'prerequisites.*' => [
                 'different:'.$task->id,

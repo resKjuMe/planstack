@@ -63,10 +63,15 @@ class TaskController extends Controller
         $prerequisites = $data['prerequisites'] ?? [];
         unset($data['prerequisites']);
 
+        // Ohne mitgeschickten Status setzt das Modell selbst den pickbaren Status
+        // der Organisation (Rolle PICKABLE) — kein Alt-Enum-Umweg über UNKNOWN.
+        if (($data['status'] ?? '') === '') {
+            unset($data['status']);
+        }
+
         $task = $project->tasks()->create([
             ...$data,
             'created_by_id' => $request->user()->id,
-            'status' => $data['status'] ?? TaskStatus::UNKNOWN->value,
         ]);
 
         $task->prerequisites()->sync($prerequisites);
@@ -115,7 +120,9 @@ class TaskController extends Controller
         return Inertia::render('TaskEdit', [
             'project' => ['alias' => $project->alias],
             'task' => ['name' => $task->name],
-            'showReview' => $task->status === TaskStatus::IN_REVIEW,
+            // Review-Felder für JEDEN Review-Status (auch REVIEWBAR oder einen
+            // eigenen), nicht nur für das kanonische IN_REVIEW.
+            'showReview' => $task->orgStatus?->kind === 'review',
             'updateUrl' => route('projects.tasks.update', [$project, $task]),
             'destroyUrl' => route('projects.tasks.destroy', [$project, $task]),
             'showUrl' => route('projects.tasks.show', [$project, $task]),
@@ -128,27 +135,7 @@ class TaskController extends Controller
                     ->get(['id', 'name', 'summary'])
                     ->map(fn ($c) => ['id' => $c->id, 'name' => $c->name, 'summary' => $c->summary])->values();
                 $shared['canDelete'] = auth()->user()->can('delete', $task);
-                $shared['values'] = [
-                    'name' => $task->name,
-                    'status' => $task->status?->value ?? 'UNKNOWN',
-                    'summary' => $task->summary ?? '',
-                    'criticality' => $task->criticality?->value ?? '',
-                    'description' => $task->description ?? '',
-                    'description_acceptance_criteria' => $task->description_acceptance_criteria ?? '',
-                    'description_target_actual' => $task->description_target_actual ?? '',
-                    'description_test_cases' => $task->description_test_cases ?? '',
-                    'phase_id' => $task->phase_id ?? '',
-                    'effort_man_days' => $task->effort_man_days ?? '',
-                    'effort_story_points' => $task->effort_story_points ?? '',
-                    'effort_tokens' => $task->effort_tokens ?? '',
-                    'affected_files' => $task->affected_files ?? '',
-                    'pr_number' => $task->pr_number ?? '',
-                    'reviewed_by' => $task->reviewed_by ?? '',
-                    'last_review_recommendation' => $task->last_review_recommendation?->value ?? '',
-                    'last_reviewed_at' => $task->last_reviewed_at?->format('Y-m-d\TH:i') ?? '',
-                    'last_review_summary' => $task->last_review_summary ?? '',
-                    'prerequisites' => $task->prerequisites()->pluck('tasks.id')->all(),
-                ];
+                $shared['values'] = $formPresenter->values($task);
 
                 return $shared;
             }),
@@ -161,8 +148,14 @@ class TaskController extends Controller
         $prerequisites = $data['prerequisites'] ?? [];
         unset($data['prerequisites']);
 
-        // Stamp merged_at the first time a task reaches MERGED.
-        if (($data['status'] ?? null) === TaskStatus::MERGED->value && $task->merged_at === null) {
+        // Stamp merged_at the first time a task reaches MERGED. Das Ziel ist ein
+        // Org-Status-KEY (der Merge-Status muss nicht „MERGED" heißen) — deshalb
+        // über die ROLLE prüfen, nicht über den Namen.
+        $target = isset($data['status'])
+            ? $project->organization->statusForKey($data['status'])
+            : null;
+
+        if ($target?->role === StatusRole::MERGED && $task->merged_at === null) {
             $data['merged_at'] = now();
         }
 
