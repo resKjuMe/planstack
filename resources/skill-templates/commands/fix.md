@@ -16,11 +16,11 @@ Bringt einen offenen PR wieder in mergefähigen Zustand — alles über `gh`/`gi
 
 **Fortschritts-Events (best-effort) — mit Zähler:** zu Beginn `ev <id> POLISHING`, nach grüner CI + beantworteten Kommentaren `ev <id> POLISHED` (`<id>` = numerische Task-id).
 
-Solange die Politur läuft, wird `POLISHING` bei **jeder gezählten Einheit** erneut abgesetzt — mit demselben Bruch und derselben Prozentzahl, die auch in die Statuszeile gehen (die Zahlen liegen dort ohnehin vor, siehe „Sticky-Statuszeile"):
+Solange die Politur läuft, geht `POLISHING` bei **jedem** Schreiben der Statuszeile erneut raus — am besten über den Helfer `sp`, der beides in einem Zug erledigt (siehe „Sticky-Statuszeile"), sonst wird die Meldung erfahrungsgemäß vergessen:
 
 ```bash
-ev <id> POLISHING "3/7 Kommentare: TaskController.php" 43
-ev <id> POLISHING "2/5 Checks: phpstan" 40
+sp <TASK> POLISHING "⚙ Fix (Fix 43 %) <PROJECT> · <TASK> — 3/7 Kommentare" "3/7 Kommentare: TaskController.php" 43
+sp <TASK> POLISHING "⚙ Fix (Fix 40 %) <PROJECT> · <TASK> — 2/5 Checks" "2/5 Checks: phpstan" 40
 ```
 
 Das ist der **einzige** Weg, auf dem der Fortschritt aufs Board kommt: `fix` claimt nicht, also gibt es keinen Claim-Fortschritt, an dem man ihn ablesen könnte. Ohne die Zusatzangaben bleiben `progress_detail`/`progress_percent` am Task leer und die Karte zeigt nur, **dass** eine Session arbeitet, nicht **wie weit**. Ohne echten Nenner die Prozentzahl weglassen (nie schätzen) — der Detailtext allein ist trotzdem wertvoll.

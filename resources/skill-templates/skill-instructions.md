@@ -34,6 +34,19 @@ Beispiele:
 
 **Grundregel: BEVOR etwas Neues passiert.** Die Zeile wird aktualisiert, **bevor** die nächste Handlung beginnt — vor jedem Tool-Aufruf, vor jedem Lesen und Schreiben einer Datei, vor jedem HTTP-Aufruf, vor dem Start eines Subagenten, vor jedem Phasenwechsel. Reihenfolge ohne Ausnahme: **Zeile schreiben → dann handeln.** Nicht danach, nicht „wenn gerade Zeit ist", nicht gebündelt am Ende. Eine Zeile, die erst nach der Handlung nachgezogen wird, zeigt dauerhaft die Vergangenheit und macht den ganzen Zweck zunichte.
 
+**Die Zeile geht IMMER zusammen mit einer Server-Meldung raus.** Sie ist nur im Fenster des laufenden Workers sichtbar; das Board erfährt vom Fortschritt ausschließlich über das Fortschritts-Event. Beides getrennt zu behandeln führt in der Praxis dazu, dass die Zeile wandert und der Server nichts mitbekommt — die Karte steht dann minutenlang auf einem alten Stand. Deshalb: **jedes** Schreiben der Statuszeile setzt im selben Zug ein Event ab, mit demselben Schritt-Text als `detail` und derselben Prozentzahl als `progress` (ohne echten Nenner: `progress` weglassen, `detail` trotzdem senden).
+
+Damit es nicht vom Erinnern abhängt, beides in **einen** Helfer legen und nur noch diesen benutzen — nie wieder direkt in die Zustandsdatei schreiben (`ev` stammt aus dem Betriebshandbuch, `$ST` ist die Zustandsdatei dieser Session):
+
+```bash
+# sp <TASK> <EVENT> "<ganze Statuszeile>" "<kurzer Schritt>" [progress]
+sp(){ printf '%s\n' "$3" > "$ST"; ev "$1" "$2" "$4" "${5:-}"; }
+
+sp C27 PROCESSING "⚙ Work (Bearbeite 44 %) DCE · C27 — 4/9 Dateien" "4/9 Dateien: TaskController.php" 44
+```
+
+Welches `<EVENT>` zur laufenden Phase gehört, steht im Betriebshandbuch („Zuordnung Zyklus → Event"); die statustreibenden Events dürfen dabei mehrfach abgesetzt werden — ein wiederholtes `PROCESSING` wechselt den Status nicht erneut, transportiert aber den neuen Stand. Beide Teile sind **best-effort**: schlägt das Event fehl, wird die Zeile trotzdem geschrieben und umgekehrt; blockieren darf keiner von beiden.
+
 Daraus folgt: der Task-Name steht drin, sobald er aus dem Board bekannt ist (auch schon vor dem Claim), die neue Phase beim Wechsel, die PR-Nummer als Link, sobald `pr_url` vorliegt. Lieber einmal zu oft schreiben als einmal zu spät — die Datei ist eine Zeile, das Schreiben kostet nichts. Ist ein Feld noch unbekannt, mit einem Platzhalter beginnen (`⚙ Work (Wähle) DCE · — Board lesen`) und verfeinern, statt mit dem Schreiben zu warten.
 
 `<Phase>` ist die **laufende Phase** in Titelschreibweise — also das, was in diesem Moment tatsächlich passiert, nicht die grobe Arbeitseinheit. Sie ist damit feiner als das `action`-Feld des Ergebnisberichts: eine Arbeitseinheit mit `action: "pick"` durchläuft mehrere Phasen. Verbindliche Phasen, mit der Einheit, in der sich ihr Fortschritt zählen lässt:
