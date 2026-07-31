@@ -104,16 +104,25 @@ export default function Board({ meta }) {
      * „Bei mir": was gerade wirklich an mir hängt.
      *  - eigene Tasks in einem ARBEITSSCHRITT (Familie active: beansprucht,
      *    in Analyse, in Arbeit)
-     *  - Tasks im REVIEW (Familie review: Review-Pool und in Review), die mich als
-     *    Reviewer haben ODER noch keinen Reviewer haben — letztere sind die, die
+     *  - FREMDE Tasks im REVIEW (Familie review: Review-Pool und in Review), die mich
+     *    als Reviewer haben ODER noch keinen Reviewer haben — letztere sind die, die
      *    ich mir holen könnte.
      * Alles andere (pickbar, fertig, blockiert, problematisch) bleibt außen vor.
+     *
+     * Die eigene Lieferung im Review gehört ausdrücklich NICHT hierher: Eigenreview
+     * ist nicht erlaubt (die API antwortet 409), an mir hängt dort also nichts. Sie
+     * steht projektübergreifend auf dem Dashboard unter „Wartet auf Review" — im
+     * Board sieht man sie ohnehin in ihrer Spalte.
      */
     const isMyWork = useCallback(
         (task) => {
             const kind = kindOf(task);
             if (kind === 'active') return task.claimerId === currentUserId;
-            if (kind === 'review') return task.reviewerId === currentUserId || task.reviewerId == null;
+            if (kind === 'review') {
+                if (task.claimerId === currentUserId) return false;
+
+                return task.reviewerId === currentUserId || task.reviewerId == null;
+            }
 
             return false;
         },

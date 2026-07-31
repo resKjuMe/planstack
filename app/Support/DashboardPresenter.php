@@ -22,7 +22,8 @@ use Illuminate\Support\Str;
  *  - `work`     — Tasks in einem Arbeitsschritt (kind `active`), die ICH beansprucht habe;
  *  - `review`   — Tasks im Review (kind `review`), die mir gehören oder noch frei sind,
  *                 aber NUR fremde Arbeit (siehe unten);
- *  - `awaiting` — meine eigene Arbeit im Review, die auf einen fremden Reviewer wartet;
+ *  - `awaiting` — meine eigene Arbeit im Review — ob sie noch auf einen Reviewer
+ *                 wartet oder schon bei einem liegt, steht an der Zeile;
  *  - `blocked`  — darüber hinaus: eigene Tasks in einer Ausnahme (kind `exception`,
  *                 also blockiert/Concern). Der Board-Chip lässt die aus, weil dort
  *                 die Ausnahme-Spalte daneben steht — auf dem Dashboard wäre die
@@ -35,9 +36,17 @@ use Illuminate\Support\Str;
  * eigene Lieferung sichtbar bleibt, ohne als holbares Review zu zählen. „Eigene
  * Arbeit" heißt hier Ersteller ODER Beanspruchender: die API kennt nur den Claim,
  * aber auch ein Task, den ich geschrieben und jemand anderes umgesetzt hat, ist
- * kein neutrales Review. Hier weicht die Seite bewusst vom Board-Chip „Bei mir" ab
- * (resources/js/board/components/Board.jsx → isMyWork): der kennt den Ersteller
- * nicht, weil die Board-Nutzlast ihn nicht mitliefert.
+ * kein neutrales Review.
+ *
+ * `awaiting` zählt dabei UNABHÄNGIG davon, wer reviewt: auch die eigene Lieferung,
+ * die schon bei einem fremden Reviewer liegt, bleibt hier stehen — sie ist nicht
+ * fertig, und ihr Stand ist genau das, was die Startseite zeigen soll.
+ *
+ * Der Board-Chip „Bei mir" (resources/js/board/components/Board.jsx → isMyWork)
+ * lässt die eigene Lieferung im Review dagegen ganz weg: dort steht sie sichtbar in
+ * ihrer Spalte, und „Bei mir" soll nur zeigen, was an MIR hängt. Zwei Sichten,
+ * dieselbe Regel „Eigenreview ist kein Auftrag" — auf dem Dashboard mit eigener
+ * Gruppe, weil die Lieferung projektübergreifend sonst unsichtbar wäre.
  *
  * Warum serverseitig und nicht aus dem geteilten React-Store: der hält immer genau
  * EIN Projekt (resources/js/data/projectStore.js). Projektübergreifend gibt es
@@ -154,6 +163,19 @@ class DashboardPresenter
                     ->where(fn (Builder $who) => $who
                         ->where('reviewed_by', $userId)
                         ->orWhereNull('reviewed_by')));
+
+                // Die EIGENE Lieferung im Review — unabhängig davon, wer sie reviewt.
+                // Ohne diesen Zweig fiel sie aus der Liste, sobald ein fremder
+                // Reviewer eingetragen war: dann greift weder der Arbeitsschritt-Zweig
+                // (der Status ist `review`) noch der Review-Zweig (reviewed_by ist
+                // weder ich noch leer). Genau das ist aber der Normalfall von „wartet
+                // auf Review", und meine Lieferung darf nicht unsichtbar werden, nur
+                // weil sich jemand ihrer angenommen hat.
+                $q->orWhere(fn (Builder $mine) => $mine
+                    ->whereHas('orgStatus', fn (Builder $s) => $s->where('kind', 'review'))
+                    ->where(fn (Builder $who) => $who
+                        ->where('claimed_by_id', $userId)
+                        ->orWhere('created_by_id', $userId)));
             })
             ->with([
                 'project:id,alias,name,github_repo',

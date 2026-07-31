@@ -196,14 +196,15 @@ class DashboardTest extends TestCase
     }
 
     /**
-     * Reviews: eigene und freie zählen, das Review eines Kollegen nicht — dieselbe
-     * Regel wie der Board-Chip. Alle drei Tasks sind FREMDE Arbeit; eigene wandert
-     * in `awaiting` (siehe den Test darunter).
+     * Reviews: eigene und freie zählen, das Review eines Kollegen an FREMDER Arbeit
+     * nicht — dieselbe Regel wie der Board-Chip. Alle drei Tasks sind fremde Arbeit;
+     * eigene wandert in `awaiting` (siehe die Tests darunter).
      */
     public function test_review_bucket_holds_mine_and_free_reviews(): void
     {
         [$organization, $ada, $project] = $this->scenario();
         $grace = $this->member($organization, 'Grace Hopper');
+        $linus = $this->member($organization, 'Linus Torvalds');
 
         Task::factory()->create([
             'project_id' => $project->id,
@@ -219,10 +220,12 @@ class DashboardTest extends TestCase
             'reviewed_by' => $ada->id,
             'status' => TaskStatus::IN_REVIEW,
         ]);
+        // Fremde Arbeit, die ein Kollege reviewt: weder holbar noch meine Lieferung.
         Task::factory()->create([
             'project_id' => $project->id,
             'name' => 'THEIRREV',
-            'claimed_by_id' => $ada->id,
+            'created_by_id' => $linus->id,
+            'claimed_by_id' => $linus->id,
             'reviewed_by' => $grace->id,
             'status' => TaskStatus::IN_REVIEW,
         ]);
@@ -230,6 +233,7 @@ class DashboardTest extends TestCase
         $data = $this->dashboard($ada);
 
         $this->assertSame(['FREE', 'MINEREV'], $this->bucketNames($data, 'review'));
+        $this->assertSame([], $this->bucketNames($data, 'awaiting'), 'nichts davon ist meine Lieferung');
         $this->assertSame(1, $data['kpis']['reviewsFree']);
         $this->assertSame(1, $data['kpis']['reviewsMine']);
 
@@ -287,6 +291,51 @@ class DashboardTest extends TestCase
         // Sichtbar bleibt die eigene Lieferung trotzdem — sie liegt bei mir, nur
         // nicht als Review-Auftrag.
         $this->assertSame(3, $data['kpis']['actionable']);
+    }
+
+    /**
+     * Der Regressionsfall: die eigene Lieferung, die schon bei einem FREMDEN Reviewer
+     * liegt. Sie fiel aus der Liste, weil der Review-Zweig der Abfrage nur „mir
+     * zugewiesen oder frei" kannte — dabei ist genau das der Normalfall von „wartet
+     * auf Review". Sie gehört in `awaiting` (nicht `review`: reviewen darf ich sie
+     * nicht) und zählt in keiner Review-Kachel.
+     */
+    public function test_own_work_already_taken_by_a_foreign_reviewer_stays_in_awaiting(): void
+    {
+        [$organization, $ada, $project] = $this->scenario();
+        $grace = $this->member($organization, 'Grace Hopper');
+
+        // Von mir umgesetzt, Grace reviewt bereits.
+        Task::factory()->create([
+            'project_id' => $project->id,
+            'name' => 'MINEINREV',
+            'claimed_by_id' => $ada->id,
+            'reviewed_by' => $grace->id,
+            'status' => TaskStatus::IN_REVIEW,
+        ]);
+        // Von mir erstellt, von Grace umgesetzt, von Linus reviewt — auch das ist
+        // meine Aufgabenstellung und bleibt sichtbar.
+        $linus = $this->member($organization, 'Linus Torvalds');
+        Task::factory()->create([
+            'project_id' => $project->id,
+            'name' => 'MINEMADE',
+            'created_by_id' => $ada->id,
+            'claimed_by_id' => $grace->id,
+            'reviewed_by' => $linus->id,
+            'status' => 'REVIEWBAR',
+        ]);
+
+        $data = $this->dashboard($ada);
+
+        $this->assertSame(['MINEINREV', 'MINEMADE'], $this->bucketNames($data, 'awaiting'));
+        $this->assertSame([], $this->bucketNames($data, 'review'));
+        $this->assertSame(0, $data['kpis']['reviewsFree']);
+        $this->assertSame(0, $data['kpis']['reviewsMine'], 'ein fremdes Review an eigener Arbeit ist keins von mir');
+
+        // Der Reviewer steht an der Zeile — sonst wäre nicht zu sehen, bei wem die
+        // Lieferung liegt.
+        $row = collect($this->names($data, 'awaiting'))->firstWhere('name', 'MINEINREV');
+        $this->assertSame('Grace Hopper', $row['reviewerName']);
     }
 
     /**

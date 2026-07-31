@@ -22,7 +22,7 @@ return [
     'filters' => 'Filters',
     'only_mine' => 'Only mine',
     'my_work' => 'On my plate',
-    'my_work_hint' => 'Your own tasks in a working step, plus reviews that are yours or still unassigned',
+    'my_work_hint' => 'Your own tasks in a working step, plus reviews of other people\'s work that are yours or still unassigned. Your own work in review stays out — you may not review it.',
     'highlight_blocked' => 'Highlight blocked',
     'assignee' => 'Assignee',
     'assignee_all' => 'All',

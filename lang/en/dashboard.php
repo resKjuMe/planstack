@@ -25,7 +25,7 @@ return [
     'group_review' => 'Reviews',
     'group_review_hint' => "Reviews of other people's work that are yours or still free",
     'group_awaiting' => 'Awaiting review',
-    'group_awaiting_hint' => 'Your own work in review — created or claimed by you. Reviewing your own work is not allowed, it waits for someone else.',
+    'group_awaiting_hint' => 'Your own work in review — created or claimed by you. Reviewing your own work is not allowed: it sits with someone else or is still waiting for a reviewer. Who has it is shown on the row.',
     'group_blocked' => 'Blocked & concerns',
     'group_blocked_hint' => 'Your own tasks in an exception — blocked or with a reported concern',
     'group_empty' => 'Nothing open.',

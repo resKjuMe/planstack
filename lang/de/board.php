@@ -22,7 +22,7 @@ return [
     'filters' => 'Filter',
     'only_mine' => 'Nur meine',
     'my_work' => 'Bei mir',
-    'my_work_hint' => 'Eigene Tasks in einem Arbeitsschritt plus Reviews, die dir gehören oder noch frei sind',
+    'my_work_hint' => 'Eigene Tasks in einem Arbeitsschritt plus fremde Reviews, die dir gehören oder noch frei sind. Eigene Arbeit im Review bleibt weg — reviewen darfst du sie nicht.',
     'highlight_blocked' => 'Blockiert hervorheben',
     'assignee' => 'Zuständig',
     'assignee_all' => 'Alle',

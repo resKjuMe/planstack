@@ -25,7 +25,7 @@ return [
     'group_review' => 'Reviews',
     'group_review_hint' => 'Reviews fremder Arbeit, die dir gehören oder noch frei sind',
     'group_awaiting' => 'Wartet auf Review',
-    'group_awaiting_hint' => 'Deine eigene Arbeit im Review — von dir erstellt oder beansprucht. Eigenreview ist nicht erlaubt, sie wartet auf einen fremden Reviewer.',
+    'group_awaiting_hint' => 'Deine eigene Arbeit im Review — von dir erstellt oder beansprucht. Eigenreview ist nicht erlaubt: sie liegt bei einem fremden Reviewer oder wartet noch auf einen. Wer sie hat, steht an der Zeile.',
     'group_blocked' => 'Blockiert & Concerns',
     'group_blocked_hint' => 'Eigene Tasks in einer Ausnahme — blockiert oder mit gemeldetem Concern',
     'group_empty' => 'Nichts offen.',
