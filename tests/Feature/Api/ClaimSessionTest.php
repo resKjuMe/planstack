@@ -317,6 +317,39 @@ class ClaimSessionTest extends TestCase
     }
 
     /**
+     * Fortschritt und Session-Vermerk sind Laufzeit-Zustand, kein Vorgang: sie duerfen
+     * NICHT im Changelog landen, sonst schuetten Dutzende Zeilen pro Task die
+     * tatsaechlichen Aenderungen (Status, PR, Zustaendigkeit) zu.
+     *
+     * Geprueft am Auditable-Trait selbst: was es als auditierbar ansieht, entscheidet
+     * ueber den Eintrag. Bleibt nichts uebrig, schreibt es gar keine Zeile — deshalb
+     * duerfen diese Felder weiterhin ueber ein normales update() laufen und ihren
+     * entity-changed-Broadcast ausloesen.
+     */
+    public function test_progress_and_session_fields_are_kept_out_of_the_changelog(): void
+    {
+        $task = new Task;
+
+        $volatile = [
+            'progress_detail' => '4/9 Dateien',
+            'progress_percent' => 44,
+            'progress_at' => now(),
+            'active_session_label' => 'CM fix MN/A1',
+            'active_session_seen_at' => now(),
+            'claim_seen_at' => now(),
+        ];
+
+        // Nur Fortschritt/Vermerk geaendert ⇒ nichts Auditierbares ⇒ kein Eintrag.
+        $this->assertSame([], $task->getAuditableAttributes($volatile));
+
+        // Echte Aenderungen bleiben selbstverstaendlich im Changelog.
+        $this->assertSame(
+            ['status_id' => 7, 'pr_number' => 42],
+            $task->getAuditableAttributes([...$volatile, 'status_id' => 7, 'pr_number' => 42]),
+        );
+    }
+
+    /**
      * Zwischen-Abschluesse beenden die Einheit NICHT: nach `PROCESSED` laeuft dieselbe
      * Arbeitseinheit weiter (PR anlegen, polieren). Wuerde der Vermerk hier fallen,
      * saehe die Karte mitten im Lauf unbearbeitet aus.

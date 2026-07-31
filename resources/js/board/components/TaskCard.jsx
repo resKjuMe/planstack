@@ -63,9 +63,13 @@ export function TaskCardView({
         { label: task.activeSession, seenAt: task.activeSessionSeenAt, ttlMinutes: task.activeSessionTtlMinutes },
         now,
     );
-    const active = activeState && ! activeState.stale && activeState.label !== session?.label
-        ? activeState
-        : null;
+    // Läuft überhaupt gerade eine Session an dem Task? Steuert die Fortschritts-
+    // Anzeige: ein Balken ohne arbeitende Session ist ein Überbleibsel. Regulär räumt
+    // der Server den Fortschritt beim Abschluss mit weg — das hier greift, wenn eine
+    // Session hart abgebrochen ist und nur die TTL sie beendet hat.
+    const sessionLive = Boolean(activeState && ! activeState.stale);
+
+    const active = sessionLive && activeState.label !== session?.label ? activeState : null;
 
     // PR-Zustandszeile nur zeigen, wenn ein PR existiert (dann liegen — sobald der
     // Sync gelaufen ist — CI-Status und offene Kommentare vor).
@@ -275,7 +279,7 @@ export function TaskCardView({
                 und Text plus Zahl bleiben auf einer Höhe lesbar. Ohne gerechnete
                 Prozentzahl bleibt das Band leer und nur der Text steht da —
                 geschätzt wird nicht. */}
-            {(task.progressDetail || task.progressPercent !== null) && (
+            {sessionLive && (task.progressDetail || task.progressPercent !== null) && (
                 <div
                     className="relative mt-1.5 overflow-hidden rounded bg-indigo-50 dark:bg-indigo-950/60"
                     title={task.progressAt ? new Date(task.progressAt).toLocaleString() : undefined}

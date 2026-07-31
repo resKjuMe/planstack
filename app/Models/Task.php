@@ -39,6 +39,31 @@ class Task extends Model
         ];
     }
 
+    /**
+     * Felder, die NICHT ins Audit-Log (und damit nicht in den Changelog) gehören.
+     *
+     * Laufzeit-Zustand einer arbeitenden Session, kein Vorgang: der Fortschritt
+     * wandert bei jeder gezählten Einheit weiter, der Session-Vermerk bei jedem
+     * API-Zugriff. Als Changelog-Einträge wären das Dutzende Zeilen pro Task, die
+     * die tatsächlichen Änderungen (Status, PR, Zuständigkeit) zuschütten.
+     *
+     * Wichtig: das Auditing schreibt gar keinen Eintrag, wenn ALLE geänderten Felder
+     * ausgeschlossen sind (`if (! empty($newValues))` im Auditable-Trait). Ein reines
+     * Fortschritts-Update erzeugt also keine leere Zeile — und der
+     * entity-changed-Broadcast bleibt trotzdem erhalten, weil das Modell-Event
+     * weiterhin feuert. Genau deshalb hier ausschliessen statt „quiet" zu speichern.
+     *
+     * @var array<int, string>
+     */
+    protected $auditExclude = [
+        'progress_detail',
+        'progress_percent',
+        'progress_at',
+        'active_session_label',
+        'active_session_seen_at',
+        'claim_seen_at',
+    ];
+
     protected $fillable = [
         'project_id',
         'created_by_id',

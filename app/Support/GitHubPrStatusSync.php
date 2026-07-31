@@ -338,7 +338,19 @@ class GitHubPrStatusSync
             'pr_status_synced_at' => now(),
         ]);
 
+        // Nur melden, wenn sich wirklich etwas geändert hat: der Sync läuft im Minuten-
+        // Takt über alle offenen PRs, ein Broadcast pro Lauf und Task wäre ein Sturm
+        // ohne Neuigkeit.
+        $changed = $task->isDirty();
+
         $task->saveQuietly();
+
+        // Quiet bleibt es mit Absicht (kein Audit-Eintrag für einen gepollten
+        // Fremdzustand), das Board soll die neuen CI-Zahlen aber ohne Reload sehen —
+        // deshalb der Broadcast explizit.
+        if ($changed) {
+            $task->emitEntityChange('update');
+        }
     }
 
     /**

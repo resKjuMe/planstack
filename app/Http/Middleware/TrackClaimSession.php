@@ -74,6 +74,11 @@ class TrackClaimSession
 
         $now = now();
 
+        // Stand VOR dem Schreiben — die Route-Bindung hat den Task zu Beginn des
+        // Requests geladen, das ist genau der Vergleichswert für „hat sich das Label
+        // geändert?" weiter unten.
+        $previousLabel = $task->active_session_label;
+
         // Beendet dieser Request die Arbeitseinheit (Merge, Freigabe, erfasstes
         // Review, Concern, abschliessendes Fortschritts-Event), dann wird der Vermerk
         // GERAEUMT statt gestempelt — sonst blieb „arbeitet daran" bis zum Ablauf der
@@ -81,7 +86,17 @@ class TrackClaimSession
         // nicht in die Aktion selbst: terminate() laeuft danach und wuerde ein dort
         // gesetztes null im selben Request wieder ueberschreiben.
         $attrs = $this->session->finished()
-            ? ['active_session_label' => null, 'active_session_seen_at' => null]
+            // Mit dem Vermerk geht auch der Fortschritt: „4/9 Dateien, 44 %" beschreibt
+            // eine laufende Arbeit. Bleibt er stehen, zeigt eine fertige Karte fuer
+            // immer einen halben Balken. Die Historie geht nicht verloren — jedes
+            // Fortschritts-Event steht mit detail/progress in task_events.
+            ? [
+                'active_session_label' => null,
+                'active_session_seen_at' => null,
+                'progress_detail' => null,
+                'progress_percent' => null,
+                'progress_at' => null,
+            ]
             // Aktive Session: gilt fuer jede Ausfuehrung, auch ohne Claim. Bewusst
             // bedingungslos (jeder task-bezogene Request dieser Session) — genau das
             // macht `fix`/`review`/Weiterarbeit sichtbar, die nie claimen.
@@ -109,6 +124,17 @@ class TrackClaimSession
         }
 
         Task::whereKey($task->id)->update($attrs);
+
+        // Erscheinen, Wechsel und Verschwinden des Vermerks gehören live aufs Board —
+        // sonst sähe man erst beim nächsten Reload, dass (nicht mehr) daran gearbeitet
+        // wird. Der Query-Builder oben umgeht die Model-Events, also hier explizit.
+        //
+        // Nur bei einer ECHTEN Änderung des Labels: der reine Heartbeat (gleiche
+        // Session, nur ein neues seen_at) läuft bei jedem API-Zugriff und würde sonst
+        // einen Broadcast-Sturm ohne Neuigkeit auslösen.
+        if (($attrs['active_session_label'] ?? null) !== $previousLabel) {
+            $task->emitEntityChange('update');
+        }
     }
 
     /**
