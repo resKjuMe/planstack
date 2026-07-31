@@ -15,6 +15,7 @@ use App\Http\Controllers\ProjectChangelogController;
 use App\Http\Controllers\ProjectClaudeController;
 use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\ProjectDiagramController;
+use App\Http\Controllers\OrganizationActivityController;
 use App\Http\Controllers\OrganizationController;
 use App\Http\Controllers\OrganizationCustomFieldController;
 use App\Http\Controllers\OrganizationEventController;
@@ -66,6 +67,10 @@ Route::middleware('auth')->group(function () {
     Route::post('organization/invite', [OrganizationController::class, 'invite'])->name('organization.invite');
     Route::post('organization/leave', [OrganizationController::class, 'leave'])->name('organization.leave');
     Route::delete('organization', [OrganizationController::class, 'destroy'])->name('organization.destroy');
+
+    // Aktivität der ganzen Organisation (Heatmap der Statusupdates, nur Gründer).
+    Route::get('organization/activity', OrganizationActivityController::class)
+        ->name('organization.activity');
 
     // Verwaltung der org-konfigurierbaren Task-Status (nur Gründer). Die
     // Transitions-Route steht vor der {status}-Route, damit sie nicht als

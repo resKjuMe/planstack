@@ -116,7 +116,7 @@ return [
 
     // Activity heatmap (status updates per day/hour)
     'heatmap_title' => 'Status updates by day and hour',
-    'heatmap_sub' => 'When work happens on this project: each cell counts the logged status changes, its hue shows the status family that prevailed there. Columns are calendar days (labelled on Mondays), rows the hours of your timezone.',
+    'heatmap_sub' => 'When work happens: each cell counts the logged status changes, its hue shows the status family that prevailed there. Columns are calendar days (labelled on Mondays), rows the hours of your timezone.',
     'heatmap_person' => 'Person:',
     'heatmap_person_all' => 'Everyone (summed)',
     'heatmap_person_option' => ':name (:count)',

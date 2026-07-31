@@ -116,7 +116,7 @@ return [
 
     // Aktivitäts-Heatmap (Statusupdates je Tag/Stunde)
     'heatmap_title' => 'Statusupdates nach Tag und Uhrzeit',
-    'heatmap_sub' => 'Wann am Projekt gearbeitet wird: je Kästchen die Zahl der protokollierten Statuswechsel, der Farbton die dort vorherrschende Status-Familie. Spalten sind Kalendertage (Beschriftung jeweils montags), Zeilen die Stunden deiner Zeitzone.',
+    'heatmap_sub' => 'Wann gearbeitet wird: je Kästchen die Zahl der protokollierten Statuswechsel, der Farbton die dort vorherrschende Status-Familie. Spalten sind Kalendertage (Beschriftung jeweils montags), Zeilen die Stunden deiner Zeitzone.',
     'heatmap_person' => 'Mitarbeiter:',
     'heatmap_person_all' => 'Alle (summiert)',
     'heatmap_person_option' => ':name (:count)',

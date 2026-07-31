@@ -25,6 +25,7 @@ final class OrganizationTabs
         ];
 
         if ($isOwner) {
+            $tabs[] = ['key' => 'activity', 'label' => __('organization.activity_nav'), 'href' => route('organization.activity')];
             $tabs[] = ['key' => 'statuses', 'label' => __('board_admin.statuses'), 'href' => route('organization.statuses.index')];
             $tabs[] = ['key' => 'events', 'label' => __('events.nav'), 'href' => route('organization.events.index')];
             $tabs[] = ['key' => 'custom-fields', 'label' => __('custom_fields.nav'), 'href' => route('organization.custom-fields.index')];

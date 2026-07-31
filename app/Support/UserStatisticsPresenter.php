@@ -3,7 +3,6 @@
 namespace App\Support;
 
 use App\Models\OrgStatus;
-use App\Models\Project;
 use App\Models\Task;
 use App\Models\User;
 use Carbon\CarbonImmutable;
@@ -95,19 +94,7 @@ class UserStatisticsPresenter
      */
     private function visibleProjectIds(User $user): array
     {
-        if ($user->organization_id === null) {
-            return [];
-        }
-
-        $isOrgOwner = $user->organization?->isOwner($user) === true;
-
-        return Project::query()
-            ->where('organization_id', $user->organization_id)
-            ->when(! $isOrgOwner, fn ($q) => $q->where(fn ($inner) => $inner
-                ->where('created_by_id', $user->id)
-                ->orWhereHas('teams.members', fn ($m) => $m->where('users.id', $user->id))))
-            ->pluck('id')
-            ->all();
+        return VisibleProjects::idsFor($user);
     }
 
     /**

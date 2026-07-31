@@ -77,8 +77,17 @@ Route::middleware('auth:sanctum')->group(function () {
     // Status-Aufenthalte der letzten N Tage je Task (Balken der Zeitachsen-Seite).
     Route::get('projects/{project}/timeline', [TimelineController::class, 'show']);
 
-    // Statusupdates je Tag und Stunde (Heatmap der Performance-Seite, Owner-only).
-    Route::get('projects/{project}/status-activity', [StatusActivityController::class, 'show']);
+    // Statusupdates je Tag und Stunde (Aktivitäts-Heatmap) in drei Geltungsbereichen:
+    // ein Projekt und die ganze Organisation (beides Owner-only), sowie die eigenen
+    // Updates einer Person (sie selbst oder der Owner).
+    // Benannt, weil die Seiten ihre Endpunkt-URL als Prop mitschicken (route() statt
+    // im Client zusammengesetzter Pfade).
+    Route::get('projects/{project}/status-activity', [StatusActivityController::class, 'project'])
+        ->name('api.status-activity.project');
+    Route::get('organization/status-activity', [StatusActivityController::class, 'organization'])
+        ->name('api.status-activity.organization');
+    Route::get('users/{user:slug}/status-activity', [StatusActivityController::class, 'user'])
+        ->name('api.status-activity.user');
 
     // Board-Protokoll-Konfiguration (token-sparende Schalter)
     Route::get('projects/{project}/config', [ProjectConfigController::class, 'show']);

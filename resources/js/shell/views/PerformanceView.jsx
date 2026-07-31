@@ -283,7 +283,7 @@ function PersonDetails({ person, strings }) {
     );
 }
 
-export default function PerformanceView({ project, strings }) {
+export default function PerformanceView({ project, activityUrl, strings }) {
     const { tasks, statusConfig, status, error } = useProjectData(project.alias);
 
     const data = useMemo(() => {
@@ -610,7 +610,7 @@ export default function PerformanceView({ project, strings }) {
 
                     {/* Wann gearbeitet wird — Verlauf aus dem Änderungsprotokoll, per
                         eigenem Endpunkt (nicht aus dem Tasks-Store ableitbar). */}
-                    <ActivityHeatmap alias={project.alias} strings={strings} />
+                    <ActivityHeatmap url={activityUrl} alias={project.alias} strings={strings} />
                 </>
             )}
         </div>

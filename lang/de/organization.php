@@ -1,6 +1,11 @@
 <?php
 
 return [
+    // Unterseite „Aktivität" (Heatmap über alle Projekte der Organisation)
+    'activity_nav' => 'Aktivität',
+    'activity_title' => 'Aktivität der Organisation',
+    'activity_intro' => 'Wann in dieser Organisation gearbeitet wird — über alle Projekte hinweg, gezählt an den protokollierten Statuswechseln. Der Filter zeigt eine einzelne Person; die Vorgabe summiert alle.',
+
     'code_from_the_email' => 'Code aus der E-Mail',
     'colleague_company_com' => 'kollege@firma.de',
     'create' => 'Gründen',

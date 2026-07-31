@@ -81,6 +81,10 @@ class ProjectWorkspacePresenter
             // in einer Antwort landen, die die Seite nie rendert.
             'performance' => $isOrgOwner ? [
                 'strings' => $this->performanceStrings(),
+                // Datenquelle der Aktivitäts-Heatmap (eigener Endpunkt, siehe
+                // StatusActivityController) — dieselbe Karte steht mit anderer URL
+                // auch unter Organisation und in der persönlichen Statistik.
+                'activityUrl' => route('api.status-activity.project', $project),
             ] : null,
         ];
     }
@@ -424,24 +428,9 @@ class ProjectWorkspacePresenter
             'durationsTotal' => __('performance.durations_total'),
             'durationsEmpty' => __('performance.durations_empty'),
 
-            // Aktivitäts-Heatmap (eigener Endpunkt, siehe StatusActivityPresenter)
-            'heatmapTitle' => __('performance.heatmap_title'),
-            'heatmapSub' => __('performance.heatmap_sub'),
-            'heatmapPerson' => __('performance.heatmap_person'),
-            'heatmapPersonAll' => __('performance.heatmap_person_all'),
-            'heatmapPersonOption' => __('performance.heatmap_person_option'),
-            'heatmapRange' => __('performance.heatmap_range'),
-            'heatmapRangeWeeks' => __('performance.heatmap_range_weeks'),
-            'heatmapTotal' => __('performance.heatmap_total'),
-            'heatmapBusiest' => __('performance.heatmap_busiest'),
-            'heatmapCell' => __('performance.heatmap_cell'),
-            'heatmapGroupWork' => __('performance.heatmap_group_work'),
-            'heatmapGroupReview' => __('performance.heatmap_group_review'),
-            'heatmapGroupOther' => __('performance.heatmap_group_other'),
-            'heatmapLegendLess' => __('performance.heatmap_legend_less'),
-            'heatmapLegendMore' => __('performance.heatmap_legend_more'),
-            'heatmapEmpty' => __('performance.heatmap_empty'),
-            'heatmapEmptyPerson' => __('performance.heatmap_empty_person'),
+            // Aktivitäts-Heatmap: geteilt mit Organisations-Aktivität und
+            // persönlicher Statistik (siehe StatusActivityStrings).
+            ...StatusActivityStrings::all(),
             'sortName' => __('performance.sort_name'),
             'noPeople' => __('performance.no_people'),
             'unassigned' => __('performance.unassigned'),

@@ -127,7 +127,7 @@ export default function ProjectWorkspace({ activeTab, currentUserId, project, ca
         calibration: { title: calibration.strings.title, render: () => <CalibrationView project={project} strings={calibration.strings} /> },
         changelog: { title: changelog.strings.title, render: () => <ChangelogView project={project} strings={changelog.strings} /> },
         ...(performance
-            ? { performance: { title: performance.strings.title, render: () => <PerformanceView project={project} strings={performance.strings} /> } }
+            ? { performance: { title: performance.strings.title, render: () => <PerformanceView project={project} activityUrl={performance.activityUrl} strings={performance.strings} /> } }
             : {}),
     };
     const view = views[tab] ?? {

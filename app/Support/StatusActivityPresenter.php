@@ -2,13 +2,21 @@
 
 namespace App\Support;
 
+use App\Models\Organization;
 use App\Models\Project;
+use App\Models\Task;
 use App\Models\User;
 use Carbon\CarbonImmutable;
+use Illuminate\Support\Collection;
 
 /**
- * Datenbasis der Aktivitäts-Heatmap auf der Performance-Unterseite: wie viele
- * Statusupdates es je Kalendertag und Stunde gab — auf Wunsch je Mitarbeiter.
+ * Datenbasis der Aktivitäts-Heatmap: wie viele Statusupdates es je Kalendertag und
+ * Stunde gab — auf Wunsch je Mitarbeiter.
+ *
+ * DREI Geltungsbereiche, eine Rechnung: ein Projekt (Unterseite „Performance"), eine
+ * ganze Organisation (Unterseite „Aktivität") und die eigenen Updates einer Person
+ * über alle sichtbaren Projekte (persönliche Statistik). Sie unterscheiden sich nur
+ * in der Menge der Tasks und darin, ob auf einen Verursacher eingeschränkt wird.
  *
  * Wie die Zeitachse ein eigener, schlanker Endpunkt statt einer Ableitung aus dem
  * geteilten Tasks-Store: der Task kennt nur seinen jetzigen Status, die ZEITPUNKTE
@@ -59,9 +67,61 @@ class StatusActivityPresenter
     public function __construct(private readonly TaskStatusHistory $history) {}
 
     /**
+     * EIN Projekt — die Projekt-Unterseite „Performance".
+     *
+     * @return array<string, mixed>
+     */
+    public function forProject(Project $project, int $days = self::DEFAULT_DAYS, ?string $timezone = null): array
+    {
+        return $this->payload(
+            $project->tasks()->pluck('id'),
+            $project->organization,
+            null,
+            $days,
+            $timezone,
+        );
+    }
+
+    /**
+     * ALLE Projekte einer Organisation — die Organisations-Unterseite „Aktivität".
+     *
+     * @return array<string, mixed>
+     */
+    public function forOrganization(Organization $organization, int $days = self::DEFAULT_DAYS, ?string $timezone = null): array
+    {
+        return $this->payload(
+            Task::whereIn('project_id', Project::where('organization_id', $organization->id)->select('id'))->pluck('id'),
+            $organization,
+            null,
+            $days,
+            $timezone,
+        );
+    }
+
+    /**
+     * Die EIGENEN Updates einer Person über alle Projekte, die sie sehen darf — die
+     * persönliche Statistik. Gefiltert wird auf sie als Verursacher: „wann arbeite
+     * ICH" ist die Frage der Seite, nicht „wann wird an meinen Projekten gearbeitet".
+     *
+     * @return array<string, mixed>
+     */
+    public function forUser(User $user, int $days = self::DEFAULT_DAYS, ?string $timezone = null): array
+    {
+        return $this->payload(
+            Task::whereIn('project_id', VisibleProjects::idsFor($user))->pluck('id'),
+            $user->organization,
+            $user->id,
+            $days,
+            $timezone,
+        );
+    }
+
+    /**
+     * @param  Collection<int, int>  $taskIds
+     * @param  ?int  $onlyActorId  nur die Updates dieser Person (null = alle)
      * @return array{from: string, to: string, days: int, timezone: string, total: int, people: array<int, array{id: int, name: string, count: int}>, buckets: array<int, array{date: string, hour: int, actor: ?int, group: string, count: int}>}
      */
-    public function payload(Project $project, int $days = self::DEFAULT_DAYS, ?string $timezone = null): array
+    private function payload(Collection $taskIds, ?Organization $organization, ?int $onlyActorId, int $days, ?string $timezone): array
     {
         $days = max(self::MIN_DAYS, min(self::MAX_DAYS, $days));
         $tz = $this->resolveTimezone($timezone);
@@ -74,7 +134,7 @@ class StatusActivityPresenter
 
         // Status-ID → Familie. Einmal je Antwort statt je Ereignis, und über `kind`
         // statt über Schlüssel-Listen (siehe GROUP_BY_KIND).
-        $groupByStatus = $project->organization->statuses()->get()
+        $groupByStatus = ($organization?->statuses()->get() ?? collect())
             ->mapWithKeys(fn ($status) => [$status->id => self::GROUP_BY_KIND[$status->kind] ?? 'other']);
 
         /** @var array<string, array{date: string, hour: int, actor: ?int, group: string, count: int}> $buckets */
@@ -83,7 +143,11 @@ class StatusActivityPresenter
         $perPerson = [];
         $total = 0;
 
-        foreach ($this->history->changeEvents($project->tasks()->pluck('id'), $from) as $event) {
+        foreach ($this->history->changeEvents($taskIds, $from) as $event) {
+            if ($onlyActorId !== null && $event['actor_id'] !== $onlyActorId) {
+                continue;
+            }
+
             $local = $event['at']->setTimezone($tz);
             $date = $local->format('Y-m-d');
             $actor = $event['actor_id'];

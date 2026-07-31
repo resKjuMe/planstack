@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
+use App\Support\StatusActivityStrings;
 use App\Support\UserStatisticsPresenter;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -41,7 +42,13 @@ class UserStatisticsController extends Controller
                 'isSelf' => $isSelf,
             ],
             'strings' => $this->strings(),
-            'urls' => ['projects' => route('projects.index')],
+            'urls' => [
+                'projects' => route('projects.index'),
+                // Datenquelle der Aktivitäts-Heatmap: die EIGENEN Statusupdates dieser
+                // Person über alle Projekte, die sie sehen darf (eigener Endpunkt, die
+                // Zeitpunkte stehen im Änderungsprotokoll).
+                'activity' => route('api.status-activity.user', $user),
+            ],
         ]);
     }
 
@@ -176,6 +183,12 @@ class UserStatisticsController extends Controller
             'none' => __('statistics.none'),
             'storyPoints' => __('common.story_points'),
             'tasks' => __('common.tasks'),
+
+            // Aktivitäts-Heatmap: dieselbe Karte wie auf der Projekt-Performance und
+            // unter Organisation, deshalb dieselben Beschriftungen (siehe
+            // StatusActivityStrings). Der Personenfilter fällt hier weg — es sind
+            // ohnehin die Updates dieser einen Person.
+            ...StatusActivityStrings::all(),
         ];
     }
 }

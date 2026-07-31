@@ -5,13 +5,16 @@ import { onEntityChanged, onReconnected } from '../data/liveRefresh';
 // Changelog-Feed ein eigener Endpunkt statt einer Ableitung aus dem Tasks-Store: die
 // Zeitpunkte der Statuswechsel stehen im Änderungsprotokoll, nicht am Task.
 //
-// Geladen wird EINMAL je Projekt das größte Fenster, das die Ansicht zeigen kann —
+// Geladen wird EINMAL je Endpunkt das größte Fenster, das die Ansicht zeigen kann —
 // die kürzeren Zeiträume schneidet der Client daraus zu (kein Netzzugriff beim
-// Umschalten). Die Zeitzone des Browsers geht mit, weil der Server in DIESER Zone
-// buckettet (siehe StatusActivityPresenter).
+// Umschalten). Der Cache hängt an der URL, weil dieselbe Karte drei Geltungsbereiche
+// bedient (Projekt, Organisation, eigene Updates). Die Zeitzone des Browsers geht mit,
+// weil der Server in DIESER Zone buckettet (siehe StatusActivityPresenter).
 //
 // Ein entity-changed-Event lädt neu, aber nur wenn die Heatmap gerade sichtbar ist;
-// sonst wird sie als stale markiert und beim nächsten Öffnen frisch geholt.
+// sonst wird sie als stale markiert und beim nächsten Öffnen frisch geholt. Ist die
+// Karte auf ein Projekt bezogen, zählt nur dessen Alias — projektübergreifende
+// Ansichten reagieren auf jede Task-Änderung.
 
 export const ACTIVITY_DAYS = 182;
 
@@ -25,10 +28,11 @@ function timezone() {
     }
 }
 
-function getSlice(alias) {
-    let s = slices.get(alias);
+function getSlice(url, alias = null) {
+    let s = slices.get(url);
     if (!s) {
         s = {
+            url,
             alias,
             payload: null,
             status: 'idle', // idle | loading | ready | error
@@ -38,7 +42,7 @@ function getSlice(alias) {
             snapshot: null,
             seq: 0,
         };
-        slices.set(alias, s);
+        slices.set(url, s);
     }
     return s;
 }
@@ -52,9 +56,9 @@ function notify(s) {
     for (const l of s.listeners) l();
 }
 
-async function load(alias) {
-    if (!alias) return;
-    const s = getSlice(alias);
+async function load(endpoint) {
+    if (!endpoint) return;
+    const s = getSlice(endpoint);
     const token = ++s.seq;
 
     if (s.status !== 'ready') {
@@ -65,8 +69,7 @@ async function load(alias) {
 
     try {
         const url =
-            `/api/projects/${encodeURIComponent(alias)}/status-activity` +
-            `?days=${ACTIVITY_DAYS}&tz=${encodeURIComponent(timezone())}`;
+            `${endpoint}?days=${ACTIVITY_DAYS}&tz=${encodeURIComponent(timezone())}`;
         const res = await fetch(url, {
             headers: { Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
             credentials: 'same-origin',
@@ -91,40 +94,47 @@ function refreshSlice(s) {
     if (s.status === 'idle') return;
     if (s.listeners.size > 0) {
         s.stale = false;
-        load(s.alias);
+        load(s.url);
     } else {
         s.stale = true;
     }
 }
 
 onEntityChanged((d) => {
-    if (!d || !d.project_alias) return;
-    const s = slices.get(d.project_alias);
-    if (s) refreshSlice(s);
+    if (!d) return;
+    for (const s of slices.values()) {
+        // Projektbezogene Karte: nur das eigene Projekt. Projektübergreifende
+        // (Organisation, eigene Updates): jede Task-Änderung kann sie betreffen.
+        if (s.alias === null || s.alias === d.project_alias) refreshSlice(s);
+    }
 });
 onReconnected(() => {
     for (const s of slices.values()) refreshSlice(s);
 });
 
-export function useStatusActivity(alias) {
+/**
+ * @param {string} url    Endpunkt ohne Query (siehe StatusActivityController)
+ * @param {?string} alias Projekt-Alias, wenn die Karte auf EIN Projekt zeigt
+ */
+export function useStatusActivity(url, alias = null) {
     useEffect(() => {
-        const s = getSlice(alias);
+        const s = getSlice(url, alias);
         if (s.status === 'idle' || s.stale) {
             s.stale = false;
-            load(alias);
+            load(url);
         }
-    }, [alias]);
+    }, [url, alias]);
 
     const sub = useCallback((cb) => {
-        const s = getSlice(alias);
+        const s = getSlice(url, alias);
         s.listeners.add(cb);
         return () => s.listeners.delete(cb);
-    }, [alias]);
+    }, [url, alias]);
     const snap = useCallback(() => {
-        const s = getSlice(alias);
+        const s = getSlice(url, alias);
         if (!s.snapshot) rebuild(s);
         return s.snapshot;
-    }, [alias]);
+    }, [url, alias]);
 
     return useSyncExternalStore(sub, snap, snap);
 }

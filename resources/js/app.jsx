@@ -27,6 +27,7 @@ import SkillSetup from './shell/pages/SkillSetup.jsx';
 import PlanstackCiSetup from './shell/pages/PlanstackCiSetup.jsx';
 import ClaudetaskSetup from './shell/pages/ClaudetaskSetup.jsx';
 import Organization from './shell/pages/Organization.jsx';
+import OrganizationActivity from './shell/pages/OrganizationActivity.jsx';
 import OrganizationCustomFields from './shell/pages/OrganizationCustomFields.jsx';
 import OrganizationStatuses from './shell/pages/OrganizationStatuses.jsx';
 import OrganizationStatusEffects from './shell/pages/OrganizationStatusEffects.jsx';
@@ -65,6 +66,7 @@ const pages = {
     PlanstackCiSetup,
     ClaudetaskSetup,
     Organization,
+    OrganizationActivity,
     OrganizationCustomFields,
     OrganizationStatuses,
     OrganizationStatusEffects,

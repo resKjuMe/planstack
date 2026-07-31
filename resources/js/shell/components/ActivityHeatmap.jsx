@@ -53,12 +53,19 @@ function Legend({ groupTotals, groupLabels, strings }) {
     );
 }
 
-export default function ActivityHeatmap({ alias, strings }) {
+/**
+ * @param {object} props
+ * @param {string} props.url            Endpunkt (Projekt, Organisation oder Person)
+ * @param {?string} props.alias         Projekt-Alias, wenn die Karte auf EIN Projekt zeigt
+ * @param {boolean} props.showPersonFilter  false auf der persönlichen Statistik: dort
+ *                                          sind alle Updates ohnehin die derselben Person
+ */
+export default function ActivityHeatmap({ url, alias = null, showPersonFilter = true, strings }) {
     const [weeks, setWeeks] = useState(RANGE_WEEKS[1]);
     // null = alle Verursacher summiert (Vorgabe). Der Filter wählt EINE Person aus;
     // die Zähler kommen ohnehin je Person mit, es wird also nichts nachgeladen.
     const [actor, setActor] = useState(null);
-    const { payload, status, error } = useStatusActivity(alias);
+    const { payload, status, error } = useStatusActivity(url, alias);
 
     const people = payload?.people ?? [];
     // Wer im geladenen Fenster nicht mehr vorkommt (Reload nach Datenänderung), darf
@@ -127,6 +134,7 @@ export default function ActivityHeatmap({ alias, strings }) {
                 </div>
                 {/* Filter in EINER Zeile über dem Raster: Person und Zeitraum. */}
                 <div className="flex flex-wrap items-center gap-3">
+                    {showPersonFilter && (
                     <label className="inline-flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
                         {strings.heatmapPerson}
                         <select
@@ -143,6 +151,7 @@ export default function ActivityHeatmap({ alias, strings }) {
                             ))}
                         </select>
                     </label>
+                    )}
                     <label className="inline-flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
                         {strings.heatmapRange}
                         <select

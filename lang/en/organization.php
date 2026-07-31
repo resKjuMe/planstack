@@ -1,6 +1,11 @@
 <?php
 
 return [
+    // Sub-page "Activity" (heatmap across all projects of the organization)
+    'activity_nav' => 'Activity',
+    'activity_title' => 'Organization activity',
+    'activity_intro' => 'When work happens in this organization — across all projects, counted from the logged status changes. The filter narrows to a single person; the default sums everyone.',
+
     'code_from_the_email' => 'Code from the email',
     'colleague_company_com' => 'colleague@company.com',
     'create' => 'Create',

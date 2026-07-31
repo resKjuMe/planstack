@@ -3,6 +3,7 @@ import { Head, router } from '@inertiajs/react';
 import AppShell from '../AppShell.jsx';
 import PageBands from '../components/PageBands.jsx';
 import { DurationBar, StatusDurations } from '../components/Durations.jsx';
+import ActivityHeatmap from '../components/ActivityHeatmap.jsx';
 import { interpolate, transChoice } from '../../summary/i18n.js';
 import {
     PILL,
@@ -352,6 +353,12 @@ export default function Statistics({ stats, person, strings, urls }) {
                                     <p className="mt-6 text-sm text-gray-400 dark:text-gray-500">{strings.noDeliveries}</p>
                                 )}
                             </div>
+
+                            {/* Wann gearbeitet wird — dieselbe Karte wie auf der
+                                Projekt-Performance, hier über alle sichtbaren Projekte
+                                und beschränkt auf die eigenen Statusupdates. Der
+                                Personenfilter fällt deshalb weg. */}
+                            <ActivityHeatmap url={urls.activity} showPersonFilter={false} strings={strings} />
 
                             {/* Verweildauer je Status (Verlauf aus dem Protokoll) */}
                             <div className={`${CARD} p-5`}>
