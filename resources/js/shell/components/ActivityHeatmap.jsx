@@ -14,7 +14,20 @@ import { interpolate, transChoice } from '../../summary/i18n.js';
 // Die Daten kommen aus einem eigenen Endpunkt (Änderungsprotokoll), nicht aus dem
 // Tasks-Store; das größte Fenster wird einmal geladen und hier zugeschnitten.
 
-const CELL = 'h-3 w-3 shrink-0 rounded-[2px]';
+const CELL = 'h-3 rounded-[2px]';
+/** Feste Breite nur für die Kästchen der Legende (dort gibt es keine Spalten). */
+const LEGEND_CELL = CELL + ' w-3 shrink-0';
+
+/**
+ * Spalten des Rasters: die Stunden-Beschriftung fest, die Tage elastisch zwischen
+ * MIN und MAX. Der Vorgabe-Zeitraum (12 Wochen) soll ohne Scrollbalken auskommen —
+ * bei fester Kästchenbreite tat er das nicht —, gleichzeitig darf ein kurzer
+ * Zeitraum die Kästchen nicht zu Klötzen aufblasen. Erst wenn selbst MIN nicht mehr
+ * passt (26 Wochen auf schmalem Fenster), scrollt das Raster.
+ */
+const COL_MIN_PX = 6;
+const COL_MAX_PX = 14;
+const columnTracks = (days) => `2.5rem repeat(${days}, minmax(${COL_MIN_PX}px, ${COL_MAX_PX}px))`;
 
 /**
  * Eine Skala je vorkommender Familie (benannt) plus die Richtung der Helligkeit.
@@ -30,7 +43,7 @@ function Legend({ groupTotals, groupLabels, strings }) {
                 <span key={g} className="inline-flex items-center gap-1.5">
                     <span className="text-gray-500 dark:text-gray-400">{groupLabels[g]}</span>
                     {GROUP_LEVELS[g].map((cls, i) => (
-                        <span key={i} className={CELL + ' ' + cls} aria-hidden="true" />
+                        <span key={i} className={LEGEND_CELL + ' ' + cls} aria-hidden="true" />
                     ))}
                 </span>
             ))}
@@ -179,19 +192,23 @@ export default function ActivityHeatmap({ alias, strings }) {
                             {activeActor !== null ? strings.heatmapEmptyPerson : strings.heatmapEmpty}
                         </p>
                     ) : (
-                        // Das Raster wird breiter als die Karte, sobald der Zeitraum
-                        // wächst — es scrollt in sich, die Seite nicht.
+                        // EIN Grid für Stundenzeilen und Datumsachse: dieselben
+                        // Spalten-Tracks, also sitzen die Ticks von selbst unter ihrer
+                        // Spalte. Die Spaltenbreite ist elastisch (siehe columnTracks) —
+                        // der Vorgabe-Zeitraum passt damit ohne Scrollbalken; nur ein
+                        // sehr langer Zeitraum scrollt, und zwar in sich, nicht die Seite.
                         <div ref={scroller} className="mt-4 overflow-x-auto">
                             <div
-                                className="inline-block min-w-full"
+                                className="grid gap-[2px]"
+                                style={{ gridTemplateColumns: columnTracks(grid.columns.length) }}
                                 role="img"
                                 aria-label={transChoice(strings.heatmapTotal, grid.total)}
                             >
                                 {grid.hours.map((hour) => (
-                                    <div key={hour} className="flex items-center gap-[2px] pb-[2px]">
+                                    <React.Fragment key={hour}>
                                         {/* Beschriftung alle drei Stunden — jede Stunde
                                             wäre bei 12px Zeilenhöhe eine Textwand. */}
-                                        <span className="w-10 shrink-0 pe-1 text-right text-[10px] leading-none text-gray-400 dark:text-gray-500">
+                                        <span className="pe-1 text-right text-[10px] leading-3 text-gray-400 dark:text-gray-500">
                                             {hour % 3 === 0 ? hourLabel(hour) : ''}
                                         </span>
                                         {grid.columns.map((col) => {
@@ -204,23 +221,22 @@ export default function ActivityHeatmap({ alias, strings }) {
                                                 />
                                             );
                                         })}
-                                    </div>
+                                    </React.Fragment>
                                 ))}
 
                                 {/* Datumsachse: ein Tick je Montag, linksbündig unter
-                                    seiner Spalte. */}
-                                <div className="flex items-start gap-[2px] pt-1">
-                                    <span className="w-10 shrink-0" />
-                                    {grid.columns.map((col) => (
-                                        <span key={col.key} className="relative h-4 w-3 shrink-0">
-                                            {col.tick && (
-                                                <span className="absolute left-0 top-0 whitespace-nowrap text-[10px] leading-none text-gray-400 dark:text-gray-500">
-                                                    {dayLabel(col.date, false)}
-                                                </span>
-                                            )}
-                                        </span>
-                                    ))}
-                                </div>
+                                    seiner Spalte (überschreibt die Nachbarspalten, darum
+                                    absolut positioniert). */}
+                                <span />
+                                {grid.columns.map((col) => (
+                                    <span key={col.key} className="relative h-4">
+                                        {col.tick && (
+                                            <span className="absolute left-0 top-1 whitespace-nowrap text-[10px] leading-none text-gray-400 dark:text-gray-500">
+                                                {dayLabel(col.date, false)}
+                                            </span>
+                                        )}
+                                    </span>
+                                ))}
                             </div>
                         </div>
                     )}
