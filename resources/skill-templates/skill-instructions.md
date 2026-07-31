@@ -9,7 +9,7 @@ Verbindliche, projektübergreifende Anweisungen für den allgemeinen `planstack`
 
 ## Sticky-Statuszeile (Pflicht bei JEDEM Aufruf)
 
-**Jeder** `/planstack`-Aufruf zeigt in einer **Statuszeile** (sticky, unten im Fenster), was gerade getan wird — auch die kurzen Kommandos (`settings`, `update-config`) und das **Nachziehen des Skills selbst**, das als Erstes Zeit kostet und nicht unsichtbar passieren darf. Endet der Aufruf, wird die Zustandsdatei geleert.
+**Jeder** `/planstack`-Aufruf zeigt dauerhaft in einer **Statuszeile** (sticky, unten im Fenster), was gerade getan wird — nicht nur der Auto-Modus, und nicht nur als Fließtext im Verlauf. Das gilt ausdrücklich auch für die kurzen Kommandos (`settings`, `update-config`) und für das **Nachziehen des Skills selbst**: die Drift-Prüfung und das Neuschreiben der SKILL.md sind oft das Erste, was Zeit kostet (Netzwerk), und dürfen nicht unsichtbar passieren. Solange ein `/planstack`-Aufruf läuft, steht in der Zeile, was er tut; endet er, wird die Zustandsdatei geleert.
 
 **Format** (genau diese Reihenfolge, Phase samt Prozentzahl in Klammern **direkt hinter dem Kommando**):
 
@@ -17,65 +17,109 @@ Verbindliche, projektübergreifende Anweisungen für den allgemeinen `planstack`
 <Symbol> <Kommando> (<Phase> <%>) <PROJECT> · <TASK> — <kurzer Schritt>
 ```
 
-Beispiele: `⚙ Work (Bearbeite 44 %) DCE · C27 — 4/9 Dateien` · `⚙ Auto › Review (Review 25 %) DCE · A1 — 2/8 Dateien im Diff` · `⚙ Update (Schreibe Skill) — SKILL.md ersetzen` · `⏳ Auto (Idle) DCE · — warte 5 min`
+Beispiele:
 
-`<Kommando>` ist das laufende Sub-Kommando in Titelschreibweise (`Work`, `Auto`, `Review`, `Fix`, `Plan`, `Settings`, `Update`). Ruft ein Kommando ein anderes auf — im Auto-Modus der Regelfall —, werden **beide** genannt, außen zuerst, getrennt durch `›` (`Auto › Work`); mehr als zwei Ebenen nicht. `<PROJECT>`/`<TASK>` **entfallen**, wo es sie nicht gibt; ist das Projekt bekannt, aber noch kein Task, bleibt der Trenner stehen (`DCE · —`).
+- `⚙ Work (Bearbeite 44 %) DCE · C27 — 4/9 Dateien`
+- `⚙ Auto › Review (Review 25 %) DCE · A1 — 2/8 Dateien im Diff`
+- `⚙ Fix (Fix 40 %) L2L · G5 — 3/7 Kommentare`
+- `⚙ Plan (Plane 43 %) DCE — 3/7 Tasks`
+- `⚙ Update (Lade Config) DCE — GET /config`
+- `⚙ Update (Schreibe Skill) — SKILL.md ersetzen`
+- `⚙ Settings (Einstellungen) — settings.json lesen`
+- `⏳ Auto (Idle) DCE · — warte 5 min`
 
-**Wann geschrieben wird:** **bei jedem Phasenwechsel** und **bei jeder gezählten Einheit** innerhalb einer Phase (z. B. nach jeder fertigen Datei), jeweils **bevor** der nächste Schritt beginnt. Ein Schreibvorgang vor *jedem* einzelnen Tool-Aufruf ist **nicht** nötig — das verdoppelt die Roundtrips, ohne mehr zu zeigen. Wo die Zeile neben einem Shell-Aufruf steht, gehört sie **in denselben Aufruf** (`printf … > "$ST"; curl …`) und kostet damit keinen eigenen Roundtrip. Der Task-Name steht drin, sobald er bekannt ist (auch vor dem Claim), die PR-Nummer als Link, sobald `pr_url` vorliegt; ist ein Feld noch unbekannt, mit Platzhalter beginnen (`⚙ Work (Wähle) DCE · — Board lesen`) und verfeinern, statt mit dem Schreiben zu warten.
+`<Kommando>` ist das **laufende Sub-Kommando** in Titelschreibweise: `Work`, `Auto`, `Review`, `Fix`, `Plan`, `Settings`, `Update`. Ruft ein Kommando ein anderes auf — im Auto-Modus der Regelfall —, werden **beide** genannt, außen zuerst, getrennt durch `›`: `Auto › Work`, `Auto › Review`, `Auto › Fix`. So ist gleichzeitig sichtbar, dass die Schleife lebt **und** was sie gerade tut. Mehr als zwei Ebenen werden nicht gezeigt.
 
-`<Phase>` ist die **laufende Phase** in Titelschreibweise — was in diesem Moment tatsächlich passiert, nicht die grobe Arbeitseinheit (eine Einheit mit `action: "pick"` durchläuft mehrere Phasen). Verbindliche Phasen mit ihrer zählbaren Einheit:
+`<PROJECT>` und `<TASK>` **entfallen**, wo es sie nicht gibt (`Settings`, `Update` ohne Projekt, `Plan` vor dem ersten Projekt) — dann folgt direkt der Gedankenstrich. Ist das Projekt bekannt, aber noch kein Task, bleibt der Trenner stehen: `DCE · —`.
 
-| Phase | zählbare Einheit |
-|---|---|
-| `Prüfe Drift` · `Lade Config` · `Schreibe Skill` · `Baseline` | — |
-| `Wähle` · `Lade Details` | — |
-| `Analyse` | Teilschritte |
-| `Bearbeite` | Dateien, Teilschritte |
-| `Erstelle PR` · `Hinterlege PR` · `Fertigstellung` | — |
-| `Fix` | Checks, Kommentare, Review-Threads |
-| `Review` | Dateien im Diff |
-| `Plane` | Tasks, Phasen |
-| `Einstellungen` · `Concern` · `Idle` · `Pause` | — |
+**Grundregel: BEVOR etwas Neues passiert.** Die Zeile wird aktualisiert, **bevor** die nächste Handlung beginnt — vor jedem Tool-Aufruf, vor jedem Lesen und Schreiben einer Datei, vor jedem HTTP-Aufruf, vor dem Start eines Subagenten, vor jedem Phasenwechsel. Reihenfolge ohne Ausnahme: **Zeile schreiben → dann handeln.** Nicht danach, nicht „wenn gerade Zeit ist", nicht gebündelt am Ende. Eine Zeile, die erst nach der Handlung nachgezogen wird, zeigt dauerhaft die Vergangenheit und macht den ganzen Zweck zunichte.
 
-Passt keine Phase, die nächstliegende nehmen statt eine neue zu erfinden — die Zeile soll über Aufrufe hinweg wiedererkennbar bleiben. Der Ergebnisbericht des Auto-Runs behält sein `action`-Feld; die Statuszeile ist davon unabhängig.
+Daraus folgt: der Task-Name steht drin, sobald er aus dem Board bekannt ist (auch schon vor dem Claim), die neue Phase beim Wechsel, die PR-Nummer als Link, sobald `pr_url` vorliegt. Lieber einmal zu oft schreiben als einmal zu spät — die Datei ist eine Zeile, das Schreiben kostet nichts. Ist ein Feld noch unbekannt, mit einem Platzhalter beginnen (`⚙ Work (Wähle) DCE · — Board lesen`) und verfeinern, statt mit dem Schreiben zu warten.
 
-**Die Selbst-Update-Kette wird angezeigt** (sie ist von außen sonst nicht zu erkennen): `⚙ <Kommando> (Prüfe Drift) …` → bei Abweichung `⚙ Update (Lade Config) …` → `⚙ Update (Schreibe Skill) — SKILL.md ersetzen` → `⚙ Update (Baseline) — config.json`, dann zurück zum eigentlichen Kommando.
+`<Phase>` ist die **laufende Phase** in Titelschreibweise — also das, was in diesem Moment tatsächlich passiert, nicht die grobe Arbeitseinheit. Sie ist damit feiner als das `action`-Feld des Ergebnisberichts: eine Arbeitseinheit mit `action: "pick"` durchläuft mehrere Phasen. Verbindliche Phasen, mit der Einheit, in der sich ihr Fortschritt zählen lässt:
 
-**`<%>` ist der Fortschritt INNERHALB der Phase — gerechnet, nie geschätzt:** erledigte ÷ geplante Einheiten, gerundet auf ganze Prozent. Der Nenner kommt aus der natürlichen Einheit der Phase (Tabelle oben) oder aus der eigenen Teilschritt-Liste; er **darf wachsen** — werden aus 7 geplanten Teilschritten 10, wird korrigiert, auch wenn die Zahl dadurch zurückgeht (ehrlich statt künstlich monoton). Steht kein Nenner fest, **entfällt die Prozentzahl** (`⚙ Work (Erstelle PR) DCE · C27`): eine geratene Zahl ist erfunden und schlimmer als keine. Der Bruch gehört **zusätzlich** in den Schritt-Text (`4/9 Dateien`, `2/5 Checks`, `3/7 Tasks`).
+| Phase | wann | zählbare Einheit |
+|---|---|---|
+| `Prüfe Drift` | Revisions-Header mit der lokalen Baseline vergleichen | — |
+| `Lade Config` | `GET /config` bzw. `GET /skill` lesen | — |
+| `Schreibe Skill` | den ausgelieferten Skill-Text über die SKILL.md schreiben | — |
+| `Baseline` | Revisionen in `config.json` zurückschreiben | — |
+| `Wähle` | Board lesen, Arbeit suchen, beanspruchen | — |
+| `Lade Details` | Beschreibung, Akzeptanzkriterien und Voraussetzungen holen | — |
+| `Analyse` | Umfang untersuchen, noch kein Code | Teilschritte |
+| `Bearbeite` | Code-Änderungen durchführen | Dateien, Teilschritte |
+| `Erstelle PR` | PR anlegen | — |
+| `Hinterlege PR` | PR-Nummer am Task eintragen | — |
+| `Fix` | Politur am offenen PR (Konflikte, Kommentare, CI) | Checks, Kommentare, Review-Threads |
+| `Review` | Review übernehmen, Diff prüfen, Ergebnis erfassen | Dateien im Diff |
+| `Fertigstellung` | fertig melden, mergen | — |
+| `Plane` | Projekt, Phasen und Tasks anlegen | Tasks, Phasen |
+| `Einstellungen` | lokale Einstellungen lesen und schreiben | — |
+| `Concern` | Concern gemeldet, Arbeitseinheit endet | — |
+| `Idle` | nichts zu tun, 5-Minuten-Pause | — |
+| `Pause` | Modus angehalten | — |
 
-Der Schritt-Text ist die eigentliche Information und soll **konkret** sein: `4/9 Dateien: TaskController.php` statt `arbeite`, `2/5 Checks: phpstan` statt `CI läuft`, `GET /config` statt `lade`. Eine Zeile ist das Budget — kürzen ja, durch Floskeln ersetzen nein. Wartet der Aufruf auf etwas Externes, gehört genau das hinein (`⏳ Work (Fix) L2L · G5 — warte auf CI`), damit Stillstand nicht wie ein Absturz aussieht.
+Passt keine Phase, die nächstliegende nehmen statt eine neue zu erfinden — die Zeile soll über Aufrufe hinweg wiedererkennbar bleiben. Der Ergebnisbericht des Auto-Runs behält unverändert sein `action`-Feld (`review`/`fix`/`finish`/`pick`/`concern`/`idle`); die Statuszeile ist davon unabhängig.
 
-**Einrichtung (zu Beginn jedes Aufrufs prüfen, bei Bedarf einmal anlegen):**
+**Beim Skill-Update (Pflicht, nicht optional):** Die Selbst-Update-Kette läuft bei jedem Aufruf und ist von außen sonst nicht zu erkennen. Sie wird durchgängig angezeigt: `⚙ <Kommando> (Prüfe Drift) …` → bei Abweichung `⚙ Update (Lade Config) …` → `⚙ Update (Schreibe Skill) — SKILL.md ersetzen` → `⚙ Update (Baseline) — config.json`. Dasselbe gilt für das Nachziehen einer einzelnen Org-Config über `config_versions` (`⚙ Update (Lade Config) DCE — status_rules`). Erst danach geht es mit dem eigentlichen Kommando weiter — der Wechsel zurück ist ebenfalls sichtbar.
 
-1. **Zustandsdatei je Session:** `~/.claude/planstack-status-<session_id>.txt`, genau **eine** Zeile.
-2. **Statusline-Skript:** liest das Session-JSON von **stdin**, zieht `session_id`, gibt **nur** den Inhalt dieser Datei aus (fehlt sie: keine Ausgabe), in **UTF-8**. Die Bindung an die `session_id` ist **Pflicht**: liest das Skript eine feste Datei ohne sie, erscheint die Zeile in **allen** Sessions des Nutzers.
-3. **`statusLine`-Eintrag** in `~/.claude/settings.json` auf dieses Skript zeigen lassen, **mit** `refreshInterval`:
+**`<%>` ist der Fortschritt INNERHALB der laufenden Phase — und wird gerechnet, nie geschätzt.** Er entsteht ausschließlich aus einem Zähler mit echtem Nenner: `<%>` = erledigte Einheiten ÷ geplante Einheiten. Der Nenner kommt
+
+1. aus der **natürlichen Einheit** der Phase (Spalte oben): zu ändernde Dateien, offene Kommentare, CI-Checks, Review-Threads, Dateien im Diff, anzulegende Tasks;
+2. sonst aus der **eigenen Teilschritt-Liste**: vor Beginn der Phase die geplanten Teilschritte festhalten (das passiert beim Planen ohnehin) und danach abzählen.
+
+Steht kein Nenner fest, **entfällt die Prozentzahl** — dann nur die Phase, ohne Zahl (`⚙ Work (Erstelle PR) DCE · C27`). Eine geratene Zahl („73 %", weil es sich nach zwei Dritteln anfühlt) ist eine erfundene Angabe und schlimmer als keine. Bei `Concern`, `Idle`, `Pause` und den kurzen Update-Phasen gibt es grundsätzlich keine.
+
+Der zugrundeliegende Bruch gehört **zusätzlich** in den `<kurzer Schritt>`-Text, damit die Zahl nachvollziehbar ist: `4/9 Dateien`, `3/7 Kommentare`, `2/5 Checks`, `1/4 Review-Threads`, `3/7 Tasks`, `3/5 Teilschritte`. Gerundet wird auf ganze Prozent.
+
+**Der Nenner darf wachsen.** Stellt sich mitten in der Phase heraus, dass aus 7 geplanten Teilschritten 10 werden, wird der Nenner korrigiert — auch wenn die Prozentzahl dadurch **zurückgeht**. Eine zurückgehende Zahl ist ehrlich; eine künstlich monotone wäre gelogen. Den Nenner also nie kleinhalten, nur damit die Anzeige steigt.
+
+Innerhalb einer Phase wird die Zeile bei **jeder** gezählten Einheit neu geschrieben (also z. B. nach jeder fertigen Datei) — das ist der einzige Fall, in dem sie mehrfach pro Phase wandert.
+
+**Möglichst genau sagen, was passiert.** Der `<kurzer Schritt>`-Text ist die eigentliche Information und soll konkret sein, nicht kategorisch: `4/9 Dateien: TaskController.php` statt `arbeite`, `2/5 Checks: phpstan` statt `CI läuft`, `GET /config` statt `lade`. Eine Zeile Länge ist das Budget — was nicht hineinpasst, wird gekürzt, aber nie durch eine Floskel ersetzt. Wartet der Aufruf auf etwas Externes (Netzwerk, CI, Nutzer-Eingabe), gehört genau das hinein (`⏳ Work (Fix) L2L · G5 — warte auf CI`), damit ein Stillstand nicht wie ein Absturz aussieht.
+
+**Einrichtung (einmalig, zu Beginn **jedes** Aufrufs prüfen und bei Bedarf anlegen):**
+
+1. **Zustandsdatei je Session:** `~/.claude/planstack-status-<session_id>.txt` — enthält genau **eine** Zeile. Die Datei ist **session-gebunden**: die Statuszeile darf **nur im laufenden Fenster** erscheinen, nie in anderen Sessions des Nutzers.
+2. **Statusline-Skript:** ein kleines Skript, das das Session-JSON von **stdin** liest, daraus `session_id` zieht und **nur** den Inhalt von `~/.claude/planstack-status-<session_id>.txt` ausgibt — existiert die Datei nicht, gibt es **keine** Ausgabe (leere Statuszeile). Ausgabe in **UTF-8**, damit Umlaute und Symbole stimmen. Die Session-Bindung ist **Pflicht**, kein Feinschliff: liest das Skript eine feste Datei ohne `session_id`, erscheint die Zeile in **allen** Sessions des Nutzers.
+3. **`statusLine`-Eintrag** in den Claude-Code-Settings (`~/.claude/settings.json`) auf dieses Skript zeigen lassen, **mit** `refreshInterval` (siehe unten):
 
    ```json
    { "statusLine": { "type": "command", "command": "…", "refreshInterval": 5 } }
    ```
 
-Der Eintrag ist zwangsläufig global — die Session-Bindung sorgt dafür, dass er nur hier etwas anzeigt. Eine **neu** angelegte `statusLine`-Konfiguration greift erst nach einem **Neustart** von Claude Code, eine vorhandene sofort. Fehlt die Einrichtung, einmal anlegen und den Nutzer hinweisen — nicht bei jedem Aufruf erneut fragen.
+   Der Eintrag ist zwangsläufig global — die Session-Bindung aus Schritt 1/2 sorgt dafür, dass er trotzdem nur hier etwas anzeigt. Dem Nutzer sagen, dass eine **neu** angelegte `statusLine`-Konfiguration erst nach einem **Neustart** von Claude Code greift (eine bereits vorhandene wird sofort übernommen).
 
-**`refreshInterval` ist der zentrale Praxis-Hinweis** (Sekunden, Minimum `1`, Empfehlung **5–10**): sonst wird die Statusline nur **ereignisgesteuert** neu berechnet (Prompt, Tool-Ende, Moduswechsel). Während ein Subagent arbeitet — im Auto-Modus der Regelfall — passiert davon minutenlang nichts, und die Zeile friert mit einem überholten Schritt ein.
+Fehlt die Einrichtung, wird sie **einmal** angelegt und der Nutzer darauf hingewiesen — nicht bei jedem Aufruf erneut gefragt.
 
-**Klickbare Links (OSC 8):** `<TASK>` und PR-Nummer als OSC-8-Hyperlink ausgeben (`\e]8;;<URL>\a<Text>\e]8;;\a`, Ctrl+Klick bzw. Cmd+Klick). `<TASK>` → `<WEB>/projects/<PROJECT>`, wobei `<WEB>` die `base_url` **ohne** abschließendes `/api` ist (einen Deep-Link auf einen einzelnen Task gibt es nicht). PR-Nummer → `pr_url` aus der API (u. a. in `review-claim`/`review-next` und an jedem dekorierten Task) — **nie** selbst eine URL bauen. `\e`/`\a` müssen **echte** Steuerzeichen sein (per `printf`, nicht als Literal `\e`); Terminals ohne Hyperlink-Unterstützung zeigen nur den Text, sichtbare Escape-Reste wie `]8;;https…` sind dagegen ein **Fehler**. Geht es nicht sauber, die Zeile **ohne** Links schreiben — lesbar ohne Link ist besser als kaputt mit. Alternative ohne eigenes Skript: `footerLinksRegexes` in den Settings macht aus erkannten Mustern klickbare Footer-Badges, dafür ohne freien Schritt-Text.
+**`refreshInterval` (der zentrale Praxis-Hinweis):** Die Statusline wird normalerweise **ereignisgesteuert** neu berechnet — bei Prompt, Tool-Ende und Moduswechsel, 300 ms entprellt. Während ein Subagent arbeitet (im Auto-Modus der Regelfall) passiert davon minutenlang **nichts**, die Zeile friert also mitten in der Arbeit ein und zeigt einen längst überholten Schritt. Deshalb im `statusLine`-Eintrag **immer** `refreshInterval` setzen (Sekunden, Minimum `1`, Empfehlung **5–10**) — nur dann pollt Claude Code die Zustandsdatei von selbst weiter.
 
-**Das Prozentzeichen bleibt einfach: `%`, nie `%%`.** Die Zeile ist **Text, kein Format-String**. Nur `printf` behandelt sein **erstes** Argument als Format-String; wer dort reflexhaft verdoppelt und die Zeile dann mit einem Werkzeug ohne Format-Strings schreibt, hat zwei Prozentzeichen hinter der Zahl. Deshalb die Zeile immer als **Argument** übergeben:
+**Klickbare Links (OSC 8):** `<TASK>` und eine PR-Nummer im Schritt-Text als **OSC-8-Hyperlink** ausgeben, damit man aus der Statuszeile direkt ins Board bzw. in den PR springt (**Ctrl+Klick** unter Windows/Linux, **Cmd+Klick** unter macOS):
+
+```
+\e]8;;<URL>\a<Text>\e]8;;\a
+```
+
+- **`<TASK>`** → Task-/Board-Ansicht der Instanz: `<WEB>/projects/<PROJECT>`, wobei `<WEB>` die `base_url` aus `config.json` **ohne** das abschließende `/api` ist (eine Deep-Link-URL auf einen einzelnen Task gibt es nicht — die Board-Ansicht des Projekts ist das Ziel).
+- **PR-Nummer** → der GitHub-PR über `pr_url`. Das Feld liefert die API bereits mit, u. a. in den Antworten von `review-claim`/`review-next` und an jedem dekorierten Task — **nie** selbst eine URL zusammenbauen.
+
+`\e` und `\a` müssen als **echte** Steuerzeichen in der Datei landen (z. B. per `printf`, nicht als Literal `\e`). Die Anweisung ist bewusst **robust**: Terminals ohne Hyperlink-Unterstützung (klassisches conhost) zeigen einfach den Text ohne Link — sichtbare Escape-Reste wie `]8;;https…` sind aber ein **Fehler**. Lässt sich das nicht sauber schreiben, die Zeile **ohne** Links ausgeben; eine lesbare Zeile ohne Link ist besser als eine kaputte mit. Wer sich das Skript-Basteln sparen will: `footerLinksRegexes` in den Settings blendet aus erkannten Mustern (Task-Namen, PR-Nummern) klickbare Footer-Badges ein — ganz ohne eigenes Statusline-Skript, dafür ohne den frei formulierten Schritt-Text.
+
+**Das Prozentzeichen bleibt einfach: `%`, nie `%%`.** Die Zeile ist **Text, kein Format-String**. `printf` nimmt sein **erstes** Argument als Format-String — dort wäre `%` eine Direktive und müsste verdoppelt werden. Genau daraus entsteht der bekannte Fehler: erst wird brav verdoppelt, geschrieben wird die Zeile dann aber mit einem Werkzeug, das keine Format-Strings kennt — und in der Statuszeile stehen hinter der Zahl **zwei** Prozentzeichen. Deshalb die Zeile **nie** als Format-String übergeben, sondern als Argument:
 
 ```
 printf '%s\n' "⚙ Review (Review 94 %) L2L · G5 — 15/16 Dateien"
 ```
 
-Mit OSC-8-Links gehören **nur** die Steuerzeichen in den Format-String, variabler Text bleibt Argument:
+Kommen die OSC-8-Links dazu, gehören **nur** die Steuerzeichen in den Format-String; jeder variable Text bleibt Argument (und braucht damit kein Escaping):
 
 ```
 printf '\e]8;;%s\a%s\e]8;;\a %s\n' "$url" "$task" "$rest"
 ```
 
-`Set-Content -Encoding utf8`, Datei-Werkzeuge und Here-Docs kennen gar keine Format-Strings — dort ist die Verdopplung **immer** falsch. Prüfmaßstab ist der Dateiinhalt: je Prozentangabe steht dort **ein** Zeichen `%`.
+Alle anderen Schreibwege — `Set-Content -Encoding utf8`, Datei-Werkzeug, Here-Doc — kennen überhaupt keine Format-Strings; dort ist `%%` **immer** falsch. Prüfmaßstab ist der Dateiinhalt, nicht der Aufruf: je Prozentangabe steht dort **ein** Zeichen `%`. Steht `%%` in der Datei, ist die Zeile kaputt.
 
-Immer **überschreiben**, nie anhängen. Das Schreiben ist **best-effort**: Fehler ignorieren, den Ablauf nie blockieren, das Setzen der Zeile nicht in Prosa berichten.
+Immer **überschreiben**, nie anhängen. Das Schreiben ist **best-effort**: Fehler ignorieren, den Ablauf nie blockieren und das Setzen der Zeile nicht in Prosa berichten.
 
 ## Feingranulare Config-Aktualisierung (`config_versions`)
 
