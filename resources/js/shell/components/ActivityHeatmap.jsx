@@ -1,30 +1,41 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useStatusActivity } from '../../performance/useStatusActivity.js';
-import { buildHeatmap, LEGEND_CLASSES, RANGE_WEEKS } from '../../performance/heatmap.js';
+import { buildHeatmap, cellClass, EMPTY_CLASS, GROUP_LEVELS, GROUPS, RANGE_WEEKS } from '../../performance/heatmap.js';
 import { interpolate, transChoice } from '../../summary/i18n.js';
 
 // Aktivitäts-Heatmap der Performance-Unterseite: X = Kalendertag, Y = Stunde,
-// Farbe = Zahl der protokollierten Statusupdates.
+// Farbton = vorherrschende Status-Familie, Helligkeit = Zahl der Statusupdates.
 //
-// Einfarbige (sequentielle) Skala — die Menge steckt in der Helligkeit, nicht in
-// wechselnden Farbtönen; leere Stunden bleiben neutral grau. Die Legende nennt die
-// Richtung, jedes Kästchen den genauen Wert im Tooltip, und die Zeile über dem
-// Raster fasst Summe und Spitze als TEXT zusammen — damit die Aussage nicht allein
-// an der Farbe hängt.
+// Die Legende nennt beide Skalen benannt, jedes Kästchen trägt seine
+// Aufschlüsselung im Tooltip, und die Zeile über dem Raster fasst Summe, Spitze und
+// die Verteilung auf die Familien als TEXT zusammen — die Aussage hängt damit nie
+// allein am Farbton (blau gegen lila ist für Rotblindheit ein schwacher Kontrast).
 //
 // Die Daten kommen aus einem eigenen Endpunkt (Änderungsprotokoll), nicht aus dem
 // Tasks-Store; das größte Fenster wird einmal geladen und hier zugeschnitten.
 
 const CELL = 'h-3 w-3 shrink-0 rounded-[2px]';
 
-function Legend({ strings }) {
+/**
+ * Eine Skala je vorkommender Familie (benannt) plus die Richtung der Helligkeit.
+ * „Sonstiges" erscheint nur, wenn es solche Updates gibt — Bearbeitung und Review
+ * stehen immer, damit die Legende beim Filtern nicht springt.
+ */
+function Legend({ groupTotals, groupLabels, strings }) {
+    const shown = GROUPS.filter((g) => g !== 'other' || groupTotals[g] > 0);
+
     return (
-        <div className="flex items-center gap-1.5 text-[10px] text-gray-400 dark:text-gray-500">
-            <span>{strings.heatmapLegendLess}</span>
-            {LEGEND_CLASSES.map((cls, i) => (
-                <span key={i} className={CELL + ' ' + cls} aria-hidden="true" />
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[10px] text-gray-400 dark:text-gray-500">
+            {shown.map((g) => (
+                <span key={g} className="inline-flex items-center gap-1.5">
+                    <span className="text-gray-500 dark:text-gray-400">{groupLabels[g]}</span>
+                    {GROUP_LEVELS[g].map((cls, i) => (
+                        <span key={i} className={CELL + ' ' + cls} aria-hidden="true" />
+                    ))}
+                </span>
             ))}
-            <span>{strings.heatmapLegendMore}</span>
+            {/* Die Reihenfolge der Kästchen IST die Skala — hier nur ihre Richtung. */}
+            <span>{strings.heatmapLegendLess} → {strings.heatmapLegendMore}</span>
         </div>
     );
 }
@@ -63,11 +74,29 @@ export default function ActivityHeatmap({ alias, strings }) {
         });
     const hourLabel = (hour) => `${String(hour).padStart(2, '0')}:00`;
 
-    const cellTitle = (col, hour, count) =>
-        transChoice(strings.heatmapCell, count, {
+    const groupLabels = {
+        work: strings.heatmapGroupWork,
+        review: strings.heatmapGroupReview,
+        other: strings.heatmapGroupOther,
+    };
+
+    /** „n Bearbeitung, m Review" — nur vorkommende Familien, in fester Reihenfolge. */
+    const breakdown = (groups) =>
+        GROUPS.filter((g) => (groups?.[g] ?? 0) > 0)
+            .map((g) => `${groups[g]} ${groupLabels[g]}`)
+            .join(', ');
+
+    // Der Tooltip nennt Menge UND Aufschlüsselung: der Farbton allein sagt nur, was
+    // überwog, nicht was sonst noch in dieser Stunde passiert ist.
+    const cellTitle = (col, hour, cell) => {
+        const title = transChoice(strings.heatmapCell, cell?.count ?? 0, {
             date: dayLabel(col.date, true),
             hour: hourLabel(hour),
         });
+        const parts = breakdown(cell?.groups);
+
+        return parts ? `${title} · ${parts}` : title;
+    };
 
     const busiestLabel = grid.busiest
         ? interpolate(strings.heatmapBusiest, {
@@ -133,11 +162,16 @@ export default function ActivityHeatmap({ alias, strings }) {
                     <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
                         <p className="text-sm text-gray-600 dark:text-gray-400">
                             {transChoice(strings.heatmapTotal, grid.total)}
+                            {/* Die Verteilung auf die Familien als Text — dieselbe
+                                Aussage wie der Farbton, nur ohne Farbe. */}
+                            {grid.total > 0 && (
+                                <span className="text-gray-400 dark:text-gray-500"> · {breakdown(grid.groupTotals)}</span>
+                            )}
                             {busiestLabel && (
                                 <span className="text-gray-400 dark:text-gray-500"> · {busiestLabel}</span>
                             )}
                         </p>
-                        <Legend strings={strings} />
+                        <Legend groupTotals={grid.groupTotals} groupLabels={groupLabels} strings={strings} />
                     </div>
 
                     {grid.total === 0 ? (
@@ -165,8 +199,8 @@ export default function ActivityHeatmap({ alias, strings }) {
                                             return (
                                                 <span
                                                     key={col.key}
-                                                    className={CELL + ' ' + LEGEND_CLASSES[cell?.level ?? 0]}
-                                                    title={cellTitle(col, hour, cell?.count ?? 0)}
+                                                    className={CELL + ' ' + cellClass(cell)}
+                                                    title={cellTitle(col, hour, cell)}
                                                 />
                                             );
                                         })}

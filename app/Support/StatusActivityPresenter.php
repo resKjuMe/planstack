@@ -26,6 +26,12 @@ use Carbon\CarbonImmutable;
  * ohne nachzuladen. Updates OHNE protokollierten Verursacher (Konsole, Automationen)
  * tragen `actor: null` — sie zählen in der Summe mit, gehören aber zu niemandem.
  *
+ * Ebenso mit der Status-FAMILIE des gesetzten Ziel-Status (`group`), aus der der
+ * Client den Farbton des Kästchens wählt. Gruppiert wird über `kind` der
+ * Org-Status-Konfiguration, nicht über eine Liste von Schlüsseln: eigene Status einer
+ * Organisation („Polishing", „Request Changes") fallen damit automatisch in die
+ * richtige Familie, ohne dass hier jemand nachpflegt.
+ *
  * Die Antwort ist SPARSE: nur Stunden mit mindestens einem Update. Ein voller
  * 26-Wochen-Raster hätte 4.368 Kästchen, davon fast alle leer.
  */
@@ -38,10 +44,22 @@ class StatusActivityPresenter
 
     private const MAX_DAYS = 366;
 
+    /**
+     * Status-Familie je `kind` der Org-Status-Konfiguration. Alles Übrige (wartend,
+     * fertig, Ausnahme, unbekannter Status) ist „sonstiges" — der Farbton sagt dann
+     * neutral „hier ist etwas passiert, aber weder Bearbeitung noch Review".
+     *
+     * @var array<string, string>
+     */
+    private const GROUP_BY_KIND = [
+        'active' => 'work',
+        'review' => 'review',
+    ];
+
     public function __construct(private readonly TaskStatusHistory $history) {}
 
     /**
-     * @return array{from: string, to: string, days: int, timezone: string, total: int, people: array<int, array{id: int, name: string, count: int}>, buckets: array<int, array{date: string, hour: int, actor: ?int, count: int}>}
+     * @return array{from: string, to: string, days: int, timezone: string, total: int, people: array<int, array{id: int, name: string, count: int}>, buckets: array<int, array{date: string, hour: int, actor: ?int, group: string, count: int}>}
      */
     public function payload(Project $project, int $days = self::DEFAULT_DAYS, ?string $timezone = null): array
     {
@@ -54,7 +72,12 @@ class StatusActivityPresenter
         $now = CarbonImmutable::now($tz);
         $from = $now->subDays($days - 1)->startOfDay();
 
-        /** @var array<string, array{date: string, hour: int, actor: ?int, count: int}> $buckets */
+        // Status-ID → Familie. Einmal je Antwort statt je Ereignis, und über `kind`
+        // statt über Schlüssel-Listen (siehe GROUP_BY_KIND).
+        $groupByStatus = $project->organization->statuses()->get()
+            ->mapWithKeys(fn ($status) => [$status->id => self::GROUP_BY_KIND[$status->kind] ?? 'other']);
+
+        /** @var array<string, array{date: string, hour: int, actor: ?int, group: string, count: int}> $buckets */
         $buckets = [];
         /** @var array<int, int> $perPerson */
         $perPerson = [];
@@ -64,9 +87,12 @@ class StatusActivityPresenter
             $local = $event['at']->setTimezone($tz);
             $date = $local->format('Y-m-d');
             $actor = $event['actor_id'];
+            // Ein inzwischen gelöschter Status ist nicht mehr einzuordnen — das
+            // Update gab es trotzdem, es zählt also als „sonstiges" mit.
+            $group = $groupByStatus[$event['status_id']] ?? 'other';
 
-            $key = $date.'|'.$local->hour.'|'.($actor ?? '-');
-            $buckets[$key] ??= ['date' => $date, 'hour' => $local->hour, 'actor' => $actor, 'count' => 0];
+            $key = $date.'|'.$local->hour.'|'.($actor ?? '-').'|'.$group;
+            $buckets[$key] ??= ['date' => $date, 'hour' => $local->hour, 'actor' => $actor, 'group' => $group, 'count' => 0];
             $buckets[$key]['count']++;
 
             if ($actor !== null) {

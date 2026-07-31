@@ -116,7 +116,7 @@ return [
 
     // Activity heatmap (status updates per day/hour)
     'heatmap_title' => 'Status updates by day and hour',
-    'heatmap_sub' => 'When work happens on this project: each cell counts the logged status changes. Columns are calendar days (labelled on Mondays), rows the hours of your timezone.',
+    'heatmap_sub' => 'When work happens on this project: each cell counts the logged status changes, its hue shows the status family that prevailed there. Columns are calendar days (labelled on Mondays), rows the hours of your timezone.',
     'heatmap_person' => 'Person:',
     'heatmap_person_all' => 'Everyone (summed)',
     'heatmap_person_option' => ':name (:count)',
@@ -125,12 +125,15 @@ return [
     'heatmap_total' => ':count status update in this range|:count status updates in this range',
     'heatmap_busiest' => 'Peak: :when with :count',
     'heatmap_cell' => ':date, :hour: :count status update|:date, :hour: :count status updates',
+    'heatmap_group_work' => 'Working',
+    'heatmap_group_review' => 'Review',
+    'heatmap_group_other' => 'Other',
     'heatmap_legend_less' => 'few',
     'heatmap_legend_more' => 'many',
     'heatmap_empty' => 'No status changes logged in this range — a wider range also shows older ones.',
     'heatmap_empty_person' => 'No status updates by this person in this range.',
     'help_heatmap' => 'Heatmap',
-    'help_heatmap_text' => 'It counts logged status changes (the same source as time spent): when work happened on the project. The filter breaks them down by the CAUSER of the change, which is not the same as the person a task is assigned to: moving or reviewing a task of somebody else shows up here too. "Everyone" additionally sums the updates without a logged causer (console, automations), which belong to no person — so the total is larger than the sum of the people. Buckets use your timezone; a task that changes status repeatedly counts repeatedly. Creation and quiet changes (without a log entry) are missing.',
+    'help_heatmap_text' => 'It counts logged status changes (the same source as time spent): when work happened on the project. The hue follows the family of the status that was SET: blue for working (claimed, analyzing, in progress, polishing), purple for review (reviewable, in review, approved, changes requested), gray for everything else (pickable, blocked, merged). In an hour with both, the more frequent family wins; the tooltip names the breakdown. The filter breaks them down by the CAUSER of the change, which is not the same as the person a task is assigned to: moving or reviewing a task of somebody else shows up here too. "Everyone" additionally sums the updates without a logged causer (console, automations), which belong to no person — so the total is larger than the sum of the people. Buckets use your timezone; a task that changes status repeatedly counts repeatedly. Creation and quiet changes (without a log entry) are missing.',
 
     'help_durations' => 'Time spent',
     'help_durations_text' => 'Reconstructed from the change log: every status change is a timestamp, the time spent is the gap to the next one. If a task falls back ("in review → changes requested → in review"), EVERY stay is counted separately and added up. Only working statuses are shown; waiting time (pickable), the time after completion (merged) and exceptions (blocked/concerned) are not working time. The bar per person carries the median over the total times of THEIR tasks — the typical task; the tooltip names each status separately.',

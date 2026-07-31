@@ -97,13 +97,14 @@ class TaskStatusHistory
      *
      * `actor_id` ist der protokollierte Verursacher (`causer_id`) und kann null sein:
      * Änderungen ohne angemeldeten Nutzer (Konsole, Automationen) haben keinen.
+     * `status_id` ist der ZIEL-Status des Wechsels — der Status, der gesetzt wurde.
      *
      * Anders als {@see stays()} wird hier NICHTS ergänzt: kein Aufenthalt ab
      * `created_at`, kein laufender Aufenthalt bis jetzt. Die Anlage eines Tasks ist
      * kein Statusupdate.
      *
      * @param  Collection<int, int>  $taskIds
-     * @return array<int, array{at: CarbonImmutable, actor_id: ?int}>  aufsteigend
+     * @return array<int, array{at: CarbonImmutable, actor_id: ?int, status_id: int}>  aufsteigend
      */
     public function changeEvents(Collection $taskIds, ?CarbonImmutable $since = null): array
     {
@@ -136,6 +137,7 @@ class TaskStatusHistory
             ->map(fn ($row) => [
                 'at' => CarbonImmutable::parse($row->created_at),
                 'actor_id' => $row->causer_id !== null ? (int) $row->causer_id : null,
+                'status_id' => (int) $row->new_values['status_id'],
             ])
             ->values()
             ->all();

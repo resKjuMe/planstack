@@ -14,29 +14,51 @@ const pad = (n) => String(n).padStart(2, '0');
 const dateKey = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 
 /**
- * Fünf Stufen einer EINFARBIGEN Skala (Sequential: Helligkeit trägt die Menge).
- * Stufe 0 ist „nichts passiert" und bleibt neutral grau — bewusst nicht die
- * hellste Farbstufe, sonst wäre „ein Update" von „kein Update" kaum zu
- * unterscheiden. Der Dunkelmodus ist eigens gestuft (dunkel → hell), keine
- * Umkehrung der hellen Stufen; das leere Kästchen liegt dort DUNKLER als die Karte
- * (gray-900 gegen gray-800), sonst verschwände das Raster im Hintergrund und die
- * leere Stunde wirkte heller als die mit einem Update.
+ * Zusammengesetzte Farbcodierung: der FARBTON sagt, welche Status-Familie in dieser
+ * Stunde überwog, die HELLIGKEIT die Menge (drei Stufen). Der Server liefert die
+ * Familie je Kästchen, abgeleitet aus `kind` der Status-Konfiguration:
+ *
+ *   work   (blau)  — Bearbeitung: claimed, analyzing, in progress, polishing …
+ *   review (lila)  — Review: reviewbar, in review, approved, request changes …
+ *   other  (grau)  — alles Übrige: pickbar, blockiert, gemergt, unbekannt
+ *
+ * Drei Stufen statt fünf, weil die blassen Enden zweier Farbtöne ineinanderlaufen —
+ * hell-blau und hell-lila sind selbst mit voller Farbsicht kaum zu trennen. Jede
+ * Stufe ist gegen die jeweilige Fläche geprüft (monotone Helligkeit, sichtbare
+ * Abstände). Blau gegen Lila bleibt für Rotblindheit (Deuteranopie) ein schwacher
+ * Kontrast — darum trägt jedes Kästchen seine Aufschlüsselung im Tooltip und die
+ * Legende beide Skalen benannt: die Aussage hängt nie allein am Farbton.
+ *
+ * Der Dunkelmodus ist eigens gestuft (dunkel → hell), keine Umkehrung der hellen
+ * Stufen; das leere Kästchen liegt dort DUNKLER als die Karte (gray-900 gegen
+ * gray-800), sonst verschwände das Raster im Hintergrund und die leere Stunde wirkte
+ * heller als die mit einem Update.
  */
-const LEVEL_CLASS = [
-    'bg-gray-100 dark:bg-gray-900',
-    'bg-indigo-200 dark:bg-indigo-900',
-    'bg-indigo-400 dark:bg-indigo-700',
-    'bg-indigo-600 dark:bg-indigo-500',
-    'bg-indigo-800 dark:bg-indigo-300',
-];
+export const EMPTY_CLASS = 'bg-gray-100 dark:bg-gray-900';
 
-export const LEGEND_CLASSES = LEVEL_CLASS;
+export const GROUP_LEVELS = {
+    work: ['bg-sky-500 dark:bg-sky-800', 'bg-sky-600 dark:bg-sky-600', 'bg-sky-800 dark:bg-sky-500'],
+    review: ['bg-purple-500 dark:bg-purple-900', 'bg-purple-700 dark:bg-purple-700', 'bg-purple-900 dark:bg-purple-500'],
+    other: ['bg-gray-400 dark:bg-gray-600', 'bg-gray-600 dark:bg-gray-400', 'bg-gray-800 dark:bg-gray-200'],
+};
 
-/** Vier Datenstufen relativ zum Maximum; 0 nur, wenn wirklich nichts passiert ist. */
+/** Reihenfolge in Legende, Tooltip UND als Gleichstands-Entscheid (siehe unten). */
+export const GROUPS = ['work', 'review', 'other'];
+
+export const LEVELS = 3;
+
+/** Drei Datenstufen relativ zum Maximum; 0 nur, wenn wirklich nichts passiert ist. */
 function levelOf(count, max) {
     if (count <= 0) return 0;
 
-    return Math.min(4, Math.max(1, Math.ceil((count / Math.max(1, max)) * 4)));
+    return Math.min(LEVELS, Math.max(1, Math.ceil((count / Math.max(1, max)) * LEVELS)));
+}
+
+/** Klasse eines Kästchens: Farbton aus der Familie, Stufe aus der Menge. */
+export function cellClass(cell) {
+    if (!cell || cell.level <= 0) return EMPTY_CLASS;
+
+    return (GROUP_LEVELS[cell.group] ?? GROUP_LEVELS.other)[cell.level - 1];
 }
 
 /**
@@ -74,6 +96,7 @@ export function buildHeatmap({ payload, weeks, actor = null }) {
     // kurzen Zeitraums an einem Ausreißer außerhalb, und die Karte einer einzelnen
     // Person wäre gegenüber der Team-Spitze fast leer.
     const counts = new Map();
+    const groupTotals = { work: 0, review: 0, other: 0 };
     let total = 0;
 
     for (const b of payload?.buckets ?? []) {
@@ -84,24 +107,40 @@ export function buildHeatmap({ payload, weeks, actor = null }) {
         const count = Number(b.count) || 0;
         if (count <= 0) continue;
 
+        const group = GROUP_LEVELS[b.group] ? b.group : 'other';
         const key = `${b.date}|${b.hour}`;
-        counts.set(key, (counts.get(key) ?? 0) + count);
+        const cell = counts.get(key) ?? { count: 0, groups: { work: 0, review: 0, other: 0 } };
+        cell.count += count;
+        cell.groups[group] += count;
+        counts.set(key, cell);
+
+        groupTotals[group] += count;
         total += count;
     }
 
     let max = 0;
     let busiest = null;
-    for (const [key, count] of counts) {
-        if (count <= max) continue;
+    for (const [key, cell] of counts) {
+        if (cell.count <= max) continue;
         const [date, hour] = key.split('|');
-        max = count;
-        busiest = { date, hour: Number(hour), count };
+        max = cell.count;
+        busiest = { date, hour: Number(hour), count: cell.count };
     }
 
     const cells = new Map();
-    for (const [key, count] of counts) {
-        cells.set(key, { count, level: levelOf(count, max) });
+    for (const [key, cell] of counts) {
+        // Der Farbton folgt der Familie mit den meisten Updates in DIESER Stunde;
+        // bei Gleichstand entscheidet die feste Reihenfolge (GROUPS), damit dieselben
+        // Daten immer dieselbe Farbe ergeben.
+        const group = GROUPS.reduce((best, g) => (cell.groups[g] > cell.groups[best] ? g : best), GROUPS[0]);
+
+        cells.set(key, {
+            count: cell.count,
+            groups: cell.groups,
+            group,
+            level: levelOf(cell.count, max),
+        });
     }
 
-    return { columns, hours: HOURS, cells, max, total, busiest, days };
+    return { columns, hours: HOURS, cells, max, total, busiest, days, groupTotals };
 }

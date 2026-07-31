@@ -88,9 +88,35 @@ class ProjectStatusActivityTest extends TestCase
 
         $this->assertSame(3, $payload['total']);
         $this->assertSame(
-            [['date' => $at->format('Y-m-d'), 'hour' => 10, 'actor' => null, 'count' => 3]],
-            $payload['buckets'],
-            'drei Wechsel in derselben Stunde sind EIN Kästchen mit Zähler 3',
+            ['review' => 2, 'work' => 1],
+            collect($payload['buckets'])->groupBy('group')->map->sum('count')->all(),
+            'zwei Review-Wechsel und einer zurück in die Bearbeitung — Rückläufer zählen einzeln',
+        );
+        $this->assertSame(
+            [[$at->format('Y-m-d'), 10], [$at->format('Y-m-d'), 10]],
+            collect($payload['buckets'])->map(fn ($b) => [$b['date'], $b['hour']])->all(),
+            'alles in derselben Stunde, nur nach Familie getrennt',
+        );
+    }
+
+    /**
+     * Der Farbton der Kästchen kommt aus der Status-FAMILIE, und die leitet sich aus
+     * `kind` der Org-Konfiguration ab — nicht aus einer Liste von Schlüsseln. Sonst
+     * fiele jeder eigene Status einer Organisation („Polishing") aus der Einordnung.
+     */
+    public function test_groups_follow_the_kind_of_the_target_status(): void
+    {
+        $task = $this->task();
+
+        $this->travelTo(now()->startOfDay()->addHours(11));
+        $task->update(['status' => TaskStatus::IN_PROGRESS]);   // kind active  → work
+        $task->update(['status' => TaskStatus::IN_REVIEW]);     // kind review  → review
+        $task->update(['status' => TaskStatus::MERGED]);        // kind done    → other
+        $task->update(['status' => TaskStatus::BLOCKED]);       // kind exception → other
+
+        $this->assertSame(
+            ['work' => 1, 'review' => 1, 'other' => 2],
+            collect($this->payload()['buckets'])->groupBy('group')->map->sum('count')->all(),
         );
     }
 
@@ -119,7 +145,7 @@ class ProjectStatusActivityTest extends TestCase
         $this->assertSame(3, $payload['total'], 'die Summe zählt beide Personen zusammen');
         $this->assertSame(
             [$owner->id => 2, $other->id => 1],
-            collect($payload['buckets'])->pluck('count', 'actor')->all(),
+            collect($payload['buckets'])->groupBy('actor')->map->sum('count')->all(),
         );
         $this->assertSame(
             [['id' => $owner->id, 'name' => $owner->name, 'count' => 2], ['id' => $other->id, 'name' => 'Ada Lovelace', 'count' => 1]],
@@ -170,11 +196,11 @@ class ProjectStatusActivityTest extends TestCase
         $task->update(['status' => TaskStatus::IN_REVIEW]);
 
         $this->assertSame(
-            [['date' => $at->format('Y-m-d'), 'hour' => 22, 'actor' => null, 'count' => 1]],
+            [['date' => $at->format('Y-m-d'), 'hour' => 22, 'actor' => null, 'group' => 'review', 'count' => 1]],
             $this->payload(182, 'UTC')['buckets'],
         );
         $this->assertSame(
-            [['date' => $at->copy()->addDay()->format('Y-m-d'), 'hour' => 7, 'actor' => null, 'count' => 1]],
+            [['date' => $at->copy()->addDay()->format('Y-m-d'), 'hour' => 7, 'actor' => null, 'group' => 'review', 'count' => 1]],
             $this->payload(182, 'Asia/Tokyo')['buckets'],
         );
     }
@@ -231,7 +257,8 @@ class ProjectStatusActivityTest extends TestCase
             ->assertJsonPath('days', 182)
             ->assertJsonPath('timezone', 'UTC')
             ->assertJsonPath('total', 1)
-            ->assertJsonPath('buckets.0.hour', 8);
+            ->assertJsonPath('buckets.0.hour', 8)
+            ->assertJsonPath('buckets.0.group', 'review');
     }
 
     /**
@@ -257,6 +284,9 @@ class ProjectStatusActivityTest extends TestCase
 
         $this->assertNotEmpty($strings['heatmapTitle']);
         $this->assertNotEmpty($strings['heatmapPersonAll']);
+        foreach (['heatmapGroupWork', 'heatmapGroupReview', 'heatmapGroupOther'] as $key) {
+            $this->assertNotEmpty($strings[$key], $key);
+        }
         $this->assertStringContainsString(':weeks', $strings['heatmapRangeWeeks']);
         foreach ([':name', ':count'] as $placeholder) {
             $this->assertStringContainsString($placeholder, $strings['heatmapPersonOption']);
