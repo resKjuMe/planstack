@@ -44,6 +44,9 @@ class TaskResource extends JsonResource
         // gehört zum Claim-Zustand: ohne beides sieht ein Client einen fremden
         // Claim, aber nicht, ob dahinter noch etwas läuft.
         'claim_session', 'claim_seen_at',
+        // Zuletzt gemeldeter Fortschritt (Event mit detail/progress) — gehört zum
+        // Arbeitszustand: zeigt auf der Karte, wie weit ein laufender Worker ist.
+        'progress_detail', 'progress_percent', 'progress_at',
         // Reviewer gehört zum Review-Zustand wie last_review_* — ohne ihn kann ein
         // Client nicht erkennen, dass ein Review (auch sein eigener) schon läuft.
         'reviewed_by', 'reviewed_by_name',
@@ -138,6 +141,13 @@ class TaskResource extends JsonResource
             'pr_mergeable' => $this->pr_mergeable,
             'pr_unresolved_threads' => $this->pr_unresolved_threads,
             'pr_review_decision' => $this->pr_review_decision,
+            // Zuletzt per Fortschritts-Event gemeldeter Stand innerhalb der laufenden
+            // Phase (`POST /events` mit detail/progress). `progress_at` gehört dazu:
+            // ohne den Zeitpunkt liest ein Betrachter einen längst überholten Stand
+            // wie einen aktuellen.
+            'progress_detail' => $this->progress_detail,
+            'progress_percent' => $this->progress_percent,
+            'progress_at' => $this->progress_at,
             // Wann der PR-Zustand zuletzt von GitHub geholt wurde. Die Auswertungen
             // brauchen das, um „0 rote CI-Läufe" von „nie gemessen" zu unterscheiden
             // — ohne Sync sähe fehlende Datenbasis wie ein gutes Ergebnis aus.

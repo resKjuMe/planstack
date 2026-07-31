@@ -22,14 +22,71 @@ use Illuminate\Validation\Rule;
 class ProjectConfigController extends ApiController
 {
     /**
+     * The blocks a client may request individually via `?parts=`. The version/drift
+     * fields are NOT listed — they always ship, so one `?parts=` call is enough to
+     * both re-adopt a block and refresh the local baseline.
+     */
+    private const PARTS = [
+        'status_rules',
+        'operating_manual',
+        'skill_instructions',
+        'plan_instructions',
+        'config',
+        'catalog',
+    ];
+
+    /**
      * GET /api/projects/{project}/config — the stored + effective config plus the
      * catalogue (profiles and per-key options) so a UI can render the knobs.
+     *
+     * The full payload is ~68 KB, almost all of it server-maintained markdown. A
+     * client that only needs to re-adopt one block (the usual case: `status_rules`
+     * after an org workflow change, detected via config_versions) can ask for just
+     * that one with `?parts=status_rules` and save the rest. Without `parts` the
+     * response is unchanged, so existing clients are unaffected.
+     *
+     * Also revalidatable: the ETag covers the rendered payload — including the org
+     * status block and the project's own config, not just the template files — so an
+     * organisation changing its workflow reliably invalidates it.
      */
-    public function show(Project $project): JsonResponse
+    public function show(Request $request, Project $project): JsonResponse
     {
         $this->authorize('view', $project);
 
-        return response()->json($this->present($project));
+        $parts = $this->requestedParts($request);
+
+        $response = response()->json($this->present($project, $parts));
+
+        $response->setEtag(hash('xxh128', (string) $response->getContent()));
+        $response->isNotModified($request);
+
+        return $response;
+    }
+
+    /**
+     * The `parts` filter as a list, or null when the client wants everything.
+     *
+     * @return list<string>|null
+     */
+    private function requestedParts(Request $request): ?array
+    {
+        if (! $request->has('parts')) {
+            return null;
+        }
+
+        $requested = array_values(array_filter(array_map(
+            'trim',
+            explode(',', (string) $request->query('parts')),
+        )));
+
+        $unknown = array_diff($requested, self::PARTS);
+
+        if ($requested === [] || $unknown !== []) {
+            abort(422, 'Unbekannte parts: '.implode(', ', $unknown === [] ? ['(leer)'] : $unknown)
+                .'. Erlaubt: '.implode(', ', self::PARTS).'.');
+        }
+
+        return $requested;
     }
 
     /**
@@ -63,32 +120,17 @@ class ProjectConfigController extends ApiController
     }
 
     /**
+     * @param  list<string>|null  $parts  Only these blocks (null = everything).
      * @return array<string, mixed>
      */
-    private function present(Project $project): array
+    private function present(Project $project, ?array $parts = null): array
     {
-        $stored = is_array($project->config) ? $project->config : [];
-        $effective = $project->effectiveConfig();
+        $wants = static fn (string $part): bool => $parts === null || in_array($part, $parts, true);
 
-        // Status-Regeln = geteilte Basis + org-spezifischer Block (tatsächliche
-        // Status/Übergänge/Automationen dieser Organisation). Nur der Body-Inhalt
-        // `status_rules` trägt den Org-Block; die Skill-Revision NICHT — sie deckt
-        // (wie der Header X-Planstack-Skill-Revision) ausschliesslich die geteilten
-        // Datei-Inhalte ab. Org-Status-Drift signalisiert stattdessen
-        // status_config_version/config_versions. So sind Body-`skill_revision` und
-        // Header identisch, und der Client schreibt keine Baseline, die dauerhaft
-        // als Drift gilt.
-        $statusRules = $project->organization
-            ? rtrim(SkillTemplate::statusRules())."\n\n".StatusRules::forOrganization($project->organization)
-            : SkillTemplate::statusRules();
-        $skillRevision = SkillTemplate::sharedRevision();
-
-        // Nur die projektspezifische Ergänzung (leer, wenn nichts hinterlegt).
-        $notes = filled($project->skill_description)
-            ? SkillTemplate::render($project->skill_description, $project)
-            : '';
-
-        return [
+        // Die Versions-/Drift-Felder sind IMMER dabei: ein `?parts=`-Aufruf soll
+        // gleichzeitig den Block liefern und die lokale Baseline erneuern können,
+        // ohne dass der Client dafür ein zweites Mal anfragen muss.
+        $payload = [
             'config_version' => $project->config_version,
             // Org-weite Status-Config-Version (Header X-Planstack-Status-Config-Version):
             // die coarse Drift-Marke, die ein Client auf dem Hot-Path beobachtet.
@@ -102,34 +144,74 @@ class ProjectConfigController extends ApiController
             // Stand und zieht bei Abweichung NUR die betroffene Config nach,
             // statt das gesamte Skill-Dokument neu zu laden.
             'config_versions' => $this->configVersions($project),
-            'profile' => $stored['profile'] ?? null,
-            'overrides' => $stored['overrides'] ?? [],
-            'effective' => $effective,
-            'client_hints' => ProjectConfig::clientHints($effective),
-            // Geteilte, projektunabhängige Inhalte (für alle Skills) + Revision
-            // (Header X-Planstack-Skill-Revision) — der Skill lädt sie bei Drift
-            // nach, statt neu heruntergeladen zu werden.
-            'operating_manual' => SkillTemplate::operatingManual(),
-            'status_rules' => $statusRules,
-            // Projektübergreifende Anweisungen des allgemeinen planstack-Skills
-            // (z. B. PR-Titel-Konvention). Nur der planstack-Skill lädt sie nach.
-            'skill_instructions' => SkillTemplate::skillInstructions(),
-            'skill_revision' => $skillRevision,
-            // Anweisungen für `/planstack plan` (Projekt/Phasen/Tasks anlegen,
-            // Task-Felder-Leitfaden) — eigene, versionierte Datei, bei jedem
-            // plan-Aufruf frisch geladen (self-updating), daher separat.
-            'plan_instructions' => SkillTemplate::planInstructions(),
+            // Revision der geteilten Datei-Inhalte (Header X-Planstack-Skill-Revision).
+            'skill_revision' => SkillTemplate::sharedRevision(),
+            // Eigene Revision der plan-Anweisungen (self-updating, separat versioniert).
             'plan_revision' => SkillTemplate::planRevision(),
-            // Projektspezifische Zusatz-Anweisungen (aus dem Claude-Feld).
-            'instructions' => $notes,
-            'catalog' => [
+            // Revision je Block: sagt — anders als skill_revision — WELCHER Block
+            // gedriftet ist, sodass der Client nur diesen per `?parts=<key>` nachliest.
+            'revisions' => SkillTemplate::revisions(),
+        ];
+
+        if ($wants('config')) {
+            $stored = is_array($project->config) ? $project->config : [];
+            $effective = $project->effectiveConfig();
+
+            $payload['profile'] = $stored['profile'] ?? null;
+            $payload['overrides'] = $stored['overrides'] ?? [];
+            $payload['effective'] = $effective;
+            $payload['client_hints'] = ProjectConfig::clientHints($effective);
+            // Projektspezifische Zusatz-Anweisungen (aus dem Claude-Feld), leer wenn
+            // nichts hinterlegt.
+            $payload['instructions'] = filled($project->skill_description)
+                ? SkillTemplate::render($project->skill_description, $project)
+                : '';
+        }
+
+        // Geteilte, projektunabhängige Inhalte (für alle Skills) — der Skill lädt sie
+        // bei Drift nach, statt neu heruntergeladen zu werden.
+        if ($wants('operating_manual')) {
+            $payload['operating_manual'] = SkillTemplate::operatingManual();
+        }
+
+        if ($wants('status_rules')) {
+            // Status-Regeln = geteilte Basis + org-spezifischer Block (tatsächliche
+            // Status/Übergänge/Automationen dieser Organisation). Nur der Body-Inhalt
+            // `status_rules` trägt den Org-Block; die Skill-Revision NICHT — sie deckt
+            // (wie der Header X-Planstack-Skill-Revision) ausschliesslich die geteilten
+            // Datei-Inhalte ab. Org-Status-Drift signalisiert stattdessen
+            // status_config_version/config_versions. So sind Body-`skill_revision` und
+            // Header identisch, und der Client schreibt keine Baseline, die dauerhaft
+            // als Drift gilt.
+            $payload['status_rules'] = $project->organization
+                ? rtrim(SkillTemplate::statusRules())."\n\n".StatusRules::forOrganization($project->organization)
+                : SkillTemplate::statusRules();
+        }
+
+        // Projektübergreifende Anweisungen des allgemeinen planstack-Skills
+        // (z. B. PR-Titel-Konvention). Nur der planstack-Skill lädt sie nach.
+        if ($wants('skill_instructions')) {
+            $payload['skill_instructions'] = SkillTemplate::skillInstructions();
+        }
+
+        // Anweisungen für `/planstack plan` (Projekt/Phasen/Tasks anlegen,
+        // Task-Felder-Leitfaden) — eigene, versionierte Datei, bei jedem
+        // plan-Aufruf frisch geladen (self-updating), daher separat.
+        if ($wants('plan_instructions')) {
+            $payload['plan_instructions'] = SkillTemplate::planInstructions();
+        }
+
+        if ($wants('catalog')) {
+            $payload['catalog'] = [
                 'profiles' => array_keys(ProjectConfig::PROFILES),
                 'options' => ProjectConfig::OPTIONS,
                 'bool_keys' => ProjectConfig::BOOL_KEYS,
                 'int_keys' => ProjectConfig::INT_KEYS,
                 'defaults' => ProjectConfig::DEFAULTS,
-            ],
-        ];
+            ];
+        }
+
+        return $payload;
     }
 
     /**

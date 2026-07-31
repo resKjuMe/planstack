@@ -73,6 +73,11 @@ class Task extends Model
         'pr_status_synced_at',
         'fix_leased_by',
         'fix_lease_expires_at',
+        // Zuletzt per Fortschritts-Event gemeldeter Stand (POST /events mit
+        // detail/progress) — denormalisiert, damit das Board ihn ohne Join zeigt.
+        'progress_detail',
+        'progress_percent',
+        'progress_at',
         'reviewed_by',
         'last_reviewed_at',
         'last_review_recommendation',
@@ -113,6 +118,8 @@ class Task extends Model
             'pr_status_synced_at' => 'datetime',
             'fix_leased_by' => 'integer',
             'fix_lease_expires_at' => 'datetime',
+            'progress_percent' => 'integer',
+            'progress_at' => 'datetime',
             'reviewed_by' => 'integer',
             'last_reviewed_at' => 'datetime',
             'last_review_recommendation' => \App\Enums\ReviewRecommendation::class,

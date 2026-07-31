@@ -29,6 +29,34 @@ class SkillEndpointTest extends TestCase
     }
 
     /**
+     * `skill_revision` is one hash over all maintained files, so it says THAT something
+     * changed, never WHICH block. The per-block map is what lets a client pull just the
+     * drifted block back into context via `?parts=<key>` — so its keys have to be
+     * exactly the `parts` names, and it must not replace the shared revision that the
+     * per-project skills (L2LR/LOG) watch.
+     */
+    public function test_returns_a_revision_per_maintained_block(): void
+    {
+        Sanctum::actingAs(User::factory()->create());
+
+        $response = $this->getJson('/api/skill')->assertOk();
+
+        $this->assertSame(
+            ['operating_manual', 'status_rules', 'skill_instructions', 'plan_instructions'],
+            array_keys((array) $response->json('revisions')),
+        );
+
+        // Every block revision differs from the others (they hash different content) and
+        // none of them equals the shared revision, which still covers all of them.
+        $revisions = (array) $response->json('revisions');
+        $this->assertSame($revisions, array_unique($revisions));
+        $this->assertNotContains($response->json('skill_revision'), $revisions);
+
+        // The shared revision keeps its meaning — L2LR/LOG rely on this header value.
+        $this->assertSame(SkillTemplate::sharedRevision(), $response->json('skill_revision'));
+    }
+
+    /**
      * The endpoint exists so a client can replace its stale SKILL.md — the text it
      * serves must therefore carry the server-maintained conventions, above all the
      * PR-title prefix (a stale copy dropped the project alias).

@@ -4,6 +4,7 @@ namespace Tests\Feature\Api;
 
 use App\Enums\StatusRole;
 use App\Enums\TaskEvent;
+use App\Enums\TaskStatus;
 use App\Models\OrgEventAutomation;
 use App\Models\Project;
 use App\Models\Task;
@@ -101,10 +102,12 @@ class ProjectConfigTest extends TestCase
 
         $response = $this->getJson("/api/projects/{$project->alias}/config")->assertOk();
 
-        // Default-seeded org ⇒ the statuses table is populated ⇒ a timestamp is
-        // present; tables the org never touched stay null.
+        // Default-seeded org ⇒ statuses and the event automations that come with the
+        // default lifecycle (DefaultTaskStatuses::seedEventAutomations) are populated
+        // ⇒ a timestamp is present. Tables the org never touched stay null — custom
+        // fields are the case that proves it, since nothing seeds them.
         $this->assertNotNull($response->json('config_versions.statuses'));
-        $this->assertNull($response->json('config_versions.event_automations'));
+        $this->assertNotNull($response->json('config_versions.event_automations'));
         $this->assertNull($response->json('config_versions.custom_fields'));
     }
 
@@ -114,11 +117,13 @@ class ProjectConfigTest extends TestCase
         $org = $project->organization;
         $target = $org->statusForRole(StatusRole::IN_PROGRESS);
 
-        OrgEventAutomation::create([
-            'organization_id' => $org->id,
-            'event' => TaskEvent::PROCESSING,
-            'target_status_id' => $target->id,
-        ]);
+        // updateOrCreate, weil die Default-Vorbelegung der Org diesen Event schon
+        // verdrahtet (DefaultTaskStatuses::seedEventAutomations) — der Test prüft,
+        // dass eine vorhandene Automation durchschlägt, nicht das Einfügen selbst.
+        OrgEventAutomation::updateOrCreate(
+            ['organization_id' => $org->id, 'event' => TaskEvent::PROCESSING],
+            ['target_status_id' => $target->id],
+        );
 
         $response = $this->getJson("/api/projects/{$project->alias}/config")->assertOk();
 
@@ -192,7 +197,10 @@ class ProjectConfigTest extends TestCase
     {
         [$user, $project] = $this->ownedProject();
         $task = $this->pickableTask($project, 'C1');
-        $task->update(['claimed_by_id' => $user->id, 'status' => TaskStatus::IN_PROGRESS]);
+        // Aus IN_PROGRESS ist MERGED nicht erreichbar (DefaultTaskStatuses::TRANSITIONS
+        // fuehrt ueber REVIEWBAR/IN_REVIEW) — die Uebergangspruefung wuerde 409 liefern.
+        // Fuer das Buendeln von pr_number + merge ist IN_REVIEW der legale Startpunkt.
+        $task->update(['claimed_by_id' => $user->id, 'status' => TaskStatus::IN_REVIEW]);
 
         $this->postJson("/api/projects/{$project->alias}/tasks/{$task->id}/complete", [
             'pr_number' => 42,
@@ -246,5 +254,106 @@ class ProjectConfigTest extends TestCase
         $this->putJson("/api/projects/{$project->alias}/config", [
             'overrides' => ['board.scope' => 'bogus'],
         ])->assertStatus(422);
+    }
+
+    /**
+     * The full config payload is ~68 KB of mostly server-maintained markdown. A skill
+     * that detected org drift via config_versions only needs `status_rules` back — so
+     * `?parts=` must return that block and drop the rest, while still carrying every
+     * version field, so one call both re-adopts the block and refreshes the baseline.
+     */
+    public function test_config_parts_returns_only_requested_blocks_plus_versions(): void
+    {
+        [, $project] = $this->ownedProject();
+
+        $response = $this->getJson("/api/projects/{$project->alias}/config?parts=status_rules")
+            ->assertOk()
+            // Requested block is there …
+            ->assertJsonStructure(['status_rules'])
+            // … the version/drift fields always ship …
+            ->assertJsonStructure([
+                'config_version',
+                'status_config_version',
+                'config_versions',
+                'skill_revision',
+                'plan_revision',
+            ])
+            // … and everything else is gone.
+            ->assertJsonMissingPath('operating_manual')
+            ->assertJsonMissingPath('skill_instructions')
+            ->assertJsonMissingPath('plan_instructions')
+            ->assertJsonMissingPath('catalog')
+            ->assertJsonMissingPath('effective')
+            ->assertJsonMissingPath('client_hints');
+
+        $this->assertNotEmpty($response->json('status_rules'));
+
+        // The saving is the whole point: the filtered body must be a fraction of the
+        // full one, otherwise the granular drift detection buys nothing.
+        $full = $this->getJson("/api/projects/{$project->alias}/config")->assertOk();
+        $this->assertLessThan(
+            strlen((string) $full->getContent()) / 2,
+            strlen((string) $response->getContent()),
+        );
+    }
+
+    public function test_config_without_parts_is_unchanged(): void
+    {
+        [, $project] = $this->ownedProject();
+
+        // Rein additiv: ohne `parts` liefert der Endpunkt weiterhin alles, damit
+        // bestehende Clients unberuehrt bleiben.
+        $this->getJson("/api/projects/{$project->alias}/config")
+            ->assertOk()
+            ->assertJsonStructure([
+                'operating_manual',
+                'status_rules',
+                'skill_instructions',
+                'plan_instructions',
+                'effective',
+                'client_hints',
+                'instructions',
+                'catalog',
+            ]);
+    }
+
+    public function test_config_rejects_unknown_parts(): void
+    {
+        [, $project] = $this->ownedProject();
+
+        $this->getJson("/api/projects/{$project->alias}/config?parts=status_rules,bogus")
+            ->assertStatus(422);
+
+        $this->getJson("/api/projects/{$project->alias}/config?parts=")
+            ->assertStatus(422);
+    }
+
+    /**
+     * `status_rules` carries the org status block from the database, and `instructions`
+     * the project's own text — so an ETag built from the template files alone would go
+     * stale silently. It must be derived from the rendered payload.
+     */
+    public function test_config_etag_revalidates_and_invalidates_on_org_change(): void
+    {
+        [, $project] = $this->ownedProject();
+
+        $etag = $this->getJson("/api/projects/{$project->alias}/config")
+            ->assertOk()
+            ->headers->get('ETag');
+
+        $this->assertNotNull($etag);
+
+        $this->get("/api/projects/{$project->alias}/config", ['If-None-Match' => $etag])
+            ->assertStatus(304);
+
+        // Change the organisation's workflow ⇒ the same ETag must no longer match.
+        $org = $project->organization;
+        OrgEventAutomation::updateOrCreate(
+            ['organization_id' => $org->id, 'event' => TaskEvent::ANALYZING],
+            ['target_status_id' => $org->statusForRole(StatusRole::IN_PROGRESS)->id],
+        );
+
+        $this->get("/api/projects/{$project->alias}/config", ['If-None-Match' => $etag])
+            ->assertOk();
     }
 }

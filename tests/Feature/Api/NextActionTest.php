@@ -42,16 +42,18 @@ class NextActionTest extends TestCase
         $reviewId = $this->inReviewId($project);
 
         $fix = $project->tasks()->create([
+            'created_by_id' => $project->created_by_id,
             'name' => 'FIXY', 'summary' => 'red CI', 'pr_number' => 10,
             'status_id' => $reviewId, 'pr_ci_status' => 'FAILURE',
         ]);
         // Review-Kandidat (im Review-Pool, PR, kein Fix-Grund) …
         $project->tasks()->create([
+            'created_by_id' => $project->created_by_id,
             'name' => 'REVVY', 'summary' => 'ready to review', 'pr_number' => 11,
             'status_id' => $reviewId,
         ]);
         // … und ein pickbarer Work-Kandidat.
-        $project->tasks()->create(['name' => 'WORKY', 'summary' => 'pickable']);
+        $project->tasks()->create(['created_by_id' => $project->created_by_id, 'name' => 'WORKY', 'summary' => 'pickable']);
 
         $result = $this->resolver()->resolve($project, $user);
 
@@ -70,9 +72,10 @@ class NextActionTest extends TestCase
         $reviewId = $this->inReviewId($project);
 
         $rev = $project->tasks()->create([
+            'created_by_id' => $project->created_by_id,
             'name' => 'REVVY', 'summary' => 'ready', 'pr_number' => 11, 'status_id' => $reviewId,
         ]);
-        $project->tasks()->create(['name' => 'WORKY', 'summary' => 'pickable']);
+        $project->tasks()->create(['created_by_id' => $project->created_by_id, 'name' => 'WORKY', 'summary' => 'pickable']);
 
         $result = $this->resolver()->resolve($project, $user);
 
@@ -84,7 +87,7 @@ class NextActionTest extends TestCase
     public function test_work_is_the_fallback_and_claims_the_task(): void
     {
         [$user, $project] = $this->ownedProject();
-        $work = $project->tasks()->create(['name' => 'WORKY', 'summary' => 'pickable']);
+        $work = $project->tasks()->create(['created_by_id' => $project->created_by_id, 'name' => 'WORKY', 'summary' => 'pickable']);
 
         $result = $this->resolver()->resolve($project, $user);
 
@@ -98,6 +101,7 @@ class NextActionTest extends TestCase
         [$user, $project] = $this->ownedProject();
         // Ein bereits gemergter Task ist weder fix- noch review- noch pickbar.
         $project->tasks()->create([
+            'created_by_id' => $project->created_by_id,
             'name' => 'DONE', 'summary' => 'merged', 'pr_number' => 9,
             'status' => StatusRole::MERGED->value,
         ]);
@@ -115,11 +119,13 @@ class NextActionTest extends TestCase
         $other = User::factory()->create();
 
         $fix = $project->tasks()->create([
+            'created_by_id' => $project->created_by_id,
             'name' => 'FIXY', 'summary' => 'red CI', 'pr_number' => 10,
             'status_id' => $reviewId, 'pr_ci_status' => 'FAILURE',
             'fix_leased_by' => $other->id, 'fix_lease_expires_at' => now()->addMinutes(10),
         ]);
         $rev = $project->tasks()->create([
+            'created_by_id' => $project->created_by_id,
             'name' => 'REVVY', 'summary' => 'ready', 'pr_number' => 11, 'status_id' => $reviewId,
         ]);
 
@@ -140,7 +146,7 @@ class NextActionTest extends TestCase
     public function test_endpoint_returns_action_and_task_payload(): void
     {
         [$user, $project] = $this->ownedProject();
-        $work = $project->tasks()->create(['name' => 'WORKY', 'summary' => 'pickable']);
+        $work = $project->tasks()->create(['created_by_id' => $project->created_by_id, 'name' => 'WORKY', 'summary' => 'pickable']);
         Sanctum::actingAs($user);
 
         $this->postJson("/api/projects/{$project->alias}/next-action")

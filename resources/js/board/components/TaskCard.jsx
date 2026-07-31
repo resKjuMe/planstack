@@ -232,6 +232,33 @@ export function TaskCardView({
                 </span>
             </div>
 
+            {/* Zuletzt gemeldeter Fortschritt innerhalb der laufenden Phase (Event
+                mit detail/progress). Macht sichtbar, wie weit ein Worker ist —
+                dauerhaft und für alle, nicht nur in dessen lokaler Statuszeile.
+                Der Balken erscheint nur mit gerechneter Prozentzahl; ohne sie
+                bleibt der Text allein stehen (geschätzt wird nicht). */}
+            {(task.progressDetail || task.progressPercent !== null) && (
+                <div
+                    className="mt-1 flex flex-col gap-0.5"
+                    title={task.progressAt ? new Date(task.progressAt).toLocaleString() : undefined}
+                >
+                    {task.progressPercent !== null && (
+                        <span className="h-1 w-full overflow-hidden rounded bg-slate-200 dark:bg-slate-700">
+                            <span
+                                className="block h-full rounded bg-indigo-500 dark:bg-indigo-400"
+                                style={{ width: `${Math.min(100, Math.max(0, task.progressPercent))}%` }}
+                            />
+                        </span>
+                    )}
+                    {task.progressDetail && (
+                        <span className="truncate text-[10px] text-slate-500 dark:text-slate-400">
+                            {task.progressPercent !== null ? `${task.progressPercent} % · ` : ''}
+                            {task.progressDetail}
+                        </span>
+                    )}
+                </div>
+            )}
+
             {/* In the review columns, show the reviewer beneath the assignee so
                 it's clear who is reviewing (distinct from who worked the task).
                 Includes the REVIEWBAR pool: review-next/review-claim reserve a

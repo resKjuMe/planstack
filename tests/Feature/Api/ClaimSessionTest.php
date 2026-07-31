@@ -37,7 +37,7 @@ class ClaimSessionTest extends TestCase
     private function task(Project $project, array $attrs = []): Task
     {
         return $project->tasks()->create(array_merge(
-            ['name' => 'SESS', 'summary' => 'a task'],
+            ['name' => 'SESS', 'summary' => 'a task', 'created_by_id' => $project->created_by_id],
             $attrs,
         ));
     }

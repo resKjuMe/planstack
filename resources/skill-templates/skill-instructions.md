@@ -9,7 +9,7 @@ Verbindliche, projektübergreifende Anweisungen für den allgemeinen `planstack`
 
 ## Sticky-Statuszeile (Pflicht bei JEDEM Aufruf)
 
-**Jeder** `/planstack`-Aufruf zeigt dauerhaft in einer **Statuszeile** (sticky, unten im Fenster), was gerade getan wird — nicht nur der Auto-Modus, und nicht nur als Fließtext im Verlauf. Das gilt ausdrücklich auch für die kurzen Kommandos (`settings`, `update-config`) und für das **Nachziehen des Skills selbst**: die Drift-Prüfung und das Neuschreiben der SKILL.md sind oft das Erste, was Zeit kostet (Netzwerk), und dürfen nicht unsichtbar passieren. Solange ein `/planstack`-Aufruf läuft, steht in der Zeile, was er tut; endet er, wird die Zustandsdatei geleert.
+**Jeder** `/planstack`-Aufruf zeigt in einer **Statuszeile** (sticky, unten im Fenster), was gerade getan wird — auch die kurzen Kommandos (`settings`, `update-config`) und das **Nachziehen des Skills selbst**, das als Erstes Zeit kostet und nicht unsichtbar passieren darf. Endet der Aufruf, wird die Zustandsdatei geleert.
 
 **Format** (genau diese Reihenfolge, Phase samt Prozentzahl in Klammern **direkt hinter dem Kommando**):
 
@@ -17,119 +17,75 @@ Verbindliche, projektübergreifende Anweisungen für den allgemeinen `planstack`
 <Symbol> <Kommando> (<Phase> <%>) <PROJECT> · <TASK> — <kurzer Schritt>
 ```
 
-Beispiele:
+Beispiele: `⚙ Work (Bearbeite 44 %) DCE · C27 — 4/9 Dateien` · `⚙ Auto › Review (Review 25 %) DCE · A1 — 2/8 Dateien im Diff` · `⚙ Update (Schreibe Skill) — SKILL.md ersetzen` · `⏳ Auto (Idle) DCE · — warte 5 min`
 
-- `⚙ Work (Bearbeite 44 %) DCE · C27 — 4/9 Dateien`
-- `⚙ Auto › Review (Review 25 %) DCE · A1 — 2/8 Dateien im Diff`
-- `⚙ Fix (Fix 40 %) L2L · G5 — 3/7 Kommentare`
-- `⚙ Plan (Plane 43 %) DCE — 3/7 Tasks`
-- `⚙ Update (Lade Config) DCE — GET /config`
-- `⚙ Update (Schreibe Skill) — SKILL.md ersetzen`
-- `⚙ Settings (Einstellungen) — settings.json lesen`
-- `⏳ Auto (Idle) DCE · — warte 5 min`
+`<Kommando>` ist das laufende Sub-Kommando in Titelschreibweise (`Work`, `Auto`, `Review`, `Fix`, `Plan`, `Settings`, `Update`). Ruft ein Kommando ein anderes auf — im Auto-Modus der Regelfall —, werden **beide** genannt, außen zuerst, getrennt durch `›` (`Auto › Work`); mehr als zwei Ebenen nicht. `<PROJECT>`/`<TASK>` **entfallen**, wo es sie nicht gibt; ist das Projekt bekannt, aber noch kein Task, bleibt der Trenner stehen (`DCE · —`).
 
-`<Kommando>` ist das **laufende Sub-Kommando** in Titelschreibweise: `Work`, `Auto`, `Review`, `Fix`, `Plan`, `Settings`, `Update`. Ruft ein Kommando ein anderes auf — im Auto-Modus der Regelfall —, werden **beide** genannt, außen zuerst, getrennt durch `›`: `Auto › Work`, `Auto › Review`, `Auto › Fix`. So ist gleichzeitig sichtbar, dass die Schleife lebt **und** was sie gerade tut. Mehr als zwei Ebenen werden nicht gezeigt.
+**Wann geschrieben wird:** **bei jedem Phasenwechsel** und **bei jeder gezählten Einheit** innerhalb einer Phase (z. B. nach jeder fertigen Datei), jeweils **bevor** der nächste Schritt beginnt. Ein Schreibvorgang vor *jedem* einzelnen Tool-Aufruf ist **nicht** nötig — das verdoppelt die Roundtrips, ohne mehr zu zeigen. Wo die Zeile neben einem Shell-Aufruf steht, gehört sie **in denselben Aufruf** (`printf … > "$ST"; curl …`) und kostet damit keinen eigenen Roundtrip. Der Task-Name steht drin, sobald er bekannt ist (auch vor dem Claim), die PR-Nummer als Link, sobald `pr_url` vorliegt; ist ein Feld noch unbekannt, mit Platzhalter beginnen (`⚙ Work (Wähle) DCE · — Board lesen`) und verfeinern, statt mit dem Schreiben zu warten.
 
-`<PROJECT>` und `<TASK>` **entfallen**, wo es sie nicht gibt (`Settings`, `Update` ohne Projekt, `Plan` vor dem ersten Projekt) — dann folgt direkt der Gedankenstrich. Ist das Projekt bekannt, aber noch kein Task, bleibt der Trenner stehen: `DCE · —`.
+`<Phase>` ist die **laufende Phase** in Titelschreibweise — was in diesem Moment tatsächlich passiert, nicht die grobe Arbeitseinheit (eine Einheit mit `action: "pick"` durchläuft mehrere Phasen). Verbindliche Phasen mit ihrer zählbaren Einheit:
 
-**Grundregel: BEVOR etwas Neues passiert.** Die Zeile wird aktualisiert, **bevor** die nächste Handlung beginnt — vor jedem Tool-Aufruf, vor jedem Lesen und Schreiben einer Datei, vor jedem HTTP-Aufruf, vor dem Start eines Subagenten, vor jedem Phasenwechsel. Reihenfolge ohne Ausnahme: **Zeile schreiben → dann handeln.** Nicht danach, nicht „wenn gerade Zeit ist", nicht gebündelt am Ende. Eine Zeile, die erst nach der Handlung nachgezogen wird, zeigt dauerhaft die Vergangenheit und macht den ganzen Zweck zunichte.
+| Phase | zählbare Einheit |
+|---|---|
+| `Prüfe Drift` · `Lade Config` · `Schreibe Skill` · `Baseline` | — |
+| `Wähle` · `Lade Details` | — |
+| `Analyse` | Teilschritte |
+| `Bearbeite` | Dateien, Teilschritte |
+| `Erstelle PR` · `Hinterlege PR` · `Fertigstellung` | — |
+| `Fix` | Checks, Kommentare, Review-Threads |
+| `Review` | Dateien im Diff |
+| `Plane` | Tasks, Phasen |
+| `Einstellungen` · `Concern` · `Idle` · `Pause` | — |
 
-Daraus folgt: der Task-Name steht drin, sobald er aus dem Board bekannt ist (auch schon vor dem Claim), die neue Phase beim Wechsel, die PR-Nummer als Link, sobald `pr_url` vorliegt. Lieber einmal zu oft schreiben als einmal zu spät — die Datei ist eine Zeile, das Schreiben kostet nichts. Ist ein Feld noch unbekannt, mit einem Platzhalter beginnen (`⚙ Work (Wähle) DCE · — Board lesen`) und verfeinern, statt mit dem Schreiben zu warten.
+Passt keine Phase, die nächstliegende nehmen statt eine neue zu erfinden — die Zeile soll über Aufrufe hinweg wiedererkennbar bleiben. Der Ergebnisbericht des Auto-Runs behält sein `action`-Feld; die Statuszeile ist davon unabhängig.
 
-`<Phase>` ist die **laufende Phase** in Titelschreibweise — also das, was in diesem Moment tatsächlich passiert, nicht die grobe Arbeitseinheit. Sie ist damit feiner als das `action`-Feld des Ergebnisberichts: eine Arbeitseinheit mit `action: "pick"` durchläuft mehrere Phasen. Verbindliche Phasen, mit der Einheit, in der sich ihr Fortschritt zählen lässt:
+**Die Selbst-Update-Kette wird angezeigt** (sie ist von außen sonst nicht zu erkennen): `⚙ <Kommando> (Prüfe Drift) …` → bei Abweichung `⚙ Update (Lade Config) …` → `⚙ Update (Schreibe Skill) — SKILL.md ersetzen` → `⚙ Update (Baseline) — config.json`, dann zurück zum eigentlichen Kommando.
 
-| Phase | wann | zählbare Einheit |
-|---|---|---|
-| `Prüfe Drift` | Revisions-Header mit der lokalen Baseline vergleichen | — |
-| `Lade Config` | `GET /config` bzw. `GET /skill` lesen | — |
-| `Schreibe Skill` | den ausgelieferten Skill-Text über die SKILL.md schreiben | — |
-| `Baseline` | Revisionen in `config.json` zurückschreiben | — |
-| `Wähle` | Board lesen, Arbeit suchen, beanspruchen | — |
-| `Lade Details` | Beschreibung, Akzeptanzkriterien und Voraussetzungen holen | — |
-| `Analyse` | Umfang untersuchen, noch kein Code | Teilschritte |
-| `Bearbeite` | Code-Änderungen durchführen | Dateien, Teilschritte |
-| `Erstelle PR` | PR anlegen | — |
-| `Hinterlege PR` | PR-Nummer am Task eintragen | — |
-| `Fix` | Politur am offenen PR (Konflikte, Kommentare, CI) | Checks, Kommentare, Review-Threads |
-| `Review` | Review übernehmen, Diff prüfen, Ergebnis erfassen | Dateien im Diff |
-| `Fertigstellung` | fertig melden, mergen | — |
-| `Plane` | Projekt, Phasen und Tasks anlegen | Tasks, Phasen |
-| `Einstellungen` | lokale Einstellungen lesen und schreiben | — |
-| `Concern` | Concern gemeldet, Arbeitseinheit endet | — |
-| `Idle` | nichts zu tun, 5-Minuten-Pause | — |
-| `Pause` | Modus angehalten | — |
+**`<%>` ist der Fortschritt INNERHALB der Phase — gerechnet, nie geschätzt:** erledigte ÷ geplante Einheiten, gerundet auf ganze Prozent. Der Nenner kommt aus der natürlichen Einheit der Phase (Tabelle oben) oder aus der eigenen Teilschritt-Liste; er **darf wachsen** — werden aus 7 geplanten Teilschritten 10, wird korrigiert, auch wenn die Zahl dadurch zurückgeht (ehrlich statt künstlich monoton). Steht kein Nenner fest, **entfällt die Prozentzahl** (`⚙ Work (Erstelle PR) DCE · C27`): eine geratene Zahl ist erfunden und schlimmer als keine. Der Bruch gehört **zusätzlich** in den Schritt-Text (`4/9 Dateien`, `2/5 Checks`, `3/7 Tasks`).
 
-Passt keine Phase, die nächstliegende nehmen statt eine neue zu erfinden — die Zeile soll über Aufrufe hinweg wiedererkennbar bleiben. Der Ergebnisbericht des Auto-Runs behält unverändert sein `action`-Feld (`review`/`fix`/`finish`/`pick`/`concern`/`idle`); die Statuszeile ist davon unabhängig.
+Der Schritt-Text ist die eigentliche Information und soll **konkret** sein: `4/9 Dateien: TaskController.php` statt `arbeite`, `2/5 Checks: phpstan` statt `CI läuft`, `GET /config` statt `lade`. Eine Zeile ist das Budget — kürzen ja, durch Floskeln ersetzen nein. Wartet der Aufruf auf etwas Externes, gehört genau das hinein (`⏳ Work (Fix) L2L · G5 — warte auf CI`), damit Stillstand nicht wie ein Absturz aussieht.
 
-**Beim Skill-Update (Pflicht, nicht optional):** Die Selbst-Update-Kette läuft bei jedem Aufruf und ist von außen sonst nicht zu erkennen. Sie wird durchgängig angezeigt: `⚙ <Kommando> (Prüfe Drift) …` → bei Abweichung `⚙ Update (Lade Config) …` → `⚙ Update (Schreibe Skill) — SKILL.md ersetzen` → `⚙ Update (Baseline) — config.json`. Dasselbe gilt für das Nachziehen einer einzelnen Org-Config über `config_versions` (`⚙ Update (Lade Config) DCE — status_rules`). Erst danach geht es mit dem eigentlichen Kommando weiter — der Wechsel zurück ist ebenfalls sichtbar.
+**Einrichtung (zu Beginn jedes Aufrufs prüfen, bei Bedarf einmal anlegen):**
 
-**`<%>` ist der Fortschritt INNERHALB der laufenden Phase — und wird gerechnet, nie geschätzt.** Er entsteht ausschließlich aus einem Zähler mit echtem Nenner: `<%>` = erledigte Einheiten ÷ geplante Einheiten. Der Nenner kommt
-
-1. aus der **natürlichen Einheit** der Phase (Spalte oben): zu ändernde Dateien, offene Kommentare, CI-Checks, Review-Threads, Dateien im Diff, anzulegende Tasks;
-2. sonst aus der **eigenen Teilschritt-Liste**: vor Beginn der Phase die geplanten Teilschritte festhalten (das passiert beim Planen ohnehin) und danach abzählen.
-
-Steht kein Nenner fest, **entfällt die Prozentzahl** — dann nur die Phase, ohne Zahl (`⚙ Work (Erstelle PR) DCE · C27`). Eine geratene Zahl („73 %", weil es sich nach zwei Dritteln anfühlt) ist eine erfundene Angabe und schlimmer als keine. Bei `Concern`, `Idle`, `Pause` und den kurzen Update-Phasen gibt es grundsätzlich keine.
-
-Der zugrundeliegende Bruch gehört **zusätzlich** in den `<kurzer Schritt>`-Text, damit die Zahl nachvollziehbar ist: `4/9 Dateien`, `3/7 Kommentare`, `2/5 Checks`, `1/4 Review-Threads`, `3/7 Tasks`, `3/5 Teilschritte`. Gerundet wird auf ganze Prozent.
-
-**Der Nenner darf wachsen.** Stellt sich mitten in der Phase heraus, dass aus 7 geplanten Teilschritten 10 werden, wird der Nenner korrigiert — auch wenn die Prozentzahl dadurch **zurückgeht**. Eine zurückgehende Zahl ist ehrlich; eine künstlich monotone wäre gelogen. Den Nenner also nie kleinhalten, nur damit die Anzeige steigt.
-
-Innerhalb einer Phase wird die Zeile bei **jeder** gezählten Einheit neu geschrieben (also z. B. nach jeder fertigen Datei) — das ist der einzige Fall, in dem sie mehrfach pro Phase wandert.
-
-**Möglichst genau sagen, was passiert.** Der `<kurzer Schritt>`-Text ist die eigentliche Information und soll konkret sein, nicht kategorisch: `4/9 Dateien: TaskController.php` statt `arbeite`, `2/5 Checks: phpstan` statt `CI läuft`, `GET /config` statt `lade`. Eine Zeile Länge ist das Budget — was nicht hineinpasst, wird gekürzt, aber nie durch eine Floskel ersetzt. Wartet der Aufruf auf etwas Externes (Netzwerk, CI, Nutzer-Eingabe), gehört genau das hinein (`⏳ Work (Fix) L2L · G5 — warte auf CI`), damit ein Stillstand nicht wie ein Absturz aussieht.
-
-**Einrichtung (einmalig, zu Beginn **jedes** Aufrufs prüfen und bei Bedarf anlegen):**
-
-1. **Zustandsdatei je Session:** `~/.claude/planstack-status-<session_id>.txt` — enthält genau **eine** Zeile. Die Datei ist **session-gebunden**: die Statuszeile darf **nur im laufenden Fenster** erscheinen, nie in anderen Sessions des Nutzers.
-2. **Statusline-Skript:** ein kleines Skript, das das Session-JSON von **stdin** liest, daraus `session_id` zieht und **nur** den Inhalt von `~/.claude/planstack-status-<session_id>.txt` ausgibt — existiert die Datei nicht, gibt es **keine** Ausgabe (leere Statuszeile). Ausgabe in **UTF-8**, damit Umlaute und Symbole stimmen. Die Session-Bindung ist **Pflicht**, kein Feinschliff: liest das Skript eine feste Datei ohne `session_id`, erscheint die Zeile in **allen** Sessions des Nutzers.
-3. **`statusLine`-Eintrag** in den Claude-Code-Settings (`~/.claude/settings.json`) auf dieses Skript zeigen lassen, **mit** `refreshInterval` (siehe unten):
+1. **Zustandsdatei je Session:** `~/.claude/planstack-status-<session_id>.txt`, genau **eine** Zeile.
+2. **Statusline-Skript:** liest das Session-JSON von **stdin**, zieht `session_id`, gibt **nur** den Inhalt dieser Datei aus (fehlt sie: keine Ausgabe), in **UTF-8**. Die Bindung an die `session_id` ist **Pflicht**: liest das Skript eine feste Datei ohne sie, erscheint die Zeile in **allen** Sessions des Nutzers.
+3. **`statusLine`-Eintrag** in `~/.claude/settings.json` auf dieses Skript zeigen lassen, **mit** `refreshInterval`:
 
    ```json
    { "statusLine": { "type": "command", "command": "…", "refreshInterval": 5 } }
    ```
 
-   Der Eintrag ist zwangsläufig global — die Session-Bindung aus Schritt 1/2 sorgt dafür, dass er trotzdem nur hier etwas anzeigt. Dem Nutzer sagen, dass eine **neu** angelegte `statusLine`-Konfiguration erst nach einem **Neustart** von Claude Code greift (eine bereits vorhandene wird sofort übernommen).
+Der Eintrag ist zwangsläufig global — die Session-Bindung sorgt dafür, dass er nur hier etwas anzeigt. Eine **neu** angelegte `statusLine`-Konfiguration greift erst nach einem **Neustart** von Claude Code, eine vorhandene sofort. Fehlt die Einrichtung, einmal anlegen und den Nutzer hinweisen — nicht bei jedem Aufruf erneut fragen.
 
-Fehlt die Einrichtung, wird sie **einmal** angelegt und der Nutzer darauf hingewiesen — nicht bei jedem Aufruf erneut gefragt.
+**`refreshInterval` ist der zentrale Praxis-Hinweis** (Sekunden, Minimum `1`, Empfehlung **5–10**): sonst wird die Statusline nur **ereignisgesteuert** neu berechnet (Prompt, Tool-Ende, Moduswechsel). Während ein Subagent arbeitet — im Auto-Modus der Regelfall — passiert davon minutenlang nichts, und die Zeile friert mit einem überholten Schritt ein.
 
-**`refreshInterval` (der zentrale Praxis-Hinweis):** Die Statusline wird normalerweise **ereignisgesteuert** neu berechnet — bei Prompt, Tool-Ende und Moduswechsel, 300 ms entprellt. Während ein Subagent arbeitet (im Auto-Modus der Regelfall) passiert davon minutenlang **nichts**, die Zeile friert also mitten in der Arbeit ein und zeigt einen längst überholten Schritt. Deshalb im `statusLine`-Eintrag **immer** `refreshInterval` setzen (Sekunden, Minimum `1`, Empfehlung **5–10**) — nur dann pollt Claude Code die Zustandsdatei von selbst weiter.
+**Klickbare Links (OSC 8):** `<TASK>` und PR-Nummer als OSC-8-Hyperlink ausgeben (`\e]8;;<URL>\a<Text>\e]8;;\a`, Ctrl+Klick bzw. Cmd+Klick). `<TASK>` → `<WEB>/projects/<PROJECT>`, wobei `<WEB>` die `base_url` **ohne** abschließendes `/api` ist (einen Deep-Link auf einen einzelnen Task gibt es nicht). PR-Nummer → `pr_url` aus der API (u. a. in `review-claim`/`review-next` und an jedem dekorierten Task) — **nie** selbst eine URL bauen. `\e`/`\a` müssen **echte** Steuerzeichen sein (per `printf`, nicht als Literal `\e`); Terminals ohne Hyperlink-Unterstützung zeigen nur den Text, sichtbare Escape-Reste wie `]8;;https…` sind dagegen ein **Fehler**. Geht es nicht sauber, die Zeile **ohne** Links schreiben — lesbar ohne Link ist besser als kaputt mit. Alternative ohne eigenes Skript: `footerLinksRegexes` in den Settings macht aus erkannten Mustern klickbare Footer-Badges, dafür ohne freien Schritt-Text.
 
-**Klickbare Links (OSC 8):** `<TASK>` und eine PR-Nummer im Schritt-Text als **OSC-8-Hyperlink** ausgeben, damit man aus der Statuszeile direkt ins Board bzw. in den PR springt (**Ctrl+Klick** unter Windows/Linux, **Cmd+Klick** unter macOS):
-
-```
-\e]8;;<URL>\a<Text>\e]8;;\a
-```
-
-- **`<TASK>`** → Task-/Board-Ansicht der Instanz: `<WEB>/projects/<PROJECT>`, wobei `<WEB>` die `base_url` aus `config.json` **ohne** das abschließende `/api` ist (eine Deep-Link-URL auf einen einzelnen Task gibt es nicht — die Board-Ansicht des Projekts ist das Ziel).
-- **PR-Nummer** → der GitHub-PR über `pr_url`. Das Feld liefert die API bereits mit, u. a. in den Antworten von `review-claim`/`review-next` und an jedem dekorierten Task — **nie** selbst eine URL zusammenbauen.
-
-`\e` und `\a` müssen als **echte** Steuerzeichen in der Datei landen (z. B. per `printf`, nicht als Literal `\e`). Die Anweisung ist bewusst **robust**: Terminals ohne Hyperlink-Unterstützung (klassisches conhost) zeigen einfach den Text ohne Link — sichtbare Escape-Reste wie `]8;;https…` sind aber ein **Fehler**. Lässt sich das nicht sauber schreiben, die Zeile **ohne** Links ausgeben; eine lesbare Zeile ohne Link ist besser als eine kaputte mit. Wer sich das Skript-Basteln sparen will: `footerLinksRegexes` in den Settings blendet aus erkannten Mustern (Task-Namen, PR-Nummern) klickbare Footer-Badges ein — ganz ohne eigenes Statusline-Skript, dafür ohne den frei formulierten Schritt-Text.
-
-**Das Prozentzeichen bleibt einfach: `%`, nie `%%`.** Die Zeile ist **Text, kein Format-String**. `printf` nimmt sein **erstes** Argument als Format-String — dort wäre `%` eine Direktive und müsste verdoppelt werden. Genau daraus entsteht der bekannte Fehler: erst wird brav verdoppelt, geschrieben wird die Zeile dann aber mit einem Werkzeug, das keine Format-Strings kennt — und in der Statuszeile stehen hinter der Zahl **zwei** Prozentzeichen. Deshalb die Zeile **nie** als Format-String übergeben, sondern als Argument:
+**Das Prozentzeichen bleibt einfach: `%`, nie `%%`.** Die Zeile ist **Text, kein Format-String**. Nur `printf` behandelt sein **erstes** Argument als Format-String; wer dort reflexhaft verdoppelt und die Zeile dann mit einem Werkzeug ohne Format-Strings schreibt, hat zwei Prozentzeichen hinter der Zahl. Deshalb die Zeile immer als **Argument** übergeben:
 
 ```
 printf '%s\n' "⚙ Review (Review 94 %) L2L · G5 — 15/16 Dateien"
 ```
 
-Kommen die OSC-8-Links dazu, gehören **nur** die Steuerzeichen in den Format-String; jeder variable Text bleibt Argument (und braucht damit kein Escaping):
+Mit OSC-8-Links gehören **nur** die Steuerzeichen in den Format-String, variabler Text bleibt Argument:
 
 ```
 printf '\e]8;;%s\a%s\e]8;;\a %s\n' "$url" "$task" "$rest"
 ```
 
-Alle anderen Schreibwege — `Set-Content -Encoding utf8`, Datei-Werkzeug, Here-Doc — kennen überhaupt keine Format-Strings; dort ist `%%` **immer** falsch. Prüfmaßstab ist der Dateiinhalt, nicht der Aufruf: je Prozentangabe steht dort **ein** Zeichen `%`. Steht `%%` in der Datei, ist die Zeile kaputt.
+`Set-Content -Encoding utf8`, Datei-Werkzeuge und Here-Docs kennen gar keine Format-Strings — dort ist die Verdopplung **immer** falsch. Prüfmaßstab ist der Dateiinhalt: je Prozentangabe steht dort **ein** Zeichen `%`.
 
-Immer **überschreiben**, nie anhängen. Das Schreiben ist **best-effort**: Fehler ignorieren, den Ablauf nie blockieren und das Setzen der Zeile nicht in Prosa berichten.
+Immer **überschreiben**, nie anhängen. Das Schreiben ist **best-effort**: Fehler ignorieren, den Ablauf nie blockieren, das Setzen der Zeile nicht in Prosa berichten.
 
 ## Feingranulare Config-Aktualisierung (`config_versions`)
 
 **Drift-Marken auf dem Hot-Path (Header jeder Board-/Task-Antwort):**
 
-- `X-Planstack-Config-Version` — **Projektconfig** (Profil/Overrides). Logik **unverändert**.
-- `X-Planstack-Skill-Revision` — geteilte **Datei**-Inhalte (Betriebshandbuch + Statusregeln + skill_instructions). Abweichung → `operating_manual`/`status_rules`/`skill_instructions` neu befolgen.
-- `X-Planstack-Status-Config-Version` — **org-weite Status-Config** (Status, Spalten, Übergänge, Status-/Event-Automationen). Diese Marke — **nicht** die Skill-Revision — steigt, wenn eine Organisation ihren Workflow ändert (z. B. eine neue ereignisgesteuerte Status-Zuweisung). Weicht sie vom lokal gespeicherten Stand ab → `GET /config` lesen und über `config_versions` (unten) ermitteln, **welche** Tabelle sich geändert hat.
+- `X-Planstack-Config-Version` — **Projektconfig** (Profil/Overrides).
+- `X-Planstack-Skill-Revision` — geteilte **Datei**-Inhalte (Betriebshandbuch + Statusregeln + `skill_instructions`). Abweichung → diese Inhalte neu befolgen und den lokalen Snapshot erneuern (siehe „Selbst-Update" im Bootstrap-Teil).
+- `X-Planstack-Status-Config-Version` — **org-weite Status-Config** (Status, Spalten, Übergänge, Status-/Event-Automationen). Diese Marke — **nicht** die Skill-Revision — steigt, wenn eine Organisation ihren Workflow ändert.
 
-`GET /config` liefert zusätzlich zu `config_version`/`skill_revision` (Projektconfig-Logik **unverändert**) `status_config_version` (dieselbe Marke wie der Header) und einen Block `config_versions` — je Org-Config-Tabelle den jüngsten `updated_at` (ISO-8601 oder `null`):
+`GET /config` liefert dazu `status_config_version` (dieselbe Marke wie der Header) und `config_versions` — je Org-Config-Tabelle den jüngsten `updated_at` (ISO-8601 oder `null`):
 
 ```json
 "config_versions": {
@@ -142,30 +98,24 @@ Immer **überschreiben**, nie anhängen. Das Schreiben ist **best-effort**: Fehl
 }
 ```
 
-Diese Werte je Projekt **lokal** als Baseline in `${CLAUDE_SKILL_DIR}/config.json` unter `projects.<PROJECT>` speichern (`status_config_version` **und** `config_versions`; rein lokal, nie an den Server). Beim **Sync-at-start** genügt der Vergleich des Headers `X-Planstack-Status-Config-Version` mit der lokalen `status_config_version` — sind sie gleich, ist nichts nachzuziehen (kein `GET /config` nötig). Weichen sie ab (oder fehlt die Baseline), `GET /config` lesen und je `config_versions`-Eintrag prüfen: hat sich ein einzelner Eintrag gegenüber der lokalen Baseline geändert, **nur die betroffene Config** neu übernehmen — **nicht** das ganze Skill-Dokument. Zuordnung Eintrag → nachzuziehender Inhalt:
+Diese Werte je Projekt **lokal** als Baseline in `${CLAUDE_SKILL_DIR}/config.json` unter `projects.<PROJECT>` speichern (`status_config_version` **und** `config_versions`; rein lokal, nie an den Server). Beim Sync-at-start genügt der Vergleich des Headers mit der lokalen `status_config_version` — sind sie gleich, ist nichts nachzuziehen (kein `GET /config` nötig). Weichen sie ab (oder fehlt die Baseline), `GET /config` lesen — dabei **nur die betroffenen Teile** anfordern (`?parts=status_rules`, siehe unten) — und je `config_versions`-Eintrag prüfen: geändert → **nur diese** Config neu übernehmen, nicht das ganze Skill-Dokument.
 
-- `statuses` · `status_groups` · `transitions` · `status_automations` · `event_automations` → den `status_rules`-Block neu übernehmen (Abschnitt „Status dieser Organisation": Spalten, Rollen, erlaubte Übergänge, Feld-Automationen **und** die ereignisgesteuerten Status-Zuweisungen).
-- `custom_fields` → nur die benutzerdefinierten Task-Felder (relevant fürs Anlegen/Befüllen von Tasks, `/planstack plan`).
+- `statuses` · `status_groups` · `transitions` · `status_automations` · `event_automations` → den `status_rules`-Block neu übernehmen (Abschnitt „Status dieser Organisation").
+- `custom_fields` → nur die benutzerdefinierten Task-Felder (relevant für `/planstack plan`).
 
-Nach dem Übernehmen die neue `status_config_version` **und** die `config_versions` als lokale Baseline zurückschreiben. `null` bleibt `null` (Tabelle leer → nichts nachzuziehen).
+Danach die neue `status_config_version` **und** die `config_versions` als lokale Baseline zurückschreiben. `null` bleibt `null`.
 
-**Snapshot mitschreiben (gilt für `skill_revision`):** Die Regeln in der lokalen SKILL.md sind nur eine Kopie dieses Textes. Wird eine neue `skill_revision` als Baseline in `config.json` geschrieben, **ohne** die Kopie zu erneuern, folgt der Skill ab dann dauerhaft dem alten Text: die Drift-Prüfung schlägt nie wieder an, weil lokale Baseline und Server-Header übereinstimmen — genau so entstehen z. B. PR-Titel ohne Projekt-Kürzel. Deshalb bei **jedem** Nachziehen von `skill_revision` (Drift **und** `update-config`) in dieser Reihenfolge:
+**Teilweise abrufen (`?parts=`):** `GET /config?parts=<a>,<b>` liefert nur die genannten Blöcke statt der vollen Antwort — erlaubt sind `status_rules`, `operating_manual`, `skill_instructions`, `plan_instructions`, `config`, `catalog`. Die Versions-/Drift-Felder (`config_version`, `skill_revision`, `status_config_version`, `config_versions`, `plan_revision`) sind **immer** enthalten, damit der Aufruf allein zum Baseline-Vergleich genügt. Ohne `parts` verhält sich der Endpunkt unverändert. Die volle Antwort ist ~68 KB — wer nur `status_rules` braucht, holt mit `?parts=status_rules` ein Zwanzigstel davon. `GET /config` unterstützt außerdem `ETag`/`If-None-Match` (`304` ohne Body), wenn sich seit dem letzten Abruf nichts geändert hat.
 
-1. `GET $BASE/skill` → `{ "skill_md": "…", "skill_revision": "…" }`.
-2. `skill_md` **vollständig über `${CLAUDE_SKILL_DIR}/SKILL.md` schreiben** (die Datei ersetzen, nicht ergänzen; `config.json`/`settings.json` bleiben unberührt).
-3. Erst danach das gelieferte `skill_revision` als Baseline in `config.json` schreiben.
+**Snapshot mitschreiben (gilt für `skill_revision`):** Die Regeln in der lokalen SKILL.md sind nur eine **Kopie** dieses Textes. Wird eine neue `skill_revision` als Baseline geschrieben, **ohne** die Kopie zu erneuern, folgt der Skill ab dann dauerhaft dem alten Text — die Drift-Prüfung schlägt nie wieder an, weil lokale Baseline und Server-Header übereinstimmen. Genau so entstehen z. B. PR-Titel ohne Projekt-Kürzel. Deshalb gilt bei **jedem** Nachziehen (Drift **und** `update-config`): **erst** die SKILL.md aus `GET $BASE/skill` ersetzen, **dann** die Baseline setzen — nie die Baseline allein. Der verbindliche Ablauf samt Schreibbefehl steht im Abschnitt „Selbst-Update" des Bootstrap-Teils. Antwortet `GET $BASE/skill` mit `404` (älterer Server), die Baseline **nicht** anheben — dann bleibt die Drift-Prüfung wirksam.
 
-Antwortet der Server auf `GET $BASE/skill` mit 404 (ältere Version), die Baseline **nicht** anheben — dann bleibt die Drift-Prüfung wirksam und der Text wird bei jedem Lauf frisch aus `/config` befolgt.
-
-**Wichtig — ereignisgesteuerter Status:** Enthält der `status_rules`-Block den Abschnitt „Ereignis-gesteuerte Status-Zuweisung", treibt der Server den Status **aus den Fortschritts-Events**. Direkte `POST /tasks/{id}/status`-Calls (`analyze`/`in_progress`/`in_review`/`done`) sind dann überflüssig — der **Server ignoriert sie in diesem Modus serverseitig** (sie können den per Event zugewiesenen Status nicht mehr überschreiben und lösen auch keinen Übergangs-Konflikt aus, sondern liefern den unveränderten Status zurück). Der Schutz gilt unabhängig davon, ob dieser Skill die Config-Änderung schon nachgezogen hat. Nur `claim`/`claim-next`, `pr`, `merge`, `concern`, `split` bleiben wirksam; der Status folgt ausschließlich den Events.
+Ereignisgesteuerter Status: gilt wie im Betriebshandbuch und in den Statusregeln beschrieben — trägt `status_rules` den Abschnitt „Ereignis-gesteuerte Status-Zuweisung", folgt der Status ausschließlich den Fortschritts-Events, und direkte `POST /tasks/{id}/status`-Calls bleiben serverseitig ohne Wirkung.
 
 ## Lokale Einstellungen (`/planstack settings`)
 
-Der Skill kennt lokale Einstellungen, die **ausschließlich auf diesem Rechner** in `${CLAUDE_SKILL_DIR}/settings.json` (neben `config.json`) gespeichert werden — sie werden **nie** an den Server übertragen. Fehlt die Datei oder ein einzelner Schlüssel, gilt der jeweilige Default.
+Lokale Einstellungen liegen **ausschließlich auf diesem Rechner** in `${CLAUDE_SKILL_DIR}/settings.json` (neben `config.json`) und werden **nie** an den Server übertragen. Fehlt die Datei oder ein Schlüssel, gilt der Default.
 
-**Aufruf `/planstack settings`** (erstes Argument ist `settings`, kein Projekt-Alias): die Einstellungen als **editierbare, interaktive Auswahl** präsentieren — wie `claude /settings`, **nicht** nacheinander abfragen. Nutze ein interaktives Auswahl-Formular (mehrere Fragen auf einmal, je eine pro Einstellung) mit **deutschen Labels** und deutschen Werten; der **aktuelle Wert** ist jeweils vorausgewählt. Nach der Auswahl alle Werte gesammelt nach `settings.json` schreiben und die aktualisierte Übersicht (deutsche Labels) zeigen.
-
-**Anzeige immer deutsch**, in `settings.json` aber die stabilen Schlüssel/Werte speichern (Mapping unten):
+**Aufruf `/planstack settings`** (erstes Argument ist `settings`, kein Projekt-Alias): die Einstellungen als **editierbare, interaktive Auswahl** präsentieren — wie `claude /settings`, **nicht** nacheinander abfragen. Ein Auswahl-Formular mit mehreren Fragen auf einmal (je eine pro Einstellung), **deutsche** Labels und Werte, der aktuelle Wert vorausgewählt. Danach alles gesammelt nach `settings.json` schreiben und die aktualisierte Übersicht zeigen. **Anzeige immer deutsch**, gespeichert werden die stabilen Schlüssel/Werte:
 
 | Einstellung (Label) | Schlüssel | Werte (Anzeige → gespeichert) | Default |
 |---|---|---|---|
@@ -178,174 +128,57 @@ Der Skill kennt lokale Einstellungen, die **ausschließlich auf diesem Rechner**
 | Ausgabe-Umfang | `verbosity` | Standard→`default` · Knapp→`minimal` · Ausführlich→`maximal` | Standard |
 | Review-Strenge | `review_strictness` | Locker→`lenient` · Standard→`default` · Streng→`strict` | Standard |
 | Review-Genauigkeit | `review_thoroughness` | Lässig→`relaxed` · Standard→`default` · Akribisch→`meticulous` | Standard |
-| Metriken (Token-Verbrauch) | `metrics` | An→`on` · Aus→`off` | An |
+| Lauf-Metriken | `metrics` | An→`on` · Aus→`off` | An |
 
-Der **Ausgabe-Umfang** (`verbosity`) steuert **verbindlich**, wie viel Fließtext Claude während der gesamten Abarbeitung (beide Modi, alle Kommandos) ausgibt. Er ist **keine Empfehlung**, sondern eine harte Vorgabe und gilt ab dem ersten Satz der Antwort:
+- **`verbosity`** steuert **verbindlich** (keine Empfehlung), wie viel Fließtext während der ganzen Abarbeitung ausgegeben wird, ab dem ersten Satz: `minimal` = nur das Nötigste — keine Vorreden, keine Ankündigungen, keine Zwischenerklärungen, keine Zusammenfassung des eben Getanen; pro Task maximal eine knappe Zeile je abgeschlossenem Schritt (`C27: PR #123 geöffnet`) und am Ende das Ergebnis; Tool-Aufrufe sprechen für sich und werden nicht zusätzlich in Prosa beschrieben. `default` = knappe Orientierung + Ergebnisse. `maximal` = Schritte, Begründungen, Abwägungen offenlegen. Explizit angeforderte Inhalte (Review-`summary`, Metriken, direkte Nutzerfragen) sind davon unberührt.
+- **`review_strictness`** = wie hart bewertet wird: `lenient` nur echte Blocker (im Zweifel `APPROVE`), `default` normal, `strict` auch kleinere Mängel, Stil, Edge-Cases (eher `REQUEST_CHANGES`).
+- **`review_thoroughness`** = wie gründlich geschaut wird: `relaxed` schneller Überblick, `default` normal, `meticulous` jede Datei/Zeile und alle Edge-Cases.
+- **`metrics`** = Lauf-Metriken erfassen und am Ende ausgeben (siehe „Metriken") oder nicht.
 
-- `minimal` — **nur das Nötigste.** Keine Vorreden, keine Ankündigungen („Ich schaue mir jetzt …", „Als Nächstes …"), keine Zwischenerklärungen, keine Begründungen, keine Zusammenfassung des eben Getanen. Pro Task **maximal eine** knappe Statuszeile je abgeschlossenem Schritt (z. B. `C27: PR #123 geöffnet`) und am Ende das Ergebnis. Werkzeug-/Tool-Aufrufe sprechen für sich — sie **nicht** zusätzlich in Prosa beschreiben. Im Zweifel weglassen.
-- `default` — normale Berichterstattung: knappe Orientierung wo sinnvoll, Ergebnisse, keine ausufernden Details.
-- `maximal` — ausführlich: Schritte, Begründungen, Abwägungen und Details offenlegen.
+**Anwendung im Arbeitszyklus** (beide Modi): `yes` → Schritt ausführen · `no` → überspringen · `ask` → **einmal für die aktuelle Aufgabe** nachfragen und die Antwort nur dafür anwenden (nicht speichern). Reihenfolge vor dem PR, jeweils nur wenn erlaubt: `local_phpcs` (formatieren) → `local_phpstan` → `local_tests`. Schlägt ein aktivierter Schritt fehl, erst beheben, dann PR. `babysit_prs` greift **nach** dem PR-Öffnen. Vor jeder Abarbeitung die aktuellen Einstellungen lesen.
 
-Der Wert gilt für die **normale Arbeitsausgabe**. Explizit angeforderte Inhalte (z. B. der Review-`summary`, `metrics`-Ausgaben, direkte Nutzerfragen) sind davon unberührt und werden vollständig geliefert.
-
-Die **Review-Strenge** (`review_strictness`) steuert, wie streng `/planstack review` urteilt: `lenient` = nur echte Blocker/kritische Punkte bemängeln (im Zweifel `APPROVE`), `default` = normale Prüfung, `strict` = auch kleinere Mängel, Stil und Edge-Cases bemängeln (eher `REQUEST_CHANGES`).
-
-Die **Review-Genauigkeit** (`review_thoroughness`) steuert, wie tief/gründlich geprüft wird: `relaxed` = schneller Überblick, nur offensichtliche Stellen, `default` = normale Prüftiefe, `meticulous` = jede Datei/Zeile, Edge-Cases und Details akribisch durchgehen. (Strenge = wie hart bewertet wird; Genauigkeit = wie gründlich geschaut wird.)
-
-Die **Metriken** (`metrics`) steuern die Token-Erfassung je Planstack-Step: `on` = während der Abarbeitung je Step den Token-Verbrauch erfassen und am Ende als Tabelle ausgeben (siehe „Metriken"), `off` = keine Erfassung, keine Tabelle.
-
-`settings.json` (Beispiel mit den Defaults; gespeichert werden die Schlüssel/Werte, nicht die Labels):
-
-```json
-{
-  "local_tests": "yes",
-  "local_phpstan": "yes",
-  "local_phpcs": "yes",
-  "babysit_prs": "ask",
-  "review_results": "task_only",
-  "review_auto_status": "manual",
-  "verbosity": "default",
-  "review_strictness": "default",
-  "review_thoroughness": "default",
-  "metrics": "on"
-}
-```
-
-**Anwendung im Arbeitszyklus** (beide Modi), je Wert einer Einstellung:
-
-- `yes` → den Schritt automatisch ausführen.
-- `no` → den Schritt überspringen.
-- `ask` → vor dem Schritt **einmal für die aktuelle Aufgabe** nachfragen und die Antwort für diese Aufgabe anwenden (nicht dauerhaft speichern).
-
-Reihenfolge vor dem PR (jeweils nur, wenn die Einstellung es zulässt): `local_phpcs` (formatieren) → `local_phpstan` (statische Analyse) → `local_tests` (Tests). Schlägt ein aktivierter Schritt fehl, erst beheben, dann PR. `babysit_prs` greift **nach** dem PR-Öffnen. Vor jeder Board-Abarbeitung die aktuellen Einstellungen aus `settings.json` lesen.
+Unbekannte Schlüssel in `settings.json` werden **ignoriert**, nicht entfernt — so überlebt eine Datei den Wechsel zwischen Skill-Versionen.
 
 ## Metriken (Einstellung `metrics`)
 
-Ist `metrics` = `on` (Default), wird während der Abarbeitung **je Planstack-Step** der Token-Verbrauch erfasst und am **Ende** des Laufs als Tabelle ausgegeben. Ist `metrics` = `off`, entfällt Erfassung und Tabelle vollständig.
+Ist `metrics` = `on` (Default), wird je Planstack-Step erfasst, was **tatsächlich messbar** ist, und am Ende des Laufs als Tabelle ausgegeben; bei `off` entfallen Erfassung und Tabelle.
 
-**Steps** sind die Schritte des Arbeitszyklus, je bearbeitetem Task getrennt — typischerweise: `claim-next`/`claim`, `analyze`, `umsetzen` (die eigentliche Implementierung inkl. lokaler Checks), `PR`, `done`, `merge` (bzw. `concern`, falls statt Umsetzung ein Concern gemeldet wird). Im Board-Modus die Steps pro Task gruppieren.
+**Nur zählen, nicht schätzen.** Exaktes Token-Accounting steht dem Skill zur Laufzeit **nicht** zur Verfügung — eine Token-Spalte wäre eine erfundene Zahl im Gewand einer Messung und ist deshalb **nicht** auszugeben. Erfasst werden je Step ausschließlich abzählbare Größen:
 
-Je Step **zwei** Werte getrennt erfassen:
+- **API-Calls** — Anzahl der Planstack-Requests in diesem Step.
+- **Tool-Calls** — Anzahl der übrigen Werkzeug-Aufrufe (Datei, Shell, Subagent).
+- **Dauer** — Wall-Clock des Steps (Sekunden, aus der Uhr, nicht geschätzt).
+- **Diff** — bei Steps mit Code-Änderung geänderte Dateien und Zeilen (`git diff --shortstat`).
 
-- **a) Planstack-Calls** — Tokens für die Interaktion mit der Planstack-API/dem MCP-Server selbst (Request-Aufbau, Antwort-Verarbeitung), also der Steuerungs-Overhead des Steps.
-- **b) Aufgaben-Ausführung** — Tokens für die eigentliche fachliche Arbeit dieses Steps (Code lesen/schreiben, Analyse, Reasoning, Tool-Calls außerhalb von Planstack).
-
-Die Werte sind eine **Best-Effort-Schätzung** aus dem tatsächlichen Verlauf (exaktes Token-Accounting steht dem Skill zur Laufzeit nicht zur Verfügung) — als solche kennzeichnen, nicht als exakte Abrechnung ausgeben.
-
-**Ausgabe am Ende** (Beispielformat; eine Zeile je Step, Summenzeile je Task und Gesamtsumme):
+**Steps** sind die Schritte des Arbeitszyklus, je Task getrennt: `claim-next`/`claim`, `analyze`, `umsetzen` (inkl. lokaler Checks), `PR`, `done`, `merge` — bzw. `concern`. Im Board-Modus je Task gruppieren.
 
 ```
-Token-Metriken (Schätzung)
+Lauf-Metriken (gezählt)
 
 Task C27
-| Step        | Planstack-Calls | Aufgaben-Ausführung | Summe  |
-|-------------|-----------------|---------------------|--------|
-| claim-next  |             420 |                   0 |    420 |
-| analyze     |             180 |               3 200 |  3 380 |
-| umsetzen    |             150 |              18 400 | 18 550 |
-| PR          |             120 |               2 100 |  2 220 |
-| done        |             110 |                   0 |    110 |
-| merge       |             110 |                   0 |    110 |
-| Summe C27   |           1 090 |              23 700 | 24 790 |
-
-Gesamt: Planstack-Calls 1 090 · Aufgaben-Ausführung 23 700 · Summe 24 790
+| Step       | API | Tools | Dauer | Diff        |
+|------------|-----|-------|-------|-------------|
+| claim-next |   1 |     0 |    2s | —           |
+| analyze    |   2 |     7 |   48s | —           |
+| umsetzen   |   3 |    31 |  6m12s| 9 D, +214/-38 |
+| PR         |   2 |     4 |   35s | —           |
+| merge      |   2 |     1 |    6s | —           |
+| Summe C27  |  10 |    43 |  7m43s| 9 D, +214/-38 |
 ```
 
-Im Einzel-Task-Modus (`/planstack work <PROJECT> <TASK>`) genügen die eine Task-Tabelle und die Gesamtsumme.
+Im Einzel-Task-Modus genügen die eine Task-Tabelle und die Summenzeile.
 
 ## Konfiguration ziehen (`/planstack update-config`)
 
-**Aufruf `/planstack update-config [<PROJECT>]`** (erstes Argument `update-config`): zieht die neuesten Konfigurationen aktiv nach (statt erst bei Drift) und gibt die Versionsnummern aus.
+**Aufruf `/planstack update-config [<PROJECT>]`**: zieht die neuesten Konfigurationen aktiv nach (statt erst bei Drift) und gibt die Versionsnummern aus.
 
-- **Ohne `<PROJECT>`:** **alle** zugänglichen Projekte aktualisieren — `GET $BASE/projects` auflisten und für **jedes** `GET $BASE/projects/<alias>/config` lesen. Dabei die allgemeinen Inhalte (`operating_manual` + `status_rules` + `skill_instructions`) einmal übernehmen und je Projekt dessen Konfiguration (`effective`/`client_hints`, `instructions`, `config_version`). Anschließend **die lokale SKILL.md aus `GET $BASE/skill` überschreiben** (siehe „Snapshot mitschreiben") und erst dann das gelieferte `skill_revision` in `config.json` schreiben (Baseline aktualisieren) **und** je Projekt die `config_versions` als lokale Baseline (`projects.<alias>.config_versions`).
-- **Mit `<PROJECT>`:** nur die allgemeine Config **und** die Config dieses einen Projekts (das Überschreiben der SKILL.md gehört zur allgemeinen Config und passiert auch hier).
+- **Ohne `<PROJECT>`:** alle zugänglichen Projekte — `GET $BASE/projects` auflisten, je Projekt `GET $BASE/projects/<alias>/config` lesen. Die allgemeinen Inhalte einmal übernehmen, je Projekt dessen Konfiguration (`effective`/`client_hints`, `instructions`, `config_version`). Anschließend die lokale SKILL.md aus `GET $BASE/skill` ersetzen (siehe „Selbst-Update") und **erst dann** `skill_revision` als Baseline schreiben, dazu je Projekt die `config_versions`.
+- **Mit `<PROJECT>`:** nur die allgemeine Config und die dieses einen Projekts (das Ersetzen der SKILL.md gehört zur allgemeinen Config und passiert auch hier).
 
-**Ausgabe** — immer die Versionsnummern zeigen und **ob die SKILL.md neu geschrieben wurde**, z. B.:
+**Ausgabe** — immer die Versionsnummern und **ob die SKILL.md neu geschrieben wurde**:
 
 ```
 Allgemein (Skill):  skill_revision <alt> → <neu>  (SKILL.md neu geschrieben)
 Projekt L2L:  config_version 3
 Projekt LOG:  config_version 1
-Projekt B2R:  config_version 2
 ```
-
-(Mit `<PROJECT>` nur die allgemeine Zeile + diese eine Projekt-Zeile.)
-
-## Auto-Modus (`/planstack auto <PROJECT>`)
-
-Arbeitet das Board von `<PROJECT>` **dauerhaft und unbeaufsichtigt** ab. `auto` steht in der **Sub-Kommando-Position** (erstes Argument, wie `review`/`fix`/`settings`/`update-config`), gefolgt vom Projekt: `/planstack auto <PROJECT>`. Es ist **kein** Task namens „auto". Der Haupt-Agent ist dabei nur **Supervisor**: Er startet in einer Endlosschleife nacheinander **Auto-Runs**, jeder Auto-Run läuft als **eigener Subagent** (frischer Kontext), und der Supervisor entscheidet nur anhand von dessen Ergebnisbericht, wie es weitergeht. Der Modus endet nicht von selbst — er läuft, bis der Nutzer ihn abbricht.
-
-**Supervisor-Schleife** (Haupt-Agent):
-
-1. **Einen Auto-Run als Subagent starten** (Agent-Tool, `subagent_type: general-purpose`, **synchron** — `run_in_background: false`, weil das Ergebnis die nächste Entscheidung bestimmt). Prompt = die „Auto-Run"-Anweisung unten, mit `<PROJECT>` fest eingesetzt.
-2. **Ergebnisbericht lesen.** Der Subagent liefert strukturiert zurück: `{ "action": "review|finish|pick|concern|idle", "task": "<Name|null>", "detail": "<kurz>" }`.
-3. **Verzweigen:**
-   - `action` ≠ `idle` (der Auto-Run hat etwas erledigt) → **sofort** den nächsten Auto-Run starten (zurück zu 1), ohne Pause.
-   - `action` = `idle` (nichts zu tun gefunden) → **5 Minuten warten**, dann den nächsten Auto-Run starten (zurück zu 1).
-4. Endlos wiederholen.
-
-Kurz nach dem Start dem Nutzer einmal bestätigen, dass der Auto-Modus für `<PROJECT>` läuft; danach je Auto-Run knapp berichten (eine Zeile: Aktion + Task) gemäß Einstellung `verbosity`.
-
-**Warten (5 Minuten):** Nach einem `idle`-Auto-Run 300 s echt pausieren (nicht mit Arbeit „totlaufen"), bevor der nächste startet. Kommt vorher ein Nutzer-Input, diesen bevorzugt behandeln.
-
-### Statuszeile im Auto-Modus
-
-Die Statuszeile gilt für **jeden** Aufruf (Abschnitt „Sticky-Statuszeile") — im Auto-Modus ist sie besonders wichtig, weil niemand zusieht. Zwei Eigenheiten:
-
-- Der **Supervisor** setzt sie vor dem Start eines Auto-Runs (`⏳ Auto (Wähle) <PROJECT> · …`), während der 5-Minuten-Pause (`⏳ Auto (Idle) …`) und beim Anhalten (`⏳ Auto (Pause) …`). Er gibt dem Auto-Run den Pfad `~/.claude/planstack-status-<session_id>.txt` **seiner** Session mit in den Prompt — der Subagent hat keine eigene `session_id`, die die Statusline lesen würde.
-- Der **Auto-Run** überschreibt sie, sobald er seine Arbeit gewählt hat, und benennt dabei **beide** Ebenen (`Auto › Work`, `Auto › Review`, `Auto › Fix`), damit sichtbar bleibt, dass die Schleife lebt.
-
-**Auto-Run (ein Subagent, genau eine Arbeitseinheit):** Der Subagent **wählt** anhand des Boards die erste zutreffende Arbeit und **ruft dafür das passende bestehende `/planstack`-Sub-Kommando** auf — jeweils mit **explizitem** `<PROJECT>` **und** `<TASK>` (kein Auto-Pick im Sub-Kommando) —, führt es vollständig aus, meldet das Ergebnis zurück und beendet sich; er startet **keine** weiteren Auto-Runs (das macht der Supervisor). Priorität:
-
-1. **Reviewbar?** Liegt mindestens ein Task zum Review bereit (`REVIEWBAR`-Pool bzw. noch nicht übernommener `IN_REVIEW`, mit PR, nicht selbst umgesetzt), den **ersten** davon per **`/planstack review <PROJECT> <TASK>`** reviewen. → `action: "review"`.
-2. **Sonst: eigene offene Tasks?** Gibt es Tasks, die **ich selbst** beansprucht habe und die noch in Arbeit sind (Status *beansprucht / in Analyse / in Arbeit / in Bereinigung*), den **ersten** davon **bis zu einem polierten PR** fertigstellen:
-   - hat er bereits einen offenen PR, der noch Politur braucht (rote CI oder offene/ungelöste Kommentare) → **`/planstack fix <PROJECT> <TASK>`**. → `action: "fix"`.
-   - sonst → **`/planstack work <PROJECT> <TASK>`** (der Ein-Task-Modus führt den Zyklus ab dem aktuellen Status weiter, bis ein polierter PR steht). → `action: "finish"`.
-3. **Sonst: pickbar?** Ist ein Task pickbar, den **besten** (höchste `unlocks`) bestimmen und per **`/planstack work <PROJECT> <TASK>`** bis zum erstellten PR umsetzen. → `action: "pick"`.
-4. **Sonst:** nichts zu tun, kein Sub-Kommando aufrufen. → `action: "idle"`.
-
-Sobald die Arbeit gewählt ist, schreibt der Auto-Run die **Sticky-Statuszeile** (Format, Links und Pfad siehe oben) und hält sie bei jedem größeren Schritt aktuell — inklusive der PR-Nummer als Link, sobald `pr_url` bekannt ist. Der Supervisor gibt ihm dazu den Pfad `~/.claude/planstack-status-<session_id>.txt` **seiner** Session mit in den Prompt (der Subagent hat keine eigene `session_id`, die die Statusline lesen würde).
-
-Der Subagent ermittelt den konkreten `<TASK>` (Name) zuerst aus dem Board bzw. `GET /tasks` (Schritt 2 gefiltert auf die eigene Beanspruchung — Identität = der Board-Nutzer dieses Tokens — und einen Arbeits-Status) und ruft das Sub-Kommando dann gezielt mit diesem Namen auf. Das jeweilige Sub-Kommando bringt seinen eigenen (ereignisgesteuerten) Zyklus, seine lokalen Checks/Einstellungen und seine Selbst-Update-Prüfung selbst mit — der Auto-Run baut nichts davon nach. Meldet die Umsetzung einen **Concern** statt einer Änderung, gilt der Auto-Run als „hat etwas getan" (`action: "concern"`, nicht `idle`). Nicht pickbare/übernehmbare Tasks nie erzwingen.
-
-## Review (`/planstack review [<PROJECT>] [<TASK>]`)
-
-Reviewt Tasks, die **zum Review bereitliegen**: im Pool-Status `REVIEWBAR` (die Spalte *vor* `IN_REVIEW`) oder in einem noch nicht übernommenen `IN_REVIEW` — jeweils mit PR. **Eigene Tasks (selbst beansprucht/umgesetzt) sind nicht reviewbar** — `review-next` überspringt sie, ein gezielter Aufruf darauf wird abgelehnt. Das Übernehmen setzt nur `reviewed_by`; die Verschiebung nach `IN_REVIEW` löst das `REVIEWING`-Event über die Org-Automation aus (die Endpunkte verschieben nicht selbst). Ablauf:
-
-1. **Task wählen & Review übernehmen** (setzt `reviewed_by`):
-   - `<PROJECT> <TASK>`: gezielt dieser Task → `POST $BASE/projects/$PROJ/tasks/$TASK/review-claim`.
-   - nur `<PROJECT>`: automatisch den ersten zum Review bereiten Task mit PR aus dem `REVIEWBAR`-Pool → `POST $BASE/projects/$PROJ/review-next`. Ein **schon selbst übernommener** Review (eigener `reviewed_by`, noch ohne erfasstes Ergebnis) wird dabei **zuerst** geliefert und fortgesetzt — abgebrochene Reviews bleiben so nicht liegen. Ist das Ergebnis schon erfasst, kommt der Task nicht erneut (er wartet dann nur noch auf den Statuswechsel).
-   - **weder `<TASK>` noch `<PROJECT>`**: **projektübergreifend** — `GET $BASE/projects` auflisten und `review-next` pro Projekt aufrufen, bis eines einen Task liefert.
-   Antwort `{"reviewing": null}` bzw. leer ⇒ nichts zu reviewen (nächstes Projekt / fertig). Nach dem Übernehmen `ev <id> REVIEWING` melden (best-effort, `<id>` aus der Antwort).
-2. **Review ausführen:** den **Review-Skill** (`/review`) für den PR des Tasks laufen lassen — mit Strenge gemäß `review_strictness` und Prüftiefe gemäß `review_thoroughness`. Die Antwort aus Schritt 1 trägt **immer** `pr_number` (und `pr_url`, sofern Repo konfiguriert) — unabhängig von den Board-/`task.fields`-Einstellungen. Ergebnis = Empfehlung (`APPROVE` oder `REQUEST_CHANGES`) + die ausführliche Review-Analyse.
-3. **Review vorlegen & Empfehlung festlegen** gemäß Einstellung `review_auto_status`:
-   - `auto`: die aus dem Review abgeleitete Empfehlung direkt verwenden — **keine** Rückfrage nötig.
-   - `manual` **oder nicht gesetzt** (Default): dem Nutzer **zuerst die vollständige Review anzeigen** (Review-Konfiguration + TLDR + ausführliche Analyse, Aufbau wie in Schritt 4) und **erst danach** die Empfehlung (`APPROVE`/`REQUEST_CHANGES`) bestätigen lassen. **Grundsatz: nie nach der Entscheidung fragen, ohne die Review vorher gezeigt zu haben.**
-
-   Solange die Settings das automatische Bestätigen bzw. Ablegen/Posten **nicht** aktiv festlegen — also `review_auto_status`≠`auto` **oder** `review_results` schreibt nicht automatisch nach Task/PR — wird also erst die Review angezeigt und die Bestätigung des Nutzers eingeholt, **bevor** irgendetwas in Task oder PR geschrieben wird (Schritte 4–5). Bei `auto` laufen die Schritte 4–5 direkt.
-4. **Ergebnis erfassen** (nach Bestätigung bzw. direkt bei `auto`): `POST $BASE/projects/$PROJ/tasks/$TASK/review` mit `{"recommendation":"APPROVE|REQUEST_CHANGES","summary":"…"}` — füllt `last_reviewed_at`, `last_review_recommendation`, `last_review_summary`. Das Feld `summary` ist **keine Kurzbeschreibung**, sondern die **ausführliche Review-Analyse**. Aufbau (in dieser Reihenfolge):
-   1. **Review-Konfiguration** (vorab, damit das Review für andere nachvollziehbar ist) — eine Zeile: `Review-Konfiguration: Strenge=<review_strictness>, Gründlichkeit=<review_thoroughness>, Modell=<tatsächlich genutztes Claude-Modell>, Effort=<Reasoning-Aufwand>`.
-   2. **TLDR** — eine Zeile: `TLDR: <Kernaussage in 1–3 Sätzen>`.
-   3. **Ausführliche Analyse** — Befunde je Datei/Aspekt, Begründungen, Risiken, Vorschläge.
-5. **Ablage gemäß `review_results`:** bei `task_only` nur den Task (Schritt 4). Bei `task_and_pr` zusätzlich am PR hinterlegen: `gh pr review <pr> --approve` bzw. `--request-changes` mit der Zusammenfassung als Kommentar.
-
-**Fortschritts-Events (best-effort, nicht blockierend):** nach Schritt 4 `ev <id> REVIEWED`, danach je nach Empfehlung `ev <id> APPROVED` bzw. `ev <id> CHANGES_REQUESTED` (siehe „Fortschritts-Events" im Betriebshandbuch).
-
-## Fix (`/planstack fix [<PROJECT>] <TASK|PR-NUMMER>`)
-
-Bringt einen offenen PR wieder in mergefähigen Zustand — alles über `gh`/`git` am PR (nichts serverseitig). `<TASK|PR-NUMMER>` ist **erforderlich** (kein Auto-Pick).
-
-1. **PR bestimmen** (Argument ist Pflicht):
-   - Argument ist **numerisch** → diese PR-Nummer (im Repo des Projekts).
-   - Argument ist ein **Task-Name** → `GET $BASE/projects/$PROJ/tasks/$TASK` → dessen `pr_number`.
-   - **Ohne `<PROJECT>`**: das Ziel projektübergreifend auflösen — `GET $BASE/projects` durchgehen und das Projekt finden, dessen Task den Namen trägt bzw. dessen Repo die PR-Nummer enthält.
-2. **Merge-Konflikte zum Ziel-Branch:** Hat der PR Konflikte mit seinem Target-/Base-Branch, den Head-Branch auschecken, den Target-Branch ziehen und einmergen (`git fetch` + `git merge origin/<base>`), Konflikte auflösen, committen und pushen.
-3. **Kommentare UND Review-Kommentare** — beide Arten abarbeiten:
-   - **PR-/Issue-Kommentare** (Konversation, `gh pr view --comments` bzw. `gh api repos/{owner}/{repo}/issues/{pr}/comments`): jeden fachlich beantworten und, wo nötig, den Code fixen.
-   - **Review-Kommentare** (inline an Codezeilen / Review-Threads, `gh api repos/{owner}/{repo}/pulls/{pr}/comments`): jeden beantworten, den Code entsprechend fixen und den Thread **auflösen** (resolve, z. B. GraphQL `resolveReviewThread`).
-   Grundsatz: alles Offene beantworten + fixen; Review-Threads zusätzlich resolven.
-4. **Fehlschlagende CI:** `gh pr checks` prüfen; rote Checks lokal reproduzieren, korrigieren, committen und pushen, bis die CI grün ist.
-
-**Fortschritts-Events (best-effort, nicht blockierend):** zu Beginn der Politur `ev <id> POLISHING`, nach grüner CI + beantworteten/aufgelösten Kommentaren `ev <id> POLISHED` (`<id>` = numerische Task-id; siehe „Fortschritts-Events" im Betriebshandbuch).
-
-Danach ggf. via `/planstack review` erneut prüfen.

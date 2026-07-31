@@ -14,11 +14,11 @@ class TaskEventLog extends Model
 {
     protected $table = 'task_events';
 
-    protected $fillable = ['task_id', 'actor_id', 'event'];
+    protected $fillable = ['task_id', 'actor_id', 'event', 'detail', 'progress'];
 
     protected function casts(): array
     {
-        return ['event' => TaskEvent::class];
+        return ['event' => TaskEvent::class, 'progress' => 'integer'];
     }
 
     public function task(): BelongsTo

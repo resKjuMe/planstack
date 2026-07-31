@@ -25,6 +25,11 @@ class SkillController extends Controller
             'skill_md' => SkillTemplate::composed(),
             'skill_revision' => SkillTemplate::sharedRevision(),
             'plan_revision' => SkillTemplate::planRevision(),
+            // Additiv: Revision je gepflegter Datei. `skill_revision` deckt alle
+            // gemeinsam ab, sagt also nicht, WAS sich geaenderte hat — mit dieser Map
+            // zieht ein Client nur den betroffenen Block ueber `?parts=<key>` nach,
+            // statt das ganze Config-Dokument in den Kontext zu holen.
+            'revisions' => SkillTemplate::revisions(),
         ]);
     }
 }

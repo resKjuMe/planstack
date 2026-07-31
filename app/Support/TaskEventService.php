@@ -18,10 +18,17 @@ use App\Models\User;
 class TaskEventService
 {
     /**
+     * @param  ?string  $detail  Freitext zum Fortschritt ("4/9 Dateien: TaskController.php").
+     * @param  ?int  $progress  Fortschritt in Prozent (0–100) innerhalb des Events.
      * @return array{configured: bool, status_changed: bool, applied_fields: array<int, string>, status: ?string}
      */
-    public function record(Task $task, TaskEvent $event, ?User $actor = null): array
-    {
+    public function record(
+        Task $task,
+        TaskEvent $event,
+        ?User $actor = null,
+        ?string $detail = null,
+        ?int $progress = null,
+    ): array {
         $organization = $task->project?->organization;
         $config = $organization?->eventAutomationFor($event);
 
@@ -48,15 +55,39 @@ class TaskEventService
             // On-Enter-Effekte des Zielstatus bei Feld-Kollision).
             $attrs = array_merge($attrs, StatusEffects::resolveEffects($task, $config->effects ?? [], $actor));
 
-            if ($attrs !== []) {
-                $task->update($attrs);
+        }
+
+        // Fortschritts-Angabe denormalisiert auf die Aufgabe spiegeln, damit das
+        // Board sie ohne Join auf jeder Karte zeigt. Nur setzen, wenn wirklich etwas
+        // gemeldet wurde — ein Event ohne detail/progress soll den letzten Stand
+        // nicht loeschen. `progress_at` traegt den Zeitpunkt, damit die Anzeige einen
+        // veralteten Stand als solchen erkennen kann.
+        //
+        // Getrennt von $attrs gehalten: `applied_fields` in der Antwort meint die per
+        // Automation angewendeten Feld-Effekte — die Fortschritts-Spiegelung ist keine
+        // solche und wuerde den Vertrag verwaessern.
+        $progressAttrs = [];
+
+        if ($detail !== null || $progress !== null) {
+            if ($detail !== null) {
+                $progressAttrs['progress_detail'] = $detail;
             }
+            if ($progress !== null) {
+                $progressAttrs['progress_percent'] = $progress;
+            }
+            $progressAttrs['progress_at'] = now();
+        }
+
+        if ($attrs !== [] || $progressAttrs !== []) {
+            $task->update([...$attrs, ...$progressAttrs]);
         }
 
         TaskEventLog::create([
             'task_id' => $task->id,
             'actor_id' => $actor?->id,
             'event' => $event->value,
+            'detail' => $detail,
+            'progress' => $progress,
         ]);
 
         return [

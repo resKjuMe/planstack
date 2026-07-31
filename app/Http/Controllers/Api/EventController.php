@@ -22,6 +22,17 @@ use Illuminate\Validation\Rule;
  */
 class EventController extends ApiController
 {
+    /**
+     * Optionale Fortschritts-Angabe, identisch auf beiden Einstiegen: `detail` als
+     * kurzer Freitext ("4/9 Dateien: TaskController.php"), `progress` als Prozentwert
+     * innerhalb des Events. Beide freiwillig — ein Event ohne sie bleibt eine reine
+     * Meldung und laesst den zuletzt gemeldeten Stand unberuehrt.
+     */
+    private const PROGRESS_RULES = [
+        'detail' => ['sometimes', 'nullable', 'string', 'max:200'],
+        'progress' => ['sometimes', 'nullable', 'integer', 'min:0', 'max:100'],
+    ];
+
     public function __construct(
         private readonly TaskEventService $events,
         private readonly NotificationBroadcaster $broadcaster,
@@ -35,11 +46,12 @@ class EventController extends ApiController
         $data = $request->validate([
             'task_id' => ['required', 'integer'],
             'event' => ['required', 'string', Rule::enum(TaskEvent::class)],
+            ...self::PROGRESS_RULES,
         ]);
 
         $task = Task::findOrFail($data['task_id']);
 
-        return $this->emit($request, $task, TaskEvent::from($data['event']));
+        return $this->emit($request, $task, TaskEvent::from($data['event']), $data);
     }
 
     /**
@@ -52,20 +64,26 @@ class EventController extends ApiController
     {
         $data = $request->validate([
             'event' => ['required', 'string', Rule::enum(TaskEvent::class)],
+            ...self::PROGRESS_RULES,
         ]);
 
-        return $this->emit($request, $task, TaskEvent::from($data['event']));
+        return $this->emit($request, $task, TaskEvent::from($data['event']), $data);
     }
 
     /**
      * Gemeinsame Logik: Event protokollieren, Automation anwenden, Header-Glocke
      * benachrichtigen und die maßgebliche Nutzlast zurückgeben.
+     *
+     * @param  array<string, mixed>  $data  Validierte Nutzlast (für detail/progress).
      */
-    private function emit(Request $request, Task $task, TaskEvent $event): JsonResponse
+    private function emit(Request $request, Task $task, TaskEvent $event, array $data = []): JsonResponse
     {
         $this->authorize('update', $task);
 
-        $result = $this->events->record($task, $event, $request->user());
+        $detail = $data['detail'] ?? null;
+        $progress = isset($data['progress']) ? (int) $data['progress'] : null;
+
+        $result = $this->events->record($task, $event, $request->user(), $detail, $progress);
 
         // Zusätzlich zu den Automations-Ergebnissen die Anzeige-Daten für die
         // Header-Glocke mitgeben: Projekt-/Task-Name und das Icon des (ggf. neu

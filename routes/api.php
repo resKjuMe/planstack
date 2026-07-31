@@ -12,6 +12,7 @@ use App\Http\Controllers\Api\StatusActivityController;
 use App\Http\Controllers\Api\StatusConfigController;
 use App\Http\Controllers\Api\TaskController;
 use App\Http\Controllers\Api\TimelineController;
+use App\Http\Middleware\AttachCommandInstructions;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -57,11 +58,13 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('projects/{project}/claim-next', [TaskController::class, 'claimNext']);
 
     // Review: nächsten in-review Task mit PR zum Review übernehmen (Auto-Pick).
-    Route::post('projects/{project}/review-next', [TaskController::class, 'reviewNext']);
+    Route::post('projects/{project}/review-next', [TaskController::class, 'reviewNext'])
+        ->middleware(AttachCommandInstructions::class);
 
     // Nächste sinnvolle Aktion entscheiden (fix → review → work) und den Task
     // atomar reservieren — {action, task} in einem Call für „/planstack auto".
-    Route::post('projects/{project}/next-action', NextActionController::class);
+    Route::post('projects/{project}/next-action', NextActionController::class)
+        ->middleware(AttachCommandInstructions::class);
 
     // Org-weite Status-Konfiguration für den geteilten React-Store (einmal laden,
     // über alle Projekte/Unterseiten wiederverwenden).
@@ -110,7 +113,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('projects/{project}/tasks/by-name/{name}', [TaskController::class, 'showByName']);
     Route::get('projects/{project}/tasks/by-pr/{pr}', [TaskController::class, 'showByPr'])
         ->whereNumber('pr');
-    Route::get('projects/{project}/tasks/{task}', [TaskController::class, 'show'])->scopeBindings();
+    Route::get('projects/{project}/tasks/{task}', [TaskController::class, 'show'])
+        ->scopeBindings()
+        ->middleware(AttachCommandInstructions::class);
     Route::match(['put', 'patch'], 'projects/{project}/tasks/{task}', [TaskController::class, 'update'])->scopeBindings();
     Route::delete('projects/{project}/tasks/{task}', [TaskController::class, 'destroy'])->scopeBindings();
 
@@ -119,7 +124,8 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('projects/{project}/tasks/{task}/claim', [TaskController::class, 'claim']);
         Route::post('projects/{project}/tasks/{task}/release', [TaskController::class, 'release']);
         // Review eines bestimmten Tasks übernehmen · Ergebnis erfassen
-        Route::post('projects/{project}/tasks/{task}/review-claim', [TaskController::class, 'reviewClaim']);
+        Route::post('projects/{project}/tasks/{task}/review-claim', [TaskController::class, 'reviewClaim'])
+            ->middleware(AttachCommandInstructions::class);
         Route::post('projects/{project}/tasks/{task}/review', [TaskController::class, 'review']);
         Route::post('projects/{project}/tasks/{task}/status', [TaskController::class, 'status']);
         // Fortschritts-Event projekt-gebunden melden (Task per Name/id im Pfad) —

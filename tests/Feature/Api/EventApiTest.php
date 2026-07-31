@@ -6,6 +6,7 @@ use App\Enums\StatusRole;
 use App\Enums\TaskEvent;
 use App\Models\Project;
 use App\Models\Task;
+use App\Models\TaskEventLog;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
@@ -22,7 +23,13 @@ class EventApiTest extends TestCase
     {
         $user = User::factory()->create();
         $project = Project::factory()->create(['created_by_id' => $user->id]);
-        $task = $project->tasks()->create(['name' => 'E1', 'summary' => 'Event-Task']);
+        // created_by_id explizit: die Spalte ist NOT NULL ohne Default, MySQL im
+        // Strict-Mode weist das Insert sonst ab (SQLite verzeiht es stillschweigend).
+        $task = $project->tasks()->create([
+            'name' => 'E1',
+            'summary' => 'Event-Task',
+            'created_by_id' => $user->id,
+        ]);
         Sanctum::actingAs($user);
 
         return [$user, $project, $task];
@@ -218,7 +225,11 @@ class EventApiTest extends TestCase
         [, $project, ] = $this->ownedTask();
         // Fremdes Projekt/Task desselben Users — scopeBindings muss ihn ablehnen.
         $other = Project::factory()->create(['created_by_id' => $project->created_by_id]);
-        $otherTask = $other->tasks()->create(['name' => 'X1', 'summary' => 'fremd']);
+        $otherTask = $other->tasks()->create([
+            'name' => 'X1',
+            'summary' => 'fremd',
+            'created_by_id' => $other->created_by_id,
+        ]);
 
         $this->postJson("/api/projects/{$project->alias}/tasks/{$otherTask->name}/events", ['event' => 'CLAIMED'])
             ->assertNotFound();
@@ -261,9 +272,102 @@ class EventApiTest extends TestCase
     public function test_event_requires_authentication(): void
     {
         $project = Project::factory()->create();
-        $task = $project->tasks()->create(['name' => 'E9', 'summary' => 'x']);
+        $task = $project->tasks()->create([
+            'name' => 'E9',
+            'summary' => 'x',
+            'created_by_id' => $project->created_by_id,
+        ]);
 
         $this->postJson('/api/events', ['task_id' => $task->id, 'event' => 'CLAIMED'])
             ->assertUnauthorized();
+    }
+
+    /**
+     * Der Fortschritt innerhalb eines Events lebte bisher nur in der lokalen
+     * Sticky-Statuszeile des Workers — im Fenster sichtbar, sonst nirgends. detail +
+     * progress heben ihn auf den Server: protokolliert je Event UND denormalisiert auf
+     * der Aufgabe, damit das Board ihn ohne Join auf der Karte zeigt.
+     */
+    public function test_event_records_progress_detail_on_task_and_log(): void
+    {
+        [, $project, $task] = $this->ownedTask();
+
+        $this->postJson("/api/projects/{$project->alias}/tasks/{$task->name}/events", [
+            'event' => 'PROCESSING',
+            'detail' => '4/9 Dateien: TaskController.php',
+            'progress' => 44,
+        ])->assertOk();
+
+        $task->refresh();
+        $this->assertSame('4/9 Dateien: TaskController.php', $task->progress_detail);
+        $this->assertSame(44, $task->progress_percent);
+        $this->assertNotNull($task->progress_at);
+
+        // Historie: die Protokollzeile traegt denselben Stand.
+        $log = TaskEventLog::where('task_id', $task->id)->latest('id')->first();
+        $this->assertSame('4/9 Dateien: TaskController.php', $log->detail);
+        $this->assertSame(44, $log->progress);
+    }
+
+    /**
+     * Ein Event ohne detail/progress ist eine reine Meldung — es darf den zuletzt
+     * gemeldeten Stand NICHT loeschen, sonst wuerde jedes Zwischen-Event (`ANALYZED`,
+     * `PUBLISHING`) die Karte leerraeumen.
+     */
+    public function test_event_without_progress_keeps_the_previous_value(): void
+    {
+        [, $project, $task] = $this->ownedTask();
+
+        $this->postJson("/api/projects/{$project->alias}/tasks/{$task->name}/events", [
+            'event' => 'PROCESSING',
+            'detail' => '4/9 Dateien',
+            'progress' => 44,
+        ])->assertOk();
+
+        $this->postJson("/api/projects/{$project->alias}/tasks/{$task->name}/events", [
+            'event' => 'PROCESSED',
+        ])->assertOk();
+
+        $task->refresh();
+        $this->assertSame('4/9 Dateien', $task->progress_detail);
+        $this->assertSame(44, $task->progress_percent);
+    }
+
+    /**
+     * `progress` ist eine gerechnete Prozentzahl — Werte ausserhalb 0–100 oder
+     * ueberlange Detailtexte sind ein Client-Fehler, kein stillschweigend
+     * abgeschnittener Wert.
+     */
+    public function test_progress_is_validated(): void
+    {
+        [, $project, $task] = $this->ownedTask();
+        $url = "/api/projects/{$project->alias}/tasks/{$task->name}/events";
+
+        $this->postJson($url, ['event' => 'PROCESSING', 'progress' => 101])->assertStatus(422);
+        $this->postJson($url, ['event' => 'PROCESSING', 'progress' => -1])->assertStatus(422);
+        $this->postJson($url, ['event' => 'PROCESSING', 'detail' => str_repeat('x', 201)])->assertStatus(422);
+
+        // Und die Felder bleiben freiwillig: ohne sie funktioniert der Aufruf wie bisher.
+        $this->postJson($url, ['event' => 'PROCESSING'])->assertOk();
+    }
+
+    /**
+     * Auch der top-level Einstieg (`POST /api/events`, Task per numerischer id) nimmt
+     * die Felder — beide Wege sind laut Betriebshandbuch wirkungsgleich.
+     */
+    public function test_top_level_entry_accepts_progress_too(): void
+    {
+        [, , $task] = $this->ownedTask();
+
+        $this->postJson('/api/events', [
+            'task_id' => $task->id,
+            'event' => 'PROCESSING',
+            'detail' => '2/5 Checks: phpstan',
+            'progress' => 40,
+        ])->assertOk();
+
+        $task->refresh();
+        $this->assertSame('2/5 Checks: phpstan', $task->progress_detail);
+        $this->assertSame(40, $task->progress_percent);
     }
 }

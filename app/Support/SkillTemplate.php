@@ -37,9 +37,47 @@ class SkillTemplate
         return resource_path('skill-templates/plan-instructions.md');
     }
 
+    /**
+     * Kommandospezifische Anleitungen: Text, den NUR das jeweilige Sub-Kommando
+     * braucht. Sie stehen absichtlich nicht in der ausgelieferten SKILL.md, sondern
+     * werden an die Antwort des Aufrufs gehaengt, ohne den das Kommando nicht
+     * stattfinden kann (siehe CommandInstructions). Damit zahlt ein Lauf nur die
+     * Anleitung, die er tatsaechlich ausfuehrt — und eine veraltete lokale Kopie
+     * dieser Abschnitte kann es nicht mehr geben.
+     */
+    public const COMMANDS = ['review', 'fix', 'auto'];
+
     private static function partial(string $path): string
     {
         return is_file($path) ? rtrim((string) file_get_contents($path))."\n" : '';
+    }
+
+    /**
+     * Die Anleitung eines Sub-Kommandos, oder '' wenn es keine eigene hat (`work`
+     * und `settings` brauchen nur den Bootstrap-Teil).
+     */
+    public static function commandInstructions(string $command): string
+    {
+        if (! in_array($command, self::COMMANDS, true)) {
+            return '';
+        }
+
+        return self::partial(resource_path("skill-templates/commands/{$command}.md"));
+    }
+
+    /**
+     * Alle kommandospezifischen Anleitungen zusammen — der Rueckfallweg: `/config`
+     * liefert sie als Teil von `skill_instructions`, damit ein Client sie auch dann
+     * bekommt, wenn die Antwort des Pflicht-Calls sie nicht mitgebracht hat.
+     */
+    public static function allCommandInstructions(): string
+    {
+        $parts = array_filter(array_map(
+            static fn (string $command): string => rtrim(self::commandInstructions($command)),
+            self::COMMANDS,
+        ));
+
+        return $parts === [] ? '' : implode("\n\n", $parts)."\n";
     }
 
     /**
@@ -69,7 +107,14 @@ class SkillTemplate
      */
     public static function skillInstructions(): string
     {
-        return self::partial(self::skillInstructionsPath());
+        // Inklusive der kommandospezifischen Teile: `/config` ist der Rueckfallweg,
+        // wenn die Antwort des Pflicht-Calls die Anleitung nicht mitgebracht hat
+        // (aelterer Server, fehlender Session-Header). Die ausgelieferte SKILL.md
+        // enthaelt sie dagegen NICHT — siehe composed().
+        $base = rtrim(self::partial(self::skillInstructionsPath()));
+        $commands = rtrim(self::allCommandInstructions());
+
+        return implode("\n\n", array_filter([$base, $commands]))."\n";
     }
 
     /**
@@ -99,6 +144,10 @@ class SkillTemplate
      * whenever any of them is edited, so clients detect drift via the
      * X-Planstack-Skill-Revision header and re-fetch the parts their SKILL.md
      * tells them to re-adopt.
+     *
+     * Deliberately still a single hash over all three files: the per-project skills
+     * (L2LR/LOG) watch exactly this header to notice drift, so its meaning must not
+     * narrow. The per-file breakdown below is purely additive.
      */
     public static function sharedRevision(): string
     {
@@ -107,6 +156,29 @@ class SkillTemplate
             0,
             12,
         );
+    }
+
+    /**
+     * A revision per server-maintained file, keyed by the name the API uses for that
+     * block (so a client can map a changed entry straight to `?parts=<key>`).
+     *
+     * Why this exists: `sharedRevision()` is one hash over three files, so editing any
+     * of them marks all of them as drifted. A client comparing this map against its
+     * stored baseline sees WHICH block changed and pulls only that one back into
+     * context, instead of re-reading the whole ~68 KB config document.
+     *
+     * @return array<string, string>
+     */
+    public static function revisions(): array
+    {
+        $revision = static fn (string $text): string => substr(hash('xxh128', $text), 0, 12);
+
+        return [
+            'operating_manual' => $revision(self::operatingManual()),
+            'status_rules' => $revision(self::statusRules()),
+            'skill_instructions' => $revision(self::skillInstructions()),
+            'plan_instructions' => $revision(self::planInstructions()),
+        ];
     }
 
     /**
@@ -134,7 +206,12 @@ class SkillTemplate
             rtrim(self::default()),
             rtrim(self::operatingManual()),
             rtrim(self::statusRules()),
-            rtrim(self::skillInstructions()),
+            // Bewusst OHNE die kommandospezifischen Teile (review/fix/auto): die
+            // kommen zur Laufzeit mit der Antwort des jeweiligen Pflicht-Calls. Eine
+            // Datei bleibt es trotzdem — es gibt keine Referenzdateien, die eine
+            // Installation nachladen muesste, und ein Client, der diese SKILL.md
+            // ueber seine alte schreibt, ist danach vollstaendig arbeitsfaehig.
+            rtrim(self::partial(self::skillInstructionsPath())),
         ];
 
         return implode("\n\n", array_filter($parts))."\n";

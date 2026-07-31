@@ -41,6 +41,7 @@ class ReviewNextTest extends TestCase
     private function task(Project $project, string $name, StatusRole $role, array $attrs = []): Task
     {
         return $project->tasks()->create(array_merge([
+            'created_by_id' => $project->created_by_id,
             'name' => $name,
             'summary' => $name,
             'pr_number' => 100 + $project->tasks()->count(),

@@ -65,6 +65,12 @@ export function mapApiTask(apiTask, meta) {
         // Ablauf ist reiner Zeitverlauf und kommt bewusst ohne Server-Event.
         claimSession: apiTask.claim_session ?? null,
         claimSeenAt: apiTask.claim_seen_at ?? null,
+        // Zuletzt per Fortschritts-Event gemeldeter Stand (POST /events mit
+        // detail/progress). Der Zeitpunkt gehört dazu: ohne ihn liest man einen
+        // längst überholten Schritt wie den aktuellen.
+        progressDetail: apiTask.progress_detail ?? null,
+        progressPercent: apiTask.progress_percent ?? null,
+        progressAt: apiTask.progress_at ?? null,
         // TTL board-weit konstant, wird aber an der Karte mitgeführt: sonst müsste
         // sie durch BoardColumn/GroupColumn bis zur Karte durchgereicht werden.
         claimTtlMinutes: meta.claimSessionTtlMinutes ?? 30,

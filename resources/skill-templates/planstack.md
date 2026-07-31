@@ -60,17 +60,26 @@ Alle Endpunkte laufen unter `$BASE/projects/$PROJ` (siehe Betriebshandbuch). Feh
 
 **B — ein Task (`/planstack work <PROJECT> <TASK>`):** Der Task ist direkt per Name ansprechbar (Pfadsegment akzeptiert Name **oder** id) — kein name→id-Lookup nötig: `POST $BASE/projects/$PROJ/tasks/$TASK/claim`, dann `GET .../tasks/$TASK` für die Details (falls `claim.return_details` aus ist), und denselben Zyklus **nur für diesen Task** (analyze → umsetzen/concern → PR → done → merge). Ist der Task nicht pickbar (Gate offen, bereits beansprucht oder schon mit PR), das melden statt es zu erzwingen.
 
-## Sticky-Statuszeile (immer)
+**In beiden Modi und bei jedem Kommando** läuft die Sticky-Statuszeile mit (Format, Phasen, Einrichtung: Abschnitt „Sticky-Statuszeile" weiter unten) — auch beim Nachziehen des Skills selbst.
 
-**Jeder** `/planstack`-Aufruf zeigt dauerhaft in einer Statuszeile, was gerade passiert — nicht nur der Auto-Modus, und ausdrücklich auch beim Nachziehen des Skills selbst. Format `<Symbol> <Kommando> (<Phase> <%>) <PROJECT> · <TASK> — <kurzer Schritt>`, z. B. `⚙ Work (Bearbeite 44 %) DCE · C27 — 4/9 Dateien` oder `⚙ Update (Schreibe Skill) — SKILL.md ersetzen`. Die Zeile wird **immer geschrieben, bevor** die nächste Handlung beginnt (Tool-Aufruf, HTTP, Datei, Subagent, Phasenwechsel) — Reihenfolge: Zeile schreiben, dann handeln. Die Prozentzahl ist der **gerechnete** Fortschritt innerhalb der Phase (Zähler durch echten Nenner); ohne Nenner steht keine Zahl. Das Prozentzeichen bleibt dabei **einfach** (`%`, nie `%%`) — die Zeile ist Text, kein Format-String; bei `printf` gehört sie ins Argument (`printf '%s\n' "…"`), nicht in den Format-String. Gespeist wird sie aus `~/.claude/planstack-status-<session_id>.txt` und ist damit **nur im laufenden Fenster** sichtbar; Task und PR-Nummer sind als OSC-8-Hyperlinks klickbar (Ctrl/Cmd+Klick). Wichtig: im `statusLine`-Eintrag **`refreshInterval`** setzen (Empfehlung 5–10 s) — sonst friert die Zeile ein, während ein Subagent arbeitet. Die verbindliche Fassung (Kommando- und Phasenliste, Einrichtung, Zähler-Regeln) ist **serverseitig gepflegt** (`skill_instructions`, Abschnitt „Sticky-Statuszeile").
+## Kommando-Anleitungen kommen zur Laufzeit
 
-## Auto-Modus (`/planstack auto <PROJECT>`)
+`review`, `fix` und `auto` haben eine eigene, ausführliche Anleitung, die **absichtlich nicht** in dieser Datei steht: sie wird an die Antwort des Aufrufs gehängt, ohne den das Kommando nicht stattfinden kann, im Feld **`command_instructions`**.
 
-Arbeitet das Board von `<PROJECT>` **dauerhaft und unbeaufsichtigt** ab (`auto` in der **Sub-Kommando-Position**, erstes Argument, gefolgt vom Projekt; kein Task namens „auto"). Der Haupt-Agent wirkt als **Supervisor** und startet in einer Endlosschleife nacheinander **Auto-Runs**, jeder als **eigener Subagent** (synchron). Ein Auto-Run erledigt genau **eine** Arbeitseinheit, indem er das passende bestehende Sub-Kommando (mit explizitem `<PROJECT>`/`<TASK>`) aufruft: (1) ersten reviewbaren Task via `/planstack review <PROJECT> <TASK>`, sonst (2) ersten eigenen offenen Task via `/planstack work <PROJECT> <TASK>` (bzw. `/planstack fix <PROJECT> <TASK>`, wenn der PR nur noch Politur braucht) bis zum polierten PR, sonst (3) besten pickbaren Task via `/planstack work <PROJECT> <TASK>` bis zum erstellten PR, sonst nichts (`idle`). Hat der Auto-Run etwas getan, startet sofort der nächste; war er `idle`, wird **5 Minuten** gewartet und dann weitergemacht. Der Modus endet erst auf Nutzer-Abbruch.
+| Kommando | Aufruf, der die Anleitung mitbringt |
+|---|---|
+| `review` | `POST .../review-next` bzw. `POST .../tasks/<TASK>/review-claim` |
+| `fix` | `GET .../tasks/<TASK>` |
+| `auto` | `POST .../next-action` |
 
-Im Auto-Modus benennt die Statuszeile beide Ebenen (`Auto › Work`, `Auto › Review`), damit sichtbar bleibt, dass die Schleife lebt.
+Ausgelöst wird das vom Header `X-Planstack-Session`, dessen **erstes Wort** das laufende Kommando nennt (`review DCE/A1`) — er wird im Zugang oben ohnehin gesetzt. Zwei Konsequenzen, die zu beachten sind:
 
-Die vollständige, verbindliche Anleitung (Supervisor-Schleife, Sticky-Statuszeile, Ergebnisbericht, Priorität) wird **serverseitig gepflegt** (`skill_instructions`, Abschnitt „Auto-Modus") und bei Drift (`X-Planstack-Skill-Revision`) frisch nachgeladen.
+1. **Der Header muss stimmen.** Steht dort nicht das tatsächlich laufende Sub-Kommando, kommt die falsche oder keine Anleitung.
+2. **`command_instructions` ist verbindlich und aktuell** — der Server liefert immer den gepflegten Stand. Ist das Feld da, gilt es; eine abweichende Fassung irgendwo sonst ist veraltet.
+
+Fehlt das Feld (älterer Server, Header nicht gesetzt), die Anleitung nachladen: `GET $BASE/projects/$PROJ/config?parts=skill_instructions` enthält **alle** Kommando-Anleitungen. Erst danach mit dem Kommando fortfahren, nicht improvisieren.
+
+`work`, `plan`, `settings` und `update-config` brauchen kein solches Nachladen: `work` und `settings` sind vollständig in dieser Datei beschrieben, `plan` holt seine Anleitung ohnehin bei jedem Aufruf (`plan_instructions`).
 
 ## Plan (`/planstack plan [<PROJECT>]`)
 
@@ -80,10 +89,32 @@ Legt **Projekte, Phasen und Tasks** an (Planungsmodus statt Abarbeitung). Die vo
 
 ## Selbst-Update
 
-**Sync-at-start:** Zu Beginn **jedes** `/planstack`-Aufrufs die Aktualität prüfen, **bevor** die eigentliche Arbeit beginnt. Modi mit Projekt-Call (Board/Task): Die erste Antwort (z. B. `claim-next`/`board`/Task) trägt `X-Planstack-Skill-Revision` — weicht sie von `$SKILLREV` ab, sofort `/config` nachziehen und die neuen Inhalte übernehmen, dann erst arbeiten. `settings` ist rein lokal (kein Sync nötig); `update-config` ist der explizite Sync.
+**Sync-at-start:** Zu Beginn **jedes** `/planstack`-Aufrufs die Aktualität prüfen, **bevor** die eigentliche Arbeit beginnt. Jede Board-/Task-Antwort trägt `X-Planstack-Config-Version`, `X-Planstack-Skill-Revision` und `X-Planstack-Status-Config-Version`. Weicht `X-Planstack-Skill-Revision` von `$SKILLREV` ab, sofort nachziehen (unten), dann erst arbeiten. Weicht nur `X-Planstack-Status-Config-Version` ab, genügt der `status_rules`-Block: `GET $BASE/projects/$PROJ/config?parts=status_rules` (siehe „Feingranulare Config-Aktualisierung"). `settings` ist rein lokal (kein Sync); `update-config` ist der explizite Sync.
 
-Jede Board-Antwort trägt `X-Planstack-Config-Version` und `X-Planstack-Skill-Revision`. Weicht `X-Planstack-Skill-Revision` von `$SKILLREV` ab: `GET $BASE/projects/$PROJ/config` lesen und `operating_manual` + `status_rules` + `skill_instructions` von dort befolgen (Vorrang vor den Snapshots unten) — `skill_instructions` sind die verbindlichen, projektübergreifenden Anweisungen dieses Skills (z. B. die PR-Titel-Konvention).
+**Snapshot mitschreiben (Pflicht):** Alle Abschnitte unterhalb dieses Kapitels sind nur eine **Kopie** des serverseitig gepflegten Textes. Wer eine neue `skill_revision` in `config.json` schreibt, **ohne** diese Kopie zu erneuern, folgt danach dauerhaft dem alten Text — die Drift-Prüfung schlägt nie wieder an, weil die Revisionen übereinstimmen. Deshalb bei **jedem** Nachziehen (Drift **und** `update-config`): **erst** die SKILL.md ersetzen, **dann** die Baseline setzen — nie die Baseline allein.
 
-**Snapshot mitschreiben (Pflicht):** Die Abschnitte unterhalb dieses Kapitels sind nur eine **Kopie** des serverseitig gepflegten Textes. Wer eine neue `skill_revision` in `config.json` schreibt, **ohne** diese Kopie zu erneuern, folgt danach dauerhaft dem alten Text — die Drift-Prüfung schlägt nie wieder an, weil die Revisionen ja übereinstimmen. Deshalb gilt bei **jedem** Nachziehen (Drift **und** `update-config`): erst `GET $BASE/skill` lesen und `skill_md` **über diese SKILL.md schreiben**, dann das gelieferte `skill_revision` als Baseline in `config.json` — **nie** die Baseline ohne das Überschreiben. Ist `GET $BASE/skill` nicht verfügbar (404, älterer Server), die Baseline **nicht** anheben (dann bleibt die Drift-Prüfung wirksam) und stattdessen `operating_manual` + `status_rules` + `skill_instructions` aus `/config` in die entsprechenden Abschnitte dieser Datei schreiben.
+**Den Skill-Text nie durch den Kontext schleifen.** `skill_md` ist ~60 KB; einlesen und mit einem Datei-Werkzeug wieder hinausschreiben kostet ~32.000 Token für einen reinen Kopiervorgang. Stattdessen direkt in eine Datei pipen — im Kontext landet nur die Revision:
+
+```bash
+SD="${CLAUDE_SKILL_DIR:-.}"
+NEW=$(curl -s "${AUTH[@]}" "$BASE/skill" | python3 -c 'import json,io,sys
+d=json.load(sys.stdin)
+io.open(sys.argv[1],"w",encoding="utf-8",newline="\n").write(d["skill_md"])
+print(d["skill_revision"])' "$SD/SKILL.md.new")
+
+# Erst uebernehmen, wenn die neue Datei plausibel ist: Marker der PR-Titel-Konvention
+# vorhanden und nicht verstuemmelt. Sonst bleibt die alte SKILL.md unangetastet.
+if [ -n "$NEW" ] && grep -q '<PROJECT>-<TASK>' "$SD/SKILL.md.new" \
+   && [ "$(wc -c <"$SD/SKILL.md.new")" -gt 4000 ]; then
+  mv -f "$SD/SKILL.md.new" "$SD/SKILL.md"   # Snapshot erneuert …
+  # … und erst JETZT $NEW als skill_revision in config.json schreiben (Baseline).
+else
+  rm -f "$SD/SKILL.md.new"                  # Fehlschlag: Baseline NICHT anheben,
+fi                                          # damit die Drift-Pruefung wirksam bleibt.
+```
+
+`newline="\n"` verhindert, dass Windows die Zeilenenden umschreibt. Schlägt irgendetwas fehl — Netzabbruch, `404` auf `GET $BASE/skill` (älterer Server), fehlender Marker —, die Baseline **nicht** anheben; dann bleibt die Drift-Prüfung wirksam und der Text wird bei jedem Lauf frisch aus `/config` (`operating_manual` + `status_rules` + `skill_instructions`) befolgt. Diese Inhalte haben ohnehin **Vorrang** vor der lokalen Kopie.
+
+**Danach den geänderten Block einmal lesen — aber nur diesen.** Die Datei auf der Platte ist jetzt aktuell, der eigene Kontext trägt aber noch den alten Text. Welcher Block sich geändert hat, sagt die Map `revisions` (aus `GET $BASE/skill` bzw. `/config`): sie führt je Block — `operating_manual`, `status_rules`, `skill_instructions`, `plan_instructions` — eine eigene Revision. Diese gegen die lokale Baseline `revisions` in `config.json` vergleichen und **nur die abweichenden** Blöcke nachlesen: `GET $BASE/projects/$PROJ/config?parts=<block>[,<block>]`. Danach die neue Map als Baseline zurückschreiben. `skill_revision` allein genügt dafür nicht — es ist **ein** Hash über alle Blöcke und sagt nur, *dass* sich etwas geändert hat, nicht *was*.
 
 **Selbstheilung (neue Kommandos):** Wird ein Sub-Kommando aufgerufen, das in dieser SKILL.md **nicht** beschrieben ist (z. B. ein später ergänztes), zuerst `GET $BASE/projects/$P/config` lesen (mit einem zugänglichen Projekt `$P` aus `GET $BASE/projects`) und `skill_instructions` befolgen — dort steht die **aktuelle Kommandoliste**. So stehen neue Features auch ohne Neu-Download bereit, sobald diese Selbstheilungs-Regel einmal installiert ist. Die **projektspezifische** Board-Konfiguration (Verhaltens-Hinweise wie `execution.mode`, `run.mode`, `parallelism.max_workers` …) liefert das Board bei Bedarf als `client_hints`-Block mit — separat je `<PROJECT>`, nichts davon ist fest im Skill hinterlegt.
