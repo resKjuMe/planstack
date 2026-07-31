@@ -6,6 +6,8 @@ return [
     'checklist_exists' => 'Checkliste besteht bereits.',
     'checklist_label_acceptance' => 'Akzeptanzkriterien',
     'checklist_label_test' => 'Testanleitung',
+    'claim_session_forgotten' => 'Session-Vermerk auf Task ":name" entfernt. Der Claim bleibt bestehen.',
+    'claim_session_not_stale' => 'Es gibt keinen verwaisten Session-Vermerk zu entfernen.',
     'creator_cannot_be_removed' => 'Der Creator kann nicht entfernt werden.',
     'github_repo_not_configured' => 'Für „:alias“ ist kein GitHub-Repository konfiguriert.',
     'github_token_missing' => 'Kein GITHUB_TOKEN konfiguriert — die GraphQL-API erlaubt keine anonymen Anfragen.',

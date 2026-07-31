@@ -3,6 +3,7 @@
 namespace App\Support;
 
 use App\Http\Middleware\TrackClaimSession;
+use App\Models\Task;
 
 /**
  * Die Session, die den aktuellen Request stellt — request-scoped im Container
@@ -67,5 +68,27 @@ class ClaimSession
             'claim_session_label' => $claimed ? $this->label : null,
             'claim_seen_at' => $claimed && $this->label !== null ? now() : null,
         ]);
+    }
+
+    /**
+     * Gilt das Session-Lease des Tasks als verwaist — also: es gibt eines, und die
+     * Session hat sich länger als die TTL nicht gemeldet?
+     *
+     * Serverseitiges Gegenstück zur Anzeige-Ableitung im Client
+     * (claimSessionState in resources/js/board/claimSession.js). Nötig, weil das
+     * Entfernen des Vermerks auf der Task-Detailseite genau diese Bedingung
+     * prüft: eine LEBENDE Session darf ihr Lease nicht unter den Füßen verlieren,
+     * sonst behauptet das Board „niemand arbeitet daran", während ein Worker läuft.
+     */
+    public static function isStale(Task $task): bool
+    {
+        if ($task->claim_session_label === null) {
+            return false;
+        }
+
+        $ttl = max(1, (int) config('planstack.claim_session_ttl_minutes', 30));
+
+        return $task->claim_seen_at === null
+            || $task->claim_seen_at->lt(now()->subMinutes($ttl));
     }
 }

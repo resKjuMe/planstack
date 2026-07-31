@@ -6,6 +6,8 @@ return [
     'checklist_exists' => 'Checklist already exists.',
     'checklist_label_acceptance' => 'Acceptance criteria',
     'checklist_label_test' => 'Test instructions',
+    'claim_session_forgotten' => 'Session note removed from task ":name". The claim itself stays.',
+    'claim_session_not_stale' => 'There is no orphaned session note to remove.',
     'creator_cannot_be_removed' => 'The creator cannot be removed.',
     'github_repo_not_configured' => 'No GitHub repository is configured for ":alias".',
     'github_token_missing' => 'No GITHUB_TOKEN configured — the GraphQL API does not allow anonymous requests.',

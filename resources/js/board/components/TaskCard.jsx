@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useDraggable } from '@dnd-kit/core';
 import CopyMenu from './CopyMenu';
 import { useNow } from '../useNow';
+import { claimSessionState } from '../claimSession';
 
 // CI-Rollup des PR (task.ciStatus, aus planstack:sync-pr-status) → Icon + Farbe +
 // Titel-Key. SUCCESS=Haken (grün), FAILURE/ERROR=Kreuz (rot), PENDING/EXPECTED=Uhr
@@ -19,30 +20,6 @@ const CI_META = {
 };
 const CI_UNKNOWN = { titleKey: 'ci_unknown', cls: 'text-gray-400 dark:text-gray-500', paths: CI_QUESTION };
 const ciMeta = (status) => CI_META[status] ?? CI_UNKNOWN;
-
-/**
- * Zustand der Worker-Session, die den Task hält — abgeleitet aus dem Alter des
- * Heartbeats (claim_seen_at) gegen die TTL. null, wenn keine Session dahinter
- * steht (Claim per Board-Klick durch einen Menschen).
- *
- * „stale" heißt NICHT, dass der Claim weg ist: er bleibt bestehen, bis ihn
- * jemand explizit freigibt. Es heißt, dass sich die Session nicht mehr gemeldet
- * hat — typischerweise ein hart gekillter Worker, der den Task sonst unsichtbar
- * für immer belegen würde.
- */
-function claimSessionState(task, now) {
-    if (! task.claimSession) {
-        return null;
-    }
-
-    const seenAt = task.claimSeenAt ? new Date(task.claimSeenAt).getTime() : null;
-    const ttlMs = Math.max(1, Number(task.claimTtlMinutes) || 30) * 60_000;
-    // Ohne Heartbeat (Alt-Claim von vor dieser Funktion) lieber „verwaist" zeigen
-    // als Aktivität behaupten, die niemand bestätigt hat.
-    const stale = seenAt === null || now - seenAt > ttlMs;
-
-    return { label: task.claimSession, stale, seenAt };
-}
 
 // Presentational card (also used for the drag overlay). No drag wiring here.
 export function TaskCardView({
@@ -68,7 +45,10 @@ export function TaskCardView({
 
     // Taktet nur die Zeit — der Session-Zustand kippt dadurch von selbst auf
     // „verwaist", ohne dass ein Server-Event nötig ist.
-    const session = claimSessionState(task, useNow());
+    const session = claimSessionState(
+        { label: task.claimSession, seenAt: task.claimSeenAt, ttlMinutes: task.claimTtlMinutes },
+        useNow(),
+    );
 
     // PR-Zustandszeile nur zeigen, wenn ein PR existiert (dann liegen — sobald der
     // Sync gelaufen ist — CI-Status und offene Kommentare vor).

@@ -235,6 +235,32 @@ class TaskController extends Controller
     }
 
     /**
+     * Entfernt den Session-Vermerk eines Claims (Label + Heartbeat), dessen Session
+     * sich nicht mehr gemeldet hat — der Aufräum-Knopf zum ⚠-Badge.
+     *
+     * Der CLAIM bleibt bewusst unberührt: „verwaist" heißt nur, dass niemand mehr
+     * Lebenszeichen sendet, nicht dass der Task frei ist. Wer ihn freigeben will,
+     * nutzt weiter „Freigeben". Ohne verwaistes Lease passiert nichts — eine
+     * lebende Session darf ihren Vermerk nicht verlieren (siehe
+     * {@see \App\Support\ClaimSession::isStale()}).
+     *
+     * Läuft absichtlich über das Modell (nicht den Query-Builder): das Verschwinden
+     * des Vermerks IST ein Board-Ereignis und soll per entity-changed gepusht werden.
+     */
+    public function forgetClaimSession(Project $project, Task $task): RedirectResponse
+    {
+        $this->authorize('update', $task);
+
+        if (! \App\Support\ClaimSession::isStale($task)) {
+            return back()->with('error', __('flash.claim_session_not_stale'));
+        }
+
+        $task->update(['claim_session_label' => null, 'claim_seen_at' => null]);
+
+        return back()->with('status', __('flash.claim_session_forgotten', ['name' => $task->name]));
+    }
+
+    /**
      * Claim the review of a task: stamp the current user as reviewer. Only
      * possible while the task awaits review (in the REVIEWABLE pool, e.g. column
      * REVIEWBAR, or a not-yet-taken IN_REVIEW task), has no reviewer yet, and the

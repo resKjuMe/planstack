@@ -85,6 +85,7 @@ class TaskShowPresenter
                 'releaseBlocked' => $claimed && $concernOpen,
             ],
             'metaChips' => $this->metaChips($project, $task),
+            'claimSession' => $this->claimSession($project, $task, $canUpdate),
             'concern' => $concernOpen ? $this->concern($project, $task, $canUpdate) : null,
             'concernCreateUrl' => route('projects.tasks.concern.edit', [$project, $task]),
             'canUpdate' => $canUpdate,
@@ -177,6 +178,30 @@ class TaskShowPresenter
         }
 
         return $chips;
+    }
+
+    /**
+     * Das Session-Lease des Claims für die Übersichtskarte: WELCHE Worker-Session
+     * den Task hält. null, wenn keine dahinter steht (Claim durch einen Menschen).
+     *
+     * „Verwaist" leitet der Client aus seenAt + ttlMinutes ab (wie auf der
+     * Board-Karte) — der Zustand kippt allein durch Zeitverlauf, dafür gibt es
+     * kein Server-Ereignis. forgetUrl räumt nur den Vermerk, nicht den Claim.
+     */
+    private function claimSession(Project $project, Task $task, bool $canUpdate): ?array
+    {
+        if ($task->claim_session_label === null) {
+            return null;
+        }
+
+        return [
+            'label' => $task->claim_session_label,
+            'seenAt' => $task->claim_seen_at?->toIso8601String(),
+            'ttlMinutes' => (int) config('planstack.claim_session_ttl_minutes', 30),
+            'forgetUrl' => $canUpdate
+                ? route('projects.tasks.claim-session.destroy', [$project, $task])
+                : null,
+        ];
     }
 
     private function concern(Project $project, Task $task, bool $canUpdate): array
@@ -417,6 +442,13 @@ class TaskShowPresenter
             'blocks' => __('common.blocks'),
             'cannotReleaseWithConcern' => __('tasks.cannot_be_released_while_a_concern_is'),
             'criticality' => __('tasks.criticality'),
+            // Session-Zeile der Übersichtskarte. Die beiden Zustands-Texte kommen
+            // aus board.* — dieselbe Aussage wie im Tooltip der Board-Karte.
+            'session' => __('tasks.session'),
+            'sessionActive' => __('board.session_active'),
+            'sessionStale' => __('board.session_stale'),
+            'forgetSession' => __('tasks.forget_session'),
+            'forgetSessionHint' => __('tasks.forget_session_hint'),
             'review' => __('tasks.review'),
             'pending' => __('tasks.pending'),
             'effort' => __('tasks.effort'),

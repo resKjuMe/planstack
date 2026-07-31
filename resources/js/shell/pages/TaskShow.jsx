@@ -3,6 +3,8 @@ import { Head, router } from '@inertiajs/react';
 import AppShell from '../AppShell.jsx';
 import PageBands from '../components/PageBands.jsx';
 import Flash from '../components/Flash.jsx';
+import { claimSessionState } from '../../board/claimSession.js';
+import { useNow } from '../../board/useNow.js';
 
 // Task-Detailseite (ehemals tasks/show.blade.php + Partials). Sämtliches Parsing
 // und das Markdown-Rendering passiert serverseitig (TaskShowPresenter); hier wird
@@ -82,6 +84,56 @@ function MetaChips({ chips }) {
                     )}
                 </span>
             ))}
+        </div>
+    );
+}
+
+// --- Session-Zeile der Übersichtskarte -------------------------------------
+
+/**
+ * Welche Worker-Session den Claim hält — gleiche Ableitung, Farben und Symbole
+ * wie auf der Board-Karte (geteilt über claimSessionState + useNow, damit
+ * „verwaist" allein durch Zeitverlauf umschlägt).
+ *
+ * Verwaist heißt NICHT, dass der Claim weg ist: der Knopf entfernt darum nur den
+ * Vermerk und lässt die Reservierung stehen — freigeben tut weiter „Freigeben".
+ * Bei einer lebenden Session gibt es ihn nicht: dann wäre das Entfernen eine
+ * Lüge gegenüber dem laufenden Worker.
+ */
+function ClaimSessionRow({ session, strings }) {
+    const state = claimSessionState(session, useNow());
+
+    if (!state) return null;
+
+    return (
+        <div className="space-y-1.5">
+            <div className="flex items-center justify-between gap-2">
+                <span className="shrink-0 text-gray-400 dark:text-gray-500">{strings.session}</span>
+                <span
+                    title={[state.stale ? strings.sessionStale : strings.sessionActive, state.seenAt ? new Date(state.seenAt).toLocaleString() : null].filter(Boolean).join(' · ')}
+                    className={
+                        'inline-flex min-w-0 items-center gap-1 rounded px-1.5 py-0.5 text-xs font-medium ' +
+                        (state.stale
+                            ? 'bg-amber-50 text-amber-700 dark:bg-amber-950 dark:text-amber-500'
+                            : 'bg-indigo-50 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-400')
+                    }
+                >
+                    <span aria-hidden="true">{state.stale ? '⚠' : '▶'}</span>
+                    <span className="truncate">{state.label}</span>
+                </span>
+            </div>
+            {state.stale && session.forgetUrl && (
+                <div className="flex justify-end">
+                    <button
+                        type="button"
+                        onClick={() => router.delete(session.forgetUrl)}
+                        title={strings.forgetSessionHint}
+                        className="text-xs font-medium text-indigo-600 dark:text-indigo-400 hover:underline"
+                    >
+                        {strings.forgetSession}
+                    </button>
+                </div>
+            )}
         </div>
     );
 }
@@ -637,7 +689,7 @@ function Requirements({ requirements, strings }) {
 // --- Seite -----------------------------------------------------------------
 
 export default function TaskShow(props) {
-    const { project, task, header, metaChips, concern, concernCreateUrl, canUpdate, description, targetActual, checklists, review, timeline, requirements, claudeLogoPath, strings, flash } = props;
+    const { project, task, header, metaChips, claimSession, concern, concernCreateUrl, canUpdate, description, targetActual, checklists, review, timeline, requirements, claudeLogoPath, strings, flash } = props;
     const [tip, setTip] = useState(false);
 
     const claim = () => router.post(header.claimUrl);
@@ -714,6 +766,7 @@ export default function TaskShow(props) {
                                     <span className="text-gray-400 dark:text-gray-500">{strings.status}</span>
                                     <StatusBadge status={task.status} />
                                 </div>
+                                {claimSession && <ClaimSessionRow session={claimSession} strings={strings} />}
                                 {task.criticality && (
                                     <div className="flex items-center justify-between">
                                         <span className="text-gray-400 dark:text-gray-500">{strings.criticality}</span>

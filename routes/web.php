@@ -251,6 +251,11 @@ Route::middleware('auth')->group(function () {
         ->scopeBindings()
         ->name('projects.tasks.board-move');
 
+    // Session-Vermerk eines verwaisten Claims entfernen (der Claim selbst bleibt).
+    Route::delete('projects/{project}/tasks/{task}/claim-session', [TaskController::class, 'forgetClaimSession'])
+        ->scopeBindings()
+        ->name('projects.tasks.claim-session.destroy');
+
     // Claim the review of a task (sets reviewed_by to the current user).
     Route::post('projects/{project}/tasks/{task}/review-claim', [TaskController::class, 'reviewClaim'])
         ->scopeBindings()
