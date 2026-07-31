@@ -53,6 +53,10 @@ class BoardPresenter
             // verwaist markiert. Der Client leitet das selbst ab (reiner
             // Zeitverlauf, kein Server-Event) und braucht dafür die Schwelle.
             'claimSessionTtlMinutes' => (int) config('planstack.claim_session_ttl_minutes', 30),
+            // Eigene, deutlich kuerzere TTL: „arbeitet gerade daran" ist sofort
+            // falsch, sobald die Session weg ist — anders als ein Claim, der als
+            // Reservierung bestehen bleibt.
+            'activeSessionTtlMinutes' => (int) config('planstack.active_session_ttl_minutes', 10),
             'strings' => $this->strings(),
         ];
     }

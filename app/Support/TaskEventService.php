@@ -18,6 +18,27 @@ use App\Models\User;
 class TaskEventService
 {
     /**
+     * Events, mit denen die Arbeitseinheit an der Aufgabe endet — danach ist der
+     * Vermerk „arbeitet gerade daran" falsch und wird geräumt (siehe
+     * {@see ClaimSession::finish()}).
+     *
+     * Bewusst NICHT dabei sind die Zwischen-Abschlüsse `ANALYZED`, `PROCESSED` und
+     * `PUBLISHED`: nach ihnen läuft dieselbe Arbeitseinheit weiter (Umsetzung → PR →
+     * Politur), die Session ist also noch da.
+     */
+    private const FINISHING_EVENTS = [
+        TaskEvent::POLISHED,          // work/fix fertig → reviewbar
+        TaskEvent::REVIEWED,          // Review erfasst
+        TaskEvent::APPROVED,
+        TaskEvent::CHANGES_REQUESTED,
+        TaskEvent::CONCERNED,         // Concern gemeldet, Einheit endet
+        TaskEvent::UNCLAIMED,         // freigegeben
+        TaskEvent::MERGED,
+    ];
+
+    public function __construct(private readonly ClaimSession $session) {}
+
+    /**
      * @param  ?string  $detail  Freitext zum Fortschritt ("4/9 Dateien: TaskController.php").
      * @param  ?int  $progress  Fortschritt in Prozent (0–100) innerhalb des Events.
      * @return array{configured: bool, status_changed: bool, applied_fields: array<int, string>, status: ?string}
@@ -54,7 +75,6 @@ class TaskEventService
             // Zusätzliche, im Event hinterlegte Feld-Effekte (überschreiben die
             // On-Enter-Effekte des Zielstatus bei Feld-Kollision).
             $attrs = array_merge($attrs, StatusEffects::resolveEffects($task, $config->effects ?? [], $actor));
-
         }
 
         // Fortschritts-Angabe denormalisiert auf die Aufgabe spiegeln, damit das
@@ -89,6 +109,12 @@ class TaskEventService
             'detail' => $detail,
             'progress' => $progress,
         ]);
+
+        // Schliesst dieses Event die Arbeitseinheit ab, den Vermerk „arbeitet gerade
+        // daran" raeumen lassen — sonst stand er bis zum Ablauf der TTL weiter da.
+        if (in_array($event, self::FINISHING_EVENTS, true)) {
+            $this->session->finish();
+        }
 
         return [
             'configured' => $config !== null,

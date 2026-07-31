@@ -70,6 +70,7 @@ export function mapApiTask(apiTask, meta) {
         // eine laufende Bearbeitung auf der Karte nicht zu sehen.
         activeSession: apiTask.active_session ?? null,
         activeSessionSeenAt: apiTask.active_session_seen_at ?? null,
+        activeSessionTtlMinutes: meta.activeSessionTtlMinutes ?? 10,
         // Zuletzt per Fortschritts-Event gemeldeter Stand (POST /events mit
         // detail/progress). Der Zeitpunkt gehört dazu: ohne ihn liest man einen
         // längst überholten Schritt wie den aktuellen.

@@ -82,5 +82,24 @@ return [
 
     'claim_session_ttl_minutes' => (int) env('PLANSTACK_CLAIM_SESSION_TTL_MINUTES', 30),
 
+    /*
+    |--------------------------------------------------------------------------
+    | Aktive Session — Anzeigedauer ohne Lebenszeichen
+    |--------------------------------------------------------------------------
+    |
+    | Deutlich kürzer als die Claim-TTL, weil beide Marken verschiedene Fragen
+    | beantworten: ein Claim ist eine Reservierung, die bestehen bleibt, bis
+    | jemand freigibt — „arbeitet gerade daran" ist dagegen sofort falsch, sobald
+    | die Session weg ist.
+    |
+    | Regulär endet der Vermerk explizit (Ende-Signal am Abschluss der
+    | Arbeitseinheit, s. TrackClaimSession). Diese TTL ist nur das Auffangnetz für
+    | abgebrochene Läufe. Nicht zu knapp wählen: ein Lauf darf während eines
+    | Testdurchlaufs oder einer CI-Wartezeit einige Minuten ohne API-Aufruf
+    | bleiben, ohne dass die Karte ihn für beendet erklärt.
+    |
+    */
+    'active_session_ttl_minutes' => (int) env('PLANSTACK_ACTIVE_SESSION_TTL_MINUTES', 10),
+
 ];
 

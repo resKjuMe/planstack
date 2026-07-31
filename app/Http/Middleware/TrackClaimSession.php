@@ -74,19 +74,27 @@ class TrackClaimSession
 
         $now = now();
 
-        // Aktive Session: gilt fuer jede Ausfuehrung, auch ohne Claim. Bewusst
-        // bedingungslos (jeder task-bezogene Request dieser Session) — genau das
-        // macht `fix`/`review`/Weiterarbeit sichtbar, die nie claimen.
-        //
-        // Mit Initialen des Betreibers davor („CM fix TXSAFE/GAP-MassRun"): mehrere
-        // Personen fahren Worker unter gleich aufgebauten Labels, ohne das Praefix
-        // waeren sie im Board nicht unterscheidbar. Es kommt vom Server, nicht aus dem
-        // Header — der Nutzer ist hier bekannt, und ein Client soll sich das nicht
-        // selbst zusammensetzen (koennte es auch falsch).
-        $attrs = [
-            'active_session_label' => self::withInitials($label, $request->user()),
-            'active_session_seen_at' => $now,
-        ];
+        // Beendet dieser Request die Arbeitseinheit (Merge, Freigabe, erfasstes
+        // Review, Concern, abschliessendes Fortschritts-Event), dann wird der Vermerk
+        // GERAEUMT statt gestempelt — sonst blieb „arbeitet daran" bis zum Ablauf der
+        // TTL stehen, obwohl die Session fertig ist. Das Raeumen gehoert hierher und
+        // nicht in die Aktion selbst: terminate() laeuft danach und wuerde ein dort
+        // gesetztes null im selben Request wieder ueberschreiben.
+        $attrs = $this->session->finished()
+            ? ['active_session_label' => null, 'active_session_seen_at' => null]
+            // Aktive Session: gilt fuer jede Ausfuehrung, auch ohne Claim. Bewusst
+            // bedingungslos (jeder task-bezogene Request dieser Session) — genau das
+            // macht `fix`/`review`/Weiterarbeit sichtbar, die nie claimen.
+            //
+            // Mit Initialen des Betreibers davor („CM fix TXSAFE/GAP-MassRun"):
+            // mehrere Personen fahren Worker unter gleich aufgebauten Labels, ohne
+            // das Praefix waeren sie im Board nicht unterscheidbar. Es kommt vom
+            // Server, nicht aus dem Header — der Nutzer ist hier bekannt, und ein
+            // Client soll sich das nicht selbst zusammensetzen (koennte es auch falsch).
+            : [
+                'active_session_label' => self::withInitials($label, $request->user()),
+                'active_session_seen_at' => $now,
+            ];
 
         // Frisch aus der DB lesen: die Route-Bindung hat den Task VOR dem
         // Controller geladen, der Claim kann also im selben Request entstanden

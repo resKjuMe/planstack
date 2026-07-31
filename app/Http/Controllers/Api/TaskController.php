@@ -9,6 +9,7 @@ use App\Http\Middleware\AttachPlanstackConfig;
 use App\Http\Resources\TaskResource;
 use App\Models\Project;
 use App\Models\Task;
+use App\Support\ClaimSession;
 use App\Support\TaskBoardService;
 use App\Support\TaskStatusService;
 use Illuminate\Http\JsonResponse;
@@ -24,6 +25,9 @@ class TaskController extends ApiController
     public function __construct(
         private readonly TaskBoardService $board,
         private readonly TaskStatusService $statuses,
+        // Beendet eine Aktion die Arbeitseinheit, wird der Vermerk „arbeitet gerade
+        // daran" geraeumt statt gestempelt (siehe ClaimSession::finish()).
+        private readonly ClaimSession $session,
     ) {}
 
     /**
@@ -398,6 +402,9 @@ class TaskController extends ApiController
             'last_review_summary' => $data['summary'] ?? null,
         ]);
 
+        // Mit dem erfassten Ergebnis ist das Review abgeschlossen.
+        $this->session->finish();
+
         return $this->reviewResource($project, $task);
     }
 
@@ -415,6 +422,9 @@ class TaskController extends ApiController
         // Config-driven: PICKABLE-role status; its on-enter effects clear the
         // assignee (default seed: claimed_by_id/@clear, claimed_at/@clear).
         $this->statuses->applyRole($task, StatusRole::PICKABLE, $request->user());
+
+        // Freigegeben heisst: diese Session arbeitet nicht mehr daran.
+        $this->session->finish();
 
         return $this->ack($project, $task);
     }
@@ -526,6 +536,11 @@ class TaskController extends ApiController
     private function markMerged(Task $task, ?\App\Models\User $actor = null): void
     {
         $this->statuses->applyRole($task, StatusRole::MERGED, $actor);
+
+        // Gemergt heisst: der Task ist vom Board und niemand arbeitet mehr daran.
+        // Hier statt in merge(), weil complete() diese Methode direkt aufruft und
+        // das Signal sonst beim gebuendelten Abschluss fehlen wuerde.
+        $this->session->finish();
     }
 
     /**

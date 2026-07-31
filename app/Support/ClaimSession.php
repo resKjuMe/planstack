@@ -20,6 +20,8 @@ class ClaimSession
 {
     private ?string $label = null;
 
+    private bool $finished = false;
+
     /**
      * Setzt das Label. Leerstrings werden zu null (ein leerer Header ist „keine
      * Session"), zu lange Werte hart gekürzt — die Spalte hält 60 Zeichen und ein
@@ -35,6 +37,27 @@ class ClaimSession
     public function label(): ?string
     {
         return $this->label;
+    }
+
+    /**
+     * Meldet, dass DIESER Request die Arbeitseinheit an der Aufgabe beendet — Merge,
+     * Freigabe, erfasstes Review, Concern oder ein abschliessendes Fortschritts-Event.
+     *
+     * Warum als Flag und nicht direkt als Update: der Vermerk „arbeitet gerade daran"
+     * wird von {@see TrackClaimSession::terminate()} NACH der Antwort geschrieben.
+     * Wuerde eine Controller-Aktion ihn selbst raeumen, stempelte terminate() ihn im
+     * selben Request sofort wieder — die aktive Session verschwaende also nie.
+     * Deshalb entscheidet terminate() anhand dieses Flags, ob es stempelt oder raeumt.
+     */
+    public function finish(): void
+    {
+        $this->finished = true;
+    }
+
+    /** Endet die Arbeitseinheit mit diesem Request? */
+    public function finished(): bool
+    {
+        return $this->finished;
     }
 
     /**

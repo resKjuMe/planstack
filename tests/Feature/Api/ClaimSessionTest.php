@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Api;
 
+use App\Enums\StatusRole;
 use App\Http\Middleware\TrackClaimSession;
 use App\Models\Project;
 use App\Models\Task;
@@ -9,6 +10,7 @@ use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Testing\TestResponse;
 use Laravel\Sanctum\Sanctum;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
 /**
@@ -259,6 +261,76 @@ class ClaimSessionTest extends TestCase
         $this->getJson("/api/projects/{$project->alias}/tasks/{$task->id}")->assertOk();
 
         $this->assertNull($task->refresh()->active_session_label);
+    }
+
+    /**
+     * Der Vermerk muss verschwinden, sobald die Arbeitseinheit fertig ist — nicht erst
+     * mit Ablauf der TTL. Das Raeumen passiert in terminate(), weil das Stempeln dort
+     * passiert: ein in der Aktion gesetztes null wuerde im selben Request sofort
+     * wieder ueberschrieben.
+     */
+    #[DataProvider('finishingCalls')]
+    public function test_a_finished_work_unit_clears_the_active_session(string $kind): void
+    {
+        [$user, $project] = $this->ownedProject();
+        $other = User::factory()->create();
+        $reviewable = $project->organization->statusForRole(StatusRole::IN_REVIEW);
+
+        $task = $this->task($project, [
+            'claimed_by_id' => $kind === 'release' ? $user->id : $other->id,
+            'pr_number' => 4242,
+            'status_id' => $reviewable->id,
+        ]);
+
+        $header = [TrackClaimSession::HEADER => 'fix MN/A1'];
+
+        // Erst arbeiten … der Vermerk steht.
+        $this->getJson("/api/projects/{$project->alias}/tasks/{$task->id}", $header)->assertOk();
+        $this->assertNotNull($task->refresh()->active_session_label, 'Vorbedingung: Vermerk gesetzt');
+
+        // … dann abschliessen.
+        match ($kind) {
+            'merge' => $this->postJson("/api/projects/{$project->alias}/tasks/{$task->id}/merge", [], $header)->assertOk(),
+            'release' => $this->postJson("/api/projects/{$project->alias}/tasks/{$task->id}/release", [], $header)->assertOk(),
+            'review' => $this->postJson("/api/projects/{$project->alias}/tasks/{$task->id}/review", [
+                'recommendation' => 'APPROVE', 'summary' => 'ok',
+            ], $header)->assertOk(),
+            'event' => $this->postJson("/api/projects/{$project->alias}/tasks/{$task->id}/events", [
+                'event' => 'POLISHED',
+            ], $header)->assertOk(),
+        };
+
+        $task->refresh();
+        $this->assertNull($task->active_session_label, "{$kind} muss den Vermerk raeumen");
+        $this->assertNull($task->active_session_seen_at);
+    }
+
+    /** @return array<string, array{0: string}> */
+    public static function finishingCalls(): array
+    {
+        return [
+            'merge' => ['merge'],
+            'release' => ['release'],
+            'erfasstes Review' => ['review'],
+            'POLISHED-Event' => ['event'],
+        ];
+    }
+
+    /**
+     * Zwischen-Abschluesse beenden die Einheit NICHT: nach `PROCESSED` laeuft dieselbe
+     * Arbeitseinheit weiter (PR anlegen, polieren). Wuerde der Vermerk hier fallen,
+     * saehe die Karte mitten im Lauf unbearbeitet aus.
+     */
+    public function test_an_intermediate_event_keeps_the_active_session(): void
+    {
+        [, $project] = $this->ownedProject();
+        $task = $this->task($project);
+
+        $this->postJson("/api/projects/{$project->alias}/tasks/{$task->id}/events", [
+            'event' => 'PROCESSED',
+        ], [TrackClaimSession::HEADER => 'work MN/A1'])->assertOk();
+
+        $this->assertNotNull($task->refresh()->active_session_label);
     }
 
     /**

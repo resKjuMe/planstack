@@ -60,7 +60,7 @@ export function TaskCardView({
     // eine verwaiste aktive Session wird gar nicht gezeigt — anders als ein Claim
     // bleibt hier nichts belegt, „vor drei Tagen mal angefasst" wäre nur Rauschen.
     const activeState = claimSessionState(
-        { label: task.activeSession, seenAt: task.activeSessionSeenAt, ttlMinutes: task.claimTtlMinutes },
+        { label: task.activeSession, seenAt: task.activeSessionSeenAt, ttlMinutes: task.activeSessionTtlMinutes },
         now,
     );
     const active = activeState && ! activeState.stale && activeState.label !== session?.label

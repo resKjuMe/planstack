@@ -223,7 +223,7 @@ class TaskShowPresenter
             return null;
         }
 
-        $ttl = max(1, (int) config('planstack.claim_session_ttl_minutes', 30));
+        $ttl = max(1, (int) config('planstack.active_session_ttl_minutes', 10));
 
         if ($task->active_session_seen_at === null
             || $task->active_session_seen_at->lt(now()->subMinutes($ttl))) {
