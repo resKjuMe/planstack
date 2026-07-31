@@ -32,28 +32,34 @@ export function StatusFilterCard({ statuses, hidden, onToggle, label, children =
 
     return (
         <div className="ps-status-filter rounded-lg bg-white p-4 shadow dark:bg-gray-800 dark:shadow-black/30">
-            <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
                 {children}
 
                 {statuses.length > 0 && (
                     <>
                         {children && <span className="h-4 w-px bg-gray-200 dark:bg-gray-700"></span>}
                         <span className="text-xs font-medium text-gray-500 dark:text-gray-400">{label}</span>
+                        {/* Ohne Textlabel: Symbol und Farbe des Status sind dasselbe
+                            Zeichen wie auf dem Board und im Diagramm — der Name
+                            steht im Tooltip (und als aria-label für Screenreader).
+                            Bei zehn Status ist die Zeile sonst breiter als die
+                            Seite. */}
                         {statuses.map((s) => (
                             <label
                                 key={s.key}
+                                title={s.label}
                                 className="inline-flex cursor-pointer items-center gap-1.5 text-xs text-gray-600 dark:text-gray-400"
                             >
                                 <input
                                     type="checkbox"
                                     checked={!hidden.has(s.key)}
                                     onChange={() => onToggle(s.key)}
+                                    aria-label={s.label}
                                     className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-800 dark:text-indigo-400"
                                 />
                                 <span className={`lg-swatch tok-${s.color} cat-${s.cat}`}>
                                     <Ico paths={s.icon} />
                                 </span>
-                                {s.label}
                             </label>
                         ))}
                     </>
