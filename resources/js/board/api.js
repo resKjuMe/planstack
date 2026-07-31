@@ -65,6 +65,11 @@ export function mapApiTask(apiTask, meta) {
         // Ablauf ist reiner Zeitverlauf und kommt bewusst ohne Server-Event.
         claimSession: apiTask.claim_session ?? null,
         claimSeenAt: apiTask.claim_seen_at ?? null,
+        // Welche Session gerade an dem Task arbeitet — auch ohne Claim. `fix`
+        // claimt nie und `review` reserviert nur reviewed_by, ohne das hier wäre
+        // eine laufende Bearbeitung auf der Karte nicht zu sehen.
+        activeSession: apiTask.active_session ?? null,
+        activeSessionSeenAt: apiTask.active_session_seen_at ?? null,
         // Zuletzt per Fortschritts-Event gemeldeter Stand (POST /events mit
         // detail/progress). Der Zeitpunkt gehört dazu: ohne ihn liest man einen
         // längst überholten Schritt wie den aktuellen.

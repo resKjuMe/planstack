@@ -111,6 +111,10 @@ class BoardPresenter
             // ersetzt — ohne die Felder verlöre sie beim Ziehen ihr Badge.
             'claimSession' => $task->claim_session_label,
             'claimSeenAt' => $task->claim_seen_at?->toIso8601String(),
+            // Aktive Session (jede Ausfuehrung, auch ohne Claim) — aus demselben
+            // Grund hier noetig: der Move-Endpunkt ersetzt die Karte.
+            'activeSession' => $task->active_session_label,
+            'activeSessionSeenAt' => $task->active_session_seen_at?->toIso8601String(),
             'claimTtlMinutes' => (int) config('planstack.claim_session_ttl_minutes', 30),
             'storyPoints' => (int) $task->effort_story_points,
             'prNumber' => $task->pr_number,

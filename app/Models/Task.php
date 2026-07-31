@@ -87,6 +87,10 @@ class Task extends Model
         'claimed_at',
         'claim_session_label',
         'claim_seen_at',
+        // Welche Skill-Session den Task gerade anfasst — unabhaengig vom Claim
+        // (fix/review claimen nicht), gestempelt von TrackClaimSession.
+        'active_session_label',
+        'active_session_seen_at',
         'merged_at',
     ];
 
@@ -125,6 +129,7 @@ class Task extends Model
             'last_review_recommendation' => \App\Enums\ReviewRecommendation::class,
             'claimed_at' => 'datetime',
             'claim_seen_at' => 'datetime',
+            'active_session_seen_at' => 'datetime',
             'merged_at' => 'datetime',
         ];
     }

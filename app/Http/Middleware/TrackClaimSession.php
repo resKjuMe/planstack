@@ -12,17 +12,30 @@ use Symfony\Component\HttpFoundation\Response;
  * Nimmt das Session-Label des Aufrufers aus dem Header X-Planstack-Session
  * entgegen und hält den Heartbeat der Session aktuell.
  *
- * Zwei Aufgaben:
+ * Drei Aufgaben:
  *  1. handle():    Label in den request-scoped {@see ClaimSession} legen, damit ein
  *                  Claim in DIESEM Request damit gestempelt wird.
  *  2. terminate(): claim_seen_at auffrischen, wenn der Request einen Task
  *                  betrifft, den genau diese Session hält. Läuft nach der Antwort,
  *                  kostet also keine Request-Latenz.
+ *  3. terminate(): den Task mit der AKTIVEN Session stempeln — für jede Ausführung,
+ *                  auch ohne Claim (s. u.).
  *
  * Der Heartbeat zählt bewusst auch LESENDE Zugriffe: eine Session, die ihren Task
  * abfragt, lebt. Aufgefrischt wird nur das eigene Lease (gleicher Nutzer UND
  * gleiches Label) — ein Blick des Menschen im Board auf denselben Task hält also
  * keine tote Session künstlich am Leben.
+ *
+ * **Aktive Session (active_session_label/…_seen_at):** Das Claim-Lease reicht als
+ * Vermerk nicht, weil es am Claim hängt. `fix` claimt nie (es arbeitet am PR einer
+ * Aufgabe, die oft jemand anderes hält), `review` reserviert über `reviewed_by`, und
+ * `work` auf einem bereits geclaimten Task claimt nicht erneut. Diese Ausführungen
+ * blieben im Board unsichtbar. Deshalb wird hier bei JEDEM task-bezogenen Request
+ * mit Session-Header festgehalten, welche Session ihn gerade anfasst — unabhängig
+ * von Claim, Reviewer oder Lease und ohne das fremde Claim-Lease zu überschreiben.
+ * Der Skill muss dafür nichts melden; es gibt damit keinen Pfad, auf dem der
+ * Vermerk vergessen wird (auf freiwillige Meldungen war kein Verlass — die
+ * Fix-Anleitung etwa setzt nur `POLISHING` ohne Zusatzangaben ab).
  *
  * Das Update läuft absichtlich über den Query-Builder: es umgeht die
  * Model-Events und damit den entity-changed-Broadcast. Ein Heartbeat ist kein
@@ -58,6 +71,16 @@ class TrackClaimSession
             return;
         }
 
+        $now = now();
+
+        // Aktive Session: gilt fuer jede Ausfuehrung, auch ohne Claim. Bewusst
+        // bedingungslos (jeder task-bezogene Request dieser Session) — genau das
+        // macht `fix`/`review`/Weiterarbeit sichtbar, die nie claimen.
+        $attrs = [
+            'active_session_label' => $label,
+            'active_session_seen_at' => $now,
+        ];
+
         // Frisch aus der DB lesen: die Route-Bindung hat den Task VOR dem
         // Controller geladen, der Claim kann also im selben Request entstanden
         // sein (POST .../claim). Nur die beiden Felder holen, kein ganzes Modell.
@@ -66,10 +89,10 @@ class TrackClaimSession
             ->where('claim_session_label', $label)
             ->exists();
 
-        if (! $held) {
-            return;
+        if ($held) {
+            $attrs['claim_seen_at'] = $now;
         }
 
-        Task::whereKey($task->id)->update(['claim_seen_at' => now()]);
+        Task::whereKey($task->id)->update($attrs);
     }
 }

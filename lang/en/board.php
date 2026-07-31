@@ -38,6 +38,7 @@ return [
     'unassigned' => '—',
     'session_active' => 'Session is working on it',
     'session_stale' => 'Session stopped reporting in — claim may be orphaned',
+    'session_working' => 'This session is working on it right now (without holding the task)',
     'reviewer' => 'Reviewer',
     'approver' => 'Approver',
     'stacked' => 'Stacked on unfinished tasks',

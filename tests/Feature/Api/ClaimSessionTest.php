@@ -181,4 +181,82 @@ class ClaimSessionTest extends TestCase
             ->assertOk()
             ->assertJsonPath('data.claim_session', 'worker-1');
     }
+
+    /**
+     * Der beobachtete Fehlerfall: eine `fix`-Session zeigte in ihrer Statuszeile
+     * „Fix (Fix 75 %) TXSAFE · GAP-MassRun", das Board an derselben Karte nichts.
+     * Ursache: `fix` claimt nie — es arbeitet am PR einer Aufgabe, die jemand
+     * ANDERES haelt —, und das Session-Label hing ausschliesslich am Claim.
+     *
+     * Deshalb muss JEDE Ausfuehrung sich vermerken, ohne das fremde Claim-Lease
+     * anzutasten.
+     */
+    public function test_a_session_without_a_claim_is_still_recorded_on_the_task(): void
+    {
+        [$user, $project] = $this->ownedProject();
+        $other = User::factory()->create();
+
+        // Fremder Claim, ohne Session (Board-Klick eines Menschen).
+        $task = $this->task($project, ['claimed_by_id' => $other->id, 'pr_number' => 8782]);
+
+        $this->getJson("/api/projects/{$project->alias}/tasks/{$task->id}", [
+            TrackClaimSession::HEADER => 'fix TXSAFE/GAP-MassRun',
+        ])->assertOk();
+
+        $task->refresh();
+
+        // Vermerkt …
+        $this->assertSame('fix TXSAFE/GAP-MassRun', $task->active_session_label);
+        $this->assertNotNull($task->active_session_seen_at);
+
+        // … ohne den fremden Claim oder dessen (leeres) Lease zu veraendern.
+        $this->assertSame($other->id, $task->claimed_by_id);
+        $this->assertNull($task->claim_session_label);
+        $this->assertNull($task->claim_seen_at);
+        $this->assertNotSame($user->id, $task->claimed_by_id);
+    }
+
+    public function test_the_active_session_is_refreshed_on_every_request_and_exposed(): void
+    {
+        [, $project] = $this->ownedProject();
+        $task = $this->task($project);
+
+        $this->getJson("/api/projects/{$project->alias}/tasks/{$task->id}", [
+            TrackClaimSession::HEADER => 'review MN/A1',
+        ])->assertOk();
+
+        $first = $task->refresh()->active_session_seen_at;
+
+        // Eine spaetere Ausfuehrung einer ANDEREN Session uebernimmt den Vermerk —
+        // er beantwortet „wer arbeitet jetzt daran", nicht „wer war mal da".
+        $this->travel(2)->minutes();
+        $this->getJson("/api/projects/{$project->alias}/tasks/{$task->id}", [
+            TrackClaimSession::HEADER => 'fix MN/A1',
+        ])->assertOk();
+
+        $task->refresh();
+        $this->assertSame('fix MN/A1', $task->active_session_label);
+        $this->assertTrue($task->active_session_seen_at->gt($first));
+
+        // Sichtbar wird der Vermerk erst im FOLGENDEN Read: der Stempel entsteht in
+        // terminate(), also nach dem Rendern der Antwort — bewusst, damit er keine
+        // Request-Latenz kostet (wie der Claim-Heartbeat).
+        $this->getJson("/api/projects/{$project->alias}/tasks/{$task->id}?fields=full")
+            ->assertOk()
+            ->assertJsonPath('data.active_session', 'fix MN/A1');
+    }
+
+    /**
+     * Ohne Header (Mensch im Board, L2LR/LOG) darf nichts gestempelt werden — sonst
+     * behauptete jede Kartenansicht, es arbeite gerade eine Session daran.
+     */
+    public function test_a_request_without_the_session_header_records_nothing(): void
+    {
+        [, $project] = $this->ownedProject();
+        $task = $this->task($project);
+
+        $this->getJson("/api/projects/{$project->alias}/tasks/{$task->id}")->assertOk();
+
+        $this->assertNull($task->refresh()->active_session_label);
+    }
 }

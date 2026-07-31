@@ -45,10 +45,27 @@ export function TaskCardView({
 
     // Taktet nur die Zeit — der Session-Zustand kippt dadurch von selbst auf
     // „verwaist", ohne dass ein Server-Event nötig ist.
+    const now = useNow();
     const session = claimSessionState(
         { label: task.claimSession, seenAt: task.claimSeenAt, ttlMinutes: task.claimTtlMinutes },
-        useNow(),
+        now,
     );
+
+    // Welche Session gerade an dem Task arbeitet — auch wenn sie ihn nicht hält:
+    // `fix` claimt nie, `review` reserviert nur reviewed_by. Ohne das bliebe eine
+    // laufende Bearbeitung auf der Karte unsichtbar.
+    //
+    // Zwei Einschränkungen mit Absicht: Ist es dieselbe Session wie das
+    // Claim-Lease, zeigt das Badge oben schon alles (kein zweites daneben). Und
+    // eine verwaiste aktive Session wird gar nicht gezeigt — anders als ein Claim
+    // bleibt hier nichts belegt, „vor drei Tagen mal angefasst" wäre nur Rauschen.
+    const activeState = claimSessionState(
+        { label: task.activeSession, seenAt: task.activeSessionSeenAt, ttlMinutes: task.claimTtlMinutes },
+        now,
+    );
+    const active = activeState && ! activeState.stale && activeState.label !== session?.label
+        ? activeState
+        : null;
 
     // PR-Zustandszeile nur zeigen, wenn ein PR existiert (dann liegen — sobald der
     // Sync gelaufen ist — CI-Status und offene Kommentare vor).
@@ -224,6 +241,23 @@ export function TaskCardView({
                         >
                             <span aria-hidden="true">{session.stale ? '⚠' : '▶'}</span>
                             <span className="truncate">{session.label}</span>
+                        </span>
+                    )}
+                    {/* Eine fremde Session, die gerade daran arbeitet (fix/review) —
+                        grün abgesetzt vom Claim-Lease, damit „hält den Task" und
+                        „arbeitet jetzt daran" unterscheidbar bleiben. */}
+                    {active && (
+                        <span
+                            className="inline-flex max-w-[9rem] shrink items-center gap-1 rounded bg-emerald-50 px-1 py-px text-[10px] font-medium text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400"
+                            title={[
+                                t('session_working'),
+                                active.seenAt ? new Date(active.seenAt).toLocaleString() : null,
+                            ]
+                                .filter(Boolean)
+                                .join(' · ')}
+                        >
+                            <span aria-hidden="true">⚡</span>
+                            <span className="truncate">{active.label}</span>
                         </span>
                     )}
                 </span>

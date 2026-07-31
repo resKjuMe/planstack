@@ -38,6 +38,7 @@ return [
     'unassigned' => '—',
     'session_active' => 'Session arbeitet daran',
     'session_stale' => 'Session hat sich nicht mehr gemeldet — Claim evtl. verwaist',
+    'session_working' => 'Diese Session arbeitet gerade daran (ohne den Task zu halten)',
     'reviewer' => 'Reviewer',
     'approver' => 'Approver',
     'stacked' => 'Gestapelt auf noch nicht abgeschlossene Tasks',

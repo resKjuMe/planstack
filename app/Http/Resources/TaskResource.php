@@ -44,6 +44,8 @@ class TaskResource extends JsonResource
         // gehört zum Claim-Zustand: ohne beides sieht ein Client einen fremden
         // Claim, aber nicht, ob dahinter noch etwas läuft.
         'claim_session', 'claim_seen_at',
+        // Welche Session gerade daran arbeitet — auch ohne Claim (fix/review).
+        'active_session', 'active_session_seen_at',
         // Zuletzt gemeldeter Fortschritt (Event mit detail/progress) — gehört zum
         // Arbeitszustand: zeigt auf der Karte, wie weit ein laufender Worker ist.
         'progress_detail', 'progress_percent', 'progress_at',
@@ -184,6 +186,11 @@ class TaskResource extends JsonResource
             'claimed_by' => $this->whenLoaded('claimer', fn () => $this->claimer?->name),
             'claimed_at' => $this->claimed_at,
             'claim_session' => $this->claim_session_label,
+            // Aktive Session: JEDE Skill-Ausfuehrung stempelt sie, auch wenn sie
+            // nicht claimt. Ohne sie sieht eine Karte, an der ein fix-Lauf arbeitet,
+            // unbearbeitet aus. `..._seen_at` ist das Liveness-Signal (TTL).
+            'active_session' => $this->active_session_label,
+            'active_session_seen_at' => $this->active_session_seen_at,
             'claim_seen_at' => $this->claim_seen_at,
             'merged_at' => $this->merged_at,
             'last_reviewed_at' => $this->last_reviewed_at,
