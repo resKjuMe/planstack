@@ -16,9 +16,15 @@ use App\Models\Task;
 class TaskFormPresenter
 {
     /**
+     * Options + Labels des Formulars. `$task` ist beim Bearbeiten gesetzt: die
+     * Personen-Liste nimmt dann auch die aktuell eingetragenen Personen auf, selbst
+     * wenn sie den Projektzugang inzwischen verloren haben — sonst zeigte das
+     * Formular ein leeres Feld und würde den Eintrag beim Speichern stillschweigend
+     * verwerfen.
+     *
      * @return array<string, mixed>
      */
-    public function shared(Project $project): array
+    public function shared(Project $project, ?Task $task = null): array
     {
         $statuses = $project->organization->statuses()->get();
 
@@ -39,7 +45,9 @@ class TaskFormPresenter
             'criticalities' => collect(Criticality::cases())->map(fn ($c) => ['value' => $c->value, 'label' => $c->label()])->values(),
             'recommendations' => collect(ReviewRecommendation::cases())->map(fn ($r) => ['value' => $r->value, 'label' => $r->label()])->values(),
             'phases' => $project->phases->map(fn ($p) => ['id' => $p->id, 'name' => $p->name])->values(),
-            'reviewers' => $project->accessUsers()->map(fn ($u) => ['id' => $u->id, 'name' => $u->name])->values(),
+            // EINE Personen-Liste für beide Zuordnungen (Claim und Review): wer
+            // Zugang zum Projekt hat, kann beides sein.
+            'members' => $this->members($project, $task),
             'strings' => [
                 'name' => __('tasks.short_code_e_g_c23'),
                 'status' => __('common.status'),
@@ -60,6 +68,8 @@ class TaskFormPresenter
                 'affectedFiles' => __('tasks.affected_files_estimated'),
                 'affectedFilesHint' => __('tasks.always_provide_this_an_estimate_is'),
                 'prNumber' => __('tasks.pr_number'),
+                'claimedBy' => __('tasks.claimed_by'),
+                'claimedByHint' => __('tasks.claimed_by_hint'),
                 'reviewedBy' => __('tasks.reviewed_by'),
                 'reviewResult' => __('tasks.review_result'),
                 'recommendation' => __('tasks.recommendation'),
@@ -71,6 +81,29 @@ class TaskFormPresenter
                 'save' => __('common.save'),
             ],
         ];
+    }
+
+    /**
+     * Projektzugang + die am Task eingetragenen Personen (siehe {@see shared()}),
+     * nach Namen sortiert.
+     *
+     * @return array<int, array{id: int, name: string}>
+     */
+    private function members(Project $project, ?Task $task): array
+    {
+        $users = $project->accessUsers();
+
+        foreach ([$task?->claimer, $task?->reviewer] as $attached) {
+            if ($attached !== null && ! $users->contains('id', $attached->id)) {
+                $users->push($attached);
+            }
+        }
+
+        return $users
+            ->sortBy('name')
+            ->map(fn ($u) => ['id' => $u->id, 'name' => $u->name])
+            ->values()
+            ->all();
     }
 
     /**
@@ -100,6 +133,7 @@ class TaskFormPresenter
             'effort_tokens' => $task->effort_tokens ?? '',
             'affected_files' => $task->affected_files ?? '',
             'pr_number' => $task->pr_number ?? '',
+            'claimed_by_id' => $task->claimed_by_id ?? '',
             'reviewed_by' => $task->reviewed_by ?? '',
             'last_review_recommendation' => $task->last_review_recommendation?->value ?? '',
             'last_reviewed_at' => $task->last_reviewed_at?->format('Y-m-d\TH:i') ?? '',

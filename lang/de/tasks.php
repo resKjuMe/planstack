@@ -16,6 +16,8 @@ return [
     'change' => 'Ändern',
     'checked' => 'geprüft',
     'claimed' => 'Beansprucht',
+    'claimed_by' => 'Beansprucht von',
+    'claimed_by_hint' => 'Wer den Task bearbeitet. Ändern stempelt den Zeitpunkt neu; auf „—" gesetzt gibt ihn frei. Der Status bleibt, wie er im Feld oben steht.',
     'concern_by_name' => 'Concern von :name',
     'concern_decisions_intro' => 'Am Planstack-Ticket :ticket wurde ein Concern gemeldet. Der Owner hat die offenen Entscheidungen nun getroffen.',
     'concern_reported' => 'Concern gemeldet',

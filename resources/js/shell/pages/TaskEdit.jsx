@@ -46,7 +46,7 @@ function EditBody({ showReview, updateUrl, destroyUrl, showUrl, strings }) {
                         criticalities={formData.criticalities}
                         recommendations={formData.recommendations}
                         phases={formData.phases}
-                        reviewers={formData.reviewers}
+                        members={formData.members}
                         candidates={formData.candidates}
                         showReview={showReview}
                         strings={strings}

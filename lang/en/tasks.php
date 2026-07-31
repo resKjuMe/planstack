@@ -16,6 +16,8 @@ return [
     'change' => 'Change',
     'checked' => 'checked',
     'claimed' => 'Claimed',
+    'claimed_by' => 'Claimed by',
+    'claimed_by_hint' => 'Who works on the task. Changing it re-stamps the timestamp; setting it to "—" releases the task. The status stays as set in the field above.',
     'concern_by_name' => 'Concern by :name',
     'concern_decisions_intro' => 'A concern was reported on the Planstack ticket :ticket. The owner has now made the open decisions.',
     'concern_reported' => 'Concern reported',

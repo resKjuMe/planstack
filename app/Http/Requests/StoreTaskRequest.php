@@ -35,6 +35,7 @@ class StoreTaskRequest extends FormRequest
             'effort_tokens' => ['nullable', 'integer', 'min:0'],
             'affected_files' => ['nullable', 'integer', 'min:0'],
             'pr_number' => ['nullable', 'integer', 'min:1'],
+            'claimed_by_id' => ['nullable', 'integer', Rule::exists('users', 'id')],
             'reviewed_by' => ['nullable', 'integer', Rule::exists('users', 'id')],
             // Status = KEY eines Status DIESER Organisation (nicht das Alt-Enum
             // TaskStatus): nur so sind REVIEWBAR/APPROVED und eigene Status

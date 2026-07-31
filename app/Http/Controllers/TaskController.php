@@ -26,6 +26,7 @@ class TaskController extends Controller
         private readonly TaskBoardService $board,
         private readonly BoardPresenter $presenter,
         private readonly \App\Support\TaskStatusService $statuses,
+        private readonly \App\Support\ClaimSession $claimSession,
     ) {}
 
     public function create(Project $project, TaskFormPresenter $formPresenter): InertiaResponse
@@ -70,7 +71,7 @@ class TaskController extends Controller
         }
 
         $task = $project->tasks()->create([
-            ...$data,
+            ...$this->withClaimStamps($data, null),
             'created_by_id' => $request->user()->id,
         ]);
 
@@ -129,7 +130,7 @@ class TaskController extends Controller
             'strings' => $strings,
             'flash' => ['status' => session('status'), 'error' => session('error')],
             'formData' => Inertia::defer(function () use ($project, $task, $formPresenter) {
-                $shared = $formPresenter->shared($project);
+                $shared = $formPresenter->shared($project, $task);
                 unset($shared['strings']);
                 $shared['candidates'] = $project->tasks()->whereKeyNot($task->id)->orderBy('name')
                     ->get(['id', 'name', 'summary'])
@@ -159,12 +160,49 @@ class TaskController extends Controller
             $data['merged_at'] = now();
         }
 
-        $task->update($data);
+        $task->update($this->withClaimStamps($data, $task));
         $task->prerequisites()->sync($prerequisites);
 
         return redirect()
             ->route('projects.tasks.show', [$project, $task])
             ->with('status', __('flash.task_updated'));
+    }
+
+    /**
+     * Begleitfelder einer Claim-Änderung aus dem Formular: `claimed_at` und das
+     * Session-Lease gehören zum Claim, nicht zum Endpunkt. Die Ableitung des Lease
+     * macht {@see \App\Support\ClaimSession::stamp()} — dieselbe Stelle, durch die
+     * auch Board-Zug, Statuswechsel und Event-Automationen laufen. Ein Claim aus dem
+     * Browser hat kein Session-Label, räumt Label und Heartbeat also mit.
+     *
+     * Bleibt der Claim unverändert, wird er aus den Daten entfernt: dann darf das
+     * Speichern eines anderen Feldes weder den Zeitstempel noch ein laufendes
+     * Worker-Lease anfassen.
+     *
+     * @param  array<string, mixed>  $data
+     * @return array<string, mixed>
+     */
+    private function withClaimStamps(array $data, ?Task $task): array
+    {
+        if (! array_key_exists('claimed_by_id', $data)) {
+            return $data;
+        }
+
+        $next = $data['claimed_by_id'] !== null ? (int) $data['claimed_by_id'] : null;
+
+        if ($task !== null && $next === $task->claimed_by_id) {
+            unset($data['claimed_by_id']);
+
+            return $data;
+        }
+
+        $data['claimed_by_id'] = $next;
+        // Neuer Claim → ab jetzt; geräumt → kein Zeitstempel. Auch beim WECHSEL neu
+        // stempeln, sonst schreibt die Auswertung die Liegezeit des Vorgängers der
+        // neuen Person zu.
+        $data['claimed_at'] = $next !== null ? now() : null;
+
+        return $this->claimSession->stamp($data);
     }
 
     public function destroy(Project $project, Task $task): RedirectResponse

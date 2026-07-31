@@ -35,7 +35,7 @@ function CreateForm({ project, showReview, storeUrl, strings }) {
         name: '', status: formData.defaultStatus ?? '', summary: '', criticality: '',
         description: '', description_acceptance_criteria: '', description_target_actual: '', description_test_cases: '',
         phase_id: '', effort_man_days: '', effort_story_points: '', effort_tokens: '',
-        affected_files: '', pr_number: '', reviewed_by: '',
+        affected_files: '', pr_number: '', claimed_by_id: '', reviewed_by: '',
         last_review_recommendation: '', last_reviewed_at: '', last_review_summary: '',
         prerequisites: [],
     });
@@ -53,7 +53,7 @@ function CreateForm({ project, showReview, storeUrl, strings }) {
                 criticalities={formData.criticalities}
                 recommendations={formData.recommendations}
                 phases={formData.phases}
-                reviewers={formData.reviewers}
+                members={formData.members}
                 candidates={formData.candidates}
                 showReview={showReview}
                 strings={strings}

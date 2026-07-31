@@ -3,7 +3,7 @@ import React from 'react';
 // Gemeinsames Task-Formular (Anlegen/Bearbeiten). Bekommt die Inertia-useForm-
 // Instanz + die Optionen/Labels; rendert alle Felder. Pendant zum früheren
 // tasks/partials/form.blade.php.
-export default function TaskForm({ form, statuses, criticalities, recommendations, phases, reviewers, candidates, showReview, strings }) {
+export default function TaskForm({ form, statuses, criticalities, recommendations, phases, members, candidates, showReview, strings }) {
     const set = (k) => (e) => form.setData(k, e.target.value);
     const err = (k) => form.errors[k] && <p className="mt-2 text-sm text-red-600 dark:text-red-400">{form.errors[k]}</p>;
     const input = 'mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-900 shadow-sm focus:border-indigo-500 focus:ring-indigo-500';
@@ -112,13 +112,27 @@ export default function TaskForm({ form, statuses, criticalities, recommendation
                 </div>
             </div>
 
-            <div>
-                <label htmlFor="rev" className={label}>{strings.reviewedBy}</label>
-                <select id="rev" value={form.data.reviewed_by} onChange={set('reviewed_by')} className={input}>
-                    <option value="">—</option>
-                    {reviewers.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
-                </select>
-                {err('reviewed_by')}
+            {/* Die beiden Personen-Zuordnungen nebeneinander: wer den Task
+                bearbeitet und wer ihn reviewt. Beide Listen sind der
+                Projektzugang. */}
+            <div className="grid gap-5 sm:grid-cols-2">
+                <div>
+                    <label htmlFor="claimed_by" className={label}>{strings.claimedBy}</label>
+                    <select id="claimed_by" value={form.data.claimed_by_id} onChange={set('claimed_by_id')} className={input}>
+                        <option value="">—</option>
+                        {members.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
+                    </select>
+                    <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">{strings.claimedByHint}</p>
+                    {err('claimed_by_id')}
+                </div>
+                <div>
+                    <label htmlFor="rev" className={label}>{strings.reviewedBy}</label>
+                    <select id="rev" value={form.data.reviewed_by} onChange={set('reviewed_by')} className={input}>
+                        <option value="">—</option>
+                        {members.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
+                    </select>
+                    {err('reviewed_by')}
+                </div>
             </div>
 
             {showReview && (

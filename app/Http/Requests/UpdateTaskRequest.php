@@ -37,6 +37,7 @@ class UpdateTaskRequest extends FormRequest
             'effort_tokens' => ['nullable', 'integer', 'min:0'],
             'affected_files' => ['nullable', 'integer', 'min:0'],
             'pr_number' => ['nullable', 'integer', 'min:1'],
+            'claimed_by_id' => ['nullable', 'integer', Rule::exists('users', 'id')],
             'reviewed_by' => ['nullable', 'integer', Rule::exists('users', 'id')],
             'last_reviewed_at' => ['nullable', 'date'],
             'last_review_recommendation' => ['nullable', Rule::enum(ReviewRecommendation::class)],
