@@ -96,6 +96,10 @@ class TaskEventService
                 $progressAttrs['progress_percent'] = $progress;
             }
             $progressAttrs['progress_at'] = now();
+
+            // Damit terminate() den eben geschriebenen Fortschritt nicht gleich wieder
+            // raeumt, falls in DIESEM Request auch die Session gewechselt hat.
+            $this->session->markProgressReported();
         }
 
         if ($attrs !== [] || $progressAttrs !== []) {

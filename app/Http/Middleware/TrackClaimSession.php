@@ -111,6 +111,22 @@ class TrackClaimSession
                 'active_session_seen_at' => $now,
             ];
 
+        // Uebernimmt eine ANDERE Session den Task, gehoert der Fortschritt der
+        // Vorgaengerin nicht mehr dazu: sonst zeigt die Karte die neue Session mit
+        // dem alten Stand („4/9 Dateien"), bis deren erstes eigenes Event kommt.
+        //
+        // Nur beim echten Wechsel (vorher stand ein anderes Label) — und nicht, wenn
+        // dieser Request selbst schon Fortschritt geschrieben hat, sonst wuerde das
+        // erste Event einer neuen Session seinen eigenen Wert loeschen.
+        $tookOver = $previousLabel !== null
+            && ($attrs['active_session_label'] ?? null) !== $previousLabel;
+
+        if ($tookOver && ! $this->session->finished() && ! $this->session->progressReported()) {
+            $attrs['progress_detail'] = null;
+            $attrs['progress_percent'] = null;
+            $attrs['progress_at'] = null;
+        }
+
         // Frisch aus der DB lesen: die Route-Bindung hat den Task VOR dem
         // Controller geladen, der Claim kann also im selben Request entstanden
         // sein (POST .../claim). Nur die beiden Felder holen, kein ganzes Modell.

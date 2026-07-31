@@ -22,6 +22,8 @@ class ClaimSession
 
     private bool $finished = false;
 
+    private bool $progressReported = false;
+
     /**
      * Setzt das Label. Leerstrings werden zu null (ein leerer Header ist „keine
      * Session"), zu lange Werte hart gekürzt — die Spalte hält 60 Zeichen und ein
@@ -58,6 +60,24 @@ class ClaimSession
     public function finished(): bool
     {
         return $this->finished;
+    }
+
+    /**
+     * Meldet, dass DIESER Request selbst einen Fortschritt geschrieben hat (Event mit
+     * detail/progress). Verhindert, dass {@see TrackClaimSession::terminate()} ihn
+     * gleich wieder raeumt, wenn im selben Request auch die Session gewechselt hat —
+     * das passiert, sobald der erste API-Aufruf einer neuen Session bereits ein
+     * Fortschritts-Event ist.
+     */
+    public function markProgressReported(): void
+    {
+        $this->progressReported = true;
+    }
+
+    /** Hat dieser Request einen Fortschritt geschrieben? */
+    public function progressReported(): bool
+    {
+        return $this->progressReported;
     }
 
     /**

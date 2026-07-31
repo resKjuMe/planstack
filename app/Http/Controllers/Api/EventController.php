@@ -99,13 +99,28 @@ class EventController extends ApiController
             'status_icon' => $task->orgStatus?->icon,
         ];
 
-        // Ereignis via Pusher an den Organisations-Channel senden (Header-Glocke).
-        // Best effort — Fehler brechen die Antwort nicht ab. organization_id
-        // fährt zusätzlich in der Nutzlast mit (der Channel ist ohnehin je Org).
-        $this->broadcaster->broadcast($request->user()->organization_id, [
-            ...$payload,
-            'organization_id' => $request->user()->organization_id,
-        ]);
+        // Reine Fortschritts-Meldungen läuten NICHT: `PROCESSING`/`POLISHING` gehen
+        // bei jeder gezählten Einheit raus (nach jeder Datei, jedem Check) — als
+        // Glocken-Benachrichtigung wären das Dutzende Meldungen pro Task, die die
+        // echten Ereignisse zuschütten. Erkennbar daran, dass der Aufruf nur
+        // detail/progress mitbrachte und sich sonst nichts geändert hat.
+        //
+        // Das betrifft ausschließlich die Glocke. Der entity-changed-Broadcast, mit
+        // dem die Board-Karte den neuen Stand ohne Reload übernimmt, läuft über das
+        // Modell-Event und bleibt unberührt.
+        $progressOnly = ($detail !== null || $progress !== null)
+            && $result['status_changed'] === false
+            && $result['applied_fields'] === [];
+
+        if (! $progressOnly) {
+            // Ereignis via Pusher an den Organisations-Channel senden (Header-Glocke).
+            // Best effort — Fehler brechen die Antwort nicht ab. organization_id
+            // fährt zusätzlich in der Nutzlast mit (der Channel ist ohnehin je Org).
+            $this->broadcaster->broadcast($request->user()->organization_id, [
+                ...$payload,
+                'organization_id' => $request->user()->organization_id,
+            ]);
+        }
 
         return response()->json($payload);
     }
