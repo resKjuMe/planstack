@@ -82,6 +82,7 @@ return [
     'scope' => 'Scope',
     'self_claimed' => 'selbst beansprucht',
     'session' => 'Session',
+    'session_working' => 'Arbeitet daran',
     'short_code_e_g_c23' => 'Kürzel (z.B. C23)',
     'show_detailed_analysis' => 'Ausführliche Analyse anzeigen',
     'show_less' => 'Weniger anzeigen',

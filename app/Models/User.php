@@ -141,4 +141,35 @@ class User extends Authenticatable
         return $this->belongsToMany(Team::class, 'users_to_teams', 'user_id', 'team_id')
             ->withTimestamps();
     }
+
+    /**
+     * Initialen des Namens („Christian Mietze" → „CM").
+     *
+     * Gebraucht dort, wo neben einem Session-Label knapp erkennbar sein muss, WER
+     * die Session betreibt: mehrere Personen fahren Worker unter gleich aufgebauten
+     * Labels (`fix TXSAFE/GAP-MassRun`), im Board waeren die sonst nicht
+     * unterscheidbar.
+     *
+     * Erster + letzter Namensteil, nicht alle: „Anna von der Wiese" ergibt so „AW"
+     * und nicht „AVD" — Namenspartikel tragen keine Unterscheidungskraft, und zwei
+     * Buchstaben halten das Praefix auf einer Karte kurz. Einteilige Namen ergeben
+     * einen Buchstaben.
+     */
+    public function initials(): string
+    {
+        $parts = array_values(array_filter(
+            preg_split('/\s+/', trim((string) $this->name)) ?: [],
+            static fn (string $part): bool => $part !== '',
+        ));
+
+        if ($parts === []) {
+            return '';
+        }
+
+        $letter = static fn (string $part): string => mb_strtoupper(mb_substr($part, 0, 1));
+
+        return count($parts) === 1
+            ? $letter($parts[0])
+            : $letter($parts[0]).$letter($parts[count($parts) - 1]);
+    }
 }

@@ -86,6 +86,7 @@ class TaskShowPresenter
             ],
             'metaChips' => $this->metaChips($project, $task),
             'claimSession' => $this->claimSession($project, $task, $canUpdate),
+            'activeSession' => $this->activeSession($task),
             'concern' => $concernOpen ? $this->concern($project, $task, $canUpdate) : null,
             'concernCreateUrl' => route('projects.tasks.concern.edit', [$project, $task]),
             'canUpdate' => $canUpdate,
@@ -201,6 +202,38 @@ class TaskShowPresenter
             'forgetUrl' => $canUpdate
                 ? route('projects.tasks.claim-session.destroy', [$project, $task])
                 : null,
+        ];
+    }
+
+    /**
+     * Welche Skill-Session gerade an der Aufgabe ARBEITET — unabhängig davon, wer sie
+     * hält. Nötig, weil `fix` nie claimt (es arbeitet am PR einer Aufgabe, die oft
+     * jemand anderes hält) und `review` nur `reviewed_by` reserviert: ohne das zeigte
+     * die Seite bei laufender Bearbeitung nichts an.
+     *
+     * Anders als beim Claim-Lease gibt es hier kein „verwaist" zum Aufräumen — es ist
+     * nichts belegt, was man freigeben müsste. Deshalb liefert die Methode nur einen
+     * lebenden Vermerk; ein abgelaufener wird gar nicht gemeldet (ein Hinweis „vor
+     * drei Tagen mal angefasst" wäre nur Rauschen) und braucht folglich auch kein
+     * forgetUrl.
+     */
+    private function activeSession(Task $task): ?array
+    {
+        if ($task->active_session_label === null) {
+            return null;
+        }
+
+        $ttl = max(1, (int) config('planstack.claim_session_ttl_minutes', 30));
+
+        if ($task->active_session_seen_at === null
+            || $task->active_session_seen_at->lt(now()->subMinutes($ttl))) {
+            return null;
+        }
+
+        return [
+            'label' => $task->active_session_label,
+            'seenAt' => $task->active_session_seen_at->toIso8601String(),
+            'ttlMinutes' => $ttl,
         ];
     }
 
@@ -447,6 +480,8 @@ class TaskShowPresenter
             'session' => __('tasks.session'),
             'sessionActive' => __('board.session_active'),
             'sessionStale' => __('board.session_stale'),
+            'sessionWorkingLabel' => __('tasks.session_working'),
+            'sessionWorking' => __('board.session_working'),
             'forgetSession' => __('tasks.forget_session'),
             'forgetSessionHint' => __('tasks.forget_session_hint'),
             'review' => __('tasks.review'),

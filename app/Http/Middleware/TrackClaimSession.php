@@ -3,6 +3,7 @@
 namespace App\Http\Middleware;
 
 use App\Models\Task;
+use App\Models\User;
 use App\Support\ClaimSession;
 use Closure;
 use Illuminate\Http\Request;
@@ -76,8 +77,14 @@ class TrackClaimSession
         // Aktive Session: gilt fuer jede Ausfuehrung, auch ohne Claim. Bewusst
         // bedingungslos (jeder task-bezogene Request dieser Session) — genau das
         // macht `fix`/`review`/Weiterarbeit sichtbar, die nie claimen.
+        //
+        // Mit Initialen des Betreibers davor („CM fix TXSAFE/GAP-MassRun"): mehrere
+        // Personen fahren Worker unter gleich aufgebauten Labels, ohne das Praefix
+        // waeren sie im Board nicht unterscheidbar. Es kommt vom Server, nicht aus dem
+        // Header — der Nutzer ist hier bekannt, und ein Client soll sich das nicht
+        // selbst zusammensetzen (koennte es auch falsch).
         $attrs = [
-            'active_session_label' => $label,
+            'active_session_label' => self::withInitials($label, $request->user()),
             'active_session_seen_at' => $now,
         ];
 
@@ -94,5 +101,23 @@ class TrackClaimSession
         }
 
         Task::whereKey($task->id)->update($attrs);
+    }
+
+    /**
+     * Label mit den Initialen des Betreibers davor („CM fix TXSAFE/GAP-MassRun").
+     *
+     * Auf die Spaltenbreite (60) gekuerzt, und zwar am LABEL, nicht am Praefix: die
+     * Initialen sind der Teil, der die Sessions unterscheidbar macht, und wuerden
+     * beim Abschneiden von rechts als Erstes wegfallen.
+     */
+    private static function withInitials(string $label, ?User $user): string
+    {
+        $initials = $user?->initials() ?? '';
+
+        if ($initials === '') {
+            return mb_substr($label, 0, 60);
+        }
+
+        return mb_substr($initials.' '.$label, 0, 60);
     }
 }

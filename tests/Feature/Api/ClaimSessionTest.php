@@ -205,8 +205,9 @@ class ClaimSessionTest extends TestCase
 
         $task->refresh();
 
-        // Vermerkt …
-        $this->assertSame('fix TXSAFE/GAP-MassRun', $task->active_session_label);
+        // Vermerkt — mit Initialen des Betreibers davor, damit mehrere Personen mit
+        // gleich aufgebauten Labels unterscheidbar bleiben.
+        $this->assertSame($user->initials().' fix TXSAFE/GAP-MassRun', $task->active_session_label);
         $this->assertNotNull($task->active_session_seen_at);
 
         // … ohne den fremden Claim oder dessen (leeres) Lease zu veraendern.
@@ -235,7 +236,7 @@ class ClaimSessionTest extends TestCase
         ])->assertOk();
 
         $task->refresh();
-        $this->assertSame('fix MN/A1', $task->active_session_label);
+        $this->assertStringEndsWith('fix MN/A1', $task->active_session_label);
         $this->assertTrue($task->active_session_seen_at->gt($first));
 
         // Sichtbar wird der Vermerk erst im FOLGENDEN Read: der Stempel entsteht in
@@ -243,7 +244,7 @@ class ClaimSessionTest extends TestCase
         // Request-Latenz kostet (wie der Claim-Heartbeat).
         $this->getJson("/api/projects/{$project->alias}/tasks/{$task->id}?fields=full")
             ->assertOk()
-            ->assertJsonPath('data.active_session', 'fix MN/A1');
+            ->assertJsonPath('data.active_session', $task->active_session_label);
     }
 
     /**
@@ -258,5 +259,59 @@ class ClaimSessionTest extends TestCase
         $this->getJson("/api/projects/{$project->alias}/tasks/{$task->id}")->assertOk();
 
         $this->assertNull($task->refresh()->active_session_label);
+    }
+
+    /**
+     * Die Initialen kommen vom Server, nicht aus dem Header: mehrere Personen fahren
+     * Worker unter gleich aufgebauten Labels (`fix TXSAFE/GAP-MassRun`) und waeren im
+     * Board sonst nicht auseinanderzuhalten.
+     */
+    public function test_the_active_session_label_is_prefixed_with_the_operator_initials(): void
+    {
+        $user = User::factory()->create(['name' => 'Christian Mietze']);
+        $project = Project::factory()->create(['created_by_id' => $user->id]);
+        Sanctum::actingAs($user);
+        $task = $this->task($project);
+
+        $this->getJson("/api/projects/{$project->alias}/tasks/{$task->id}", [
+            TrackClaimSession::HEADER => 'fix TXSAFE/GAP-MassRun',
+        ])->assertOk();
+
+        $this->assertSame('CM fix TXSAFE/GAP-MassRun', $task->refresh()->active_session_label);
+        $this->assertSame('CM', $user->initials());
+    }
+
+    /**
+     * Erster + letzter Namensteil: Namenspartikel („von der") tragen keine
+     * Unterscheidungskraft, „Anna von der Wiese" soll also „AW" ergeben und nicht
+     * „AVD". Einteiliger Name ⇒ ein Buchstabe.
+     */
+    public function test_initials_use_the_first_and_last_name_part(): void
+    {
+        $this->assertSame('CM', (new User(['name' => 'Christian Mietze']))->initials());
+        $this->assertSame('AW', (new User(['name' => 'Anna von der Wiese']))->initials());
+        $this->assertSame('C', (new User(['name' => 'Christian']))->initials());
+        $this->assertSame('', (new User(['name' => '  ']))->initials());
+    }
+
+    /**
+     * Gekuerzt wird am Label, nicht am Praefix — die Initialen sind der Teil, der die
+     * Sessions unterscheidbar macht, und fielen beim Abschneiden von rechts zuerst weg.
+     */
+    public function test_a_long_active_label_keeps_the_initials_and_fits_the_column(): void
+    {
+        $user = User::factory()->create(['name' => 'Christian Mietze']);
+        $project = Project::factory()->create(['created_by_id' => $user->id]);
+        Sanctum::actingAs($user);
+        $task = $this->task($project);
+
+        $this->getJson("/api/projects/{$project->alias}/tasks/{$task->id}", [
+            TrackClaimSession::HEADER => str_repeat('x', 200),
+        ])->assertOk();
+
+        $label = $task->refresh()->active_session_label;
+
+        $this->assertSame(60, mb_strlen($label));
+        $this->assertStringStartsWith('CM ', $label);
     }
 }

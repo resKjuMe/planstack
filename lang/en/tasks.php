@@ -82,6 +82,7 @@ return [
     'scope' => 'Scope',
     'self_claimed' => 'self-claimed',
     'session' => 'Session',
+    'session_working' => 'Working on it',
     'short_code_e_g_c23' => 'Short code (e.g. C23)',
     'show_detailed_analysis' => 'Show detailed analysis',
     'show_less' => 'Show less',

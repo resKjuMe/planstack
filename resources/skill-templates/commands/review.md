@@ -16,4 +16,12 @@ Reviewt Tasks, die **zum Review bereitliegen**: Pool-Status `REVIEWBAR` (die Spa
    3. **Ausführliche Analyse** — Befunde je Datei/Aspekt, Begründungen, Risiken, Vorschläge.
 5. **Ablage gemäß `review_results`:** `task_only` = nur der Task. `task_and_pr` = zusätzlich am PR (`gh pr review <pr> --approve` bzw. `--request-changes` mit der Zusammenfassung).
 
-**Fortschritts-Events (best-effort):** nach Schritt 4 `ev <id> REVIEWED`, danach `ev <id> APPROVED` bzw. `ev <id> CHANGES_REQUESTED`.
+**Fortschritts-Events (best-effort) — mit Zähler:** nach Schritt 4 `ev <id> REVIEWED`, danach `ev <id> APPROVED` bzw. `ev <id> CHANGES_REQUESTED`.
+
+Während Schritt 2 läuft, `REVIEWING` bei **jeder** geprüften Datei erneut absetzen — mit demselben Bruch und derselben Prozentzahl wie in der Statuszeile:
+
+```bash
+ev <id> REVIEWING "2/8 Dateien im Diff: TaskController.php" 25
+```
+
+Sonst bleiben `progress_detail`/`progress_percent` am Task leer, und das Board zeigt nur, **dass** reviewt wird, nicht **wie weit**. Ohne echten Nenner die Prozentzahl weglassen, nie schätzen.

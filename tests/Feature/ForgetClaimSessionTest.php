@@ -150,4 +150,51 @@ class ForgetClaimSessionTest extends TestCase
 
         $this->assertNull(app(TaskShowPresenter::class)->props($this->project, $task)['claimSession']);
     }
+
+    /**
+     * Die Detailseite zeigt zusaetzlich, welche Session gerade ARBEITET — auch wenn
+     * sie den Task nicht haelt. `fix` claimt nie und `review` reserviert nur
+     * reviewed_by; ohne diesen Prop zeigte die Seite bei laufender Bearbeitung
+     * nichts an.
+     */
+    public function test_the_detail_page_exposes_a_working_session_without_a_claim(): void
+    {
+        $seenAt = now()->subMinute();
+        $task = $this->task([
+            // Fremder Claim ohne Session-Lease (Board-Klick eines Menschen) …
+            'claim_session_label' => null,
+            'claim_seen_at' => null,
+            // … waehrend eine fix-Session daran arbeitet.
+            'active_session_label' => 'fix TXSAFE/GAP-MassRun',
+            'active_session_seen_at' => $seenAt,
+        ]);
+
+        $this->actingAs($this->owner);
+        $props = app(TaskShowPresenter::class)->props($this->project, $task);
+
+        $this->assertNull($props['claimSession'], 'kein Claim-Lease vorhanden');
+        $this->assertSame('fix TXSAFE/GAP-MassRun', $props['activeSession']['label']);
+        $this->assertSame($seenAt->toIso8601String(), $props['activeSession']['seenAt']);
+
+        // Kein Aufraeum-Knopf: hier ist nichts belegt, was man freigeben muesste.
+        $this->assertArrayNotHasKey('forgetUrl', $props['activeSession']);
+    }
+
+    /**
+     * Ein abgelaufener Arbeits-Vermerk wird gar nicht gemeldet. Anders als beim Claim
+     * bleibt nichts belegt — „vor drei Tagen mal angefasst" waere nur Rauschen, und
+     * es gibt folglich auch nichts aufzuraeumen.
+     */
+    public function test_a_stale_working_session_is_not_reported_at_all(): void
+    {
+        $ttl = (int) config('planstack.claim_session_ttl_minutes', 30);
+        $task = $this->task([
+            'active_session_label' => 'fix TXSAFE/GAP-MassRun',
+            'active_session_seen_at' => now()->subMinutes($ttl + 5),
+        ]);
+
+        $this->actingAs($this->owner);
+
+        $this->assertNull(app(TaskShowPresenter::class)->props($this->project, $task)['activeSession']);
+    }
 }

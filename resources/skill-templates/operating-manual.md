@@ -53,7 +53,13 @@ print(json.dumps(d))' "$2" "${3:-}" "${4:-}")" 2>/dev/null || true; }
 ev C27 PROCESSING "4/9 Dateien: TaskController.php" 44
 ```
 
-Ein Event **ohne** die Felder lässt den zuletzt gemeldeten Stand unberührt (er wird nicht geleert) — es ist also unschädlich, sie nur dort mitzugeben, wo es einen echten Zähler gibt. Ohne echten Nenner `progress` **weglassen**, nie schätzen: dieselbe Regel wie für die Prozentzahl der Statuszeile.
+Ein Event **ohne** die Felder lässt den zuletzt gemeldeten Stand unberührt (er wird nicht geleert). Ohne echten Nenner `progress` **weglassen**, nie schätzen: dieselbe Regel wie für die Prozentzahl der Statuszeile.
+
+**Verbindlich, nicht optional:** Immer wenn die Statuszeile wegen einer gezählten Einheit neu geschrieben wird, geht **derselbe** Bruch und **dieselbe** Prozentzahl auch als Event heraus. Die Werte liegen zu diesem Zeitpunkt ohnehin vor — es ist ein zusätzliches `ev` mit zwei Argumenten. Wer nur den nackten Event-Namen meldet, lässt `progress_detail`/`progress_percent` am Task leer; das Board zeigt dann bloß, **dass** eine Session arbeitet, nicht **wie weit**. Die statustreibenden Events dürfen dafür mehrfach abgesetzt werden — ein wiederholtes `PROCESSING` ändert den Status nicht erneut, transportiert aber den neuen Stand:
+
+```bash
+ev C27 PROCESSING "4/9 Dateien: TaskController.php" 44
+```
 
 **Die Antwort ist maßgeblich (nicht selbst herleiten):** `POST /events` liefert `{configured, status_changed, status, applied_fields}` zurück. Liegt eine Antwort vor, ist ihr `status` der **tatsächliche** Status des Tasks nach dem Event — den Status **niemals** aus dem Event-Namen erraten. `status_changed:false` bei einem statustreibenden Event bedeutet nicht „Fehler", sondern dass der Guard nicht passte (der aktuelle Status stand nicht in der Override-Menge, s. `status_rules` → „Ereignis-gesteuerte Status-Zuweisung") — meist, weil ein vorheriges Event fehlte oder die Reihenfolge nicht stimmte. In dem Fall den zurückgemeldeten `status` akzeptieren, **nicht** dagegen anarbeiten. `configured:false` heißt: für dieses Event ist in der Org keine Automation hinterlegt — reine Meldung, kein Statuswechsel zu erwarten.
 

@@ -138,6 +138,34 @@ function ClaimSessionRow({ session, strings }) {
     );
 }
 
+/**
+ * Welche Skill-Session gerade an der Aufgabe ARBEITET — unabhängig davon, wer sie
+ * hält. `fix` claimt nie und `review` reserviert nur reviewed_by, ohne diese Zeile
+ * zeigte die Seite bei laufender Bearbeitung nichts.
+ *
+ * Bewusst schlichter als die Claim-Zeile: kein „verwaist"-Zustand und kein
+ * Entfernen-Knopf. Es ist nichts belegt, was man freigeben müsste — der Server
+ * liefert den Vermerk nur, solange er lebt, sonst gar nicht.
+ */
+function ActiveSessionRow({ session, strings }) {
+    const state = claimSessionState(session, useNow());
+
+    if (!state || state.stale) return null;
+
+    return (
+        <div className="flex items-center justify-between gap-2">
+            <span className="shrink-0 text-gray-400 dark:text-gray-500">{strings.sessionWorkingLabel}</span>
+            <span
+                title={[strings.sessionWorking, state.seenAt ? new Date(state.seenAt).toLocaleString() : null].filter(Boolean).join(' · ')}
+                className="inline-flex min-w-0 items-center gap-1 rounded bg-emerald-50 px-1.5 py-0.5 text-xs font-medium text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400"
+            >
+                <span aria-hidden="true">⚡</span>
+                <span className="truncate">{state.label}</span>
+            </span>
+        </div>
+    );
+}
+
 // --- Concern-Banner + Entscheidungs-Wizard ---------------------------------
 
 function ConcernBanner({ concern, strings, claudeLogoPath }) {
@@ -689,7 +717,7 @@ function Requirements({ requirements, strings }) {
 // --- Seite -----------------------------------------------------------------
 
 export default function TaskShow(props) {
-    const { project, task, header, metaChips, claimSession, concern, concernCreateUrl, canUpdate, description, targetActual, checklists, review, timeline, requirements, claudeLogoPath, strings, flash } = props;
+    const { project, task, header, metaChips, claimSession, activeSession, concern, concernCreateUrl, canUpdate, description, targetActual, checklists, review, timeline, requirements, claudeLogoPath, strings, flash } = props;
     const [tip, setTip] = useState(false);
 
     const claim = () => router.post(header.claimUrl);
@@ -767,6 +795,7 @@ export default function TaskShow(props) {
                                     <StatusBadge status={task.status} />
                                 </div>
                                 {claimSession && <ClaimSessionRow session={claimSession} strings={strings} />}
+                                {activeSession && <ActiveSessionRow session={activeSession} strings={strings} />}
                                 {task.criticality && (
                                     <div className="flex items-center justify-between">
                                         <span className="text-gray-400 dark:text-gray-500">{strings.criticality}</span>

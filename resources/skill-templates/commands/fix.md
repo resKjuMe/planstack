@@ -14,6 +14,15 @@ Bringt einen offenen PR wieder in mergefähigen Zustand — alles über `gh`/`gi
    Grundsatz: alles Offene beantworten + fixen, Review-Threads zusätzlich resolven.
 4. **Fehlschlagende CI:** `gh pr checks` prüfen, rote Checks lokal reproduzieren, korrigieren, pushen, bis die CI grün ist.
 
-**Fortschritts-Events (best-effort):** zu Beginn `ev <id> POLISHING`, nach grüner CI + beantworteten Kommentaren `ev <id> POLISHED` (`<id>` = numerische Task-id).
+**Fortschritts-Events (best-effort) — mit Zähler:** zu Beginn `ev <id> POLISHING`, nach grüner CI + beantworteten Kommentaren `ev <id> POLISHED` (`<id>` = numerische Task-id).
+
+Solange die Politur läuft, wird `POLISHING` bei **jeder gezählten Einheit** erneut abgesetzt — mit demselben Bruch und derselben Prozentzahl, die auch in die Statuszeile gehen (die Zahlen liegen dort ohnehin vor, siehe „Sticky-Statuszeile"):
+
+```bash
+ev <id> POLISHING "3/7 Kommentare: TaskController.php" 43
+ev <id> POLISHING "2/5 Checks: phpstan" 40
+```
+
+Das ist der **einzige** Weg, auf dem der Fortschritt aufs Board kommt: `fix` claimt nicht, also gibt es keinen Claim-Fortschritt, an dem man ihn ablesen könnte. Ohne die Zusatzangaben bleiben `progress_detail`/`progress_percent` am Task leer und die Karte zeigt nur, **dass** eine Session arbeitet, nicht **wie weit**. Ohne echten Nenner die Prozentzahl weglassen (nie schätzen) — der Detailtext allein ist trotzdem wertvoll.
 
 Danach ggf. via `/planstack review` erneut prüfen.

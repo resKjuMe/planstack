@@ -269,27 +269,34 @@ export function TaskCardView({
             {/* Zuletzt gemeldeter Fortschritt innerhalb der laufenden Phase (Event
                 mit detail/progress). Macht sichtbar, wie weit ein Worker ist —
                 dauerhaft und für alle, nicht nur in dessen lokaler Statuszeile.
-                Der Balken erscheint nur mit gerechneter Prozentzahl; ohne sie
-                bleibt der Text allein stehen (geschätzt wird nicht). */}
+
+                Der Füllstand liegt als Band HINTER dem Text, nicht als eigener
+                Balken darüber: so kostet er keine zusätzliche Zeile auf der Karte
+                und Text plus Zahl bleiben auf einer Höhe lesbar. Ohne gerechnete
+                Prozentzahl bleibt das Band leer und nur der Text steht da —
+                geschätzt wird nicht. */}
             {(task.progressDetail || task.progressPercent !== null) && (
                 <div
-                    className="mt-1 flex flex-col gap-0.5"
+                    className="relative mt-1.5 overflow-hidden rounded bg-indigo-50 dark:bg-indigo-950/60"
                     title={task.progressAt ? new Date(task.progressAt).toLocaleString() : undefined}
                 >
                     {task.progressPercent !== null && (
-                        <span className="h-1 w-full overflow-hidden rounded bg-slate-200 dark:bg-slate-700">
-                            <span
-                                className="block h-full rounded bg-indigo-500 dark:bg-indigo-400"
-                                style={{ width: `${Math.min(100, Math.max(0, task.progressPercent))}%` }}
-                            />
-                        </span>
+                        <span
+                            aria-hidden="true"
+                            className="absolute inset-y-0 left-0 bg-indigo-200/70 dark:bg-indigo-800/70"
+                            style={{ width: `${Math.min(100, Math.max(0, task.progressPercent))}%` }}
+                        />
                     )}
-                    {task.progressDetail && (
-                        <span className="truncate text-[10px] text-slate-500 dark:text-slate-400">
-                            {task.progressPercent !== null ? `${task.progressPercent} % · ` : ''}
+                    <div className="relative flex items-baseline justify-between gap-2 px-1.5 py-1">
+                        <span className="truncate text-[11px] text-indigo-900 dark:text-indigo-200">
                             {task.progressDetail}
                         </span>
-                    )}
+                        {task.progressPercent !== null && (
+                            <span className="shrink-0 text-[11px] font-semibold text-indigo-900 dark:text-indigo-200">
+                                {task.progressPercent} %
+                            </span>
+                        )}
+                    </div>
                 </div>
             )}
 
