@@ -2,6 +2,8 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import PageHead from '../components/PageHead.jsx';
 import { useProjectData } from '../../data/useProjectData';
 import { deriveDiagram } from '../../diagram/derive.js';
+import { useDependencyFilters, useStatusFilters } from '../../diagram/useDependencyFilters.js';
+import { PhaseFilterPills, StatusFilterCard } from '../components/DependencyFilters.jsx';
 import { ChipsSkeleton, BlockSkeleton } from '../components/Skeleton.jsx';
 
 // Inneres SVG-Icon-Markup (aus dem Status) in ein <svg> hüllen.
@@ -66,19 +68,11 @@ export default function DiagramView({ project, currentUserId, strings, viewSwitc
             return false;
         }
     };
-    // Ausgeblendete Status als Menge von Status-Keys (ersetzt die frühere
-    // „Erledigte ausblenden"-Checkbox durch eine Checkbox je Status).
-    const readHiddenStatuses = () => {
-        try {
-            const raw = localStorage.getItem('ps-diagram-hidden-statuses');
-            return new Set(raw ? JSON.parse(raw) : []);
-        } catch {
-            return new Set();
-        }
-    };
-    const [hiddenStatuses, setHiddenStatuses] = useState(readHiddenStatuses);
+    // Status- und Phasenfilter teilt das Diagramm mit der Zeitachse (gemeinsamer
+    // Reiter, dieselben Tasks) — siehe useDependencyFilters. Ansichts-eigen bleibt
+    // nur die Darstellungs-Option „Kurzbeschreibungen".
+    const { hiddenStatuses, toggleStatus, phaseFilter, togglePhase } = useDependencyFilters();
     const [showDesc, setShowDesc] = useState(() => readPref('ps-diagram-desc'));
-    const [phaseFilter, setPhaseFilter] = useState(null);
     const [hasLock, setHasLock] = useState(false);
 
     const rootRef = useRef(null);
@@ -126,38 +120,24 @@ export default function DiagramView({ project, currentUserId, strings, viewSwitc
         }
     };
 
-    const toggleStatus = (statusKey) => {
-        setHiddenStatuses((cur) => {
-            const next = new Set(cur);
-            if (next.has(statusKey)) next.delete(statusKey);
-            else next.add(statusKey);
-            try {
-                localStorage.setItem('ps-diagram-hidden-statuses', JSON.stringify([...next]));
-            } catch {
-                /* ignore */
-            }
-            return next;
-        });
-    };
-
-    const togglePhase = (id) => {
-        const key = String(id);
-        setPhaseFilter((cur) => (cur === key ? null : key));
-        graphRef.current?.clearLock(); // ein alter Knoten-Fokus ergibt nach Filter keinen Sinn
+    // Ein alter Knoten-Fokus ergibt nach einem Phasenwechsel keinen Sinn mehr.
+    const onPhaseToggle = (id) => {
+        togglePhase(id);
+        graphRef.current?.clearLock();
     };
 
     const reset = () => {
-        setPhaseFilter(null);
+        if (phaseFilter !== null) togglePhase(phaseFilter);
         graphRef.current?.clearLock();
     };
 
     // Nur tatsächlich vorkommende Status bekommen eine Filter-Checkbox, in
     // Legenden-Reihenfolge (Board-Position). Der Filter blendet Status aus.
-    const statusFilters = useMemo(() => {
-        if (!diagram) return [];
-        const present = new Set(diagram.nodes.map((n) => n.statusKey).filter(Boolean));
-        return diagram.legend.filter((l) => l.key && present.has(l.key));
-    }, [diagram]);
+    const presentStatuses = useMemo(
+        () => new Set((diagram?.nodes || []).map((n) => n.statusKey).filter(Boolean)),
+        [diagram],
+    );
+    const statusFilters = useStatusFilters(diagram?.legend, presentStatuses);
 
     const showReset = hasLock || phaseFilter !== null;
 
@@ -172,43 +152,22 @@ export default function DiagramView({ project, currentUserId, strings, viewSwitc
 
             {/* Steuerungs-Card: Darstellungs- und Status-Filter über dem Diagramm. */}
             {diagram && (
-                <div className="bg-white rounded-lg shadow p-4 dark:bg-gray-800 dark:shadow-black/30">
-                    <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-                        <label className="inline-flex cursor-pointer items-center gap-1.5 text-xs text-gray-600 dark:text-gray-400">
-                            <input
-                                type="checkbox"
-                                checked={showDesc}
-                                onChange={(e) => setPref('ps-diagram-desc', e.target.checked, setShowDesc)}
-                                className="rounded border-gray-300 dark:border-gray-600 dark:bg-gray-800 text-indigo-600 dark:text-indigo-400 focus:ring-indigo-500"
-                            />
-                            {strings.shortDescriptions}
-                        </label>
-
-                        {statusFilters.length > 0 && (
-                            <>
-                                <span className="h-4 w-px bg-gray-200 dark:bg-gray-700"></span>
-                                <span className="text-xs font-medium text-gray-500 dark:text-gray-400">{strings.statusFilter}</span>
-                                {statusFilters.map((s) => (
-                                    <label
-                                        key={s.key}
-                                        className="inline-flex cursor-pointer items-center gap-1.5 text-xs text-gray-600 dark:text-gray-400"
-                                    >
-                                        <input
-                                            type="checkbox"
-                                            checked={!hiddenStatuses.has(s.key)}
-                                            onChange={() => toggleStatus(s.key)}
-                                            className="rounded border-gray-300 dark:border-gray-600 dark:bg-gray-800 text-indigo-600 dark:text-indigo-400 focus:ring-indigo-500"
-                                        />
-                                        <span className={`lg-swatch tok-${s.color} cat-${s.cat}`}>
-                                            <Ico paths={s.icon} />
-                                        </span>
-                                        {s.label}
-                                    </label>
-                                ))}
-                            </>
-                        )}
-                    </div>
-                </div>
+                <StatusFilterCard
+                    statuses={statusFilters}
+                    hidden={hiddenStatuses}
+                    onToggle={toggleStatus}
+                    label={strings.statusFilter}
+                >
+                    <label className="inline-flex cursor-pointer items-center gap-1.5 text-xs text-gray-600 dark:text-gray-400">
+                        <input
+                            type="checkbox"
+                            checked={showDesc}
+                            onChange={(e) => setPref('ps-diagram-desc', e.target.checked, setShowDesc)}
+                            className="rounded border-gray-300 dark:border-gray-600 dark:bg-gray-800 text-indigo-600 dark:text-indigo-400 focus:ring-indigo-500"
+                        />
+                        {strings.shortDescriptions}
+                    </label>
+                </StatusFilterCard>
             )}
 
             <div className="bg-white rounded-lg shadow p-6 overflow-x-auto space-y-4 dark:bg-gray-800 dark:shadow-black/30">
@@ -225,31 +184,12 @@ export default function DiagramView({ project, currentUserId, strings, viewSwitc
             {diagram && (
                 <>
                     {/* Phasen-Kopfzeile: Klick filtert auf die Phase. */}
-                    <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5">
-                        {diagram.phases.map((ph) => {
-                            const active = phaseFilter === String(ph.id);
-                            return (
-                                <button
-                                    key={ph.id}
-                                    type="button"
-                                    data-diagram-phase={ph.id}
-                                    {...(active ? { 'data-active': true } : {})}
-                                    onClick={() => togglePhase(ph.id)}
-                                    className="flex items-center gap-2 rounded-md bg-gray-50 dark:bg-gray-700/40 ring-1 ring-gray-100 dark:ring-gray-700 px-2.5 py-1"
-                                    title={`${ph.name} — ${ph.pct}% · ${strings.clickToFilter}`}
-                                >
-                                    <span className="text-xs font-medium text-gray-600 dark:text-gray-400">{ph.short}</span>
-                                    <span className="h-1.5 w-14 overflow-hidden rounded-full bg-gray-200 dark:bg-gray-700">
-                                        <span
-                                            className={'block h-full rounded-full ' + (ph.pct >= 100 ? 'bg-green-600' : 'bg-indigo-500')}
-                                            style={{ width: `${ph.pct}%` }}
-                                        ></span>
-                                    </span>
-                                    <span className="text-[11px] tabular-nums text-gray-400 dark:text-gray-500">{ph.pct}%</span>
-                                </button>
-                            );
-                        })}
-                    </div>
+                    <PhaseFilterPills
+                        phases={diagram.phases}
+                        activeId={phaseFilter}
+                        onToggle={onPhaseToggle}
+                        hint={strings.clickToFilter}
+                    />
 
                     {/* Legende + Toolbar */}
                     <div className="flex flex-wrap items-center justify-between gap-3">

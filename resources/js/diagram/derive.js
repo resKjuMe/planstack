@@ -9,7 +9,7 @@
 // Renderer (resources/js/diagram/DependencyGraph.js) unverändert bleibt.
 
 // Verhaltens-Kategorie eines Status (Rahmen/Claimer/Review — nicht die Farbe).
-function categoryOf(role, kind) {
+export function categoryOf(role, kind) {
     switch (role) {
         case 'COMPLETED':
         case 'MERGED':
@@ -188,8 +188,34 @@ export function deriveDiagram({
         }
     }
 
-    // Schmale Phasen-Kopfzeile (Kurzname + %-erledigt, SP-basiert).
-    const phaseHeader = [...phases]
+    return {
+        nodes,
+        edges,
+        phases: derivePhaseProgress({ tasks, phases, statusConfig }),
+        legend: deriveLegend(statusConfig),
+    };
+}
+
+/**
+ * Schmale Phasen-Kopfzeile (Kurzname + %-erledigt, SP-basiert) — die Phasen-Pillen,
+ * über die Diagramm UND Zeitachse auf eine Phase filtern. Eine Definition, damit
+ * beide Ansichten dieselben Prozentzahlen zeigen.
+ *
+ * @param {object} args
+ * @param {Array}  args.tasks         rohe API-Tasks
+ * @param {Array}  args.phases        [{id, name, position}]
+ * @param {object} args.statusConfig  { statuses, roleKey }
+ * @returns {Array<{id: number, short: string, name: string, pct: number}>}
+ */
+export function derivePhaseProgress({ tasks, phases, statusConfig }) {
+    const doneKeys = new Set(
+        (statusConfig?.statuses || []).filter((s) => s.counts_as_done).map((s) => s.key),
+    );
+    const roleKey = statusConfig?.roleKey || {};
+    const isDone = (t) => doneKeys.has(roleKey[t.display_status] || t.display_status);
+    const sp = (t) => Number(t.effort?.story_points || 0);
+
+    return [...(phases || [])]
         .sort((a, b) => (a.position ?? 0) - (b.position ?? 0))
         .map((phase) => {
             const pt = tasks.filter((t) => t.phase_id === phase.id);
@@ -202,9 +228,17 @@ export function deriveDiagram({
                 pct: Math.round((done / total) * 100),
             };
         });
+}
 
-    // Legende: je konfiguriertem Status (nach Board-Position), im echten Knotenstil.
-    const legend = [...statuses]
+/**
+ * Legende je konfiguriertem Status (nach Board-Position), im echten Knotenstil —
+ * gleichzeitig die Vorlage der Status-Filter-Kästchen in Diagramm und Zeitachse.
+ *
+ * @param {object} statusConfig  { statuses, roleKey }
+ * @returns {Array<{key: string, label: string, color: string, icon: string|null, cat: string}>}
+ */
+export function deriveLegend(statusConfig) {
+    return [...(statusConfig?.statuses || [])]
         .sort((a, b) => (a.position ?? 0) - (b.position ?? 0))
         .map((s) => ({
             key: s.key,
@@ -213,6 +247,4 @@ export function deriveDiagram({
             icon: s.icon || null,
             cat: categoryOf(s.role, s.kind),
         }));
-
-    return { nodes, edges, phases: phaseHeader, legend };
 }

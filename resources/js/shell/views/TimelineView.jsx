@@ -3,6 +3,8 @@ import PageHead from '../components/PageHead.jsx';
 import { useProjectData } from '../../data/useProjectData';
 import { useTaskTimeline } from '../../timeline/useTaskTimeline.js';
 import { deriveTimeline, flattenTree } from '../../timeline/derive.js';
+import { useDependencyFilters, useStatusFilters } from '../../diagram/useDependencyFilters.js';
+import { PhaseFilterPills, StatusFilterCard } from '../components/DependencyFilters.jsx';
 import { interpolate, transChoice } from '../../summary/i18n.js';
 import { BlockSkeleton, ChipsSkeleton } from '../components/Skeleton.jsx';
 
@@ -14,6 +16,9 @@ const AXIS_MIN = 'min-w-[64rem]';
 // Einrückung je Baumebene, ab der 8. Ebene gedeckelt: tiefe Ketten (die es gibt)
 // würden der Taskspalte sonst den Platz für den Namen wegnehmen.
 const indentOf = (depth) => 8 + Math.min(depth, 8) * 11;
+
+// Stabile Referenz für den Filter-Hook, solange die Daten noch nicht geladen sind.
+const EMPTY_SET = new Set();
 
 function Chevron({ open }) {
     return (
@@ -101,10 +106,15 @@ function TaskBar({ node }) {
 }
 
 function Row({ row, strings, onToggle }) {
-    const { node, depth, hasChildren, isCollapsed } = row;
+    const { node, depth, hasChildren, isCollapsed, dimmed } = row;
 
     return (
-        <div className="relative flex border-b border-gray-100 dark:border-gray-700/60 last:border-b-0 hover:bg-gray-50/70 dark:hover:bg-gray-700/20">
+        <div
+            className={
+                'relative flex border-b border-gray-100 dark:border-gray-700/60 last:border-b-0 hover:bg-gray-50/70 dark:hover:bg-gray-700/20 '
+                + (dimmed ? 'opacity-50' : '')
+            }
+        >
             <div
                 className={NAME_COL + ' shrink-0 sticky left-0 z-10 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 py-1.5 pe-3'}
                 style={{ paddingInlineStart: indentOf(depth) + 'px' }}
@@ -194,6 +204,11 @@ export default function TimelineView({ project, strings, viewSwitch = null }) {
         });
     }, [tasks, phases, statusConfig, status, history, historyStatus, project.taskUrlTemplate, locale, strings]);
 
+    // Status- und Phasenfilter sind DIESELBEN wie im Diagramm — gemeinsamer Reiter,
+    // gemeinsame Tasks, gemeinsamer Zustand (siehe useDependencyFilters).
+    const { hiddenStatuses, toggleStatus, phaseFilter, togglePhase } = useDependencyFilters();
+    const statusFilters = useStatusFilters(data?.statusLegend, data?.presentStatuses ?? EMPTY_SET);
+
     const [collapsed, setCollapsed] = useState(() => new Set());
     const [activeOnly, setActiveOnly] = useState(false);
 
@@ -216,10 +231,18 @@ export default function TimelineView({ project, strings, viewSwitch = null }) {
         return ids;
     }, [data]);
 
-    const rows = useMemo(
-        () => (data ? flattenTree(data.roots, collapsed, activeOnly) : []),
-        [data, collapsed, activeOnly],
-    );
+    // Ein Task passt, wenn sein Status sichtbar ist, er in der gewählten Phase liegt
+    // und — bei aktiver Pille — im Fenster überhaupt etwas passiert ist. Vorfahren
+    // passender Tasks bleiben stehen (flattenTree), damit der Baum nicht zerreißt.
+    const rows = useMemo(() => {
+        if (!data) return [];
+        const matches = (node) =>
+            !hiddenStatuses.has(node.statusKey)
+            && (phaseFilter === null || String(node.phaseId) === phaseFilter)
+            && (!activeOnly || node.hasOwnActivity);
+
+        return flattenTree(data.roots, collapsed, matches);
+    }, [data, collapsed, activeOnly, hiddenStatuses, phaseFilter]);
 
     const loading = status === 'loading' || status === 'idle' || historyStatus === 'loading' || historyStatus === 'idle';
     const failed = status === 'error' || historyStatus === 'error';
@@ -254,6 +277,22 @@ export default function TimelineView({ project, strings, viewSwitch = null }) {
 
             {data && (
                 <>
+                    {/* Status-Filter — dieselbe Karte wie im Diagramm. */}
+                    <StatusFilterCard
+                        statuses={statusFilters}
+                        hidden={hiddenStatuses}
+                        onToggle={toggleStatus}
+                        label={strings.statusFilter}
+                    />
+
+                    {/* Phasen-Pillen — ebenfalls wie im Diagramm: Klick filtert. */}
+                    <PhaseFilterPills
+                        phases={data.phaseProgress}
+                        activeId={phaseFilter}
+                        onToggle={togglePhase}
+                        hint={strings.clickToFilter}
+                    />
+
                     <div className="flex flex-wrap items-center gap-3">
                         <div className="inline-flex items-center gap-1 rounded-full bg-gray-100 p-1 dark:bg-gray-700">
                             {[

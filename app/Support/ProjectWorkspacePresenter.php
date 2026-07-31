@@ -493,12 +493,17 @@ class ProjectWorkspacePresenter
                 ['strong' => __('common.timeline'), 'text' => __('status.timeline_help_intro')],
                 ['strong' => __('status.timeline_help_tree'), 'text' => __('status.timeline_help_tree_text')],
                 ['strong' => __('status.timeline_help_bar'), 'text' => __('status.timeline_help_bar_text')],
+                ['strong' => __('status.timeline_help_filters'), 'text' => __('status.timeline_help_filters_text')],
                 ['text' => __('status.timeline_help_gaps')],
             ],
             'task' => __('status.task'),
             'today' => __('status.timeline_today'),
             'all' => __('common.all'),
             'activeOnly' => __('status.timeline_active_only'),
+            // Status- und Phasenfilter teilt die Zeitachse mit dem Diagramm — auch
+            // die Beschriftungen kommen aus denselben Schlüsseln.
+            'statusFilter' => __('status.status_filter'),
+            'clickToFilter' => __('status.click_to_filter'),
             'expandAll' => __('status.timeline_expand_all'),
             'collapseAll' => __('status.timeline_collapse_all'),
             'dependsOn' => __('status.timeline_depends_on'),

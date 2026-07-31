@@ -6,6 +6,8 @@
 // welchem Status LAG, steht nur im Änderungsprotokoll. Der Baum dagegen steckt in
 // den Voraussetzungen (prerequisites), die der Store ohnehin lädt.
 
+import { deriveLegend, derivePhaseProgress } from '../diagram/derive.js';
+
 const DAY_MS = 86400000;
 
 /** Ortszeit-Mitternacht des Tages, in dem `ms` liegt. */
@@ -311,6 +313,7 @@ export function deriveTimeline({
             id: t.id,
             name: t.name,
             summary: t.summary,
+            phaseId: t.phase_id ?? null,
             url: url(t.id),
             pr: t.pr_number ?? null,
             prUrl: t.pr_url ?? null,
@@ -370,6 +373,11 @@ export function deriveTimeline({
         roots,
         days: buildDays(axisFrom, axisTo, windowDays, locale),
         legend,
+        // Filter-Bausteine, identisch zum Diagramm (gemeinsamer Reiter, gemeinsame
+        // Filter): Status-Legende im Knotenstil und Phasen-Fortschritt.
+        statusLegend: deriveLegend(statusConfig),
+        phaseProgress: derivePhaseProgress({ tasks, phases, statusConfig }),
+        presentStatuses: new Set(Array.from(nodes.values()).map((n) => n.statusKey).filter(Boolean)),
         axisFrom,
         axisTo,
         nowLeft: Math.min(100, Math.max(0, ((nowMs - axisFrom) / (axisTo - axisFrom)) * 100)),
@@ -380,21 +388,37 @@ export function deriveTimeline({
 }
 
 /**
- * Baum → Zeilenliste für das Rendern: eingeklappte Knoten verbergen ihre Nachfolger,
- * die Filter-Pille „nur mit Aktivität" behält Vorfahren aktiver Tasks.
+ * Baum → Zeilenliste für das Rendern: eingeklappte Knoten verbergen ihre Nachfolger.
+ *
+ * `matches` entscheidet je Task, ob er dem Filter entspricht (Status, Phase, „nur mit
+ * Aktivität"). Ein Task, der selbst nicht passt, aber einen passenden NACHFOLGER hat,
+ * bleibt trotzdem stehen — sonst risse der Filter den Baum auseinander und die
+ * verbleibenden Tasks hingen ohne ihre Voraussetzung in der Luft.
  *
  * @param {Array} roots
  * @param {Set<number>} collapsed
- * @param {boolean} activeOnly
- * @returns {Array<{node: object, depth: number, hasChildren: boolean, isCollapsed: boolean, hiddenChildren: number}>}
+ * @param {(node: object) => boolean} [matches]
+ * @returns {Array<{node: object, depth: number, hasChildren: boolean, isCollapsed: boolean, hiddenChildren: number, dimmed: boolean}>}
  */
-export function flattenTree(roots, collapsed, activeOnly) {
+export function flattenTree(roots, collapsed, matches = null) {
     const rows = [];
 
-    const walk = (node, depth) => {
-        if (activeOnly && !node.hasActivity) return;
+    // Memoisiert, damit die Prüfung „passt hier irgendwo darunter etwas?" den
+    // Teilbaum nicht je Ebene erneut durchläuft.
+    const keepCache = new Map();
+    const keep = (node) => {
+        if (!matches) return true;
+        if (keepCache.has(node.id)) return keepCache.get(node.id);
+        keepCache.set(node.id, true); // Zyklen-Schutz während der Rekursion
+        const result = matches(node) || node.children.some(keep);
+        keepCache.set(node.id, result);
+        return result;
+    };
 
-        const children = activeOnly ? node.children.filter((c) => c.hasActivity) : node.children;
+    const walk = (node, depth) => {
+        if (!keep(node)) return;
+
+        const children = node.children.filter(keep);
         const isCollapsed = collapsed.has(node.id);
 
         rows.push({
@@ -403,6 +427,8 @@ export function flattenTree(roots, collapsed, activeOnly) {
             hasChildren: children.length > 0,
             isCollapsed,
             hiddenChildren: isCollapsed ? children.length : 0,
+            // Nur als Wegweiser zum gefilterten Nachfolger dabei — leiser gezeichnet.
+            dimmed: matches ? !matches(node) : false,
         });
 
         if (!isCollapsed) {
