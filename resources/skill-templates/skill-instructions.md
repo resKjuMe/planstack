@@ -105,6 +105,20 @@ Fehlt die Einrichtung, wird sie **einmal** angelegt und der Nutzer darauf hingew
 
 `\e` und `\a` müssen als **echte** Steuerzeichen in der Datei landen (z. B. per `printf`, nicht als Literal `\e`). Die Anweisung ist bewusst **robust**: Terminals ohne Hyperlink-Unterstützung (klassisches conhost) zeigen einfach den Text ohne Link — sichtbare Escape-Reste wie `]8;;https…` sind aber ein **Fehler**. Lässt sich das nicht sauber schreiben, die Zeile **ohne** Links ausgeben; eine lesbare Zeile ohne Link ist besser als eine kaputte mit. Wer sich das Skript-Basteln sparen will: `footerLinksRegexes` in den Settings blendet aus erkannten Mustern (Task-Namen, PR-Nummern) klickbare Footer-Badges ein — ganz ohne eigenes Statusline-Skript, dafür ohne den frei formulierten Schritt-Text.
 
+**Das Prozentzeichen bleibt einfach: `%`, nie `%%`.** Die Zeile ist **Text, kein Format-String**. `printf` nimmt sein **erstes** Argument als Format-String — dort wäre `%` eine Direktive und müsste verdoppelt werden. Genau daraus entsteht der bekannte Fehler: erst wird brav verdoppelt, geschrieben wird die Zeile dann aber mit einem Werkzeug, das keine Format-Strings kennt — und in der Statuszeile stehen hinter der Zahl **zwei** Prozentzeichen. Deshalb die Zeile **nie** als Format-String übergeben, sondern als Argument:
+
+```
+printf '%s\n' "⚙ Review (Review 94 %) L2L · G5 — 15/16 Dateien"
+```
+
+Kommen die OSC-8-Links dazu, gehören **nur** die Steuerzeichen in den Format-String; jeder variable Text bleibt Argument (und braucht damit kein Escaping):
+
+```
+printf '\e]8;;%s\a%s\e]8;;\a %s\n' "$url" "$task" "$rest"
+```
+
+Alle anderen Schreibwege — `Set-Content -Encoding utf8`, Datei-Werkzeug, Here-Doc — kennen überhaupt keine Format-Strings; dort ist `%%` **immer** falsch. Prüfmaßstab ist der Dateiinhalt, nicht der Aufruf: je Prozentangabe steht dort **ein** Zeichen `%`. Steht `%%` in der Datei, ist die Zeile kaputt.
+
 Immer **überschreiben**, nie anhängen. Das Schreiben ist **best-effort**: Fehler ignorieren, den Ablauf nie blockieren und das Setzen der Zeile nicht in Prosa berichten.
 
 ## Feingranulare Config-Aktualisierung (`config_versions`)

@@ -58,9 +58,35 @@ class SkillEndpointTest extends TestCase
         $skill = $this->getJson('/api/skill')->assertOk()->json('skill_md');
 
         $this->assertStringContainsString('Sticky-Statuszeile', $skill);
-        $this->assertStringContainsString('<Symbol> Auto (<Aktion>) <PROJECT> · <TASK> — <kurzer Schritt>', $skill);
+        $this->assertStringContainsString('<Symbol> <Kommando> (<Phase> <%>) <PROJECT> · <TASK> — <kurzer Schritt>', $skill);
         $this->assertStringContainsString('planstack-status-<session_id>.txt', $skill);
         $this->assertStringContainsString('refreshInterval', $skill);
         $this->assertStringContainsString('OSC 8', $skill);
+    }
+
+    /**
+     * Die Statuszeile trägt eine Prozentzahl, und der Text wird mit `printf`
+     * geschrieben (die OSC-8-Steuerzeichen müssen echt sein). Wer beides
+     * zusammenbringt, escaped `%` reflexhaft zu `%%` — und schreibt die Zeile dann
+     * mit einem Werkzeug ohne Format-String, sodass die Verdopplung sichtbar wird
+     * („Review 94 %%"). Die Regel dagegen muss im ausgelieferten Text stehen, sonst
+     * kommt der Fehler mit dem nächsten Aufruf zurück.
+     */
+    public function test_served_skill_forbids_doubling_the_percent_sign(): void
+    {
+        Sanctum::actingAs(User::factory()->create());
+
+        $skill = $this->getJson('/api/skill')->assertOk()->json('skill_md');
+
+        $this->assertStringContainsString('nie `%%`', $skill, 'die Regel gegen das doppelte Prozentzeichen fehlt');
+        $this->assertStringContainsString("printf '%s\\n'", $skill, 'der sichere Schreibweg fehlt');
+
+        // Und der Anleitungstext selbst darf keine Prozentangabe verdoppeln: die
+        // Beispielzeilen werden abgeschrieben, ein `%%` darin lehrt genau den Fehler.
+        $this->assertSame(
+            0,
+            preg_match('/\d\s*%%/', $skill, $hit),
+            'verdoppeltes Prozentzeichen in einer Beispielzeile: '.($hit[0] ?? ''),
+        );
     }
 }
