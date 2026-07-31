@@ -8,6 +8,7 @@ use App\Http\Controllers\Api\ChangelogController;
 use App\Http\Controllers\Api\ProjectConfigController;
 use App\Http\Controllers\Api\ProjectController;
 use App\Http\Controllers\Api\SkillController;
+use App\Http\Controllers\Api\StatusActivityController;
 use App\Http\Controllers\Api\StatusConfigController;
 use App\Http\Controllers\Api\TaskController;
 use App\Http\Controllers\Api\TimelineController;
@@ -75,6 +76,9 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Status-Aufenthalte der letzten N Tage je Task (Balken der Zeitachsen-Seite).
     Route::get('projects/{project}/timeline', [TimelineController::class, 'show']);
+
+    // Statusupdates je Tag und Stunde (Heatmap der Performance-Seite, Owner-only).
+    Route::get('projects/{project}/status-activity', [StatusActivityController::class, 'show']);
 
     // Board-Protokoll-Konfiguration (token-sparende Schalter)
     Route::get('projects/{project}/config', [ProjectConfigController::class, 'show']);

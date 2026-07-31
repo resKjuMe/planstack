@@ -113,6 +113,25 @@ return [
     'durations_per_visit' => 'je Aufenthalt :value',
     'durations_total' => 'gesamt :value',
     'durations_empty' => 'Noch keine protokollierten Statuswechsel — die Verweildauer entsteht erst mit dem ersten Wechsel.',
+
+    // Aktivitäts-Heatmap (Statusupdates je Tag/Stunde)
+    'heatmap_title' => 'Statusupdates nach Tag und Uhrzeit',
+    'heatmap_sub' => 'Wann am Projekt gearbeitet wird: je Kästchen die Zahl der protokollierten Statuswechsel. Spalten sind Kalendertage (Beschriftung jeweils montags), Zeilen die Stunden deiner Zeitzone.',
+    'heatmap_person' => 'Mitarbeiter:',
+    'heatmap_person_all' => 'Alle (summiert)',
+    'heatmap_person_option' => ':name (:count)',
+    'heatmap_range' => 'Zeitraum:',
+    'heatmap_range_weeks' => ':weeks Wochen',
+    'heatmap_total' => ':count Statusupdate im Zeitraum|:count Statusupdates im Zeitraum',
+    'heatmap_busiest' => 'Spitze: :when mit :count',
+    'heatmap_cell' => ':date, :hour Uhr: :count Statusupdate|:date, :hour Uhr: :count Statusupdates',
+    'heatmap_legend_less' => 'wenig',
+    'heatmap_legend_more' => 'viel',
+    'heatmap_empty' => 'Keine protokollierten Statuswechsel in diesem Zeitraum — mit einem größeren Zeitraum werden auch ältere sichtbar.',
+    'heatmap_empty_person' => 'Keine Statusupdates dieser Person in diesem Zeitraum.',
+    'help_heatmap' => 'Heatmap',
+    'help_heatmap_text' => 'Gezählt werden protokollierte Statuswechsel (dieselbe Quelle wie die Verweildauer): wann am Projekt gearbeitet wurde. Der Filter schlüsselt nach dem VERURSACHER des Wechsels auf — das ist nicht dasselbe wie der Bearbeiter des Tasks: wer einen fremden Task verschiebt oder reviewt, erscheint hier mit. „Alle" summiert zusätzlich die Updates ohne protokollierten Verursacher (Konsole, Automationen), die zu keiner Person zählen — die Summe ist deshalb größer als die Summe der Personen. Gebucketet wird in deiner Zeitzone; ein Task, der mehrfach den Status wechselt, zählt mehrfach. Anlage und stille Änderungen (ohne Protokolleintrag) fehlen.',
+
     'help_durations' => 'Verweildauer',
     'help_durations_text' => 'Aus dem Änderungsprotokoll rekonstruiert: jede Statusänderung ist ein Zeitstempel, die Verweildauer der Abstand zur nächsten. Fällt ein Task zurück („in Review → Änderungen erbeten → in Review"), wird JEDER Aufenthalt einzeln gezählt und aufaddiert. Gezeigt werden nur Bearbeitungs-Status; Wartezeit (pickbar), die Zeit nach der Fertigstellung (gemergt) und Ausnahmen (blockiert/problematisch) sind keine Bearbeitungsdauer. Der Balken je Mitarbeiter trägt den Median über die Gesamtzeiten SEINER Tasks — die typische Task; der Tooltip nennt jeden Status einzeln.',
 

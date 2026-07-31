@@ -5,6 +5,7 @@ import { DurationBar, StatusDurations } from '../components/Durations.jsx';
 import { derivePerformance } from '../../performance/derive.js';
 import { interpolate } from '../../summary/i18n.js';
 import { KpiTilesSkeleton, CardsSkeleton, TableSkeleton } from '../components/Skeleton.jsx';
+import ActivityHeatmap from '../components/ActivityHeatmap.jsx';
 
 // Performance je Mitarbeiter — Owner-only Unterseite des ProjectWorkspace. Die
 // Daten kommen aus DEMSELBEN geteilten Store wie Board/Summary/Kalibrierung; die
@@ -606,6 +607,10 @@ export default function PerformanceView({ project, strings }) {
                             <p className="px-4 py-6 text-center text-sm text-gray-400 dark:text-gray-500">{strings.noPeople}</p>
                         )}
                     </div>
+
+                    {/* Wann gearbeitet wird — Verlauf aus dem Änderungsprotokoll, per
+                        eigenem Endpunkt (nicht aus dem Tasks-Store ableitbar). */}
+                    <ActivityHeatmap alias={project.alias} strings={strings} />
                 </>
             )}
         </div>

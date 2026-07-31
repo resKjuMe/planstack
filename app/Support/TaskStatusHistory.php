@@ -88,6 +88,60 @@ class TaskStatusHistory
     }
 
     /**
+     * Die einzelnen Statuswechsel als EREIGNISSE — Zeitpunkt und Verursacher, ohne
+     * Dauern und ohne Status.
+     *
+     * Grundlage der Aktivitäts-Heatmap („wann wird gearbeitet, und von wem?"): die
+     * fragt nicht, WIE LANGE ein Task irgendwo lag, sondern WANN etwas passiert ist.
+     * Was ein Statusupdate ist, entscheidet damit weiterhin nur diese Klasse.
+     *
+     * `actor_id` ist der protokollierte Verursacher (`causer_id`) und kann null sein:
+     * Änderungen ohne angemeldeten Nutzer (Konsole, Automationen) haben keinen.
+     *
+     * Anders als {@see stays()} wird hier NICHTS ergänzt: kein Aufenthalt ab
+     * `created_at`, kein laufender Aufenthalt bis jetzt. Die Anlage eines Tasks ist
+     * kein Statusupdate.
+     *
+     * @param  Collection<int, int>  $taskIds
+     * @return array<int, array{at: CarbonImmutable, actor_id: ?int}>  aufsteigend
+     */
+    public function changeEvents(Collection $taskIds, ?CarbonImmutable $since = null): array
+    {
+        if ($taskIds->isEmpty()) {
+            return [];
+        }
+
+        $log = EloquentAuditLog::forEntity(Task::class);
+
+        if (! Schema::hasTable($log->getTable())) {
+            return [];
+        }
+
+        $query = $log->newQuery()
+            ->whereIn('entity_id', $taskIds->all())
+            ->where('new_values', 'like', '%status_id%')
+            ->orderBy('created_at')
+            ->orderBy('id');
+
+        if ($since !== null) {
+            // Die Protokoll-Zeitstempel stehen in der App-Zeitzone; ein Grenzwert in
+            // einer ANDEREN Zone (die Heatmap rechnet in der Zone des Betrachters)
+            // muss dafür umgerechnet werden, sonst verschiebt sich das Fenster um
+            // den Zonen-Offset.
+            $query->where('created_at', '>=', $since->setTimezone(config('app.timezone'))->toDateTimeString());
+        }
+
+        return $query->get(['new_values', 'created_at', 'causer_id'])
+            ->filter(fn ($row) => ($row->new_values['status_id'] ?? null) !== null)
+            ->map(fn ($row) => [
+                'at' => CarbonImmutable::parse($row->created_at),
+                'actor_id' => $row->causer_id !== null ? (int) $row->causer_id : null,
+            ])
+            ->values()
+            ->all();
+    }
+
+    /**
      * @param  Collection<int, object>  $rows  Audit-Zeilen des Tasks, nach Zeit sortiert
      * @return array<int, array{task_id: int, status_id: int, from: CarbonImmutable, to: CarbonImmutable, open: bool}>
      */
