@@ -236,7 +236,7 @@ export function TaskCardView({
                 </div>
             </div>
 
-            <p className="mt-1 text-sm font-semibold leading-snug text-gray-900 dark:text-gray-100 line-clamp-3">{task.summary}</p>
+            <p className="mt-1 text-sm leading-snug text-gray-900 dark:text-gray-100 line-clamp-3">{task.summary}</p>
 
             {/* Session + Fortschritt in EINEM Block. Vorher standen Claimer, Label
                 und Fortschritt nebeneinander in einer Zeile und schnitten sich
