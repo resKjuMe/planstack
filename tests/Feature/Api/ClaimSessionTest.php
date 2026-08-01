@@ -317,6 +317,66 @@ class ClaimSessionTest extends TestCase
     }
 
     /**
+     * Fortschritt huckepack am Header: aus dem Betrieb kam der Befund, dass der
+     * Session-Header lueckenlos mitfaehrt (einmal im AUTH-Array eingerichtet), das
+     * separat abzusetzende Fortschritts-Event aber ausfaellt (bei jedem Schritt neu
+     * zu tun). Deshalb nimmt JEDER task-bezogene Aufruf den Stand mit — ein Claim,
+     * ein Status-Call oder ein Task-Read zieht den Fortschritt nach, auch wenn das
+     * Event fehlt.
+     */
+    public function test_progress_headers_are_recorded_on_any_task_request(): void
+    {
+        [, $project] = $this->ownedProject();
+        $task = $this->task($project);
+
+        $this->getJson("/api/projects/{$project->alias}/tasks/{$task->id}", [
+            TrackClaimSession::HEADER => 'work MN/A1',
+            TrackClaimSession::STEP_HEADER => '4/9 Dateien: TaskController.php',
+            TrackClaimSession::PROGRESS_HEADER => '44',
+        ])->assertOk();
+
+        $task->refresh();
+        $this->assertSame('4/9 Dateien: TaskController.php', $task->progress_detail);
+        $this->assertSame(44, $task->progress_percent);
+        $this->assertNotNull($task->progress_at);
+    }
+
+    /**
+     * Die Angabe faehrt auf einem Aufruf mit, der etwas ganz anderes tut. Ein krummer
+     * Wert darf ihn deshalb nicht mit einem 422 abschiessen — er wird gekappt bzw.
+     * ignoriert, und ein leerer Header laesst den letzten Stand stehen.
+     */
+    public function test_odd_progress_headers_never_break_the_call(): void
+    {
+        [, $project] = $this->ownedProject();
+        $task = $this->task($project);
+        $url = "/api/projects/{$project->alias}/tasks/{$task->id}";
+
+        $this->getJson($url, [
+            TrackClaimSession::HEADER => 'work MN/A1',
+            TrackClaimSession::STEP_HEADER => str_repeat('x', 500),
+            TrackClaimSession::PROGRESS_HEADER => '999',
+        ])->assertOk();
+
+        $task->refresh();
+        $this->assertSame(200, mb_strlen($task->progress_detail));
+        $this->assertSame(100, $task->progress_percent);
+
+        // Unsinn im Prozent-Header wird ignoriert, nicht auf 0 gesetzt …
+        $this->getJson($url, [
+            TrackClaimSession::HEADER => 'work MN/A1',
+            TrackClaimSession::PROGRESS_HEADER => 'keine-zahl',
+        ])->assertOk();
+        $this->assertSame(100, $task->refresh()->progress_percent);
+
+        // … und ein Aufruf ganz ohne die Header laesst den Stand unberuehrt.
+        $this->getJson($url, [TrackClaimSession::HEADER => 'work MN/A1'])->assertOk();
+        $task->refresh();
+        $this->assertSame(100, $task->progress_percent);
+        $this->assertSame(200, mb_strlen($task->progress_detail));
+    }
+
+    /**
      * Fortschritt und Session-Vermerk sind Laufzeit-Zustand, kein Vorgang: sie duerfen
      * NICHT im Changelog landen, sonst schuetten Dutzende Zeilen pro Task die
      * tatsaechlichen Aenderungen (Status, PR, Zustaendigkeit) zu.

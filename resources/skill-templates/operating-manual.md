@@ -2,7 +2,7 @@
 
 **Zyklus:** `claim-next` (bester Pick **und** Claim in einem, spart Roundtrips/Tokens) → `analyze` → (`concern`) | (`in_progress` → PR → `done` → `merge`). Board neu lesen gemäß `reread.policy`. Alternativ manuell: `GET /board` → bester Pick → `POST /claim`.
 
-Endpunkte unter `$BASE/projects/$PROJ`, Aufruf mit `curl -s "${AUTH[@]}"`:
+Endpunkte unter `$BASE/projects/$PROJ`, Aufruf mit `curl -s "${AUTH[@]}"` — der allgemeine `planstack`-Skill nutzt stattdessen seinen Wrapper `pc`, der zusätzlich den aktuellen Fortschritt als Header mitschickt (siehe „Zugang"):
 
 | Methode / Pfad | Zweck |
 |---|---|
@@ -63,7 +63,7 @@ Ein Event **ohne** die Felder lässt den zuletzt gemeldeten Stand unberührt (er
 ev C27 PROCESSING "4/9 Dateien: TaskController.php" 44
 ```
 
-Am verlässlichsten mit dem Helfer `sp` (schreibt Zeile **und** meldet, siehe „Sticky-Statuszeile") — dann kann die Meldung gar nicht mehr vergessen werden. Wer nur den nackten Event-Namen meldet, lässt `progress_detail`/`progress_percent` am Task leer; das Board zeigt dann bloß, **dass** eine Session arbeitet, nicht **wie weit**.
+Am verlässlichsten mit dem Helfer `sp` (schreibt Zeile **und** meldet, siehe „Sticky-Statuszeile"). Er setzt zusätzlich `PS_STEP`/`PS_PCT`, sodass der Stand über die Header `X-Planstack-Step`/`X-Planstack-Progress` auf **jedem** weiteren Aufruf mitfährt (Wrapper `pc`, siehe „Zugang"). Fällt ein Event doch einmal aus, zieht der nächste beliebige Aufruf den Fortschritt nach — deshalb Planstack-Aufrufe nie mit blankem `curl` absetzen. Wer nur den nackten Event-Namen meldet, lässt `progress_detail`/`progress_percent` am Task leer; das Board zeigt dann bloß, **dass** eine Session arbeitet, nicht **wie weit**.
 
 **Die Antwort ist maßgeblich (nicht selbst herleiten):** `POST /events` liefert `{configured, status_changed, status, applied_fields}` zurück. Liegt eine Antwort vor, ist ihr `status` der **tatsächliche** Status des Tasks nach dem Event — den Status **niemals** aus dem Event-Namen erraten. `status_changed:false` bei einem statustreibenden Event bedeutet nicht „Fehler", sondern dass der Guard nicht passte (der aktuelle Status stand nicht in der Override-Menge, s. `status_rules` → „Ereignis-gesteuerte Status-Zuweisung") — meist, weil ein vorheriges Event fehlte oder die Reihenfolge nicht stimmte. In dem Fall den zurückgemeldeten `status` akzeptieren, **nicht** dagegen anarbeiten. `configured:false` heißt: für dieses Event ist in der Org keine Automation hinterlegt — reine Meldung, kein Statuswechsel zu erwarten.
 

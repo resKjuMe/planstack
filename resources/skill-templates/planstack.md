@@ -50,9 +50,25 @@ else PROJ=$A1; TASK=$A2; fi   # <- veraltete Kurzform (ohne work), bis v3.0.0
 # "${AUTH[@]}" die Kennung automatisch mit.
 case "$A1" in work|do|auto) CMD=$A1 ;; *) CMD=work ;; esac
 AUTH+=(-H "X-Planstack-Session: $CMD ${PROJ}${TASK:+/$TASK}")
+
+# Fortschritt faehrt huckepack: PS_STEP/PS_PCT setzt der sp-Helfer (s. u.), und
+# JEDER Aufruf ueber "pc" nimmt den aktuellen Stand mit aufs Board. Anders als ein
+# separat abzusetzendes Event kann das nicht vergessen werden — es haengt an einem
+# Wrapper, der einmal eingerichtet wird. Ab hier "pc" statt "curl -s" benutzen.
+PS_STEP=""; PS_PCT=""
+pc(){
+  # Header als ARRAY aufbauen: der Schritt-Text enthaelt Leerzeichen ("4/9 Dateien:
+  # TaskController.php") und wuerde bei unquoted ${VAR:+...} in Woerter zerlegt.
+  local hs=()
+  [ -n "$PS_STEP" ] && hs+=(-H "X-Planstack-Step: $PS_STEP")
+  [ -n "$PS_PCT" ]  && hs+=(-H "X-Planstack-Progress: $PS_PCT")
+  curl -s "${AUTH[@]}" "${hs[@]}" "$@"
+}
 ```
 
 Alle Endpunkte laufen unter `$BASE/projects/$PROJ` (siehe Betriebshandbuch). Fehler: `401` Token · `403` kein Zugriff aufs Projekt · `404` unbekannter Alias.
+
+**Alle Planstack-Aufrufe gehen über `pc`** (nicht über blankes `curl`): nur so trägt jeder Aufruf den aktuellen Schritt mit. Ein leerer Header meldet nichts und lässt den letzten Stand stehen; ein krummer Wert wird serverseitig gekappt statt den Aufruf abzulehnen — die Angabe darf einen Claim oder Merge nie scheitern lassen.
 
 ## Zwei Modi
 

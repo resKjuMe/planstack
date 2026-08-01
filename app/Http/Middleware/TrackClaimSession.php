@@ -48,6 +48,24 @@ class TrackClaimSession
 {
     public const HEADER = 'X-Planstack-Session';
 
+    /**
+     * Fortschritt als Header, huckepack auf jedem ohnehin stattfindenden Aufruf.
+     *
+     * Warum zusaetzlich zum Fortschritts-Event: die Praxis zeigt, dass ein separat
+     * abzusetzendes Event vergessen wird, waehrend der Session-Header lueckenlos
+     * mitfaehrt — er wird EINMAL im AUTH-Array eingerichtet und ist danach an jedem
+     * Aufruf dabei. Was einmal eingerichtet wird, haelt; was man sich bei jedem
+     * Schritt merken muss, driftet ab. Also wandert der Fortschritt auf denselben
+     * Weg: der Client haengt Schritt und Prozentzahl an seinen Curl-Wrapper, und
+     * jeder Claim, Status-Call oder Task-Read bringt den aktuellen Stand mit.
+     *
+     * Das Event bleibt trotzdem der Hauptweg — es ist der einzige Aufruf, der auch
+     * dann passiert, wenn gerade sonst nichts mit dem Server zu bereden ist.
+     */
+    public const STEP_HEADER = 'X-Planstack-Step';
+
+    public const PROGRESS_HEADER = 'X-Planstack-Progress';
+
     public function __construct(private readonly ClaimSession $session) {}
 
     public function handle(Request $request, Closure $next): Response
@@ -111,6 +129,15 @@ class TrackClaimSession
                 'active_session_seen_at' => $now,
             ];
 
+        // Fortschritt aus den Headern — gilt als „dieser Request hat Fortschritt
+        // gemeldet", genau wie ein Event mit detail/progress.
+        $headerProgress = self::progressFrom($request);
+
+        if ($headerProgress !== [] && ! $this->session->finished()) {
+            $attrs = [...$attrs, ...$headerProgress, 'progress_at' => $now];
+            $this->session->markProgressReported();
+        }
+
         // Uebernimmt eine ANDERE Session den Task, gehoert der Fortschritt der
         // Vorgaengerin nicht mehr dazu: sonst zeigt die Karte die neue Session mit
         // dem alten Stand („4/9 Dateien"), bis deren erstes eigenes Event kommt.
@@ -151,6 +178,36 @@ class TrackClaimSession
         if (($attrs['active_session_label'] ?? null) !== $previousLabel) {
             $task->emitEntityChange('update');
         }
+    }
+
+    /**
+     * Fortschritt aus den Headern, auf die Spaltenbreite bzw. 0–100 gebracht.
+     *
+     * Bewusst nachsichtig statt validierend: die Angabe faehrt huckepack auf einem
+     * Aufruf, der etwas ganz anderes tut (Claim, Status, Task-Read). Ein krummer
+     * Wert darf diesen Aufruf nicht mit einem 422 abschiessen — er wird gekappt
+     * bzw. ignoriert. Ein leerer Header bedeutet „nichts Neues zu melden" und
+     * laesst den letzten Stand stehen.
+     *
+     * @return array<string, string|int>
+     */
+    private static function progressFrom(Request $request): array
+    {
+        $out = [];
+
+        $step = trim((string) $request->header(self::STEP_HEADER, ''));
+
+        if ($step !== '') {
+            $out['progress_detail'] = mb_substr($step, 0, 200);
+        }
+
+        $percent = trim((string) $request->header(self::PROGRESS_HEADER, ''));
+
+        if ($percent !== '' && is_numeric($percent)) {
+            $out['progress_percent'] = max(0, min(100, (int) $percent));
+        }
+
+        return $out;
     }
 
     /**

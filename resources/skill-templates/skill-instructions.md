@@ -40,10 +40,16 @@ Damit es nicht vom Erinnern abhängt, beides in **einen** Helfer legen und nur n
 
 ```bash
 # sp <TASK> <EVENT> "<ganze Statuszeile>" "<kurzer Schritt>" [progress]
-sp(){ printf '%s\n' "$3" > "$ST"; ev "$1" "$2" "$4" "${5:-}"; }
+sp(){
+  printf '%s\n' "$3" > "$ST"      # Statuszeile (lokal, nur dieses Fenster)
+  PS_STEP=$4; PS_PCT=${5:-}       # ab jetzt faehrt der Stand auf JEDEM pc-Aufruf mit
+  ev "$1" "$2" "$4" "${5:-}"      # und geht sofort als Event raus
+}
 
 sp C27 PROCESSING "⚙ Work (Bearbeite 44 %) DCE · C27 — 4/9 Dateien" "4/9 Dateien: TaskController.php" 44
 ```
+
+**Warum drei Dinge auf einmal:** die Erfahrung aus dem Betrieb ist, dass der Session-Header lückenlos mitfährt (einmal eingerichtet), das separat abzusetzende Event dagegen ausfällt (bei jedem Schritt neu zu tun). `sp` dreht das um: der Schritt landet in `PS_STEP`/`PS_PCT` und wird damit Teil des Headers, den **jeder** spätere Aufruf über `pc` ohnehin mitschickt. Selbst wenn ein Event ausfällt, zieht der nächste Claim, Status-Call oder Task-Read den Stand nach. Das Event bleibt trotzdem drin — es ist der einzige Aufruf, der auch dann passiert, wenn sonst gerade nichts mit dem Server zu bereden ist.
 
 Welches `<EVENT>` zur laufenden Phase gehört, steht im Betriebshandbuch („Zuordnung Zyklus → Event"); die statustreibenden Events dürfen dabei mehrfach abgesetzt werden — ein wiederholtes `PROCESSING` wechselt den Status nicht erneut, transportiert aber den neuen Stand. Beide Teile sind **best-effort**: schlägt das Event fehl, wird die Zeile trotzdem geschrieben und umgekehrt; blockieren darf keiner von beiden.
 
