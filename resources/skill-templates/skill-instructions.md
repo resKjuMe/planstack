@@ -111,6 +111,15 @@ Innerhalb einer Phase wird die Zeile bei **jeder** gezählten Einheit neu geschr
 
 Fehlt die Einrichtung, wird sie **einmal** angelegt und der Nutzer darauf hingewiesen — nicht bei jedem Aufruf erneut gefragt.
 
+**Mehrere Worker (Auto-Modus mit `auto_workers` > 1):** Eine Zustandsdatei und `N` gleichzeitig arbeitende Worker gehen nicht zusammen — sie würden sich im Sekundentakt gegenseitig überschreiben, und die Zeile zeigte zufällig den, der zuletzt geschrieben hat. Deshalb schreibt **jeder** seinen eigenen Teil:
+
+1. **Kopf:** der Supervisor schreibt wie gehabt `~/.claude/planstack-status-<session_id>.txt`, aber ohne Task — er hält keinen: `⚙ Auto (3/3 Worker) DCE — 12 erledigt`. Die Zahl in Klammern ist `belegte/verfügbare Slots`.
+2. **Slot je Worker:** Worker `k` schreibt **ausschließlich** `~/.claude/planstack-status-<session_id>.w<k>.txt` — eine Zeile in der **Kurzform** `#<k> <TASK> <Phase> <%> — <kurzer Schritt>`, z. B. `#2 C27 Bearbeite 44 % — 4/9 Dateien`. Also ohne Symbol, Kommando und Projekt: die stehen im Kopf, und der Platz ist knapp.
+3. **Zusammensetzen:** das Statusline-Skript gibt den Kopf aus und hängt die vorhandenen Slot-Dateien, nach Slot-Nummer sortiert, mit ` │ ` getrennt an. Fehlt eine Slot-Datei, fehlt der Abschnitt — kein Platzhalter. Gibt es **keine** Slot-Datei, verhält sich das Skript genau wie bisher (nur der Kopf). Die Gesamtlänge auf eine Zeile begrenzen (überzählige Slots hinten weglassen, z. B. `… +2`).
+4. **Aufräumen:** der Worker **löscht** seine Slot-Datei am Ende (auch bei Concern oder Abbruch mit Fehler). Bleibt eine liegen, räumt der Supervisor sie beim Einsammeln weg; zusätzlich ignoriert das Skript Slot-Dateien, die länger als 15 Minuten nicht angefasst wurden.
+
+Alles andere gilt unverändert: **jeder** Worker meldet seinen Fortschritt zusätzlich per Event an den Server (`sp`-Helfer, jeder an seinem eigenen Task) — die Slot-Datei ist nur die Anzeige im Fenster, das Board erfährt davon nichts.
+
 **`refreshInterval` (der zentrale Praxis-Hinweis):** Die Statusline wird normalerweise **ereignisgesteuert** neu berechnet — bei Prompt, Tool-Ende und Moduswechsel, 300 ms entprellt. Während ein Subagent arbeitet (im Auto-Modus der Regelfall) passiert davon minutenlang **nichts**, die Zeile friert also mitten in der Arbeit ein und zeigt einen längst überholten Schritt. Deshalb im `statusLine`-Eintrag **immer** `refreshInterval` setzen (Sekunden, Minimum `1`, Empfehlung **5–10**) — nur dann pollt Claude Code die Zustandsdatei von selbst weiter.
 
 **Klickbare Links (OSC 8):** `<TASK>` und eine PR-Nummer im Schritt-Text als **OSC-8-Hyperlink** ausgeben, damit man aus der Statuszeile direkt ins Board bzw. in den PR springt (**Ctrl+Klick** unter Windows/Linux, **Cmd+Klick** unter macOS):
@@ -192,11 +201,13 @@ Lokale Einstellungen liegen **ausschließlich auf diesem Rechner** in `${CLAUDE_
 | Review-Strenge | `review_strictness` | Locker→`lenient` · Standard→`default` · Streng→`strict` | Standard |
 | Review-Genauigkeit | `review_thoroughness` | Lässig→`relaxed` · Standard→`default` · Akribisch→`meticulous` | Standard |
 | Lauf-Metriken | `metrics` | An→`on` · Aus→`off` | An |
+| Parallele Worker (Auto-Modus) | `auto_workers` | Automatisch (Projekt-Vorgabe)→`auto` · 1→`1` · 2→`2` · 3→`3` · 4→`4` · 6→`6` · 8→`8` | Automatisch |
 
 - **`verbosity`** steuert **verbindlich** (keine Empfehlung), wie viel Fließtext während der ganzen Abarbeitung ausgegeben wird, ab dem ersten Satz: `minimal` = nur das Nötigste — keine Vorreden, keine Ankündigungen, keine Zwischenerklärungen, keine Zusammenfassung des eben Getanen; pro Task maximal eine knappe Zeile je abgeschlossenem Schritt (`C27: PR #123 geöffnet`) und am Ende das Ergebnis; Tool-Aufrufe sprechen für sich und werden nicht zusätzlich in Prosa beschrieben. `default` = knappe Orientierung + Ergebnisse. `maximal` = Schritte, Begründungen, Abwägungen offenlegen. Explizit angeforderte Inhalte (Review-`summary`, Metriken, direkte Nutzerfragen) sind davon unberührt.
 - **`review_strictness`** = wie hart bewertet wird: `lenient` nur echte Blocker (im Zweifel `APPROVE`), `default` normal, `strict` auch kleinere Mängel, Stil, Edge-Cases (eher `REQUEST_CHANGES`).
 - **`review_thoroughness`** = wie gründlich geschaut wird: `relaxed` schneller Überblick, `default` normal, `meticulous` jede Datei/Zeile und alle Edge-Cases.
 - **`metrics`** = Lauf-Metriken erfassen und am Ende ausgeben (siehe „Metriken") oder nicht.
+- **`auto_workers`** = wie viele Arbeitseinheiten der **Auto-Modus** gleichzeitig laufen lässt (nur dort wirksam; `work`, `review` und `fix` bleiben einzeln). `auto` = die Vorgabe des Projekts übernehmen (`parallelism.max_workers`). Eine Zahl gilt für **diese Maschine** und wird trotzdem am Projekt-Deckel gekappt — die kleinere der beiden Zahlen gewinnt. `1` = rein sequenziell wie bisher. Höhere Werte kosten proportional Kontext, Rechenzeit und lokale Ressourcen: nur so hoch wählen, wie die Maschine parallele Prüfläufe und Arbeitsverzeichnisse verträgt. Die Regeln für den Parallelbetrieb (Session-Label, eigenes `git worktree` je Worker, serialisierte Prüfläufe) stehen in der Auto-Anleitung und sind dort **verbindlich**.
 
 **Anwendung im Arbeitszyklus** (beide Modi): `yes` → Schritt ausführen · `no` → überspringen · `ask` → **einmal für die aktuelle Aufgabe** nachfragen und die Antwort nur dafür anwenden (nicht speichern). Reihenfolge vor dem PR, jeweils nur wenn erlaubt: `local_phpcs` (formatieren) → `local_phpstan` → `local_tests`. Schlägt ein aktivierter Schritt fehl, erst beheben, dann PR. `babysit_prs` greift **nach** dem PR-Öffnen. Vor jeder Abarbeitung die aktuellen Einstellungen lesen.
 

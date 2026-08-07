@@ -4,6 +4,7 @@ namespace App\Support;
 
 use App\Http\Middleware\TrackClaimSession;
 use App\Models\Task;
+use App\Models\User;
 
 /**
  * Die Session, die den aktuellen Request stellt — request-scoped im Container
@@ -111,6 +112,52 @@ class ClaimSession
             'claim_session_label' => $claimed ? $this->label : null,
             'claim_seen_at' => $claimed && $this->label !== null ? now() : null,
         ]);
+    }
+
+    /**
+     * Label mit den Initialen des Betreibers davor („CM fix TXSAFE/GAP-MassRun #2").
+     *
+     * Auf die Spaltenbreite (60) gekürzt, und zwar am LABEL, nicht am Präfix: die
+     * Initialen sind der Teil, der die Sessions unterscheidbar macht, und würden
+     * beim Abschneiden von rechts als Erstes wegfallen.
+     *
+     * Steht hier und nicht (nur) in der Middleware, weil auch der
+     * {@see NextActionResolver} stempelt: er reserviert Tasks für parallele Worker und
+     * vermerkt dabei sofort, WELCHER Worker-Slot sie bekommen hat — mit demselben
+     * Präfix, sonst sähen die serverseitig gestempelten Vermerke anders aus als die,
+     * die der Worker danach selbst schreibt.
+     */
+    public static function withInitials(string $label, ?User $user): string
+    {
+        $initials = $user?->initials() ?? '';
+
+        if ($initials === '') {
+            return mb_substr($label, 0, 60);
+        }
+
+        return mb_substr($initials.' '.$label, 0, 60);
+    }
+
+    /**
+     * Gilt der Vermerk „arbeitet gerade daran" als lebendig — also: es gibt eine
+     * aktive Session, und sie hat sich innerhalb der (kurzen) Anzeige-TTL gemeldet?
+     *
+     * Der Gegenpol zu {@see isStale()}: dort geht es um die Reservierung (Claim), hier
+     * um die tatsächliche Bearbeitung. Der {@see NextActionResolver} braucht genau
+     * diese Frage, um einem zweiten Worker keinen Task zu geben, an dem sichtbar schon
+     * einer arbeitet: ein `fix`-Lease läuft nach 15 Minuten ab, die Arbeit daran nicht.
+     */
+    public static function isActivelyWorked(Task $task): bool
+    {
+        return $task->active_session_label !== null
+            && $task->active_session_seen_at !== null
+            && $task->active_session_seen_at->gte(now()->subMinutes(self::activeTtlMinutes()));
+    }
+
+    /** Anzeigedauer des „arbeitet daran"-Vermerks ohne Lebenszeichen (Minuten). */
+    public static function activeTtlMinutes(): int
+    {
+        return max(1, (int) config('planstack.active_session_ttl_minutes', 10));
     }
 
     /**

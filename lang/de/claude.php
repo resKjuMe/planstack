@@ -153,7 +153,7 @@ return [
     'none_the_client_uses_its_built_in' => 'Keine — der Client nutzt seine eingebauten Standards (nichts Zusätzliches im Kontext).',
     'not_quite_as_economical_as_economy_the' => 'Nicht ganz so sparsam wie „economy". Der Subagent-Modus entfaltet seinen Vorteil nur, wenn der ausführende Worker Tasks tatsächlich isoliert (ein Task pro frischem Kontext) abarbeitet.',
     'noticeably_more_tokens_than_recommended' => 'Spürbar mehr Tokens als „recommended" und „economy" (volle Listen, volle Schreib-Antworten, Deltas statt server-erzwungener Regeln).',
-    'number_of_parallel_workers_1_32_affects' => 'Anzahl paralleler Worker (1–32). Beeinflusst den Durchsatz, nicht die Tokens pro Task – die Gesamtkosten skalieren mit der Anzahl.',
+    'number_of_parallel_workers_1_32_affects' => 'Obergrenze paralleler Worker (1–32) für den Auto-Modus: pro Aufruf gibt der Server höchstens so viele Arbeitseinheiten heraus. Beeinflusst den Durchsatz, nicht die Tokens pro Task – die Gesamtkosten skalieren mit der Anzahl.',
     'occasionally_an_unnecessary_or_a' => 'Gelegentlich ein unnötiger oder ein fehlender Concern.',
     'off' => 'Aus',
     'on' => 'An',

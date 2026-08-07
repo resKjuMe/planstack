@@ -47,13 +47,14 @@ return [
     'cmd_work_task_2' => 'Details holen, falls der Claim sie nicht mitgeliefert hat.',
     'cmd_work_task_3' => 'Derselbe Zyklus wie beim ganzen Board — nur für diesen einen Task. Ist er nicht pickbar (Gate offen, beansprucht, schon mit PR), wird das gemeldet statt erzwungen.',
 
-    'cmd_auto_purpose' => 'Arbeitet das Board dauerhaft und unbeaufsichtigt ab. Der Haupt-Agent ist nur Supervisor und startet in einer Endlosschleife Auto-Runs, jeder als eigener Subagent mit genau einer Arbeitseinheit. Der Modus endet erst auf Abbruch.',
+    'cmd_auto_purpose' => 'Arbeitet das Board dauerhaft und unbeaufsichtigt ab. Der Haupt-Agent ist nur Supervisor und hält einen Pool von Auto-Runs am Laufen, jeder als eigener Subagent mit genau einer Arbeitseinheit — je nach Einstellung `auto_workers` einer nach dem anderen oder mehrere gleichzeitig. Der Modus endet erst auf Abbruch.',
     'cmd_auto_1' => 'Sticky-Statuszeile setzen, bevor die Arbeitseinheit beginnt — so früh wie möglich, damit dauerhaft sichtbar ist, was läuft.',
     'cmd_auto_2' => 'Priorität 1: Liegt etwas zum Review bereit, wird das gereviewt.',
     'cmd_auto_3' => 'Priorität 2: eigene, noch offene Tasks bis zum polierten PR fertigstellen — mit offenem PR, der nur noch Politur braucht, über `fix`.',
     'cmd_auto_4' => 'Priorität 3: den besten pickbaren Task umsetzen, bis der PR steht.',
     'cmd_auto_5' => 'Statt der drei Prüfungen einzeln: entscheidet fix → review → work in einem Aufruf und reserviert den Task atomar.',
-    'cmd_auto_6' => 'Nichts zu tun (`idle`): 5 Minuten warten, Statuszeile auf „Idle" setzen, dann von vorn. Hat der Auto-Run etwas getan, startet der nächste sofort.',
+    'cmd_auto_6' => 'Nichts zu tun (`idle`): 5 Minuten warten, Statuszeile auf „Idle" setzen, dann von vorn. Hat der Auto-Run etwas getan, startet der nächste sofort. Pausiert wird erst, wenn kein Worker mehr läuft und der letzte Aufruf nichts geliefert hat.',
+    'cmd_auto_7' => 'Parallelbetrieb: holt in EINEM Aufruf so viele Arbeitseinheiten, wie Worker-Slots frei sind — jede auf einem anderen Task, jede atomar reserviert und schon mit dem Session-Label ihres Workers gestempelt. Die Anzahl ist das Minimum aus der lokalen Einstellung `auto_workers` und dem Projekt-Knopf „Max. Worker". Damit sich die Worker nicht in die Quere kommen: eigenes Session-Label je Worker (der Heartbeat hält nur so sein eigenes Lease), eigener `git worktree` je Worker, serialisierte lokale Prüfläufe, und ein Task, an dem sichtbar gearbeitet wird, geht an keinen zweiten Worker.',
 
     'cmd_review_purpose' => 'Reviewt Tasks, die zum Review bereitliegen (mit PR). Ohne Task wird automatisch einer des Projekts gewählt, ohne Projekt wird projektübergreifend gesucht. Eigene Tasks sind nicht reviewbar.',
     'cmd_review_1' => 'Gezielt diesen Task zum Review übernehmen — setzt `reviewed_by`.',

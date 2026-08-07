@@ -12,11 +12,11 @@ Ein Planstack-Board wird über die **REST-API** abgearbeitet: Board lesen, Task 
 
 - `/planstack work <PROJECT>` — das Board von `<PROJECT>` abarbeiten (besten Pick wählen, Zyklus s. u.).
 - `/planstack work <PROJECT> <TASK>` — gezielt **einen** Task (`<TASK>` = Task-Name, z. B. `C27`) dieses Projekts abarbeiten. `work` steht in der **Sub-Kommando-Position** (erstes Argument); `<PROJECT>` = Alias **oder** id, `<TASK>` = Name **oder** id (optional).
-- `/planstack auto <PROJECT>` — **Auto-Modus**: das Board von `<PROJECT>` dauerhaft und unbeaufsichtigt abarbeiten (reviewen → eigene Tasks fertigstellen → pickbaren Task umsetzen; bei Leerlauf 5 min warten, dann weiter). `auto` steht in der **Sub-Kommando-Position** (erstes Argument), gefolgt vom Projekt. Die ausführliche Anleitung ist serverseitig gepflegt (siehe „Auto-Modus").
+- `/planstack auto <PROJECT>` — **Auto-Modus**: das Board von `<PROJECT>` dauerhaft und unbeaufsichtigt abarbeiten (reviewen → eigene Tasks fertigstellen → pickbaren Task umsetzen; bei Leerlauf 5 min warten, dann weiter). `auto` steht in der **Sub-Kommando-Position** (erstes Argument), gefolgt vom Projekt. Arbeitet mit **mehreren Workern gleichzeitig**, wenn die Einstellung `auto_workers` und der Projekt-Knopf `parallelism.max_workers` das zulassen. Die ausführliche Anleitung ist serverseitig gepflegt (siehe „Auto-Modus").
 - `/planstack review [<PROJECT>] [<TASK>]` — in-review Task(s) mit PR reviewen (übernimmt Review, führt den Review-Skill aus, erfasst das Ergebnis; ohne Argumente projektübergreifend; siehe „Review").
 - `/planstack fix [<PROJECT>] <TASK|PR-NUMMER>` — offenen PR reparieren (Task/PR erforderlich): Merge-Konflikte auflösen, Kommentare + Review-Kommentare beantworten/fixen/resolven, rote CI korrigieren (siehe „Fix").
 - `/planstack plan [<PROJECT>]` — Projekte, Phasen und Tasks anlegen (Planung). Die Anleitung dazu ist serverseitig gepflegt und wird bei **jedem** Aufruf frisch geladen (siehe „Plan").
-- `/planstack settings` — lokale Einstellungen (Tests, PHPStan, PHPCS, Babysit-PRs) anzeigen/ändern (nur lokal gespeichert; siehe „Lokale Einstellungen").
+- `/planstack settings` — lokale Einstellungen (Tests, PHPStan, PHPCS, Babysit-PRs, parallele Worker) anzeigen/ändern (nur lokal gespeichert; siehe „Lokale Einstellungen").
 - `/planstack update-config [<PROJECT>]` — neueste allgemeine (+ Projekt-)Konfiguration ziehen und die Versionsnummern anzeigen (siehe „Konfiguration ziehen").
 
 `<PROJECT>` ist der Projekt-Alias (z. B. `L2L`, `LOG`). Dasselbe installierte Skill bedient **alle** Projekte, auf die dein Token Zugriff hat.

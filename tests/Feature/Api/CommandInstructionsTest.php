@@ -96,6 +96,13 @@ class CommandInstructionsTest extends TestCase
         $this->assertStringContainsString('Supervisor-Schleife', $instructions);
         // Der Auto-Run darf die Priorität nicht selbst bauen — die Regel muss mitkommen.
         $this->assertStringContainsString('next-action', $instructions);
+
+        // Parallelbetrieb: ohne diese drei Regeln zerlegen sich mehrere Worker
+        // gegenseitig — falsches Session-Label (Lease läuft ab, während gearbeitet
+        // wird), gemeinsamer Checkout, gleichzeitige Prüfläufe.
+        $this->assertStringContainsString('auto_workers', $instructions);
+        $this->assertStringContainsString('git -C <repo> worktree add', $instructions);
+        $this->assertStringContainsString('serialisiert', $instructions);
     }
 
     public function test_fix_session_gets_the_fix_instructions_on_the_task_read(): void

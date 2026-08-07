@@ -3,6 +3,7 @@
 use App\Http\Controllers\Api\EventController;
 use App\Http\Controllers\Api\McpController;
 use App\Http\Controllers\Api\NextActionController;
+use App\Http\Controllers\Api\NextActionsController;
 use App\Http\Controllers\Api\PhaseController;
 use App\Http\Controllers\Api\ChangelogController;
 use App\Http\Controllers\Api\ProjectConfigController;
@@ -64,6 +65,12 @@ Route::middleware('auth:sanctum')->group(function () {
     // Nächste sinnvolle Aktion entscheiden (fix → review → work) und den Task
     // atomar reservieren — {action, task} in einem Call für „/planstack auto".
     Route::post('projects/{project}/next-action', NextActionController::class)
+        ->middleware(AttachCommandInstructions::class);
+
+    // Dasselbe für N PARALLELE Worker: `count` Arbeitseinheiten auf verschiedenen
+    // Tasks in einem Aufruf, serverseitig gegen Doppelvergabe gesichert (und die
+    // Kommando-Anleitung kommt einmal statt N-mal mit).
+    Route::post('projects/{project}/next-actions', NextActionsController::class)
         ->middleware(AttachCommandInstructions::class);
 
     // Org-weite Status-Konfiguration für den geteilten React-Store (einmal laden,

@@ -93,6 +93,22 @@ class SkillEndpointTest extends TestCase
     }
 
     /**
+     * Mehrere Worker teilen sich ein Fenster: ohne die Slot-Dateien schreiben sie alle
+     * in dieselbe Zustandsdatei, und die Zeile zeigt zufällig den, der zuletzt dran
+     * war. Die Einstellung, die den Parallelbetrieb überhaupt einschaltet, gehört
+     * ebenfalls in den ausgelieferten Text — die Auto-Anleitung liest sie dort.
+     */
+    public function test_served_skill_carries_the_parallel_worker_settings(): void
+    {
+        Sanctum::actingAs(User::factory()->create());
+
+        $skill = $this->getJson('/api/skill')->assertOk()->json('skill_md');
+
+        $this->assertStringContainsString('auto_workers', $skill);
+        $this->assertStringContainsString('planstack-status-<session_id>.w<k>.txt', $skill);
+    }
+
+    /**
      * Die Statuszeile trägt eine Prozentzahl, und der Text wird mit `printf`
      * geschrieben (die OSC-8-Steuerzeichen müssen echt sein). Wer beides
      * zusammenbringt, escaped `%` reflexhaft zu `%%` — und schreibt die Zeile dann

@@ -47,13 +47,14 @@ return [
     'cmd_work_task_2' => 'Fetch the details if the claim did not return them.',
     'cmd_work_task_3' => 'The same cycle as for the whole board — for this one task only. If it is not pickable (open gate, already claimed, PR already set), that is reported rather than forced.',
 
-    'cmd_auto_purpose' => 'Works the board continuously and unattended. The main agent is only a supervisor and starts auto runs in an endless loop, each as its own subagent handling exactly one unit of work. The mode only ends when it is cancelled.',
+    'cmd_auto_purpose' => 'Works the board continuously and unattended. The main agent is only a supervisor and keeps a pool of auto runs going, each as its own subagent handling exactly one unit of work — one after another or several at once, depending on the `auto_workers` setting. The mode only ends when it is cancelled.',
     'cmd_auto_1' => 'Set the sticky status line before the unit of work starts — as early as possible, so what is running stays visible.',
     'cmd_auto_2' => 'Priority 1: if something is ready for review, review it.',
     'cmd_auto_3' => 'Priority 2: finish your own open tasks through to a polished PR — via `fix` when an open PR only needs polishing.',
     'cmd_auto_4' => 'Priority 3: implement the best pickable task until the PR is up.',
     'cmd_auto_5' => 'Instead of the three checks separately: decides fix → review → work in one call and reserves the task atomically.',
-    'cmd_auto_6' => 'Nothing to do (`idle`): wait 5 minutes, set the status line to "idle", then start over. If the auto run did something, the next one starts immediately.',
+    'cmd_auto_6' => 'Nothing to do (`idle`): wait 5 minutes, set the status line to "idle", then start over. If the auto run did something, the next one starts immediately. The pause only kicks in once no worker is left running and the last call returned nothing.',
+    'cmd_auto_7' => 'Parallel mode: fetches as many work units as there are free worker slots in ONE call — each on a different task, each reserved atomically and already stamped with the session label of the worker that will run it. The count is the minimum of the local `auto_workers` setting and the project knob "Max. workers". That is what keeps the workers out of each others way: one session label per worker (only that way does a heartbeat keep its own lease alive), one `git worktree` per worker, serialised local checks, and a task somebody is visibly working on is never handed to a second worker.',
 
     'cmd_review_purpose' => 'Reviews tasks that are ready for review (with a PR). Without a task one is picked automatically within the project; without a project the search spans all projects. Your own tasks are not reviewable.',
     'cmd_review_1' => 'Take over the review of this specific task — sets `reviewed_by`.',

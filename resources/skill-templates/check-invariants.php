@@ -64,6 +64,14 @@ $required = [
     // Prozentzeichen-Regel samt sicherem Schreibweg.
     ['nie `%%`', 'Regel gegen das doppelte Prozentzeichen'],
     ["printf '%s\\n'", 'sicherer Schreibweg fuer die Statuszeile'],
+
+    // Parallele Worker: jede dieser vier Angaben verhindert eine Kollisionsart.
+    // Faellt eine heraus, laufen die Worker sich gegenseitig ins Messer — und zwar
+    // still, das Board sieht dabei bis zum Schluss plausibel aus.
+    ['auto_workers', 'Einstellung fuer die Worker-Anzahl'],
+    ['planstack-status-<session_id>.w<k>.txt', 'Slot-Datei je Worker'],
+    ['git -C <repo> worktree add', 'eigenes Arbeitsverzeichnis je Worker'],
+    ['next-actions', 'Stapel-Endpunkt fuer mehrere Worker'],
 ];
 
 $errors = [];

@@ -7,7 +7,8 @@ Endpunkte unter `$BASE/projects/$PROJ`, Aufruf mit `curl -s "${AUTH[@]}"` — de
 | Methode / Pfad | Zweck |
 |---|---|
 | `POST /claim-next` | besten pickbaren Task atomar beanspruchen; Antwort = geclaimter Task (nach `task.fields`), `{"claimed":null}` wenn nichts pickbar |
-| `POST /next-action` | **nächste sinnvolle Arbeit vom Server bestimmen lassen** und atomar reservieren, in einem Aufruf: `action` (`fix` · `review` · `work` · `none`), `reason`, Task unter `data` (`pr_number`/`pr_url` immer dabei). Priorität `fix` → `review` → `work` ist serverseitig hinterlegt — nicht nachbauen |
+| `POST /next-action` | **nächste sinnvolle Arbeit vom Server bestimmen lassen** und atomar reservieren, in einem Aufruf: `action` (`fix` · `review` · `work` · `none`), `reason`, `session` (Label des Workers), Task unter `data` (`pr_number`/`pr_url` immer dabei). Priorität `fix` → `review` → `work` ist serverseitig hinterlegt — nicht nachbauen |
+| `POST /next-actions {count}` | dasselbe für **`count` parallele Worker**: Liste unter `data`, je Eintrag `{action, reason, session, task}` — **jede Einheit auf einem anderen Task**, alle atomar reserviert. Dazu `workers` (vergeben), `requested`, `max_workers` (Deckel des Projekts, `parallelism.max_workers`; `count` wird darauf gekappt). Ohne `count`: so viele wie erlaubt. Leeres `data` = nichts zu tun |
 | `POST /review-next` | nächsten zum Review bereiten Task mit PR (Pool `REVIEWBAR`, ersatzweise noch nicht übernommener `IN_REVIEW`) zum Review übernehmen (setzt `reviewed_by`); **ein bereits selbst übernommener, noch nicht abgeschlossener Review kommt zuerst** (wird fortgesetzt, nicht neu gestempelt; mit erfasstem Ergebnis nicht mehr); `{"reviewing":null}` wenn nichts ansteht |
 | `POST /tasks/{id}/review-claim` · `/review {recommendation,summary}` | Review übernehmen · Ergebnis erfassen (`APPROVE`/`REQUEST_CHANGES`) |
 | `GET /board` | pickable nach `unlocks`; Antwort trägt die Versions-Header |
@@ -34,6 +35,12 @@ In Task-Pfaden ist `{id}` **auch per Task-Name** ansprechbar (z. B. `.../tasks/C
 3. **Heartbeat:** Jeder weitere Zugriff derselben Session frischt `claim_seen_at` auf. Bleibt er aus (Worker hart beendet), markiert das Board den Claim nach `claim_session_ttl_minutes` als **verwaist** — der Claim selbst bleibt bestehen, bis ihn jemand per `release` freigibt.
 
 Ein fremdes Claim-Lease wird dabei **nie** überschrieben. Ohne Header verhält sich alles wie bisher (nur eben ohne Vermerk). Der Header ist reine Anzeige-Information und ersetzt **keine** Autorisierung.
+
+**Bei mehreren parallelen Workern gibt der Server das Label vor.** `next-action`/`next-actions` reservieren den Task **für einen bestimmten Worker** und stempeln Claim-Lease und Vermerk direkt mit dessen Label (`<aktion> <PROJECT>/<TASK> #<slot>`, z. B. `work MN/C27 #2`) — nicht mit dem des Aufrufers. Das Feld `session` der Antwort nennt es. Genau dieser Wert gehört danach in **jeden** Aufruf des Workers:
+
+- Anderes Label ⇒ der Heartbeat trifft ein fremdes Lease nicht, das eigene bleibt stehen: das Board hält den Task für verwaist, während daran gearbeitet wird.
+- Auch das **Fix-Lease** hängt daran: es wird von jedem Aufruf **dieser** Session verlängert und mit dem Ende der Arbeitseinheit (abschließendes Event, Merge, `release`, erfasstes Review) sofort freigegeben — statt bis zum Ablauf zu blockieren.
+- Umgekehrt gibt der Server einen Task, an dem **sichtbar gearbeitet wird** (frischer Vermerk, jünger als `active_session_ttl_minutes`), an **keinen** weiteren Worker heraus — auch dann nicht, wenn dessen Lease schon abgelaufen ist. Ein hart abgebrochener Worker blockiert seinen Task damit für höchstens diese TTL.
 
 **Der Vermerk endet mit der Arbeitseinheit — sofern sie sich abmeldet.** Serverseitig geräumt wird er beim Merge, bei `release`, beim erfassten Review und bei den **abschließenden** Fortschritts-Events (`POLISHED`, `REVIEWED`, `APPROVED`, `CHANGES_REQUESTED`, `CONCERNED`, `UNCLAIMED`, `MERGED`) — die Zwischen-Abschlüsse `ANALYZED`/`PROCESSED`/`PUBLISHED` beenden ihn bewusst **nicht**, weil dieselbe Einheit danach weiterläuft. Das ist der praktische Grund, das jeweils passende Abschluss-Event tatsächlich abzusetzen: ohne es bleibt „arbeitet daran" bis zum Ablauf der (kurzen) TTL stehen, obwohl niemand mehr arbeitet. Bricht ein Lauf hart ab, greift genau diese TTL als Auffangnetz.
 

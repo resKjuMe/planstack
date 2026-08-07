@@ -19,7 +19,12 @@ use Illuminate\Http\Resources\Json\JsonResource;
  *
  * Priority fix → review → work (see {@see NextActionResolver}). The response is
  * the reserved task (decorated, PR always included) under `data`, plus top-level
- * `action` and `reason`. Returns 200 `{"action": "none"}` when nothing is due.
+ * `action`, `reason` and `session` (the label the worker must send). Returns 200
+ * `{"action": "none"}` when nothing is due.
+ *
+ * For several parallel workers use {@see NextActionsController} (plural): it hands
+ * out `count` units on distinct tasks in one call. This endpoint stays as-is — the
+ * single-worker shorthand older skills already call.
  */
 class NextActionController extends ApiController
 {
@@ -45,6 +50,10 @@ class NextActionController extends ApiController
         return $resource->additional([
             'action' => $result['action'],
             'reason' => $result['reason'],
+            // Das Session-Label des Workers, der diese Einheit ausführt: damit ist die
+            // Reservierung mit DEM gestempelt, der arbeitet, und nicht mit dem
+            // Aufrufer. Der Worker sendet genau diesen Wert in X-Planstack-Session.
+            'session' => $result['session'],
         ]);
     }
 

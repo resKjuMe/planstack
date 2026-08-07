@@ -156,14 +156,33 @@ class TrackClaimSession
 
         // Frisch aus der DB lesen: die Route-Bindung hat den Task VOR dem
         // Controller geladen, der Claim kann also im selben Request entstanden
-        // sein (POST .../claim). Nur die beiden Felder holen, kein ganzes Modell.
-        $held = Task::whereKey($task->id)
-            ->where('claimed_by_id', $userId)
-            ->where('claim_session_label', $label)
-            ->exists();
+        // sein (POST .../claim). Nur die nötigen Felder holen, kein ganzes Modell.
+        $current = Task::whereKey($task->id)
+            ->first(['id', 'claimed_by_id', 'claim_session_label', 'fix_leased_by']);
+
+        $held = $current !== null
+            && $current->claimed_by_id === $userId
+            && $current->claim_session_label === $label;
 
         if ($held) {
             $attrs['claim_seen_at'] = $now;
+        }
+
+        // **Fix-Lease mitziehen.** Das Lease von `next-action(s)` läuft nach
+        // fix_lease_minutes ab, damit ein toter Worker den PR freigibt. Ein LEBENDER
+        // Worker verliert es damit aber mitten in der Arbeit — bei parallelen Workern
+        // heißt das: ein zweiter bekommt denselben PR. Also verlängert jeder Zugriff
+        // dieser Session das Lease, genau wie beim Claim-Heartbeat. Umgekehrt gibt das
+        // Ende der Arbeitseinheit es sofort frei, statt es ablaufen zu lassen — der
+        // nächste Worker kann den PR dann direkt übernehmen.
+        if ($current?->fix_leased_by === $userId) {
+            $attrs['fix_lease_expires_at'] = $this->session->finished()
+                ? null
+                : $now->copy()->addMinutes(max(1, (int) config('planstack.fix_lease_minutes', 15)));
+
+            if ($this->session->finished()) {
+                $attrs['fix_leased_by'] = null;
+            }
         }
 
         Task::whereKey($task->id)->update($attrs);
@@ -213,18 +232,13 @@ class TrackClaimSession
     /**
      * Label mit den Initialen des Betreibers davor („CM fix TXSAFE/GAP-MassRun").
      *
-     * Auf die Spaltenbreite (60) gekuerzt, und zwar am LABEL, nicht am Praefix: die
-     * Initialen sind der Teil, der die Sessions unterscheidbar macht, und wuerden
-     * beim Abschneiden von rechts als Erstes wegfallen.
+     * Liegt in {@see ClaimSession}, weil auch der NextActionResolver stempelt (er
+     * reserviert Tasks fuer parallele Worker) — beide Wege muessen dasselbe Format
+     * erzeugen, sonst wechselt der Vermerk beim ersten eigenen Aufruf des Workers
+     * scheinbar die Session.
      */
     private static function withInitials(string $label, ?User $user): string
     {
-        $initials = $user?->initials() ?? '';
-
-        if ($initials === '') {
-            return mb_substr($label, 0, 60);
-        }
-
-        return mb_substr($initials.' '.$label, 0, 60);
+        return ClaimSession::withInitials($label, $user);
     }
 }

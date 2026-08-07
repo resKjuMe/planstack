@@ -98,6 +98,7 @@ class FaqController extends Controller
                 ['GET /projects/{p}/tasks', 'cmd_auto_3', '⚙ Work (Bearbeite 44 %) DCE · C27 — 4/9 Dateien'],
                 ['POST /projects/{p}/claim-next', 'cmd_auto_4', '⚙ Work (Analyse 60 %) DCE · C27 — 3/5 Teilschritte'],
                 ['POST /projects/{p}/next-action', 'cmd_auto_5', null],
+                ['POST /projects/{p}/next-actions', 'cmd_auto_7', '⚙ Auto (3/3 Worker) DCE — 12 erledigt │ #1 C27 Bearbeite 44 % — 4/9 Dateien'],
                 ['—', 'cmd_auto_6', '⏳ Auto (Idle) DCE · — warte 5 min'],
             ], '⚙ Auto › Work (Bearbeite 44 %) DCE · C27 — 4/9 Dateien'],
             ['/planstack review [<PROJECT>] [<TASK>]', 'cmd_review_purpose', [
