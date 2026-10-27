@@ -33,6 +33,59 @@ export function StackedIcon({ pr, strings, className = 'h-3.5 w-3.5' }) {
     );
 }
 
+// „vor 3 min“; ab einer Woche das Datum.
+export function formatRelative(iso, now, strings) {
+    if (!iso) return '—';
+    const minutes = Math.max(0, Math.floor((now - new Date(iso)) / 60000));
+    if (minutes < 1) return strings.just_now;
+    if (minutes < 60) return strings.ago_minutes.replace(':n', minutes);
+    if (minutes < 24 * 60) return strings.ago_hours.replace(':n', Math.floor(minutes / 60));
+    if (minutes < 7 * 24 * 60) return strings.ago_days.replace(':n', Math.floor(minutes / (24 * 60)));
+    return formatDate(iso);
+}
+
+const COLUMN_ICONS = {
+    // Flamme: Risiko der Änderung
+    criticality: <path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.07-2.14-.22-4.05 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.15.43-2.29 1-3a2.5 2.5 0 0 0 2.5 2.5z" />,
+    // Funken: KI-Prüfbarkeit
+    aiReviewability: <><path d="M9.94 15.5a2 2 0 0 0-1.44-1.44l-6.13-1.58a.5.5 0 0 1 0-.96l6.13-1.58a2 2 0 0 0 1.44-1.44l1.58-6.13a.5.5 0 0 1 .96 0l1.58 6.13a2 2 0 0 0 1.44 1.44l6.13 1.58a.5.5 0 0 1 0 .96l-6.13 1.58a2 2 0 0 0-1.44 1.44l-1.58 6.13a.5.5 0 0 1-.96 0z" /><path d="M20 3v4M22 5h-4" /></>,
+    // Person: menschliches Review nötig
+    need: <><circle cx="12" cy="8" r="4" /><path d="M4 21a8 8 0 0 1 16 0" /></>,
+    // Uhr: Zeitpunkt des Reviews
+    reviewedAt: <><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></>,
+};
+
+export function ColumnIcon({ name }) {
+    return (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="inline h-4 w-4" aria-hidden="true">
+            {COLUMN_ICONS[name]}
+        </svg>
+    );
+}
+
+// Kompakt für die Liste: Haken bzw. Kreuz, der Text im Tooltip.
+export function DecisionIcon({ decision, strings }) {
+    const approve = decision === 'APPROVE';
+    return (
+        <span
+            title={strings[`decision_${decision}`] ?? decision}
+            className={`inline-flex h-5 w-5 items-center justify-center rounded-full ${approve
+                ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300'
+                : 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300'}`}
+        >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="h-3 w-3" aria-hidden="true">
+                {approve ? <path d="M5 12l5 5l10 -10" /> : <path d="M18 6L6 18M6 6l12 12" />}
+            </svg>
+        </span>
+    );
+}
+
+// Startet über den lokalen claudetask:-Handler eine PowerShell mit Claude und
+// ps-review für diesen PR (Einrichtung: /claudetask/setup).
+export function reviewCommandHref(pr) {
+    return `claudetask:${encodeURIComponent(`/ps-review ${pr.githubUrl}`)}`;
+}
+
 export function StateBadge({ state, strings }) {
     const tone = {
         OPEN: 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300',
@@ -52,6 +105,17 @@ export function RunningBadge({ running, strings }) {
             <span className="h-1.5 w-1.5 rounded-full bg-sky-500 animate-pulse" />
             {strings.review_running.replace(':time', formatDate(running.startedAt))}
             {running.reviewer ? ` · ${running.reviewer}` : ''}
+        </span>
+    );
+}
+
+// Kompakt für die Liste: nur der pulsierende Punkt, der Text im Tooltip.
+export function RunningDot({ running, strings }) {
+    const text = strings.review_running.replace(':time', formatDate(running.startedAt)) + (running.reviewer ? ` · ${running.reviewer}` : '');
+    return (
+        <span title={text} className="relative inline-flex h-2 w-2 shrink-0">
+            <span className="absolute inline-flex h-full w-full rounded-full bg-sky-400 opacity-75 animate-ping" />
+            <span className="relative inline-flex h-2 w-2 rounded-full bg-sky-500" />
         </span>
     );
 }
@@ -79,7 +143,7 @@ function reviewersTitle(approvals, strings) {
 export function ApprovalChips({ approvals, strings }) {
     const chip = 'rounded px-1.5 py-0.5 font-mono text-[11px]';
     return (
-        <span className="inline-flex flex-wrap items-center gap-1" title={`${reviewersTitle(approvals, strings)}\n\n${strings.approvals_hint}`}>
+        <span className="inline-flex items-center gap-1 whitespace-nowrap" title={`${reviewersTitle(approvals, strings)}\n\n${strings.approvals_hint}`}>
             <span className={`${chip} ${approvals.approved >= approvals.required ? okTone : openTone}`}>
                 {approvals.approved >= approvals.required ? '✓ ' : ''}{approvals.approved}/{approvals.required}
             </span>
@@ -163,8 +227,8 @@ export function ScoreBar({ value, title, tone }) {
     const bad = tone === 'risk' ? value : 100 - value;
     const color = bad >= 67 ? 'bg-red-500' : bad >= 34 ? 'bg-amber-500' : 'bg-green-500';
     return (
-        <div className="flex items-center gap-2 min-w-[6.5rem]" title={title ?? undefined}>
-            <div className="h-1.5 w-16 rounded bg-gray-200 dark:bg-gray-700 overflow-hidden">
+        <div className="flex items-center gap-2" title={title ?? undefined}>
+            <div className="h-1.5 w-12 rounded bg-gray-200 dark:bg-gray-700 overflow-hidden">
                 <div className={`h-full ${color}`} style={{ width: `${value}%` }} />
             </div>
             <span className="font-mono text-xs text-gray-700 dark:text-gray-300">{value}</span>

@@ -70,6 +70,13 @@ return [
     'approval_outdated' => 'älterer Commit',
     'no_critical_files' => 'keine kritischen Dateien',
     'stacked_on' => 'Gestapelt auf :branch',
+    'section_running' => 'Review läuft',
     'section_needs_review' => 'Review nötig',
     'section_reviewed' => 'Reviewt, seitdem nichts gepusht',
+    'section_approved' => 'Ausreichend approvt',
+    'rereview' => 'Seit dem Review gepusht – klicken startet ps-review in Claude (PowerShell)',
+    'just_now' => 'gerade eben',
+    'ago_minutes' => 'vor :n min',
+    'ago_hours' => 'vor :n h',
+    'ago_days' => 'vor :n d',
 ];

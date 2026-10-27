@@ -6,6 +6,26 @@
 return [
     'releases' => [
         [
+            'version' => '2.7.1',
+            'date' => '2026-10-27',
+            'tldr' => [
+                'de' => ['Kompaktere PR-Liste, vier Gruppen'],
+                'en' => ['More compact PR list, four groups'],
+            ],
+            'changes' => [
+                'de' => [
+                    'Neu: „Pull Requests“ zeigt jeden PR in einer Zeile. Empfehlung und Spaltenköpfe sind Symbole, die Details stehen im Tooltip; der Review-Zeitpunkt steht als „vor 3 min“.',
+                    'Neu: Die Liste hat vier Gruppen: Review läuft, Review nötig, reviewt (seitdem nichts gepusht) und ausreichend approvt.',
+                    'Neu: Wurde seit deinem Review gepusht, startet ein Klick auf ↻ ps-review für den PR in Claude (über den claudetask-Handler).',
+                ],
+                'en' => [
+                    'New: "Pull requests" shows each PR on a single line. Recommendation and column headers are icons with details in the tooltip; the review time reads like "3 min ago".',
+                    'New: The list has four groups: review running, review needed, reviewed (nothing pushed since) and sufficiently approved.',
+                    'New: If something was pushed since your review, clicking ↻ starts ps-review for the PR in Claude (via the claudetask handler).',
+                ],
+            ],
+        ],
+        [
             'version' => '2.7.0',
             'date' => '2026-10-27',
             'tldr' => [
