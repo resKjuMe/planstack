@@ -101,6 +101,11 @@ class PullRequest extends Model
         return "https://github.com/{$this->repository}/pull/{$this->pull_request_id}";
     }
 
+    public static function loginFor(User $user): string
+    {
+        return $user->slug.self::LOGIN_SUFFIX;
+    }
+
     /**
      * Planstack-User der Organisation zum GitHub-Login, oder null.
      */

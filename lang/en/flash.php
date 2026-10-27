@@ -39,6 +39,8 @@ return [
     'pr_sync_no_token' => 'no GITHUB_TOKEN set',
     'pr_sync_none' => 'No open PRs with a PR number to reconcile.',
     'pr_sync_summary' => ':merged PR(s) tagged as merged · :checked checked',
+    'pull_request_sync_none' => 'No open PRs to sync.',
+    'pull_request_sync_summary' => ':updated PR(s) updated · :created new',
     'project_created' => 'Project ":alias" was created.',
     'project_deleted' => 'Project deleted.',
     'project_updated' => 'Project updated.',

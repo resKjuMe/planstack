@@ -6,8 +6,11 @@ use App\Models\PullRequest;
 use App\Models\PullRequestApproval;
 use App\Models\PullRequestReview;
 use App\Models\ReviewFinding;
+use App\Models\User;
 use App\Support\PullRequestApprovals;
+use App\Support\PullRequestStateSync;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
@@ -28,14 +31,9 @@ class PullRequestController extends Controller
     public function index(Request $request): InertiaResponse
     {
         $user = $request->user();
-        $state = in_array($request->query('state'), self::STATES, true) ? $request->query('state') : 'open';
-        $role = in_array($request->query('role'), self::ROLES, true) ? $request->query('role') : 'reviewed';
+        [$state, $role] = $this->filters($request);
 
-        $pullRequests = PullRequest::query()
-            ->where('organization_id', $user->organization_id)
-            ->when($role === 'reviewed', fn (Builder $q) => $q->whereHas('reviews', fn (Builder $r) => $r->where('reviewer_id', $user->id)))
-            ->when($role === 'authored', fn (Builder $q) => $q->where('author_id', $user->id))
-            ->when($state !== 'all', fn (Builder $q) => $q->where('state', strtoupper($state)))
+        $pullRequests = $this->listQuery($user, $role, $state)
             ->with(['author', 'latestReview', 'runningReview.reviewer', 'approvals.user'])
             ->withCount('reviews')
             ->latest('updated_at')
@@ -58,8 +56,42 @@ class PullRequestController extends Controller
                     'reviewer' => $pr->runningReview->reviewer?->name,
                 ] : null,
             ])->values(),
+            'syncUrl' => route('pull-requests.sync', ['state' => $state, 'role' => $role]),
+            'flash' => ['status' => session('status'), 'error' => session('error')],
             'strings' => __('pull_requests'),
         ]);
+    }
+
+    /**
+     * Gleicht nur offene PRs mit GitHub ab: „reviewt“ die der aktuellen Liste,
+     * „geschrieben“ alle eigenen, auch die Planstack noch nicht kennt.
+     */
+    public function sync(Request $request, PullRequestStateSync $sync): RedirectResponse
+    {
+        $user = $request->user();
+        [$state, $role] = $this->filters($request);
+        $back = redirect()->route('pull-requests.index', ['state' => $state, 'role' => $role]);
+
+        if ($role === 'authored') {
+            $result = $sync->syncAuthored($user);
+        } else {
+            $open = $this->listQuery($user, $role, $state)->where('state', 'OPEN')->limit(self::LIMIT)->get();
+            if ($open->isEmpty()) {
+                return $back->with('status', __('flash.pull_request_sync_none'));
+            }
+            $result = $sync->sync($open);
+        }
+
+        if ($result['tokenMissing']) {
+            return $back->with('error', __('flash.pr_sync_no_token'));
+        }
+
+        $message = __('flash.pull_request_sync_summary', ['updated' => $result['prs'], 'created' => $result['created']]);
+        if ($result['errors'] > 0) {
+            return $back->with('error', $message.' · '.__('flash.pr_sync_errors', ['count' => $result['errors']]).': '.implode('; ', $result['failures']));
+        }
+
+        return $back->with('status', $message);
     }
 
     public function show(Request $request, PullRequest $pullRequest): InertiaResponse
@@ -107,6 +139,26 @@ class PullRequestController extends Controller
             'backUrl' => route('pull-requests.index'),
             'strings' => __('pull_requests'),
         ]);
+    }
+
+    /**
+     * @return array{0: string, 1: string} Status, Rolle
+     */
+    private function filters(Request $request): array
+    {
+        return [
+            in_array($request->input('state'), self::STATES, true) ? $request->input('state') : 'open',
+            in_array($request->input('role'), self::ROLES, true) ? $request->input('role') : 'reviewed',
+        ];
+    }
+
+    private function listQuery(User $user, string $role, string $state): Builder
+    {
+        return PullRequest::query()
+            ->where('organization_id', $user->organization_id)
+            ->when($role === 'reviewed', fn (Builder $q) => $q->whereHas('reviews', fn (Builder $r) => $r->where('reviewer_id', $user->id)))
+            ->when($role === 'authored', fn (Builder $q) => $q->where('author_id', $user->id))
+            ->when($state !== 'all', fn (Builder $q) => $q->where('state', strtoupper($state)));
     }
 
     private function pullRequestRow(PullRequest $pr): array

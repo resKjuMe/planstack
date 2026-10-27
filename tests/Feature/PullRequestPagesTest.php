@@ -6,6 +6,7 @@ use App\Models\Organization;
 use App\Models\PullRequest;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Http;
 use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
 
@@ -188,6 +189,75 @@ class PullRequestPagesTest extends TestCase
             ->assertInertia(fn (Assert $page) => $page
                 ->where('pullRequest.approvals.reviewers.0.name', 'Vera Rolf')
                 ->where('pullRequest.approvals.reviewers.0.outdated', true));
+    }
+
+    private function node(int $number, array $attributes = []): array
+    {
+        return array_merge([
+            'number' => $number, 'state' => 'OPEN', 'mergedAt' => null, 'closedAt' => null,
+            'title' => "PR {$number}", 'headRefOid' => 'ccc', 'additions' => 3, 'deletions' => 1, 'changedFiles' => 1,
+            'commitCount' => ['totalCount' => 1], 'comments' => ['totalCount' => 0],
+        ], $attributes);
+    }
+
+    public function test_sync_of_reviewed_pull_requests_covers_only_the_open_ones_of_the_list(): void
+    {
+        config(['planstack.github_token' => 'test-token', 'planstack.github_api' => 'https://api.github.com']);
+        $me = $this->member('Ich Selbst');
+        $other = $this->member('Jemand Anderes');
+
+        $this->review($mine = $this->pullRequest(1), $me);
+        $this->review($this->pullRequest(2, ['state' => 'MERGED']), $me);
+        $this->review($this->pullRequest(3), $other);
+
+        Http::fake(['api.github.com/graphql' => Http::response(['data' => ['repository' => [
+            'pr1' => $this->node(1, ['state' => 'MERGED', 'mergedAt' => '2026-10-27T09:00:00Z']),
+        ]]])]);
+
+        $this->actingAs($me)
+            ->post(route('pull-requests.sync', ['role' => 'reviewed', 'state' => 'open']))
+            ->assertRedirect(route('pull-requests.index', ['state' => 'open', 'role' => 'reviewed']))
+            ->assertSessionHas('status');
+
+        $this->assertSame('MERGED', $mine->refresh()->state->value);
+        Http::assertSentCount(1);
+        Http::assertSent(fn ($request) => str_contains($request['query'], 'pr1:')
+            && ! str_contains($request['query'], 'pr2:')
+            && ! str_contains($request['query'], 'pr3:'));
+    }
+
+    public function test_sync_of_authored_pull_requests_adds_unknown_ones_and_closes_vanished_ones(): void
+    {
+        config(['planstack.github_token' => 'test-token', 'planstack.github_api' => 'https://api.github.com']);
+        $me = $this->member('Ich Selbst');
+        $known = $this->pullRequest(4, ['author_id' => $me->id]);
+        $vanished = $this->pullRequest(5, ['author_id' => $me->id]);
+
+        Http::fake(fn ($request) => str_contains($request['query'], 'search(')
+            ? Http::response(['data' => ['search' => [
+                'pageInfo' => ['hasNextPage' => false, 'endCursor' => null],
+                'nodes' => [
+                    $this->node(4, ['title' => 'PR 4 neu', 'repository' => ['nameWithOwner' => 'clockodo-intern/main'], 'author' => ['login' => 'ich-selbst_clockodo'], 'headRefName' => 'feature/4', 'baseRefName' => 'main', 'body' => '', 'createdAt' => '2026-10-20T08:00:00Z']),
+                    $this->node(9, ['repository' => ['nameWithOwner' => 'clockodo-intern/app'], 'author' => ['login' => 'ich-selbst_clockodo'], 'headRefName' => 'feature/9', 'baseRefName' => 'develop', 'body' => 'Text', 'createdAt' => '2026-10-26T08:00:00Z']),
+                ],
+            ]]])
+            : Http::response(['data' => ['repository' => [
+                'pr5' => $this->node(5, ['state' => 'CLOSED', 'closedAt' => '2026-10-27T09:00:00Z']),
+            ]]]));
+
+        $this->actingAs($me)
+            ->post(route('pull-requests.sync', ['role' => 'authored', 'state' => 'open']))
+            ->assertSessionHas('status');
+
+        Http::assertSent(fn ($request) => ($request['variables']['q'] ?? null) === 'is:pr is:open author:ich-selbst_clockodo');
+        $this->assertSame('PR 4 neu', $known->refresh()->title);
+        $this->assertSame('CLOSED', $vanished->refresh()->state->value);
+
+        $created = PullRequest::query()->where('repository', 'clockodo-intern/app')->where('pull_request_id', 9)->sole();
+        $this->assertSame($me->id, $created->author_id);
+        $this->assertSame('feature/9', $created->branch);
+        $this->assertSame('develop', $created->target_branch);
+        $this->assertSame($this->organization->id, $created->organization_id);
     }
 
     public function test_detail_page_of_another_organization_is_not_found(): void

@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
-import { Head, Link } from '@inertiajs/react';
+import { Head, Link, router } from '@inertiajs/react';
 import AppShell from '../AppShell.jsx';
+import Flash from '../components/Flash.jsx';
 import PageBands from '../components/PageBands.jsx';
 import { ApprovalChips, DecisionBadge, FindingCounts, RunningBadge, ScoreBar, StateBadge, formatDate } from '../components/PullRequestParts.jsx';
 
@@ -32,8 +33,14 @@ function compare(a, b, key, dir) {
     return dir === 'asc' ? result : -result;
 }
 
-export default function PullRequestsIndex({ filters, filterUrls, pullRequests, strings }) {
+export default function PullRequestsIndex({ filters, filterUrls, syncUrl, flash, pullRequests, strings }) {
     const [sort, setSort] = useState({ key: 'need', dir: 'desc' });
+    const [syncing, setSyncing] = useState(false);
+    const sync = () => router.post(syncUrl, {}, {
+        preserveScroll: true,
+        onStart: () => setSyncing(true),
+        onFinish: () => setSyncing(false),
+    });
     const rows = useMemo(
         () => [...pullRequests].sort((a, b) => compare(a, b, sort.key, sort.dir)),
         [pullRequests, sort],
@@ -56,9 +63,21 @@ export default function PullRequestsIndex({ filters, filterUrls, pullRequests, s
                             <h2 className="font-semibold text-xl text-gray-800 dark:text-gray-100 leading-tight">{strings.title}</h2>
                             <p className="text-sm text-gray-500 dark:text-gray-400">{strings.subtitle}</p>
                         </div>
-                        <div className="flex flex-wrap gap-2">
+                        <div className="flex flex-wrap items-center gap-2">
                             <Pills current={filters.role} urls={filterUrls.role} label={(r) => strings[`role_${r}`]} />
                             <Pills current={filters.state} urls={filterUrls.state} label={(s) => strings[`state_${s}`]} />
+                            <button
+                                type="button"
+                                onClick={sync}
+                                disabled={syncing}
+                                title={strings[`sync_hint_${filters.role}`]}
+                                className="inline-flex items-center gap-1.5 rounded-md bg-white dark:bg-gray-800 px-3 py-1.5 text-xs font-medium text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-600 shadow-sm hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-60 disabled:cursor-wait"
+                            >
+                                <svg className={`h-3.5 w-3.5 text-gray-500 dark:text-gray-400 ${syncing ? 'animate-spin' : ''}`} viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                                    <path fillRule="evenodd" d="M15.312 11.424a5.5 5.5 0 01-9.201 2.466l-.312-.311h2.433a.75.75 0 000-1.5H3.989a.75.75 0 00-.75.75v4.242a.75.75 0 001.5 0v-2.43l.31.31a7 7 0 0011.712-3.138.75.75 0 00-1.449-.39zm1.23-3.723a.75.75 0 00.219-.53V2.929a.75.75 0 00-1.5 0V5.36l-.31-.31A7 7 0 003.239 8.188a.75.75 0 101.448.389A5.5 5.5 0 0113.89 6.11l.311.311h-2.432a.75.75 0 000 1.5h4.243a.75.75 0 00.53-.219z" clipRule="evenodd" />
+                                </svg>
+                                {syncing ? strings.syncing : strings.sync}
+                            </button>
                         </div>
                     </div>
                 }
@@ -66,6 +85,7 @@ export default function PullRequestsIndex({ filters, filterUrls, pullRequests, s
 
             <div className="py-8">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                    <Flash status={flash?.status} error={flash?.error} />
                     {rows.length === 0 ? (
                         <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-8 text-center text-gray-500 dark:text-gray-400">
                             {strings.empty}

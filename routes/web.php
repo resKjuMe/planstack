@@ -164,8 +164,9 @@ Route::middleware('auth')->group(function () {
         Route::get('/commands', [FaqController::class, 'commands'])->name('commands');
     });
 
-    // Pull Requests aus ps-review: Liste (eigene, Default offen) + Detailseite.
+    // Pull Requests aus ps-review: Liste (eigene, Default offen), GitHub-Sync + Detailseite.
     Route::get('pull-requests', [PullRequestController::class, 'index'])->name('pull-requests.index');
+    Route::post('pull-requests/sync', [PullRequestController::class, 'sync'])->name('pull-requests.sync');
     Route::get('pull-requests/{pullRequest}', [PullRequestController::class, 'show'])->name('pull-requests.show');
 
     // Teams

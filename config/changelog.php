@@ -6,6 +6,22 @@
 return [
     'releases' => [
         [
+            'version' => '2.6.1',
+            'date' => '2026-10-27',
+            'tldr' => [
+                'de' => ['Pull Requests per Knopfdruck abgleichen'],
+                'en' => ['Sync pull requests on demand'],
+            ],
+            'changes' => [
+                'de' => [
+                    'Neu: „Pull Requests“ hat oben einen Button „Sync“. Unter „Von mir reviewt“ holt er den aktuellen Stand der offenen PRs in der Liste von GitHub. Unter „Von mir geschrieben“ holt er alle deine offenen PRs – auch solche, die Planstack noch nicht kennt.',
+                ],
+                'en' => [
+                    'New: "Pull requests" has a "Sync" button at the top. Under "Reviewed by me" it fetches the current state of the open PRs in the list from GitHub. Under "Authored by me" it fetches all your open PRs – including ones Planstack does not know yet.',
+                ],
+            ],
+        ],
+        [
             'version' => '2.6.0',
             'date' => '2026-10-27',
             'tldr' => [
