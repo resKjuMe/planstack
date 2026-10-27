@@ -70,4 +70,6 @@ return [
     'approval_outdated' => 'older commit',
     'no_critical_files' => 'no critical files',
     'stacked_on' => 'Stacked on :branch',
+    'section_needs_review' => 'Needs review',
+    'section_reviewed' => 'Reviewed, nothing pushed since',
 ];

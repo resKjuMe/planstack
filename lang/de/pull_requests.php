@@ -70,4 +70,6 @@ return [
     'approval_outdated' => 'älterer Commit',
     'no_critical_files' => 'keine kritischen Dateien',
     'stacked_on' => 'Gestapelt auf :branch',
+    'section_needs_review' => 'Review nötig',
+    'section_reviewed' => 'Reviewt, seitdem nichts gepusht',
 ];
