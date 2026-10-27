@@ -4,7 +4,7 @@ import AppShell from '../AppShell.jsx';
 import { useNow } from '../../board/useNow.js';
 import Flash from '../components/Flash.jsx';
 import PageBands from '../components/PageBands.jsx';
-import { ApprovalChips, ColumnIcon, StackedIcon, DecisionIcon, FindingCounts, RunningDot, ScoreBar, StateBadge, formatDate, formatRelative, reviewCommandHref } from '../components/PullRequestParts.jsx';
+import { ApprovalChips, ColumnIcon, StackedIcon, DecisionIcon, FindingCounts, RunningDot, ScoreBar, StateBadge, formatDate, formatRelative, ReviewStartLink } from '../components/PullRequestParts.jsx';
 
 // Eigene Pull Requests aus ps-review. Filter (Status, Rolle) laufen über den
 // Server, Aufteilung und Sortierung clientseitig. Gruppen: laufende Reviews, was
@@ -246,9 +246,7 @@ function Row({ pr, level, canShare, strings }) {
                     <td className={cell}>
                         <span className="inline-flex items-center gap-1.5">
                             <DecisionIcon decision={review.decision} strings={strings} />
-                            {review.stale && (
-                                <a href={reviewCommandHref(pr)} title={strings.rereview} className="text-amber-600 dark:text-amber-400 hover:text-amber-700 dark:hover:text-amber-300">↻</a>
-                            )}
+                            <ReviewStartLink pr={pr} strings={strings} />
                         </span>
                     </td>
                     <td className={cell}><FindingCounts review={review} /></td>
@@ -258,7 +256,12 @@ function Row({ pr, level, canShare, strings }) {
                     <td className={`${cell} text-xs text-gray-500 dark:text-gray-400`} title={formatDate(review.reviewedAt)}>{formatRelative(review.reviewedAt, now, strings)}</td>
                 </>
             ) : (
-                <td colSpan={6} className={`${cell} text-xs text-gray-400 dark:text-gray-500`}>{pr.running ? '' : strings.not_reviewed}</td>
+                <td colSpan={6} className={`${cell} text-xs text-gray-400 dark:text-gray-500`}>
+                    <span className="inline-flex items-center gap-1.5">
+                        <ReviewStartLink pr={pr} strings={strings} />
+                        {pr.running ? '' : strings.not_reviewed}
+                    </span>
+                </td>
             )}
         </tr>
     );
