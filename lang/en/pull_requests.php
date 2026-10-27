@@ -50,4 +50,8 @@ return [
     'thoroughness' => 'Thoroughness',
     'model' => 'Model',
     'reviews_count' => ':count reviews',
+    'review_running' => 'Review running since :time',
+    'review_abandoned' => 'Abandoned',
+    'started' => 'Started',
+    'duration' => 'Duration',
 ];

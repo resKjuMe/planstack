@@ -6,6 +6,22 @@
 return [
     'releases' => [
         [
+            'version' => '2.5.1',
+            'date' => '2026-10-27',
+            'tldr' => [
+                'de' => ['Laufende Reviews sichtbar'],
+                'en' => ['Running reviews visible'],
+            ],
+            'changes' => [
+                'de' => [
+                    'Neu: Sobald ps-review einen PR prüft, zeigt „Pull Requests“ das Review als laufend an. Auf der Detailseite steht bei jedem Review, wie lange es gedauert hat. Ein Review, das nach zwei Stunden nicht abgeschlossen ist, gilt als abgebrochen.',
+                ],
+                'en' => [
+                    'New: As soon as ps-review starts checking a PR, "Pull requests" shows the review as running. The detail page shows how long each review took. A review that has not finished after two hours counts as abandoned.',
+                ],
+            ],
+        ],
+        [
             'version' => '2.5.0',
             'date' => '2026-10-27',
             'tldr' => [

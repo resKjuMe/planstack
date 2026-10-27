@@ -50,4 +50,8 @@ return [
     'thoroughness' => 'Gründlichkeit',
     'model' => 'Modell',
     'reviews_count' => ':count Reviews',
+    'review_running' => 'Review läuft seit :time',
+    'review_abandoned' => 'Abgebrochen',
+    'started' => 'Gestartet',
+    'duration' => 'Dauer',
 ];

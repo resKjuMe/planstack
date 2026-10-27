@@ -48,6 +48,8 @@ class PullRequestPagesTest extends TestCase
     {
         $review = $pullRequest->reviews()->create(array_merge([
             'reviewer_id' => $reviewer->id,
+            'review_started_at' => now()->subMinutes(10),
+            'review_finished_at' => now(),
             'decision' => 'APPROVE',
             'criticality' => 50,
             'ai_reviewability' => 50,
@@ -119,6 +121,51 @@ class PullRequestPagesTest extends TestCase
                 ->has('reviews', 1)
                 ->where('reviews.0.reviewer', 'Ich Selbst')
                 ->where('reviews.0.findings.0.messageHtml', "<p><strong>fett</strong></p>\n"));
+    }
+
+    public function test_a_running_review_is_shown_next_to_the_last_finished_one(): void
+    {
+        $me = $this->member('Ich Selbst');
+        $pullRequest = $this->pullRequest(1);
+        $this->review($pullRequest, $me, ['criticality' => 80]);
+        $pullRequest->reviews()->create(['reviewer_id' => $me->id, 'review_started_at' => now()]);
+
+        $this->actingAs($me)
+            ->get(route('pull-requests.index'))
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('pullRequests.0.review.criticality', 80)
+                ->where('pullRequests.0.review.status', 'finished')
+                ->where('pullRequests.0.running.reviewer', 'Ich Selbst'));
+    }
+
+    public function test_a_first_review_in_progress_lists_the_pull_request_without_rating(): void
+    {
+        $me = $this->member('Ich Selbst');
+        $this->pullRequest(1)->reviews()->create(['reviewer_id' => $me->id, 'review_started_at' => now()]);
+
+        $this->actingAs($me)
+            ->get(route('pull-requests.index'))
+            ->assertInertia(fn (Assert $page) => $page
+                ->has('pullRequests', 1)
+                ->where('pullRequests.0.review', null)
+                ->whereNot('pullRequests.0.running', null));
+    }
+
+    public function test_an_unfinished_review_older_than_two_hours_counts_as_abandoned(): void
+    {
+        $me = $this->member('Ich Selbst');
+        $pullRequest = $this->pullRequest(1);
+        $pullRequest->reviews()->create(['reviewer_id' => $me->id, 'review_started_at' => now()->subHours(3)]);
+
+        $this->actingAs($me)
+            ->get(route('pull-requests.index'))
+            ->assertInertia(fn (Assert $page) => $page->where('pullRequests.0.running', null));
+
+        $this->actingAs($me)
+            ->get(route('pull-requests.show', $pullRequest))
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('reviews.0.status', 'abandoned')
+                ->where('reviews.0.findings', []));
     }
 
     public function test_detail_page_of_another_organization_is_not_found(): void

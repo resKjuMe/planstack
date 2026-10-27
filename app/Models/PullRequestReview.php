@@ -3,15 +3,21 @@
 namespace App\Models;
 
 use App\Enums\ReviewRecommendation;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class PullRequestReview extends Model
 {
+    /** Ein Review, das so lange ohne Abschluss ist, gilt als abgebrochen. */
+    public const ABANDONED_AFTER_HOURS = 2;
+
     protected $fillable = [
         'pull_request_id',
         'reviewer_id',
+        'review_started_at',
+        'review_finished_at',
         'decision',
         'findings',
         'findings_critical',
@@ -31,6 +37,8 @@ class PullRequestReview extends Model
     protected function casts(): array
     {
         return [
+            'review_started_at' => 'datetime',
+            'review_finished_at' => 'datetime',
             'decision' => ReviewRecommendation::class,
             'findings' => 'integer',
             'findings_critical' => 'integer',
@@ -56,12 +64,38 @@ class PullRequestReview extends Model
         return $this->hasMany(ReviewFinding::class);
     }
 
+    public function scopeFinished(Builder $query): void
+    {
+        $query->whereNotNull('review_finished_at');
+    }
+
+    public function scopeRunning(Builder $query): void
+    {
+        $query->whereNull('review_finished_at')
+            ->where('review_started_at', '>=', now()->subHours(self::ABANDONED_AFTER_HOURS));
+    }
+
+    public function isFinished(): bool
+    {
+        return $this->review_finished_at !== null;
+    }
+
+    public function isAbandoned(): bool
+    {
+        return ! $this->isFinished()
+            && ($this->review_started_at === null || $this->review_started_at->lt(now()->subHours(self::ABANDONED_AFTER_HOURS)));
+    }
+
     /**
      * Wie dringend ein menschliches Review ist: hohes Risiko bei niedriger
-     * KI-Prüfbarkeit zuerst (0–10000).
+     * KI-Prüfbarkeit zuerst (0–10000); null, solange nicht bewertet.
      */
-    public function needScore(): int
+    public function needScore(): ?int
     {
+        if ($this->criticality === null || $this->ai_reviewability === null) {
+            return null;
+        }
+
         return $this->criticality * (100 - $this->ai_reviewability);
     }
 }

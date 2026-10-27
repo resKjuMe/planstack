@@ -129,14 +129,41 @@ class PullRequestApiTest extends TestCase
         $this->putJson('/api/pull-requests', $this->pullRequestPayload())->assertForbidden();
     }
 
-    public function test_store_review_derives_the_counts_from_the_findings(): void
+    /** @return array{0: int, 1: int} PR-ID und Review-ID */
+    private function startedReview(): array
+    {
+        $id = $this->putJson('/api/pull-requests', $this->pullRequestPayload())->json('data.id');
+        $reviewId = $this->postJson("/api/pull-requests/{$id}/reviews", ['model' => 'claude-opus-5-5'])->json('data.id');
+
+        return [$id, $reviewId];
+    }
+
+    public function test_start_review_records_a_running_review_without_rating(): void
     {
         $user = $this->member();
         Sanctum::actingAs($user);
         $id = $this->putJson('/api/pull-requests', $this->pullRequestPayload())->json('data.id');
 
-        $this->postJson("/api/pull-requests/{$id}/reviews", $this->reviewPayload())
+        $this->postJson("/api/pull-requests/{$id}/reviews", ['commit_sha' => 'abc1234', 'strictness' => 'strict'])
             ->assertCreated()
+            ->assertJsonPath('data.decision', null)
+            ->assertJsonPath('data.review_finished_at', null);
+
+        $review = PullRequest::findOrFail($id)->reviews()->sole();
+        $this->assertSame($user->id, $review->reviewer_id);
+        $this->assertNotNull($review->review_started_at);
+        $this->assertNull($review->criticality);
+        $this->assertSame('abc1234', $review->commit_sha);
+    }
+
+    public function test_finish_review_derives_the_counts_from_the_findings(): void
+    {
+        Sanctum::actingAs($this->member());
+        [$id, $reviewId] = $this->startedReview();
+
+        $this->putJson("/api/pull-requests/{$id}/reviews/{$reviewId}", $this->reviewPayload())
+            ->assertOk()
+            ->assertJsonPath('data.id', $reviewId)
             ->assertJsonPath('data.findings', 4)
             ->assertJsonPath('data.findings_critical', 1)
             ->assertJsonPath('data.findings_important', 1)
@@ -144,27 +171,49 @@ class PullRequestApiTest extends TestCase
             ->assertJsonPath('data.url', route('pull-requests.show', $id));
 
         $review = PullRequest::findOrFail($id)->reviews()->sole();
-        $this->assertSame($user->id, $review->reviewer_id);
-        $this->assertSame('claude-opus-5-5', $review->model);
+        $this->assertNotNull($review->review_finished_at);
+        $this->assertSame('REQUEST_CHANGES', $review->decision->value);
         $this->assertSame(1, $review->findingItems()->where('requires_po_decision', true)->count());
     }
 
-    public function test_store_review_accepts_a_review_without_findings(): void
+    public function test_finish_review_accepts_a_review_without_findings(): void
     {
         Sanctum::actingAs($this->member());
-        $id = $this->putJson('/api/pull-requests', $this->pullRequestPayload())->json('data.id');
+        [$id, $reviewId] = $this->startedReview();
 
-        $this->postJson("/api/pull-requests/{$id}/reviews", $this->reviewPayload(['decision' => 'APPROVE', 'findings' => []]))
-            ->assertCreated()
+        $this->putJson("/api/pull-requests/{$id}/reviews/{$reviewId}", $this->reviewPayload(['decision' => 'APPROVE', 'findings' => []]))
+            ->assertOk()
             ->assertJsonPath('data.findings', 0);
+    }
+
+    public function test_a_finished_review_cannot_be_finished_again(): void
+    {
+        Sanctum::actingAs($this->member());
+        [$id, $reviewId] = $this->startedReview();
+
+        $this->putJson("/api/pull-requests/{$id}/reviews/{$reviewId}", $this->reviewPayload())->assertOk();
+        $this->putJson("/api/pull-requests/{$id}/reviews/{$reviewId}", $this->reviewPayload())->assertConflict();
+
+        $this->assertSame(4, PullRequest::findOrFail($id)->reviews()->sole()->findingItems()->count());
+    }
+
+    public function test_only_the_reviewer_can_finish_the_review(): void
+    {
+        $organization = Organization::factory()->create();
+        Sanctum::actingAs($this->member(organization: $organization));
+        [$id, $reviewId] = $this->startedReview();
+
+        Sanctum::actingAs($this->member('Kollege Zwei', $organization));
+
+        $this->putJson("/api/pull-requests/{$id}/reviews/{$reviewId}", $this->reviewPayload())->assertForbidden();
     }
 
     public function test_inline_findings_need_file_and_line(): void
     {
         Sanctum::actingAs($this->member());
-        $id = $this->putJson('/api/pull-requests', $this->pullRequestPayload())->json('data.id');
+        [$id, $reviewId] = $this->startedReview();
 
-        $this->postJson("/api/pull-requests/{$id}/reviews", $this->reviewPayload([
+        $this->putJson("/api/pull-requests/{$id}/reviews/{$reviewId}", $this->reviewPayload([
             'findings' => [['level' => 'HINT', 'type' => 'INLINE', 'title' => 'x', 'message' => 'y']],
         ]))->assertUnprocessable()->assertJsonValidationErrors(['findings.0.file', 'findings.0.line']);
     }
@@ -172,9 +221,9 @@ class PullRequestApiTest extends TestCase
     public function test_scores_must_be_between_0_and_100(): void
     {
         Sanctum::actingAs($this->member());
-        $id = $this->putJson('/api/pull-requests', $this->pullRequestPayload())->json('data.id');
+        [$id, $reviewId] = $this->startedReview();
 
-        $this->postJson("/api/pull-requests/{$id}/reviews", $this->reviewPayload(['criticality' => 101, 'ai_reviewability' => -1]))
+        $this->putJson("/api/pull-requests/{$id}/reviews/{$reviewId}", $this->reviewPayload(['criticality' => 101, 'ai_reviewability' => -1]))
             ->assertUnprocessable()
             ->assertJsonValidationErrors(['criticality', 'ai_reviewability']);
     }
@@ -182,10 +231,20 @@ class PullRequestApiTest extends TestCase
     public function test_reviews_on_pull_requests_of_another_organization_are_not_found(): void
     {
         Sanctum::actingAs($this->member());
-        $id = $this->putJson('/api/pull-requests', $this->pullRequestPayload())->json('data.id');
+        [$id, $reviewId] = $this->startedReview();
 
         Sanctum::actingAs($this->member('Eve Fremd'));
 
-        $this->postJson("/api/pull-requests/{$id}/reviews", $this->reviewPayload())->assertNotFound();
+        $this->postJson("/api/pull-requests/{$id}/reviews")->assertNotFound();
+        $this->putJson("/api/pull-requests/{$id}/reviews/{$reviewId}", $this->reviewPayload())->assertNotFound();
+    }
+
+    public function test_a_review_of_another_pull_request_is_not_found(): void
+    {
+        Sanctum::actingAs($this->member());
+        [, $reviewId] = $this->startedReview();
+        $otherId = $this->putJson('/api/pull-requests', $this->pullRequestPayload(['pull_request_id' => 1]))->json('data.id');
+
+        $this->putJson("/api/pull-requests/{$otherId}/reviews/{$reviewId}", $this->reviewPayload())->assertNotFound();
     }
 }

@@ -38,9 +38,10 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('skill', SkillController::class);
 
     // PR-Reviews (Skill ps-review): PR per Repo + Nummer anlegen/aktualisieren,
-    // danach je Review ein Datensatz samt Findings.
+    // je Review den Start vermerken und es mit Findings abschließen.
     Route::put('pull-requests', [PullRequestController::class, 'upsert']);
-    Route::post('pull-requests/{pullRequest}/reviews', [PullRequestController::class, 'storeReview']);
+    Route::post('pull-requests/{pullRequest}/reviews', [PullRequestController::class, 'startReview']);
+    Route::put('pull-requests/{pullRequest}/reviews/{review}', [PullRequestController::class, 'finishReview']);
 
     // Fortschritts-Events (task_id + event); wendet die je Event konfigurierte
     // Automation an und protokolliert das Event. Siehe docs/event-api.md.
