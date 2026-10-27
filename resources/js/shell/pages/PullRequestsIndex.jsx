@@ -8,8 +8,8 @@ import { ApprovalChips, ColumnIcon, StackedIcon, DecisionIcon, FindingCounts, Ru
 
 // Eigene Pull Requests aus ps-review. Filter (Status, Rolle) laufen über den
 // Server, Aufteilung und Sortierung clientseitig. Gruppen: laufende Reviews, was
-// ein Review braucht (keins, oder seit dem letzten gepusht), Reviewtes, schon
-// ausreichend Approvtes. Default ist der Titel; gestapelte PRs hängen dann
+// ein Review braucht (keins, oder seit dem letzten gepusht), empfohlene, aber
+// noch nicht von mir approvte, Reviewtes, schon ausreichend Approvtes. Default ist der Titel; gestapelte PRs hängen dann
 // eingerückt unter ihrem Parent.
 
 const byTitle = (a, b) => (a.title ?? '').localeCompare(b.title ?? '', undefined, { numeric: true, sensitivity: 'base' });
@@ -80,7 +80,10 @@ function arrange(list, sort) {
 const section = (pr) => {
     if (pr.running) return 'running';
     if (pr.approvals.fulfilled) return 'approved';
-    return !pr.review || pr.review.stale ? 'needs_review' : 'reviewed';
+    if (!pr.review || pr.review.stale) return 'needs_review';
+    // Approve empfohlen, auf GitHub aber noch nichts von mir (eigene PRs ausgenommen).
+    if (pr.review.decision === 'APPROVE' && !pr.mine.githubDecision && !pr.mine.isAuthor) return 'approve_pending';
+    return 'reviewed';
 };
 
 export default function PullRequestsIndex({ filters, filterUrls, syncUrl, flash, pullRequests, strings }) {
@@ -92,7 +95,7 @@ export default function PullRequestsIndex({ filters, filterUrls, syncUrl, flash,
         onFinish: () => setSyncing(false),
     });
     const sections = useMemo(() => [
-        ...['running', 'needs_review', 'reviewed', 'approved'].map((key) => ({
+        ...['running', 'needs_review', 'approve_pending', 'reviewed', 'approved'].map((key) => ({
             key,
             rows: arrange(pullRequests.filter((pr) => section(pr) === key), sort),
         })),
@@ -151,8 +154,8 @@ export default function PullRequestsIndex({ filters, filterUrls, syncUrl, flash,
                                         <SortHeader id="author" sort={sort} onSort={toggleSort}>{strings.col_author}</SortHeader>
                                         <SortHeader id="size" sort={sort} onSort={toggleSort} align="right">{strings.col_size}</SortHeader>
                                         <SortHeader id="approvals" sort={sort} onSort={toggleSort} title={strings.approvals_hint}>{strings.approvals}</SortHeader>
-                                        <SortHeader id="decision" sort={sort} onSort={toggleSort}>{strings.col_decision}</SortHeader>
-                                        <SortHeader id="findings" sort={sort} onSort={toggleSort}>{strings.col_findings}</SortHeader>
+                                        <SortHeader id="decision" sort={sort} onSort={toggleSort} title={strings.col_decision}><ColumnIcon name="decision" /></SortHeader>
+                                        <SortHeader id="findings" sort={sort} onSort={toggleSort} title={`${strings.findings}: ${strings.level_CRITICAL} / ${strings.level_IMPORTANT} / ${strings.level_HINT}`}><ColumnIcon name="findings" /></SortHeader>
                                         <SortHeader id="criticality" sort={sort} onSort={toggleSort} title={strings.col_criticality}><ColumnIcon name="criticality" /></SortHeader>
                                         <SortHeader id="aiReviewability" sort={sort} onSort={toggleSort} title={strings.col_ai_reviewability}><ColumnIcon name="aiReviewability" /></SortHeader>
                                         <SortHeader id="need" sort={sort} onSort={toggleSort} title={`${strings.col_need}: ${strings.need_hint}`} align="right"><ColumnIcon name="need" /></SortHeader>
@@ -162,7 +165,7 @@ export default function PullRequestsIndex({ filters, filterUrls, syncUrl, flash,
                                 {sections.map((section) => (
                                     <tbody key={section.key} className="divide-y divide-gray-100 dark:divide-gray-700">
                                         <tr className="bg-gray-50/60 dark:bg-gray-900/20">
-                                            <th colSpan={10} className="px-3 pt-4 pb-1.5 text-left text-xs font-semibold text-gray-700 dark:text-gray-200">
+                                            <th colSpan={10} className="px-2 pt-4 pb-1.5 text-left text-xs font-semibold text-gray-700 dark:text-gray-200">
                                                 {strings[`section_${section.key}`]} <span className="font-normal text-gray-400">({section.rows.length})</span>
                                             </th>
                                         </tr>
@@ -205,7 +208,7 @@ function Pills({ current, urls, label }) {
 function SortHeader({ id, sort, onSort, children, title, align = 'left' }) {
     const active = sort.key === id;
     return (
-        <th className={`px-3 py-2 font-medium whitespace-nowrap ${align === 'right' ? 'text-right' : ''}`} title={title}>
+        <th className={`px-2 py-2 font-medium whitespace-nowrap ${align === 'right' ? 'text-right' : ''}`} title={title}>
             <button type="button" onClick={() => onSort(id)} className={`uppercase tracking-wide ${active ? 'text-gray-900 dark:text-gray-100' : ''}`}>
                 {children}{active ? (sort.dir === 'desc' ? ' ↓' : ' ↑') : ''}
             </button>
@@ -217,10 +220,10 @@ function SortHeader({ id, sort, onSort, children, title, align = 'left' }) {
 function Row({ pr, level, strings }) {
     const review = pr.review;
     const now = useNow();
-    const cell = 'px-3 py-1.5 whitespace-nowrap';
+    const cell = 'px-2 py-1.5 whitespace-nowrap';
     return (
         <tr className="hover:bg-gray-50 dark:hover:bg-gray-700/40">
-            <td className={`${cell} max-w-md`} style={level > 0 ? { paddingLeft: `calc(0.75rem + ${level * 30}px)` } : undefined}>
+            <td className={`${cell} max-w-xs`} style={level > 0 ? { paddingLeft: `calc(0.5rem + ${level * 30}px)` } : undefined}>
                 <div className="flex items-center gap-2 min-w-0">
                     <a href={pr.githubUrl} target="_blank" rel="noreferrer" className="shrink-0 font-mono text-xs text-gray-500 dark:text-gray-400 hover:underline" title={`${pr.repository}#${pr.number}`}>{pr.number}</a>
                     <StackedIcon pr={pr} strings={strings} />

@@ -50,6 +50,7 @@ class PullRequestController extends Controller
                 ...$this->pullRequestRow($pr),
                 'reviewsCount' => $pr->reviews_count,
                 'approvals' => $this->approvals($pr),
+                'mine' => $this->viewerState($pr, $user),
                 'review' => $pr->latestReview ? $this->reviewRow($pr->latestReview, $pr) : null,
                 'running' => $pr->runningReview ? [
                     'startedAt' => $pr->runningReview->review_started_at?->toIso8601String(),
@@ -179,6 +180,22 @@ class PullRequestController extends Controller
             'deletions' => $pr->deletions,
             'openedAt' => $pr->opened_at?->toIso8601String(),
             'updatedAt' => $pr->updated_at?->toIso8601String(),
+        ];
+    }
+
+    /**
+     * Eigene GitHub-Entscheidung zum PR und ob man selbst der Autor ist (dann
+     * lässt GitHub kein Approve zu).
+     */
+    private function viewerState(PullRequest $pr, User $user): array
+    {
+        $login = PullRequest::loginFor($user);
+
+        return [
+            'githubDecision' => $pr->approvals
+                ->first(fn (PullRequestApproval $a) => $a->user_id === $user->id || strcasecmp($a->login, $login) === 0)
+                ?->state,
+            'isAuthor' => $pr->author_id === $user->id || strcasecmp((string) $pr->author_login, $login) === 0,
         ];
     }
 
