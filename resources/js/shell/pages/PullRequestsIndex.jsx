@@ -136,7 +136,7 @@ export default function PullRequestsIndex({ filters, filterUrls, syncUrl, flash,
             />
 
             <div className="py-8">
-                <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <Flash status={flash?.status} error={flash?.error} />
                     {pullRequests.length === 0 ? (
                         <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-8 text-center text-gray-500 dark:text-gray-400">
