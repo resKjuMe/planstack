@@ -164,8 +164,7 @@ function Row({ pr, strings }) {
                     {pr.title}
                 </Link>
                 <div className="mt-0.5 flex flex-wrap items-center gap-x-2 text-xs text-gray-500 dark:text-gray-400">
-                    <a href={pr.githubUrl} target="_blank" rel="noreferrer" className="font-mono hover:underline">{pr.repository}#{pr.number}</a>
-                    <span className="font-mono truncate max-w-[16rem]" title={`${pr.branch} → ${pr.targetBranch}`}>{pr.branch} → {pr.targetBranch}</span>
+                    <a href={pr.githubUrl} target="_blank" rel="noreferrer" className="font-mono hover:underline" title={`${pr.repository}#${pr.number}`}>{pr.number}</a>
                     {pr.state !== 'OPEN' && <StateBadge state={pr.state} strings={strings} />}
                     {pr.running && <RunningBadge running={pr.running} strings={strings} />}
                 </div>

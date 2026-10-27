@@ -15,9 +15,11 @@ return [
             'changes' => [
                 'de' => [
                     'Neu: PRs, die nicht nach main gehen, sondern auf einem anderen Branch aufsetzen, tragen unter „Pull Requests“ ein Stapel-Symbol vor dem Titel. Der Tooltip nennt den Ziel-Branch.',
+                    'Die Liste ist aufgeräumt: Sie zeigt nur noch die PR-Nummer; Repository und Branches stehen auf der Detailseite.',
                 ],
                 'en' => [
                     'New: PRs that do not target main but build on another branch show a stack icon in front of their title under "Pull requests". The tooltip names the target branch.',
+                    'The list is tidier: it shows only the PR number; repository and branches are on the detail page.',
                 ],
             ],
         ],
