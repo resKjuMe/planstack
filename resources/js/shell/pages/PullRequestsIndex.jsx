@@ -1,14 +1,16 @@
 import React, { useMemo, useState } from 'react';
 import { Head, Link, router } from '@inertiajs/react';
 import AppShell from '../AppShell.jsx';
+import { useNow } from '../../board/useNow.js';
 import Flash from '../components/Flash.jsx';
 import PageBands from '../components/PageBands.jsx';
-import { ApprovalChips, StackedIcon, DecisionBadge, FindingCounts, RunningBadge, ScoreBar, StateBadge, formatDate } from '../components/PullRequestParts.jsx';
+import { ApprovalChips, ColumnIcon, StackedIcon, DecisionIcon, FindingCounts, RunningDot, ScoreBar, StateBadge, formatDate, formatRelative, reviewCommandHref } from '../components/PullRequestParts.jsx';
 
 // Eigene Pull Requests aus ps-review. Filter (Status, Rolle) laufen über den
-// Server, Aufteilung und Sortierung clientseitig. Oben steht, was ein Review
-// braucht (keins, oder seit dem letzten gepusht), unten der Rest. Default ist
-// der Titel; gestapelte PRs hängen dann eingerückt unter ihrem Parent.
+// Server, Aufteilung und Sortierung clientseitig. Gruppen: laufende Reviews, was
+// ein Review braucht (keins, oder seit dem letzten gepusht), Reviewtes, schon
+// ausreichend Approvtes. Default ist der Titel; gestapelte PRs hängen dann
+// eingerückt unter ihrem Parent.
 
 const byTitle = (a, b) => (a.title ?? '').localeCompare(b.title ?? '', undefined, { numeric: true, sensitivity: 'base' });
 
@@ -73,7 +75,13 @@ function arrange(list, sort) {
         : [...list].sort((a, b) => compare(a, b, sort.key, sort.dir)).map((pr) => ({ pr, level: 0 }));
 }
 
-const needsReview = (pr) => !pr.review || pr.review.stale;
+// Ein laufendes Review geht vor, danach ausreichend approvt: dann braucht es
+// kein weiteres Review.
+const section = (pr) => {
+    if (pr.running) return 'running';
+    if (pr.approvals.fulfilled) return 'approved';
+    return !pr.review || pr.review.stale ? 'needs_review' : 'reviewed';
+};
 
 export default function PullRequestsIndex({ filters, filterUrls, syncUrl, flash, pullRequests, strings }) {
     const [sort, setSort] = useState({ key: 'title', dir: 'asc' });
@@ -84,8 +92,10 @@ export default function PullRequestsIndex({ filters, filterUrls, syncUrl, flash,
         onFinish: () => setSyncing(false),
     });
     const sections = useMemo(() => [
-        { key: 'needs_review', rows: arrange(pullRequests.filter(needsReview), sort) },
-        { key: 'reviewed', rows: arrange(pullRequests.filter((pr) => !needsReview(pr)), sort) },
+        ...['running', 'needs_review', 'reviewed', 'approved'].map((key) => ({
+            key,
+            rows: arrange(pullRequests.filter((pr) => section(pr) === key), sort),
+        })),
     ].filter((section) => section.rows.length > 0), [pullRequests, sort]);
 
     const toggleSort = (key) => setSort((current) => (
@@ -126,7 +136,7 @@ export default function PullRequestsIndex({ filters, filterUrls, syncUrl, flash,
             />
 
             <div className="py-8">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8">
                     <Flash status={flash?.status} error={flash?.error} />
                     {pullRequests.length === 0 ? (
                         <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-8 text-center text-gray-500 dark:text-gray-400">
@@ -143,10 +153,10 @@ export default function PullRequestsIndex({ filters, filterUrls, syncUrl, flash,
                                         <SortHeader id="approvals" sort={sort} onSort={toggleSort} title={strings.approvals_hint}>{strings.approvals}</SortHeader>
                                         <SortHeader id="decision" sort={sort} onSort={toggleSort}>{strings.col_decision}</SortHeader>
                                         <SortHeader id="findings" sort={sort} onSort={toggleSort}>{strings.col_findings}</SortHeader>
-                                        <SortHeader id="criticality" sort={sort} onSort={toggleSort}>{strings.col_criticality}</SortHeader>
-                                        <SortHeader id="aiReviewability" sort={sort} onSort={toggleSort}>{strings.col_ai_reviewability}</SortHeader>
-                                        <SortHeader id="need" sort={sort} onSort={toggleSort} title={strings.need_hint} align="right">{strings.col_need}</SortHeader>
-                                        <SortHeader id="reviewedAt" sort={sort} onSort={toggleSort}>{strings.col_reviewed_at}</SortHeader>
+                                        <SortHeader id="criticality" sort={sort} onSort={toggleSort} title={strings.col_criticality}><ColumnIcon name="criticality" /></SortHeader>
+                                        <SortHeader id="aiReviewability" sort={sort} onSort={toggleSort} title={strings.col_ai_reviewability}><ColumnIcon name="aiReviewability" /></SortHeader>
+                                        <SortHeader id="need" sort={sort} onSort={toggleSort} title={`${strings.col_need}: ${strings.need_hint}`} align="right"><ColumnIcon name="need" /></SortHeader>
+                                        <SortHeader id="reviewedAt" sort={sort} onSort={toggleSort} title={strings.col_reviewed_at}><ColumnIcon name="reviewedAt" /></SortHeader>
                                     </tr>
                                 </thead>
                                 {sections.map((section) => (
@@ -203,42 +213,48 @@ function SortHeader({ id, sort, onSort, children, title, align = 'left' }) {
     );
 }
 
+// Eine Zeile je PR; Nebeninfos (Repo, Dateien, Begründungen) stehen im Tooltip.
 function Row({ pr, level, strings }) {
     const review = pr.review;
+    const now = useNow();
+    const cell = 'px-3 py-1.5 whitespace-nowrap';
     return (
-        <tr className="hover:bg-gray-50 dark:hover:bg-gray-700/40 align-top">
-            <td className="px-3 py-2 max-w-md" style={level > 0 ? { paddingLeft: `calc(0.75rem + ${level * 30}px)` } : undefined}>
-                <StackedIcon pr={pr} strings={strings} />
-                <Link href={pr.showUrl} className="font-medium text-gray-900 dark:text-gray-100 hover:text-indigo-600 dark:hover:text-indigo-400">
-                    {pr.title}
-                </Link>
-                <div className="mt-0.5 flex flex-wrap items-center gap-x-2 text-xs text-gray-500 dark:text-gray-400">
-                    <a href={pr.githubUrl} target="_blank" rel="noreferrer" className="font-mono hover:underline" title={`${pr.repository}#${pr.number}`}>{pr.number}</a>
+        <tr className="hover:bg-gray-50 dark:hover:bg-gray-700/40">
+            <td className={`${cell} max-w-md`} style={level > 0 ? { paddingLeft: `calc(0.75rem + ${level * 30}px)` } : undefined}>
+                <div className="flex items-center gap-2 min-w-0">
+                    <a href={pr.githubUrl} target="_blank" rel="noreferrer" className="shrink-0 font-mono text-xs text-gray-500 dark:text-gray-400 hover:underline" title={`${pr.repository}#${pr.number}`}>{pr.number}</a>
+                    <StackedIcon pr={pr} strings={strings} />
+                    <Link href={pr.showUrl} title={pr.title} className="truncate font-medium text-gray-900 dark:text-gray-100 hover:text-indigo-600 dark:hover:text-indigo-400">
+                        {pr.title}
+                    </Link>
                     {pr.state !== 'OPEN' && <StateBadge state={pr.state} strings={strings} />}
-                    {pr.running && <RunningBadge running={pr.running} strings={strings} />}
+                    {pr.running && <RunningDot running={pr.running} strings={strings} />}
                 </div>
             </td>
-            <td className="px-3 py-2 whitespace-nowrap text-gray-700 dark:text-gray-300">{pr.author ?? '—'}</td>
-            <td className="px-3 py-2 whitespace-nowrap text-right font-mono text-xs">
-                <span className="text-green-600 dark:text-green-400">+{pr.additions}</span>{' '}
-                <span className="text-red-600 dark:text-red-400">−{pr.deletions}</span>
-                <div className="text-gray-400">{pr.changedFiles} {strings.files}</div>
+            <td className={`${cell} text-gray-700 dark:text-gray-300`}>{pr.author ?? '—'}</td>
+            <td className={`${cell} text-right font-mono text-[11px] leading-tight`} title={`${pr.changedFiles} ${strings.files}`}>
+                <div className="text-green-600 dark:text-green-400">+{pr.additions}</div>
+                <div className="text-red-600 dark:text-red-400">−{pr.deletions}</div>
             </td>
-            <td className="px-3 py-2"><ApprovalChips approvals={pr.approvals} strings={strings} /></td>
+            <td className={cell}><ApprovalChips approvals={pr.approvals} strings={strings} /></td>
             {review ? (
                 <>
-                    <td className="px-3 py-2 whitespace-nowrap">
-                        <DecisionBadge decision={review.decision} strings={strings} />
-                        {review.stale && <div className="mt-0.5 text-xs text-amber-600 dark:text-amber-400">{strings.stale}</div>}
+                    <td className={cell}>
+                        <span className="inline-flex items-center gap-1.5">
+                            <DecisionIcon decision={review.decision} strings={strings} />
+                            {review.stale && (
+                                <a href={reviewCommandHref(pr)} title={strings.rereview} className="text-amber-600 dark:text-amber-400 hover:text-amber-700 dark:hover:text-amber-300">↻</a>
+                            )}
+                        </span>
                     </td>
-                    <td className="px-3 py-2 whitespace-nowrap"><FindingCounts review={review} /></td>
-                    <td className="px-3 py-2"><ScoreBar value={review.criticality} title={review.criticalityReason} tone="risk" /></td>
-                    <td className="px-3 py-2"><ScoreBar value={review.aiReviewability} title={review.aiReviewabilityReason} tone="ai" /></td>
-                    <td className="px-3 py-2 text-right font-mono text-xs text-gray-700 dark:text-gray-300" title={strings.need_hint}>{Math.round(review.needScore / 100)}</td>
-                    <td className="px-3 py-2 whitespace-nowrap text-xs text-gray-500 dark:text-gray-400">{formatDate(review.reviewedAt)}</td>
+                    <td className={cell}><FindingCounts review={review} /></td>
+                    <td className={cell}><ScoreBar value={review.criticality} title={review.criticalityReason} tone="risk" /></td>
+                    <td className={cell}><ScoreBar value={review.aiReviewability} title={review.aiReviewabilityReason} tone="ai" /></td>
+                    <td className={`${cell} text-right font-mono text-xs text-gray-700 dark:text-gray-300`} title={strings.need_hint}>{Math.round(review.needScore / 100)}</td>
+                    <td className={`${cell} text-xs text-gray-500 dark:text-gray-400`} title={formatDate(review.reviewedAt)}>{formatRelative(review.reviewedAt, now, strings)}</td>
                 </>
             ) : (
-                <td colSpan={6} className="px-3 py-2 text-xs text-gray-400 dark:text-gray-500">{pr.running ? '' : strings.not_reviewed}</td>
+                <td colSpan={6} className={`${cell} text-xs text-gray-400 dark:text-gray-500`}>{pr.running ? '' : strings.not_reviewed}</td>
             )}
         </tr>
     );
