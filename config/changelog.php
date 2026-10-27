@@ -6,6 +6,24 @@
 return [
     'releases' => [
         [
+            'version' => '2.8.0',
+            'date' => '2026-10-27',
+            'tldr' => [
+                'de' => ['Shared Reviews', 'Approve empfohlen, aber noch offen'],
+                'en' => ['Shared reviews', 'Approve recommended but still open'],
+            ],
+            'changes' => [
+                'de' => [
+                    'Neu: Unter „Pull Requests“ → „Von mir geschrieben“ markierst du einen eigenen PR über das Teilen-Symbol vorn in der Zeile als „Shared Review“. Der neue Filter „Shared“ zeigt alle geteilten PRs deiner Organisation.',
+                    'Neu: Eine eigene Gruppe sammelt PRs, für die das Review „Approve“ empfiehlt, du auf GitHub aber noch weder approved noch Änderungen verlangt hast.',
+                ],
+                'en' => [
+                    'New: Under "Pull requests" → "Authored by me" you can mark your own PR as a "shared review" with the share icon at the start of the row. The new "Shared" filter shows all shared PRs of your organization.',
+                    'New: A separate group collects PRs whose review recommends "Approve" while you have neither approved nor requested changes on GitHub yet.',
+                ],
+            ],
+        ],
+        [
             'version' => '2.7.1',
             'date' => '2026-10-27',
             'tldr' => [

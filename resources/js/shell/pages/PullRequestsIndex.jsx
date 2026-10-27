@@ -169,7 +169,7 @@ export default function PullRequestsIndex({ filters, filterUrls, syncUrl, flash,
                                                 {strings[`section_${section.key}`]} <span className="font-normal text-gray-400">({section.rows.length})</span>
                                             </th>
                                         </tr>
-                                        {section.rows.map(({ pr, level }) => <Row key={pr.id} pr={pr} level={level} strings={strings} />)}
+                                        {section.rows.map(({ pr, level }) => <Row key={pr.id} pr={pr} level={level} canShare={filters.role === 'authored'} strings={strings} />)}
                                     </tbody>
                                 ))}
                             </table>
@@ -217,7 +217,7 @@ function SortHeader({ id, sort, onSort, children, title, align = 'left' }) {
 }
 
 // Eine Zeile je PR; Nebeninfos (Repo, Dateien, Begründungen) stehen im Tooltip.
-function Row({ pr, level, strings }) {
+function Row({ pr, level, canShare, strings }) {
     const review = pr.review;
     const now = useNow();
     const cell = 'px-2 py-1.5 whitespace-nowrap';
@@ -225,6 +225,7 @@ function Row({ pr, level, strings }) {
         <tr className="hover:bg-gray-50 dark:hover:bg-gray-700/40">
             <td className={`${cell} max-w-xs`} style={level > 0 ? { paddingLeft: `calc(0.5rem + ${level * 30}px)` } : undefined}>
                 <div className="flex items-center gap-2 min-w-0">
+                    {canShare && <ShareToggle pr={pr} strings={strings} />}
                     <a href={pr.githubUrl} target="_blank" rel="noreferrer" className="shrink-0 font-mono text-xs text-gray-500 dark:text-gray-400 hover:underline" title={`${pr.repository}#${pr.number}`}>{pr.number}</a>
                     <StackedIcon pr={pr} strings={strings} />
                     <Link href={pr.showUrl} title={pr.title} className="truncate font-medium text-gray-900 dark:text-gray-100 hover:text-indigo-600 dark:hover:text-indigo-400">
@@ -260,6 +261,27 @@ function Row({ pr, level, strings }) {
                 <td colSpan={6} className={`${cell} text-xs text-gray-400 dark:text-gray-500`}>{pr.running ? '' : strings.not_reviewed}</td>
             )}
         </tr>
+    );
+}
+
+// Eigenen PR als „Shared Review“ für die Organisation markieren / aufheben.
+function ShareToggle({ pr, strings }) {
+    const toggle = () => router.post(pr.shareUrl, {}, { preserveScroll: true, preserveState: true });
+    return (
+        <button
+            type="button"
+            onClick={toggle}
+            title={pr.shared ? strings.share_on : strings.share_off}
+            aria-pressed={pr.shared}
+            className={`shrink-0 inline-flex h-5 w-5 items-center justify-center rounded ${pr.shared
+                ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/50 dark:text-indigo-300'
+                : 'text-gray-300 hover:text-gray-500 dark:text-gray-600 dark:hover:text-gray-400'}`}
+        >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-3.5 w-3.5" aria-hidden="true">
+                <circle cx="18" cy="5" r="3" /><circle cx="6" cy="12" r="3" /><circle cx="18" cy="19" r="3" />
+                <path d="M8.59 13.51l6.83 3.98M15.41 6.51l-6.82 3.98" />
+            </svg>
+        </button>
     );
 }
 
