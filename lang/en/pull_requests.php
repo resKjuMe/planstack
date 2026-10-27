@@ -75,6 +75,7 @@ return [
     'section_approve_pending' => 'Approve recommended, still open on GitHub',
     'section_reviewed' => 'Reviewed, nothing pushed since',
     'section_approved' => 'Sufficiently approved',
+    'start_review' => 'Start ps-review for this PR in Claude (PowerShell)',
     'rereview' => 'Pushed since the review – click to start ps-review in Claude (PowerShell)',
     'just_now' => 'just now',
     'ago_minutes' => ':n min ago',

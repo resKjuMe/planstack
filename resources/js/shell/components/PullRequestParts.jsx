@@ -90,6 +90,24 @@ export function reviewCommandHref(pr) {
     return `claudetask:${encodeURIComponent(`/ps-review ${pr.githubUrl}`)}`;
 }
 
+// Startknopf für ps-review: ↻ wenn seit dem letzten Review gepusht wurde, sonst ▶.
+export function ReviewStartLink({ pr, strings }) {
+    const stale = pr.review?.stale;
+    return (
+        <a
+            href={reviewCommandHref(pr)}
+            title={stale ? strings.rereview : strings.start_review}
+            className={`inline-flex h-5 w-5 shrink-0 items-center justify-center rounded ${stale
+                ? 'text-amber-600 hover:text-amber-700 dark:text-amber-400 dark:hover:text-amber-300'
+                : 'text-gray-300 hover:text-indigo-600 dark:text-gray-600 dark:hover:text-indigo-400'}`}
+        >
+            {stale ? '↻' : (
+                <svg viewBox="0 0 24 24" fill="currentColor" className="h-3 w-3" aria-hidden="true"><path d="M7 4.5v15a1 1 0 0 0 1.5.87l12-7.5a1 1 0 0 0 0-1.74l-12-7.5A1 1 0 0 0 7 4.5z" /></svg>
+            )}
+        </a>
+    );
+}
+
 export function StateBadge({ state, strings }) {
     const tone = {
         OPEN: 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300',
