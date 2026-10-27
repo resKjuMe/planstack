@@ -119,7 +119,7 @@ export default function PullRequestsIndex({ filters, filterUrls, syncUrl, flash,
                             <p className="text-sm text-gray-500 dark:text-gray-400">{strings.subtitle}</p>
                         </div>
                         <div className="flex flex-wrap items-center gap-2">
-                            <Pills current={filters.role} urls={filterUrls.role} label={(r) => strings[`role_${r}`]} />
+                            <Pills current={filters.role} urls={filterUrls.role} label={(r) => (r === filters.role ? <>{strings[`role_${r}`]} <span className="opacity-75">({pullRequests.length})</span></> : strings[`role_${r}`])} />
                             <Pills current={filters.state} urls={filterUrls.state} label={(s) => strings[`state_${s}`]} />
                             <button
                                 type="button"
