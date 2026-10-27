@@ -2,7 +2,7 @@ import React from 'react';
 import { Head, Link } from '@inertiajs/react';
 import AppShell from '../AppShell.jsx';
 import PageBands from '../components/PageBands.jsx';
-import { ApprovalPanel, StackedIcon, DecisionBadge, FindingCounts, LEVEL_TONE, Markdown, RunningBadge, ScoreBar, StateBadge, formatDate, formatDuration } from '../components/PullRequestParts.jsx';
+import { ApprovalPanel, PoBadge, StackedIcon, DecisionBadge, FindingCounts, LEVEL_TONE, Markdown, RunningBadge, ScoreBar, StateBadge, formatDate, formatDuration } from '../components/PullRequestParts.jsx';
 
 // Detailseite eines Pull Requests: Metadaten, Beschreibung und alle Reviews
 // (neuestes oben) mit Zusammenfassung und Befunden. Markdown rendert der Server.
@@ -102,6 +102,7 @@ function Review({ review, strings }) {
             <header className="flex flex-wrap items-center gap-3 border-b border-gray-100 dark:border-gray-700 px-5 py-3">
                 <DecisionBadge decision={review.decision} strings={strings} />
                 <FindingCounts review={review} />
+                <PoBadge count={review.poDecisions} strings={strings} />
                 <span className="text-xs text-gray-500 dark:text-gray-400">
                     {formatDate(review.reviewedAt)}{review.reviewer ? ` · ${review.reviewer}` : ''}
                     {review.commitSha ? ` · ${review.commitSha.slice(0, 7)}` : ''}

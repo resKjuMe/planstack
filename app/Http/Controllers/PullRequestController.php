@@ -40,6 +40,14 @@ class PullRequestController extends Controller
             ->limit(self::LIMIT)
             ->get();
 
+        $poCounts = ReviewFinding::query()
+            ->whereIn('pull_request_review_id', $pullRequests->pluck('latestReview.id')->filter())
+            ->where('requires_po_decision', true)
+            ->groupBy('pull_request_review_id')
+            ->selectRaw('pull_request_review_id, count(*) as aggregate')
+            ->pluck('aggregate', 'pull_request_review_id');
+        $pullRequests->each(fn (PullRequest $pr) => $pr->latestReview?->setAttribute('po_decisions_count', (int) ($poCounts[$pr->latestReview->id] ?? 0)));
+
         return Inertia::render('PullRequestsIndex', [
             'filters' => ['state' => $state, 'role' => $role],
             'filterUrls' => [
@@ -255,6 +263,9 @@ class PullRequestController extends Controller
             'aiReviewability' => $review->ai_reviewability,
             'aiReviewabilityReason' => $review->ai_reviewability_reason,
             'needScore' => $review->needScore(),
+            // Befunde, die eine fachliche Entscheidung des PO brauchen.
+            'poDecisions' => $review->po_decisions_count
+                ?? ($review->relationLoaded('findingItems') ? $review->findingItems->where('requires_po_decision', true)->count() : 0),
             'reviewedAt' => ($review->review_finished_at ?? $review->review_started_at)?->toIso8601String(),
             // Seit dem Review gepusht: der geprüfte Stand ist nicht mehr der aktuelle.
             'stale' => $review->commit_sha !== null && $pr->last_commit !== null

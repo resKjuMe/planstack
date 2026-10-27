@@ -321,6 +321,24 @@ class PullRequestPagesTest extends TestCase
                 ->where('pullRequests.0.shared', true));
     }
 
+    public function test_list_and_detail_count_findings_that_need_a_po_decision(): void
+    {
+        $me = $this->member('Ich Selbst');
+        $pullRequest = $this->pullRequest(1);
+        $this->review($pullRequest, $me);
+        $pullRequest->latestReview()->first()->findingItems()->create([
+            'level' => 'IMPORTANT', 'type' => 'SUMMARY', 'requires_po_decision' => true, 'title' => 'Fachregel', 'message' => 'Offen.',
+        ]);
+
+        $this->actingAs($me)
+            ->get(route('pull-requests.index'))
+            ->assertInertia(fn (Assert $page) => $page->where('pullRequests.0.review.poDecisions', 1));
+
+        $this->actingAs($me)
+            ->get(route('pull-requests.show', $pullRequest))
+            ->assertInertia(fn (Assert $page) => $page->where('reviews.0.poDecisions', 1));
+    }
+
     public function test_detail_page_of_another_organization_is_not_found(): void
     {
         $pullRequest = $this->pullRequest(7);

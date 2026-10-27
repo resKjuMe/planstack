@@ -108,6 +108,18 @@ export function ReviewStartLink({ pr, strings }) {
     );
 }
 
+export function PoBadge({ count, strings }) {
+    if (!count) return null;
+    return (
+        <span
+            title={strings.po_decisions.replace(':count', count)}
+            className="inline-flex shrink-0 items-center rounded px-1.5 py-0.5 text-[11px] font-semibold bg-indigo-100 text-indigo-800 dark:bg-indigo-900/50 dark:text-indigo-300"
+        >
+            PO{count > 1 ? ` ${count}` : ''}
+        </span>
+    );
+}
+
 export function StateBadge({ state, strings }) {
     const tone = {
         OPEN: 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300',
