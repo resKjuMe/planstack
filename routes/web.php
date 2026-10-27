@@ -168,6 +168,7 @@ Route::middleware('auth')->group(function () {
     Route::get('pull-requests', [PullRequestController::class, 'index'])->name('pull-requests.index');
     Route::post('pull-requests/sync', [PullRequestController::class, 'sync'])->name('pull-requests.sync');
     Route::get('pull-requests/{pullRequest}', [PullRequestController::class, 'show'])->name('pull-requests.show');
+    Route::post('pull-requests/{pullRequest}/share', [PullRequestController::class, 'toggleShare'])->name('pull-requests.share');
 
     // Teams
     Route::resource('teams', TeamController::class)

@@ -80,4 +80,8 @@ return [
     'ago_minutes' => 'vor :n min',
     'ago_hours' => 'vor :n h',
     'ago_days' => 'vor :n d',
+    'role_shared' => 'Shared',
+    'sync_hint_shared' => 'Offene geteilte PRs dieser Liste mit GitHub abgleichen',
+    'share_on' => 'Als Shared Review markiert – klicken zum Aufheben',
+    'share_off' => 'Als Shared Review für die Organisation markieren',
 ];

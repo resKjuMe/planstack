@@ -276,6 +276,51 @@ class PullRequestPagesTest extends TestCase
         $this->assertSame($this->organization->id, $created->organization_id);
     }
 
+    public function test_the_author_toggles_the_shared_flag(): void
+    {
+        $me = $this->member('Ich Selbst');
+        $pullRequest = $this->pullRequest(1, ['author_id' => $me->id]);
+
+        $this->actingAs($me)->post(route('pull-requests.share', $pullRequest))->assertRedirect();
+        $pullRequest->refresh();
+        $this->assertNotNull($pullRequest->shared_at);
+        $this->assertSame($me->id, $pullRequest->shared_by_id);
+
+        $this->actingAs($me)->post(route('pull-requests.share', $pullRequest))->assertRedirect();
+        $this->assertNull($pullRequest->refresh()->shared_at);
+    }
+
+    public function test_only_the_author_can_share(): void
+    {
+        $author = $this->member('Autor');
+        $other = $this->member('Jemand Anderes');
+        $pullRequest = $this->pullRequest(1, ['author_id' => $author->id]);
+
+        $this->actingAs($other)->post(route('pull-requests.share', $pullRequest))->assertForbidden();
+        $this->assertNull($pullRequest->refresh()->shared_at);
+    }
+
+    public function test_shared_lists_all_shared_pull_requests_of_the_organization(): void
+    {
+        $me = $this->member('Ich Selbst');
+        $colleague = $this->member('Kollegin');
+        $this->pullRequest(1, ['author_id' => $colleague->id, 'shared_at' => now()]);
+        $this->pullRequest(2, ['author_id' => $colleague->id]);
+        $foreign = Organization::factory()->create();
+        PullRequest::create([
+            'organization_id' => $foreign->id, 'repository' => 'x/y', 'pull_request_id' => 3,
+            'title' => 'Fremd', 'branch' => 'b', 'target_branch' => 'main', 'shared_at' => now(),
+        ]);
+
+        $this->actingAs($me)
+            ->get(route('pull-requests.index', ['role' => 'shared']))
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('filters.role', 'shared')
+                ->has('pullRequests', 1)
+                ->where('pullRequests.0.number', 1)
+                ->where('pullRequests.0.shared', true));
+    }
+
     public function test_detail_page_of_another_organization_is_not_found(): void
     {
         $pullRequest = $this->pullRequest(7);

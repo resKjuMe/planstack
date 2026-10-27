@@ -24,7 +24,7 @@ class PullRequestController extends Controller
 {
     private const STATES = ['open', 'merged', 'closed', 'all'];
 
-    private const ROLES = ['reviewed', 'authored'];
+    private const ROLES = ['reviewed', 'authored', 'shared'];
 
     private const LIMIT = 500;
 
@@ -95,6 +95,25 @@ class PullRequestController extends Controller
         return $back->with('status', $message);
     }
 
+    /**
+     * Markiert einen eigenen PR als „Shared Review“ (für die ganze Organisation
+     * sichtbar) bzw. hebt die Markierung auf.
+     */
+    public function toggleShare(Request $request, PullRequest $pullRequest): RedirectResponse
+    {
+        $user = $request->user();
+        abort_unless($pullRequest->organization_id === $user->organization_id, 404);
+        abort_unless($this->viewerState($pullRequest, $user)['isAuthor'], 403);
+
+        $shared = $pullRequest->shared_at === null;
+        $pullRequest->update([
+            'shared_at' => $shared ? now() : null,
+            'shared_by_id' => $shared ? $user->id : null,
+        ]);
+
+        return back();
+    }
+
     public function show(Request $request, PullRequest $pullRequest): InertiaResponse
     {
         abort_unless($pullRequest->organization_id === $request->user()->organization_id, 404);
@@ -159,6 +178,7 @@ class PullRequestController extends Controller
             ->where('organization_id', $user->organization_id)
             ->when($role === 'reviewed', fn (Builder $q) => $q->whereHas('reviews', fn (Builder $r) => $r->where('reviewer_id', $user->id)))
             ->when($role === 'authored', fn (Builder $q) => $q->where('author_id', $user->id))
+            ->when($role === 'shared', fn (Builder $q) => $q->whereNotNull('shared_at'))
             ->when($state !== 'all', fn (Builder $q) => $q->where('state', strtoupper($state)));
     }
 
@@ -180,6 +200,8 @@ class PullRequestController extends Controller
             'deletions' => $pr->deletions,
             'openedAt' => $pr->opened_at?->toIso8601String(),
             'updatedAt' => $pr->updated_at?->toIso8601String(),
+            'shared' => $pr->shared_at !== null,
+            'shareUrl' => route('pull-requests.share', $pr),
         ];
     }
 

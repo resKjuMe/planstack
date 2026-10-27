@@ -40,6 +40,8 @@ class PullRequest extends Model
         'opened_at',
         'merged_at',
         'closed_at',
+        'shared_at',
+        'shared_by_id',
     ];
 
     protected function casts(): array
@@ -57,6 +59,7 @@ class PullRequest extends Model
             'opened_at' => 'datetime',
             'merged_at' => 'datetime',
             'closed_at' => 'datetime',
+            'shared_at' => 'datetime',
         ];
     }
 
