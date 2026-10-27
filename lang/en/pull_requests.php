@@ -72,6 +72,7 @@ return [
     'stacked_on' => 'Stacked on :branch',
     'section_running' => 'Review running',
     'section_needs_review' => 'Needs review',
+    'section_approve_pending' => 'Approve recommended, still open on GitHub',
     'section_reviewed' => 'Reviewed, nothing pushed since',
     'section_approved' => 'Sufficiently approved',
     'rereview' => 'Pushed since the review – click to start ps-review in Claude (PowerShell)',

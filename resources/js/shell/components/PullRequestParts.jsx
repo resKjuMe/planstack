@@ -45,6 +45,10 @@ export function formatRelative(iso, now, strings) {
 }
 
 const COLUMN_ICONS = {
+    // Waage: Empfehlung des Reviews
+    decision: <><path d="M12 3v18M7 21h10M5 7h14" /><path d="M5 7l-3 7a3 3 0 0 0 6 0zM19 7l-3 7a3 3 0 0 0 6 0z" /></>,
+    // Käfer: Befunde (kritisch / wichtig / Hinweis)
+    findings: <><rect x="8" y="6" width="8" height="14" rx="4" /><path d="M9 3l1.5 3M15 3l-1.5 3M8 11H4M20 11h-4M8 16H4.5M19.5 16H16M12 11v9" /></>,
     // Flamme: Risiko der Änderung
     criticality: <path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.07-2.14-.22-4.05 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.15.43-2.29 1-3a2.5 2.5 0 0 0 2.5 2.5z" />,
     // Funken: KI-Prüfbarkeit

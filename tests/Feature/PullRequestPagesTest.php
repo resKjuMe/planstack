@@ -169,6 +169,22 @@ class PullRequestPagesTest extends TestCase
                 ->where('reviews.0.findings', []));
     }
 
+    public function test_list_marks_my_github_decision_and_own_pull_requests(): void
+    {
+        $me = $this->member('Ich Selbst');
+        $approved = $this->pullRequest(1);
+        $this->review($approved, $me);
+        $approved->approvals()->create(['login' => 'ich-selbst_clockodo', 'state' => 'APPROVED']);
+        $own = $this->pullRequest(2, ['author_id' => $me->id]);
+        $this->review($own, $me);
+
+        $this->actingAs($me)
+            ->get(route('pull-requests.index'))
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('pullRequests', fn ($rows) => collect($rows)->firstWhere('number', 1)['mine'] === ['githubDecision' => 'APPROVED', 'isAuthor' => false]
+                    && collect($rows)->firstWhere('number', 2)['mine'] === ['githubDecision' => null, 'isAuthor' => true]));
+    }
+
     public function test_list_and_detail_show_the_approvals(): void
     {
         $me = $this->member('Ich Selbst');

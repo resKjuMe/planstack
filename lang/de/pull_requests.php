@@ -72,6 +72,7 @@ return [
     'stacked_on' => 'Gestapelt auf :branch',
     'section_running' => 'Review läuft',
     'section_needs_review' => 'Review nötig',
+    'section_approve_pending' => 'Approve empfohlen, auf GitHub noch offen',
     'section_reviewed' => 'Reviewt, seitdem nichts gepusht',
     'section_approved' => 'Ausreichend approvt',
     'rereview' => 'Seit dem Review gepusht – klicken startet ps-review in Claude (PowerShell)',
