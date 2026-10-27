@@ -19,6 +19,20 @@ export function DecisionBadge({ decision, strings }) {
     );
 }
 
+// Gestapelter PR (Ziel ist nicht main); dasselbe Icon wie der Stacked-Marker im Board.
+export function StackedIcon({ pr, strings, className = 'h-3.5 w-3.5' }) {
+    if (pr.targetBranch === 'main') return null;
+    return (
+        <span title={strings.stacked_on.replace(':branch', pr.targetBranch)} className="inline-flex shrink-0 text-indigo-500 dark:text-indigo-400 align-[-0.125em] mr-1">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden="true">
+                <path d="M12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.84z" />
+                <path d="M2 12a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 12" />
+                <path d="M2 17a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 17" />
+            </svg>
+        </span>
+    );
+}
+
 export function StateBadge({ state, strings }) {
     const tone = {
         OPEN: 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300',

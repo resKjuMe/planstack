@@ -69,4 +69,5 @@ return [
     'no_approvals' => 'Noch keine Approves.',
     'approval_outdated' => 'älterer Commit',
     'no_critical_files' => 'keine kritischen Dateien',
+    'stacked_on' => 'Gestapelt auf :branch',
 ];

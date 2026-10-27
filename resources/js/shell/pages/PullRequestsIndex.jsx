@@ -3,7 +3,7 @@ import { Head, Link, router } from '@inertiajs/react';
 import AppShell from '../AppShell.jsx';
 import Flash from '../components/Flash.jsx';
 import PageBands from '../components/PageBands.jsx';
-import { ApprovalChips, DecisionBadge, FindingCounts, RunningBadge, ScoreBar, StateBadge, formatDate } from '../components/PullRequestParts.jsx';
+import { ApprovalChips, StackedIcon, DecisionBadge, FindingCounts, RunningBadge, ScoreBar, StateBadge, formatDate } from '../components/PullRequestParts.jsx';
 
 // Eigene Pull Requests aus ps-review. Filter (Status, Rolle) laufen über den
 // Server, die Sortierung clientseitig; Default ist der Handlungsbedarf.
@@ -159,6 +159,7 @@ function Row({ pr, strings }) {
     return (
         <tr className="hover:bg-gray-50 dark:hover:bg-gray-700/40 align-top">
             <td className="px-3 py-2 max-w-md">
+                <StackedIcon pr={pr} strings={strings} />
                 <Link href={pr.showUrl} className="font-medium text-gray-900 dark:text-gray-100 hover:text-indigo-600 dark:hover:text-indigo-400">
                     {pr.title}
                 </Link>

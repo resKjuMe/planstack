@@ -6,6 +6,22 @@
 return [
     'releases' => [
         [
+            'version' => '2.6.2',
+            'date' => '2026-10-27',
+            'tldr' => [
+                'de' => ['Gestapelte PRs erkennbar'],
+                'en' => ['Stacked PRs marked'],
+            ],
+            'changes' => [
+                'de' => [
+                    'Neu: PRs, die nicht nach main gehen, sondern auf einem anderen Branch aufsetzen, tragen unter „Pull Requests“ ein Stapel-Symbol vor dem Titel. Der Tooltip nennt den Ziel-Branch.',
+                ],
+                'en' => [
+                    'New: PRs that do not target main but build on another branch show a stack icon in front of their title under "Pull requests". The tooltip names the target branch.',
+                ],
+            ],
+        ],
+        [
             'version' => '2.6.1',
             'date' => '2026-10-27',
             'tldr' => [
