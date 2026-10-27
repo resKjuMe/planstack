@@ -247,4 +247,49 @@ class PullRequestApiTest extends TestCase
 
         $this->putJson("/api/pull-requests/{$otherId}/reviews/{$reviewId}", $this->reviewPayload())->assertNotFound();
     }
+
+    public function test_review_states_report_my_review_per_pull_request(): void
+    {
+        $me = $this->member();
+        $colleague = $this->member('Kollege Zwei', Organization::findOrFail($me->organization_id));
+        Sanctum::actingAs($me);
+
+        $make = fn (int $n) => PullRequest::create([
+            'organization_id' => $me->organization_id, 'repository' => 'clockodo-intern/main', 'pull_request_id' => $n,
+            'title' => "PR {$n}", 'branch' => "b{$n}", 'target_branch' => 'main', 'last_commit' => 'head',
+        ]);
+        $finish = fn (PullRequest $pr, string $sha, int $reviewer) => $pr->reviews()->create([
+            'reviewer_id' => $reviewer, 'review_started_at' => now()->subHour(), 'review_finished_at' => now()->subMinutes(30),
+            'decision' => 'APPROVE', 'criticality' => 10, 'ai_reviewability' => 90, 'commit_sha' => $sha,
+            'findings' => 3, 'findings_critical' => 1, 'findings_important' => 1, 'findings_hint' => 1,
+        ]);
+
+        $finish($make(1), 'head', $me->id);
+        $finish($make(2), 'old', $me->id);
+        $running = $make(3);
+        $finish($running, 'head', $me->id);
+        $running->reviews()->create(['reviewer_id' => $me->id, 'review_started_at' => now()->subMinutes(5)]);
+        $finish($make(4), 'head', $colleague->id);
+
+        $this->getJson('/api/pull-requests/review-states?repository=clockodo-intern/main&prs=1,2,3,4,5')
+            ->assertOk()
+            ->assertJsonPath('data.1.state', 'current')
+            ->assertJsonPath('data.1.findings', 3)
+            ->assertJsonPath('data.1.critical', 1)
+            ->assertJsonPath('data.1.recommendation', 'APPROVE')
+            ->assertJsonPath('data.2.state', 'outdated')
+            ->assertJsonPath('data.3.state', 'running')
+            ->assertJsonPath('data.3.recommendation', 'APPROVE')
+            ->assertJsonPath('data.4.state', 'none')
+            ->assertJsonPath('data.5.state', 'none');
+    }
+
+    public function test_review_states_validate_the_pr_list(): void
+    {
+        Sanctum::actingAs($this->member());
+
+        $this->getJson('/api/pull-requests/review-states?repository=a/b&prs=1;drop')
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['prs']);
+    }
 }

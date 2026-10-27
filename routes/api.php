@@ -40,6 +40,8 @@ Route::middleware('auth:sanctum')->group(function () {
     // PR-Reviews (Skill ps-review): PR per Repo + Nummer anlegen/aktualisieren,
     // je Review den Start vermerken und es mit Findings abschließen.
     Route::put('pull-requests', [PullRequestController::class, 'upsert']);
+    // Eigener Review-Stand je PR für Browser-Erweiterungen (Jira-Planstack-Reviews).
+    Route::get('pull-requests/review-states', [PullRequestController::class, 'reviewStates']);
     Route::post('pull-requests/{pullRequest}/reviews', [PullRequestController::class, 'startReview']);
     Route::put('pull-requests/{pullRequest}/reviews/{review}', [PullRequestController::class, 'finishReview']);
 

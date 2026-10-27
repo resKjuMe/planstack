@@ -12,6 +12,7 @@ use App\Support\PullRequestApprovals;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 
 /**
@@ -171,6 +172,77 @@ class PullRequestController extends ApiController
         });
 
         return response()->json(['data' => $this->reviewPayload($review, $pullRequest)]);
+    }
+
+    /**
+     * GET /api/pull-requests/review-states?repository=owner/name&prs=1,2,3 — der
+     * eigene Review-Stand je PR für Browser-Erweiterungen (z. B. Jira):
+     * none · current · outdated (seit dem Review gepusht) · running.
+     */
+    public function reviewStates(Request $request): JsonResponse
+    {
+        $organizationId = $this->organizationId($request);
+        $data = $request->validate([
+            'repository' => ['required', 'string', 'max:200'],
+            'prs' => ['required', 'string', 'max:2000', 'regex:/^\d+(,\d+)*$/'],
+        ]);
+        $numbers = array_slice(array_unique(array_map('intval', explode(',', $data['prs']))), 0, 200);
+        $userId = $request->user()->id;
+
+        $pullRequests = PullRequest::query()
+            ->where('organization_id', $organizationId)
+            ->where('repository', $data['repository'])
+            ->whereIn('pull_request_id', $numbers)
+            ->with(['reviews' => fn ($q) => $q->where('reviewer_id', $userId)])
+            ->get()
+            ->keyBy('pull_request_id');
+
+        $states = [];
+        foreach ($numbers as $number) {
+            $states[(string) $number] = $this->reviewState($pullRequests->get($number));
+        }
+
+        return response()->json(['data' => $states]);
+    }
+
+    private function reviewState(?PullRequest $pullRequest): array
+    {
+        if ($pullRequest === null) {
+            return ['state' => 'none'];
+        }
+
+        $finished = $pullRequest->reviews->filter->isFinished()->sortByDesc('review_finished_at')->first();
+        $running = $pullRequest->reviews
+            ->reject->isFinished()
+            ->reject->isAbandoned()
+            ->sortByDesc('review_started_at')
+            ->first();
+
+        $state = ['state' => 'none', 'url' => route('pull-requests.show', $pullRequest)];
+
+        if ($finished !== null) {
+            $stale = $finished->commit_sha !== null && $pullRequest->last_commit !== null
+                && ! Str::startsWith($pullRequest->last_commit, $finished->commit_sha)
+                && ! Str::startsWith($finished->commit_sha, $pullRequest->last_commit);
+
+            $state = [
+                ...$state,
+                'state' => $stale ? 'outdated' : 'current',
+                'date' => $finished->review_finished_at?->toIso8601String(),
+                'findings' => $finished->findings,
+                'critical' => $finished->findings_critical,
+                'important' => $finished->findings_important,
+                'hints' => $finished->findings_hint,
+                'recommendation' => $finished->decision?->value,
+            ];
+        }
+
+        if ($running !== null) {
+            $state['state'] = 'running';
+            $state['runningSince'] = $running->review_started_at?->toIso8601String();
+        }
+
+        return $state;
     }
 
     private function organizationId(Request $request): int
