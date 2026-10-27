@@ -1,0 +1,6 @@
+{
+  "review_strictness": "strict",
+  "review_thoroughness": "meticulous",
+  "verbosity": "minimal",
+  "planstack_config": "~/.claude/skills/planstack/config.json"
+}

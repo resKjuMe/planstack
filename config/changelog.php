@@ -6,6 +6,22 @@
 return [
     'releases' => [
         [
+            'version' => '2.8.1',
+            'date' => '2026-10-27',
+            'tldr' => [
+                'de' => ['ps-review-Skill zum Herunterladen'],
+                'en' => ['ps-review skill download'],
+            ],
+            'changes' => [
+                'de' => [
+                    'Neu: Unter „Pull Requests“ lädst du über „ps-review-Skill“ den Claude-Code-Skill herunter, der Reviews hierher sendet – fertig eingerichtet mit eigenem API-Token. Nach ~/.claude/skills/ entpacken und mit „/ps-review <PR>“ starten. Jede Zeile hat außerdem einen Startknopf, der ps-review für den PR direkt in Claude öffnet.',
+                ],
+                'en' => [
+                    'New: Under "Pull requests", "ps-review skill" downloads the Claude Code skill that sends reviews here – preconfigured with its own API token. Unzip into ~/.claude/skills/ and run "/ps-review <PR>". Every row also has a start button that opens ps-review for the PR directly in Claude.',
+                ],
+            ],
+        ],
+        [
             'version' => '2.8.0',
             'date' => '2026-10-27',
             'tldr' => [

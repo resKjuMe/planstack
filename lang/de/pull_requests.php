@@ -85,4 +85,6 @@ return [
     'sync_hint_shared' => 'Offene geteilte PRs dieser Liste mit GitHub abgleichen',
     'share_on' => 'Als Shared Review markiert – klicken zum Aufheben',
     'share_off' => 'Als Shared Review für die Organisation markieren',
+    'skill_download' => 'ps-review-Skill',
+    'skill_download_hint' => 'Skill ps-review als ZIP herunterladen (mit neuem API-Token), nach ~/.claude/skills/ entpacken, dann „/ps-review <PR>“ in Claude Code',
 ];
