@@ -6,6 +6,22 @@
 return [
     'releases' => [
         [
+            'version' => '2.8.2',
+            'date' => '2026-10-27',
+            'tldr' => [
+                'de' => ['Pull Requests aktualisieren sich live'],
+                'en' => ['Pull requests update live'],
+            ],
+            'changes' => [
+                'de' => [
+                    'Verbessert: Liste und Detailseite unter „Pull Requests“ aktualisieren sich jetzt von selbst, sobald ein Review startet oder endet, eine Freigabe eingeht oder ein PR sich ändert – kein Neuladen der Seite mehr nötig.',
+                ],
+                'en' => [
+                    'Improved: The list and detail page under "Pull requests" now update by themselves as soon as a review starts or finishes, an approval arrives or a PR changes – no more page reload needed.',
+                ],
+            ],
+        ],
+        [
             'version' => '2.8.1',
             'date' => '2026-10-27',
             'tldr' => [

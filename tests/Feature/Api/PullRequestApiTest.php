@@ -2,10 +2,13 @@
 
 namespace Tests\Feature\Api;
 
+use App\Jobs\BroadcastEntityChange;
 use App\Models\Organization;
 use App\Models\PullRequest;
+use App\Models\PullRequestReview;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Bus;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
@@ -174,6 +177,27 @@ class PullRequestApiTest extends TestCase
         $this->assertNotNull($review->review_finished_at);
         $this->assertSame('REQUEST_CHANGES', $review->decision->value);
         $this->assertSame(1, $review->findingItems()->where('requires_po_decision', true)->count());
+    }
+
+    public function test_starting_and_finishing_a_review_broadcast_the_pull_request(): void
+    {
+        // Coalescing-Gedächtnis des Traits überlebt sonst den vorigen Test.
+        \Closure::bind(fn () => PullRequestReview::$broadcastCoalesce = [], null, PullRequestReview::class)();
+        Sanctum::actingAs($this->member());
+        $id = $this->putJson('/api/pull-requests', $this->pullRequestPayload())->json('data.id');
+        Bus::fake([BroadcastEntityChange::class]);
+
+        $reviewId = $this->postJson("/api/pull-requests/{$id}/reviews")->assertCreated()->json('data.id');
+        $this->putJson("/api/pull-requests/{$id}/reviews/{$reviewId}", $this->reviewPayload())->assertOk();
+
+        foreach (['insert', 'update'] as $action) {
+            Bus::assertDispatchedAfterResponse(
+                BroadcastEntityChange::class,
+                fn (BroadcastEntityChange $job) => $job->payload['entity'] === 'pull-request'
+                    && $job->payload['id'] === $id
+                    && $job->payload['action'] === $action,
+            );
+        }
     }
 
     public function test_finish_review_accepts_a_review_without_findings(): void

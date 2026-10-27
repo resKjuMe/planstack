@@ -4,7 +4,7 @@ import AppShell from '../AppShell.jsx';
 import { useNow } from '../../board/useNow.js';
 import Flash from '../components/Flash.jsx';
 import PageBands from '../components/PageBands.jsx';
-import { ApprovalChips, ColumnIcon, StackedIcon, DecisionIcon, FindingCounts, PoBadge, RunningDot, ScoreBar, StateBadge, formatDate, formatRelative, ReviewStartLink } from '../components/PullRequestParts.jsx';
+import { ApprovalChips, ColumnIcon, StackedIcon, DecisionIcon, FindingCounts, PoBadge, RunningDot, ScoreBar, StateBadge, formatDate, formatRelative, ReviewStartLink, usePullRequestLiveReload } from '../components/PullRequestParts.jsx';
 
 // Eigene Pull Requests aus ps-review. Filter (Status, Rolle) laufen über den
 // Server, Aufteilung und Sortierung clientseitig. Gruppen: laufende Reviews, was
@@ -89,6 +89,7 @@ const section = (pr) => {
 export default function PullRequestsIndex({ filters, filterUrls, syncUrl, skillDownloadUrl, flash, pullRequests, strings }) {
     const [sort, setSort] = useState({ key: 'title', dir: 'asc' });
     const [syncing, setSyncing] = useState(false);
+    usePullRequestLiveReload(['pullRequests']);
     const sync = () => router.post(syncUrl, {}, {
         preserveScroll: true,
         onStart: () => setSyncing(true),

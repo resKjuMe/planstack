@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Concerns\BroadcastsEntityChange;
 use App\Enums\PullRequestState;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -11,6 +12,8 @@ use Illuminate\Support\Str;
 
 class PullRequest extends Model
 {
+    use BroadcastsEntityChange;
+
     /** GitHub-Konvention: `vorname-nachname_clockodo` ↔ Planstack-Slug `vorname-nachname`. */
     private const LOGIN_SUFFIX = '_clockodo';
 
@@ -97,6 +100,20 @@ class PullRequest extends Model
             ['review_started_at' => 'max', 'id' => 'max'],
             fn ($query) => $query->running(),
         );
+    }
+
+    /**
+     * Gemeldet als `pull-request`; die PR-Seiten laden darauf neu.
+     *
+     * @return array{entity: string, id: int, organization_id: int|null}
+     */
+    public function entityChangeScope(): ?array
+    {
+        return [
+            'entity' => 'pull-request',
+            'id' => $this->id,
+            'organization_id' => $this->organization_id,
+        ];
     }
 
     public function url(): string

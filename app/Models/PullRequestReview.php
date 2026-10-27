@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Concerns\BroadcastsEntityChange;
 use App\Enums\ReviewRecommendation;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
@@ -10,6 +11,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class PullRequestReview extends Model
 {
+    use BroadcastsEntityChange;
+
     /** Ein Review, das so lange ohne Abschluss ist, gilt als abgebrochen. */
     public const ABANDONED_AFTER_HOURS = 2;
 
@@ -46,6 +49,20 @@ class PullRequestReview extends Model
             'findings_hint' => 'integer',
             'criticality' => 'integer',
             'ai_reviewability' => 'integer',
+        ];
+    }
+
+    /**
+     * Gemeldet als der zugehörige `pull-request`.
+     *
+     * @return array{entity: string, id: int, organization_id: int|null}
+     */
+    public function entityChangeScope(): ?array
+    {
+        return [
+            'entity' => 'pull-request',
+            'id' => $this->pull_request_id,
+            'organization_id' => $this->pullRequest?->organization_id,
         ];
     }
 

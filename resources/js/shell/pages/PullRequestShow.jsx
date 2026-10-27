@@ -2,12 +2,13 @@ import React from 'react';
 import { Head, Link } from '@inertiajs/react';
 import AppShell from '../AppShell.jsx';
 import PageBands from '../components/PageBands.jsx';
-import { ApprovalPanel, PoBadge, StackedIcon, DecisionBadge, FindingCounts, LEVEL_TONE, Markdown, RunningBadge, ScoreBar, StateBadge, formatDate, formatDuration } from '../components/PullRequestParts.jsx';
+import { ApprovalPanel, PoBadge, StackedIcon, DecisionBadge, FindingCounts, LEVEL_TONE, Markdown, RunningBadge, ScoreBar, StateBadge, formatDate, formatDuration, usePullRequestLiveReload } from '../components/PullRequestParts.jsx';
 
 // Detailseite eines Pull Requests: Metadaten, Beschreibung und alle Reviews
 // (neuestes oben) mit Zusammenfassung und Befunden. Markdown rendert der Server.
 
 export default function PullRequestShow({ pullRequest: pr, reviews, backUrl, strings }) {
+    usePullRequestLiveReload(['pullRequest', 'reviews'], pr.id);
     return (
         <>
             <Head><title>{`${pr.repository}#${pr.number} · ${strings.title}`}</title></Head>

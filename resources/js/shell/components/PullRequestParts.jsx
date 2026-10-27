@@ -1,6 +1,35 @@
-import React from 'react';
+import React, { useEffect } from 'react';
+import { router } from '@inertiajs/react';
+import { onEntityChanged, onReconnected } from '../../data/liveRefresh.js';
 
 // Gemeinsame Bausteine der Pull-Request-Seiten (Liste + Detail).
+
+/**
+ * Lädt die Props `only` neu, sobald sich ein PR (oder dessen Review/Freigabe)
+ * ändert — mit `pullRequestId` nur bei diesem PR. Kurz entprellt, weil ein
+ * Sync viele PRs auf einmal meldet.
+ */
+export function usePullRequestLiveReload(only, pullRequestId = null) {
+    const key = only.join(',');
+    useEffect(() => {
+        let timer = null;
+        const reload = () => {
+            clearTimeout(timer);
+            timer = setTimeout(() => router.reload({ only: key.split(',') }), 500);
+        };
+        const offEntity = onEntityChanged((detail) => {
+            if (detail?.entity !== 'pull-request') return;
+            if (pullRequestId !== null && detail.id !== pullRequestId) return;
+            reload();
+        });
+        const offReconnect = onReconnected(reload);
+        return () => {
+            clearTimeout(timer);
+            offEntity();
+            offReconnect();
+        };
+    }, [key, pullRequestId]);
+}
 
 export function formatDate(iso) {
     if (!iso) return '—';
