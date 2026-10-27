@@ -55,6 +55,21 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Pflicht-Approvals je Gruppe (Pull Requests aus ps-review)
+    |--------------------------------------------------------------------------
+    |
+    | Check-Run, der die Approvals je Gruppe kritischer Dateien als Tabelle
+    | ausgibt (| Group | Team | Approvals | Files | Status |). Die App-ID hält
+    | die GraphQL-Abfrage klein; ohne sie werden die Gruppen nicht synchronisiert.
+    |
+    */
+
+    'approval_check_name' => env('GITHUB_APPROVAL_CHECK_NAME', 'pr-bot / Check Critical Files Approvals'),
+
+    'approval_check_app_id' => env('GITHUB_APPROVAL_CHECK_APP_ID', 5393133),
+
+    /*
+    |--------------------------------------------------------------------------
     | next-action: Fix-Lease
     |--------------------------------------------------------------------------
     |
@@ -102,4 +117,3 @@ return [
     'active_session_ttl_minutes' => (int) env('PLANSTACK_ACTIVE_SESSION_TTL_MINUTES', 10),
 
 ];
-

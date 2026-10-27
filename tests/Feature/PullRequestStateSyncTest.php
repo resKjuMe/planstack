@@ -51,12 +51,18 @@ class PullRequestStateSyncTest extends TestCase
                     'pr1' => [
                         'state' => 'MERGED', 'mergedAt' => '2026-10-26T10:00:00Z', 'closedAt' => '2026-10-26T10:00:00Z',
                         'title' => 'PR 1', 'headRefOid' => 'bbb', 'additions' => 5, 'deletions' => 1, 'changedFiles' => 2,
-                        'commits' => ['totalCount' => 3], 'comments' => ['totalCount' => 1],
+                        'commitCount' => ['totalCount' => 3], 'comments' => ['totalCount' => 1],
+                        'latestOpinionatedReviews' => ['nodes' => [
+                            ['author' => ['login' => 'vera-rolf_clockodo'], 'state' => 'APPROVED', 'submittedAt' => '2026-10-26T09:00:00Z', 'commit' => ['oid' => 'bbb']],
+                        ]],
+                        'commits' => ['nodes' => [['commit' => ['checkSuites' => ['nodes' => [
+                            ['checkRuns' => ['nodes' => [['summary' => "| Group | Team | Approvals | Files | Status |\n| --- | --- | --- | --- | --- |\n| Backend | backend-dev | 1 / 2 | 3 | 1 missing |"]]]],
+                        ]]]]]],
                     ],
                     'pr2' => [
                         'state' => 'OPEN', 'mergedAt' => null, 'closedAt' => null,
                         'title' => 'PR 2 neu', 'headRefOid' => 'ccc', 'additions' => 9, 'deletions' => 0, 'changedFiles' => 1,
-                        'commits' => ['totalCount' => 1], 'comments' => ['totalCount' => 0],
+                        'commitCount' => ['totalCount' => 1], 'comments' => ['totalCount' => 0],
                     ],
                     'pr3' => null,
                 ]],
@@ -70,12 +76,18 @@ class PullRequestStateSyncTest extends TestCase
         $this->assertSame('MERGED', $merged->refresh()->state->value);
         $this->assertNotNull($merged->merged_at);
         $this->assertSame('bbb', $merged->last_commit);
-        $this->assertSame('PR 2 neu', $open->refresh()->title);
+        $this->assertSame(3, $merged->commits);
+        $this->assertEquals([['label' => 'Backend', 'team' => 'backend-dev', 'approved' => 1, 'required' => 2]], $merged->approval_groups);
+        $this->assertSame(['vera-rolf_clockodo'], $merged->approvals()->pluck('login')->all());
+        // Ohne Check-Daten bleiben die Gruppen unbekannt.
+        $this->assertNull($open->refresh()->approval_groups);
+        $this->assertSame('PR 2 neu', $open->title);
         $this->assertSame(9, $open->additions);
         $this->assertSame('OPEN', $missing->refresh()->state->value);
 
         // Nur offene PRs werden abgefragt.
-        Http::assertSent(fn ($request) => ! str_contains($request['query'], 'pr4:'));
+        Http::assertSent(fn ($request) => ! str_contains($request['query'], 'pr4:')
+            && str_contains($request['query'], 'filterBy: {appId: 5393133}'));
         $this->assertSame('CLOSED', $closed->refresh()->state->value);
     }
 

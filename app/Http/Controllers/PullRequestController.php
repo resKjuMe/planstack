@@ -3,8 +3,10 @@
 namespace App\Http\Controllers;
 
 use App\Models\PullRequest;
+use App\Models\PullRequestApproval;
 use App\Models\PullRequestReview;
 use App\Models\ReviewFinding;
+use App\Support\PullRequestApprovals;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -34,7 +36,7 @@ class PullRequestController extends Controller
             ->when($role === 'reviewed', fn (Builder $q) => $q->whereHas('reviews', fn (Builder $r) => $r->where('reviewer_id', $user->id)))
             ->when($role === 'authored', fn (Builder $q) => $q->where('author_id', $user->id))
             ->when($state !== 'all', fn (Builder $q) => $q->where('state', strtoupper($state)))
-            ->with(['author', 'latestReview', 'runningReview.reviewer'])
+            ->with(['author', 'latestReview', 'runningReview.reviewer', 'approvals.user'])
             ->withCount('reviews')
             ->latest('updated_at')
             ->limit(self::LIMIT)
@@ -49,6 +51,7 @@ class PullRequestController extends Controller
             'pullRequests' => $pullRequests->map(fn (PullRequest $pr) => [
                 ...$this->pullRequestRow($pr),
                 'reviewsCount' => $pr->reviews_count,
+                'approvals' => $this->approvals($pr),
                 'review' => $pr->latestReview ? $this->reviewRow($pr->latestReview, $pr) : null,
                 'running' => $pr->runningReview ? [
                     'startedAt' => $pr->runningReview->review_started_at?->toIso8601String(),
@@ -63,7 +66,7 @@ class PullRequestController extends Controller
     {
         abort_unless($pullRequest->organization_id === $request->user()->organization_id, 404);
 
-        $pullRequest->load(['author', 'reviews' => fn ($q) => $q->latest('review_started_at')->latest('id'), 'reviews.reviewer', 'reviews.findingItems']);
+        $pullRequest->load(['author', 'approvals.user', 'reviews' => fn ($q) => $q->latest('review_started_at')->latest('id'), 'reviews.reviewer', 'reviews.findingItems']);
 
         return Inertia::render('PullRequestShow', [
             'pullRequest' => [
@@ -75,6 +78,7 @@ class PullRequestController extends Controller
                 'lastCommit' => $pullRequest->last_commit,
                 'mergedAt' => $pullRequest->merged_at?->toIso8601String(),
                 'closedAt' => $pullRequest->closed_at?->toIso8601String(),
+                'approvals' => $this->approvals($pullRequest),
             ],
             'reviews' => $pullRequest->reviews->map(fn (PullRequestReview $review) => [
                 ...$this->reviewRow($review, $pullRequest),
@@ -123,6 +127,22 @@ class PullRequestController extends Controller
             'deletions' => $pr->deletions,
             'openedAt' => $pr->opened_at?->toIso8601String(),
             'updatedAt' => $pr->updated_at?->toIso8601String(),
+        ];
+    }
+
+    private function approvals(PullRequest $pr): array
+    {
+        return [
+            ...PullRequestApprovals::status($pr, $pr->approvals),
+            'reviewers' => $pr->approvals
+                ->sortBy(fn (PullRequestApproval $a) => [$a->state, $a->submitted_at])
+                ->map(fn (PullRequestApproval $a) => [
+                    'name' => $a->user?->name ?? $a->login,
+                    'state' => $a->state,
+                    'submittedAt' => $a->submitted_at?->toIso8601String(),
+                    // Approve auf einem älteren Commit als dem aktuellen.
+                    'outdated' => $a->commit_sha !== null && $pr->last_commit !== null && $a->commit_sha !== $pr->last_commit,
+                ])->values(),
         ];
     }
 

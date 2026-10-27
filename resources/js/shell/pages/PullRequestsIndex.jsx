@@ -2,7 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { Head, Link } from '@inertiajs/react';
 import AppShell from '../AppShell.jsx';
 import PageBands from '../components/PageBands.jsx';
-import { DecisionBadge, FindingCounts, RunningBadge, ScoreBar, StateBadge, formatDate } from '../components/PullRequestParts.jsx';
+import { ApprovalChips, DecisionBadge, FindingCounts, RunningBadge, ScoreBar, StateBadge, formatDate } from '../components/PullRequestParts.jsx';
 
 // Eigene Pull Requests aus ps-review. Filter (Status, Rolle) laufen über den
 // Server, die Sortierung clientseitig; Default ist der Handlungsbedarf.
@@ -11,6 +11,8 @@ const SORTS = {
     pr: (pr) => `${pr.repository}#${String(pr.number).padStart(8, '0')}`,
     author: (pr) => (pr.author ?? '').toLowerCase(),
     size: (pr) => pr.additions + pr.deletions,
+    // Offene Freigaben zuerst (aufsteigend): vollständig ans Ende, dann nach Zahl.
+    approvals: (pr) => (pr.approvals.fulfilled ? 1000 : 0) + pr.approvals.approved - pr.approvals.changesRequested * 10,
     decision: (pr) => pr.review?.decision ?? null,
     findings: (pr) => (pr.review ? pr.review.critical * 10000 + pr.review.important * 100 + pr.review.hint : null),
     criticality: (pr) => pr.review?.criticality ?? null,
@@ -40,7 +42,7 @@ export default function PullRequestsIndex({ filters, filterUrls, pullRequests, s
     const toggleSort = (key) => setSort((current) => (
         current.key === key
             ? { key, dir: current.dir === 'desc' ? 'asc' : 'desc' }
-            : { key, dir: ['pr', 'author', 'aiReviewability'].includes(key) ? 'asc' : 'desc' }
+            : { key, dir: ['pr', 'author', 'aiReviewability', 'approvals'].includes(key) ? 'asc' : 'desc' }
     ));
 
     return (
@@ -76,6 +78,7 @@ export default function PullRequestsIndex({ filters, filterUrls, pullRequests, s
                                         <SortHeader id="pr" sort={sort} onSort={toggleSort}>{strings.col_pr}</SortHeader>
                                         <SortHeader id="author" sort={sort} onSort={toggleSort}>{strings.col_author}</SortHeader>
                                         <SortHeader id="size" sort={sort} onSort={toggleSort} align="right">{strings.col_size}</SortHeader>
+                                        <SortHeader id="approvals" sort={sort} onSort={toggleSort} title={strings.approvals_hint}>{strings.approvals}</SortHeader>
                                         <SortHeader id="decision" sort={sort} onSort={toggleSort}>{strings.col_decision}</SortHeader>
                                         <SortHeader id="findings" sort={sort} onSort={toggleSort}>{strings.col_findings}</SortHeader>
                                         <SortHeader id="criticality" sort={sort} onSort={toggleSort}>{strings.col_criticality}</SortHeader>
@@ -152,6 +155,7 @@ function Row({ pr, strings }) {
                 <span className="text-red-600 dark:text-red-400">−{pr.deletions}</span>
                 <div className="text-gray-400">{pr.changedFiles} {strings.files}</div>
             </td>
+            <td className="px-3 py-2"><ApprovalChips approvals={pr.approvals} strings={strings} /></td>
             {review ? (
                 <>
                     <td className="px-3 py-2 whitespace-nowrap">

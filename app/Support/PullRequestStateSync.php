@@ -11,14 +11,15 @@ use Illuminate\Support\Facades\Http;
 
 /**
  * Hält die offenen PRs aus ps-review aktuell: Status (gemergt/geschlossen),
- * letzter Commit, Titel und Umfang kommen je Repo per GraphQL, je Anfrage bis zu
- * CHUNK PRs als Aliase. Ein fehlgeschlagenes Repo bricht den Lauf nicht ab.
+ * letzter Commit, Titel, Umfang und Approvals (je Reviewer und je Gruppe
+ * kritischer Dateien) kommen je Repo per GraphQL, je Anfrage bis zu CHUNK PRs
+ * als Aliase. Ein fehlgeschlagenes Repo bricht den Lauf nicht ab.
  */
 class PullRequestStateSync
 {
     private const CHUNK = 25;
 
-    private const FIELDS = 'state mergedAt closedAt title headRefOid additions deletions changedFiles commits { totalCount } comments { totalCount }';
+    private const FIELDS = 'state mergedAt closedAt title headRefOid additions deletions changedFiles commitCount: commits { totalCount } comments { totalCount }';
 
     /**
      * @return array{repos: int, prs: int, errors: int, tokenMissing: bool, failures: array<int, string>}
@@ -67,8 +68,9 @@ class PullRequestStateSync
     private function fetch(PendingRequest $client, string $owner, string $name, array $numbers, ?string &$error): array
     {
         $error = null;
+        $fields = self::FIELDS.' '.$this->approvalFields();
         $aliases = collect($numbers)
-            ->map(fn (int $n) => "pr{$n}: pullRequest(number: {$n}) { ".self::FIELDS.' }')
+            ->map(fn (int $n) => "pr{$n}: pullRequest(number: {$n}) { {$fields} }")
             ->implode("\n");
 
         try {
@@ -125,17 +127,50 @@ class PullRequestStateSync
                 'additions' => $node['additions'],
                 'deletions' => $node['deletions'],
                 'changed_files' => $node['changedFiles'],
-                'commits' => data_get($node, 'commits.totalCount', $pullRequest->commits),
+                'commits' => data_get($node, 'commitCount.totalCount', $pullRequest->commits),
                 'comments' => data_get($node, 'comments.totalCount', $pullRequest->comments),
             ]);
+
+            $check = collect(data_get($node, 'commits.nodes.0.commit.checkSuites.nodes', []))
+                ->flatMap(fn ($suite) => data_get($suite, 'checkRuns.nodes', []) ?? [])
+                ->first();
+            if ($check !== null) {
+                $pullRequest->approval_groups = PullRequestApprovals::parseGroups($check['summary'] ?? null);
+            }
 
             if ($pullRequest->isDirty()) {
                 $pullRequest->save();
                 $updated++;
             }
+
+            if (is_array(data_get($node, 'latestOpinionatedReviews.nodes'))) {
+                PullRequestApprovals::sync($pullRequest, collect($node['latestOpinionatedReviews']['nodes'])->map(fn ($r) => [
+                    'login' => data_get($r, 'author.login'),
+                    'state' => $r['state'] ?? null,
+                    'submitted_at' => $r['submittedAt'] ?? null,
+                    'commit_sha' => data_get($r, 'commit.oid'),
+                ]));
+            }
         }
 
         return $updated;
+    }
+
+    /**
+     * Reviews plus der Check-Run mit den Gruppen; die Check-Suites werden auf die
+     * App des Checks gefiltert, sonst sprengt die Abfrage GitHubs Ressourcenlimit.
+     */
+    private function approvalFields(): string
+    {
+        $fields = 'latestOpinionatedReviews(first: 30) { nodes { author { login } state submittedAt commit { oid } } }';
+        $appId = (int) config('planstack.approval_check_app_id');
+        $checkName = json_encode((string) config('planstack.approval_check_name'));
+
+        if ($appId > 0) {
+            $fields .= " commits(last: 1) { nodes { commit { checkSuites(first: 3, filterBy: {appId: {$appId}}) { nodes { checkRuns(first: 1, filterBy: {checkName: {$checkName}}) { nodes { summary } } } } } } }";
+        }
+
+        return $fields;
     }
 
     private function date(?string $value): ?Carbon

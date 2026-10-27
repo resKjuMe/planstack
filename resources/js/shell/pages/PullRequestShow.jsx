@@ -2,7 +2,7 @@ import React from 'react';
 import { Head, Link } from '@inertiajs/react';
 import AppShell from '../AppShell.jsx';
 import PageBands from '../components/PageBands.jsx';
-import { DecisionBadge, FindingCounts, LEVEL_TONE, Markdown, RunningBadge, ScoreBar, StateBadge, formatDate, formatDuration } from '../components/PullRequestParts.jsx';
+import { ApprovalPanel, DecisionBadge, FindingCounts, LEVEL_TONE, Markdown, RunningBadge, ScoreBar, StateBadge, formatDate, formatDuration } from '../components/PullRequestParts.jsx';
 
 // Detailseite eines Pull Requests: Metadaten, Beschreibung und alle Reviews
 // (neuestes oben) mit Zusammenfassung und Befunden. Markdown rendert der Server.
@@ -38,6 +38,8 @@ export default function PullRequestShow({ pullRequest: pr, reviews, backUrl, str
                     </div>
 
                     <aside className="space-y-6">
+                        <ApprovalPanel approvals={pr.approvals} strings={strings} />
+
                         <section className="bg-white dark:bg-gray-800 rounded-lg shadow p-5">
                             <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
                                 <Fact label={strings.files} value={pr.changedFiles} />

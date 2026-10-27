@@ -580,6 +580,10 @@ curl -s https://planstack.eskju.net/api/user \
                     <tr><td><code>state</code></td><td>string</td><td><span class="opt">{{ __('api.optional') }}</span> · OPEN · CLOSED · MERGED</td></tr>
                     <tr><td><code>changed_files</code>, <code>additions</code>, <code>deletions</code>, <code>commits</code>, <code>comments</code>, <code>review_comments</code></td><td>integer</td><td><span class="opt">{{ __('api.optional') }}</span> · ≥ 0</td></tr>
                     <tr><td><code>opened_at</code>, <code>merged_at</code>, <code>closed_at</code></td><td>datetime</td><td><span class="opt">{{ __('api.optional') }}</span></td></tr>
+                    <tr><td><code>github_reviews</code></td><td>array</td><td><span class="opt">{{ __('api.optional') }}</span> · alle GitHub-Reviews des PR; je Reviewer zählt die letzte Entscheidung (APPROVED, CHANGES_REQUESTED; DISMISSED hebt auf, COMMENTED zählt nicht, der Autor fällt weg). Ersetzt die gespeicherten Approvals.</td></tr>
+                    <tr><td><code>github_reviews[].login</code>, <code>.state</code></td><td>string</td><td><span class="req">{{ __('api.required') }}</span></td></tr>
+                    <tr><td><code>github_reviews[].submitted_at</code>, <code>.commit_id</code></td><td>string</td><td><span class="opt">{{ __('api.optional') }}</span></td></tr>
+                    <tr><td><code>approval_check_summary</code></td><td>markdown</td><td><span class="opt">{{ __('api.optional') }}</span> · <code>output.summary</code> des Checks „pr-bot / Check Critical Files Approvals“; daraus entstehen die Pflicht-Approvals je Gruppe</td></tr>
                 </tbody>
             </table>
         </section>

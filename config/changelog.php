@@ -6,6 +6,22 @@
 return [
     'releases' => [
         [
+            'version' => '2.6.0',
+            'date' => '2026-10-27',
+            'tldr' => [
+                'de' => ['Freigaben je PR'],
+                'en' => ['Approvals per PR'],
+            ],
+            'changes' => [
+                'de' => [
+                    'Neu: „Pull Requests“ zeigt, wer einen PR auf GitHub approved oder Änderungen verlangt hat und ob die Freigabe vollständig ist. Ein Approve ist immer nötig; berührt ein PR kritische Dateien, verlangt die jeweilige Gruppe (Frontend/Backend) zusätzlich zwei Approves aus ihrem Team. Der Stand wird alle fünf Minuten aktualisiert.',
+                ],
+                'en' => [
+                    'New: "Pull requests" shows who approved a PR on GitHub or requested changes, and whether the approvals are complete. One approval is always required; if a PR touches critical files, the affected group (frontend/backend) also needs two approvals from its team. The data refreshes every five minutes.',
+                ],
+            ],
+        ],
+        [
             'version' => '2.5.1',
             'date' => '2026-10-27',
             'tldr' => [

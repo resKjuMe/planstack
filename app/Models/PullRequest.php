@@ -36,6 +36,7 @@ class PullRequest extends Model
         'commits',
         'comments',
         'review_comments',
+        'approval_groups',
         'opened_at',
         'merged_at',
         'closed_at',
@@ -52,6 +53,7 @@ class PullRequest extends Model
             'commits' => 'integer',
             'comments' => 'integer',
             'review_comments' => 'integer',
+            'approval_groups' => 'array',
             'opened_at' => 'datetime',
             'merged_at' => 'datetime',
             'closed_at' => 'datetime',
@@ -71,6 +73,11 @@ class PullRequest extends Model
     public function reviews(): HasMany
     {
         return $this->hasMany(PullRequestReview::class);
+    }
+
+    public function approvals(): HasMany
+    {
+        return $this->hasMany(PullRequestApproval::class);
     }
 
     public function latestReview(): HasOne
