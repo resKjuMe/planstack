@@ -6,6 +6,24 @@
 return [
     'releases' => [
         [
+            'version' => '2.7.0',
+            'date' => '2026-10-27',
+            'tldr' => [
+                'de' => ['Pull Requests in zwei Listen, gestapelte PRs eingerückt'],
+                'en' => ['Pull requests in two lists, stacked PRs indented'],
+            ],
+            'changes' => [
+                'de' => [
+                    'Neu: „Pull Requests“ teilt sich in zwei Listen: oben die PRs, die ein Review brauchen (noch keins, oder seit dem letzten wurde gepusht), unten die, an denen sich seit dem letzten Review nichts geändert hat.',
+                    'Neu: Die Listen sind nach Titel sortiert. Gestapelte PRs stehen eingerückt unter dem PR, auf dem sie aufsetzen. Ein Klick auf eine andere Spalte sortiert wie bisher danach; ein Klick auf „PR“ stellt die Ansicht nach Titel wieder her.',
+                ],
+                'en' => [
+                    'New: "Pull requests" is split into two lists: at the top the PRs that need a review (none yet, or pushed since the last one), below those that have not changed since the last review.',
+                    'New: Both lists are sorted by title. Stacked PRs are indented under the PR they build on. Clicking another column sorts by it as before; clicking "PR" restores the title view.',
+                ],
+            ],
+        ],
+        [
             'version' => '2.6.2',
             'date' => '2026-10-27',
             'tldr' => [

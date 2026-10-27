@@ -6,10 +6,14 @@ import PageBands from '../components/PageBands.jsx';
 import { ApprovalChips, StackedIcon, DecisionBadge, FindingCounts, RunningBadge, ScoreBar, StateBadge, formatDate } from '../components/PullRequestParts.jsx';
 
 // Eigene Pull Requests aus ps-review. Filter (Status, Rolle) laufen über den
-// Server, die Sortierung clientseitig; Default ist der Handlungsbedarf.
+// Server, Aufteilung und Sortierung clientseitig. Oben steht, was ein Review
+// braucht (keins, oder seit dem letzten gepusht), unten der Rest. Default ist
+// der Titel; gestapelte PRs hängen dann eingerückt unter ihrem Parent.
+
+const byTitle = (a, b) => (a.title ?? '').localeCompare(b.title ?? '', undefined, { numeric: true, sensitivity: 'base' });
 
 const SORTS = {
-    pr: (pr) => `${pr.repository}#${String(pr.number).padStart(8, '0')}`,
+    title: (pr) => (pr.title ?? '').toLowerCase(),
     author: (pr) => (pr.author ?? '').toLowerCase(),
     size: (pr) => pr.additions + pr.deletions,
     // Offene Freigaben zuerst (aufsteigend): vollständig ans Ende, dann nach Zahl.
@@ -33,23 +37,61 @@ function compare(a, b, key, dir) {
     return dir === 'asc' ? result : -result;
 }
 
+// Parent ist der PR im selben Repo, dessen Branch das Ziel dieses PR ist (wie im
+// Tampermonkey-Skript git-colors). Liegt der Parent nicht in der Liste, ist der
+// PR selbst Wurzel. Ergebnis: Zeilen in Baumreihenfolge mit Einrücktiefe.
+function asTree(list, dir) {
+    const sign = dir === 'desc' ? -1 : 1;
+    const byBranch = new Map(list.map((pr) => [`${pr.repository}:${pr.branch}`, pr]));
+    const children = new Map(list.map((pr) => [pr.id, []]));
+    const roots = [];
+
+    list.forEach((pr) => {
+        const parent = pr.targetBranch !== 'main' ? byBranch.get(`${pr.repository}:${pr.targetBranch}`) : null;
+        if (parent && parent !== pr) children.get(parent.id).push(pr);
+        else roots.push(pr);
+    });
+
+    const rows = [];
+    const seen = new Set();
+    const walk = (pr, level) => {
+        if (seen.has(pr.id)) return; // Zyklus (A → B → A) nicht endlos verfolgen
+        seen.add(pr.id);
+        rows.push({ pr, level });
+        children.get(pr.id).sort((a, b) => sign * byTitle(a, b)).forEach((child) => walk(child, level + 1));
+    };
+    roots.sort((a, b) => sign * byTitle(a, b)).forEach((pr) => walk(pr, 0));
+    // PRs, die nur in einem Zyklus hängen, haben keine Wurzel: ans Ende.
+    list.filter((pr) => !seen.has(pr.id)).sort(byTitle).forEach((pr) => walk(pr, 0));
+
+    return rows;
+}
+
+function arrange(list, sort) {
+    return sort.key === 'title'
+        ? asTree(list, sort.dir)
+        : [...list].sort((a, b) => compare(a, b, sort.key, sort.dir)).map((pr) => ({ pr, level: 0 }));
+}
+
+const needsReview = (pr) => !pr.review || pr.review.stale;
+
 export default function PullRequestsIndex({ filters, filterUrls, syncUrl, flash, pullRequests, strings }) {
-    const [sort, setSort] = useState({ key: 'need', dir: 'desc' });
+    const [sort, setSort] = useState({ key: 'title', dir: 'asc' });
     const [syncing, setSyncing] = useState(false);
     const sync = () => router.post(syncUrl, {}, {
         preserveScroll: true,
         onStart: () => setSyncing(true),
         onFinish: () => setSyncing(false),
     });
-    const rows = useMemo(
-        () => [...pullRequests].sort((a, b) => compare(a, b, sort.key, sort.dir)),
-        [pullRequests, sort],
-    );
+    const sections = useMemo(() => [
+        { key: 'needs_review', rows: arrange(pullRequests.filter(needsReview), sort) },
+        { key: 'reviewed', rows: arrange(pullRequests.filter((pr) => !needsReview(pr)), sort) },
+    ].filter((section) => section.rows.length > 0), [pullRequests, sort]);
 
     const toggleSort = (key) => setSort((current) => (
         current.key === key
             ? { key, dir: current.dir === 'desc' ? 'asc' : 'desc' }
-            : { key, dir: ['pr', 'author', 'aiReviewability', 'approvals'].includes(key) ? 'asc' : 'desc' }
+            : { key, dir: ['title', 'author', 'aiReviewability', 'approvals'].includes(key) ? 'asc' : 'desc' }
     ));
 
     return (
@@ -86,7 +128,7 @@ export default function PullRequestsIndex({ filters, filterUrls, syncUrl, flash,
             <div className="py-8">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <Flash status={flash?.status} error={flash?.error} />
-                    {rows.length === 0 ? (
+                    {pullRequests.length === 0 ? (
                         <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-8 text-center text-gray-500 dark:text-gray-400">
                             {strings.empty}
                         </div>
@@ -95,7 +137,7 @@ export default function PullRequestsIndex({ filters, filterUrls, syncUrl, flash,
                             <table className="min-w-full text-sm">
                                 <thead className="bg-gray-50 dark:bg-gray-900/40 text-left text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">
                                     <tr>
-                                        <SortHeader id="pr" sort={sort} onSort={toggleSort}>{strings.col_pr}</SortHeader>
+                                        <SortHeader id="title" sort={sort} onSort={toggleSort}>{strings.col_pr}</SortHeader>
                                         <SortHeader id="author" sort={sort} onSort={toggleSort}>{strings.col_author}</SortHeader>
                                         <SortHeader id="size" sort={sort} onSort={toggleSort} align="right">{strings.col_size}</SortHeader>
                                         <SortHeader id="approvals" sort={sort} onSort={toggleSort} title={strings.approvals_hint}>{strings.approvals}</SortHeader>
@@ -107,9 +149,16 @@ export default function PullRequestsIndex({ filters, filterUrls, syncUrl, flash,
                                         <SortHeader id="reviewedAt" sort={sort} onSort={toggleSort}>{strings.col_reviewed_at}</SortHeader>
                                     </tr>
                                 </thead>
-                                <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
-                                    {rows.map((pr) => <Row key={pr.id} pr={pr} strings={strings} />)}
-                                </tbody>
+                                {sections.map((section) => (
+                                    <tbody key={section.key} className="divide-y divide-gray-100 dark:divide-gray-700">
+                                        <tr className="bg-gray-50/60 dark:bg-gray-900/20">
+                                            <th colSpan={10} className="px-3 pt-4 pb-1.5 text-left text-xs font-semibold text-gray-700 dark:text-gray-200">
+                                                {strings[`section_${section.key}`]} <span className="font-normal text-gray-400">({section.rows.length})</span>
+                                            </th>
+                                        </tr>
+                                        {section.rows.map(({ pr, level }) => <Row key={pr.id} pr={pr} level={level} strings={strings} />)}
+                                    </tbody>
+                                ))}
                             </table>
                         </div>
                     )}
@@ -154,11 +203,11 @@ function SortHeader({ id, sort, onSort, children, title, align = 'left' }) {
     );
 }
 
-function Row({ pr, strings }) {
+function Row({ pr, level, strings }) {
     const review = pr.review;
     return (
         <tr className="hover:bg-gray-50 dark:hover:bg-gray-700/40 align-top">
-            <td className="px-3 py-2 max-w-md">
+            <td className="px-3 py-2 max-w-md" style={level > 0 ? { paddingLeft: `calc(0.75rem + ${level * 30}px)` } : undefined}>
                 <StackedIcon pr={pr} strings={strings} />
                 <Link href={pr.showUrl} className="font-medium text-gray-900 dark:text-gray-100 hover:text-indigo-600 dark:hover:text-indigo-400">
                     {pr.title}
