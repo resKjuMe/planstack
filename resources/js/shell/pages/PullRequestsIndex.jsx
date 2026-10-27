@@ -4,7 +4,7 @@ import AppShell from '../AppShell.jsx';
 import { useNow } from '../../board/useNow.js';
 import Flash from '../components/Flash.jsx';
 import PageBands from '../components/PageBands.jsx';
-import { ApprovalChips, ColumnIcon, StackedIcon, DecisionIcon, FindingCounts, RunningDot, ScoreBar, StateBadge, formatDate, formatRelative, ReviewStartLink } from '../components/PullRequestParts.jsx';
+import { ApprovalChips, ColumnIcon, StackedIcon, DecisionIcon, FindingCounts, PoBadge, RunningDot, ScoreBar, StateBadge, formatDate, formatRelative, ReviewStartLink } from '../components/PullRequestParts.jsx';
 
 // Eigene Pull Requests aus ps-review. Filter (Status, Rolle) laufen über den
 // Server, Aufteilung und Sortierung clientseitig. Gruppen: laufende Reviews, was
@@ -242,6 +242,7 @@ function Row({ pr, level, canShare, strings }) {
                     <Link href={pr.showUrl} title={pr.title} className="truncate font-medium text-gray-900 dark:text-gray-100 hover:text-indigo-600 dark:hover:text-indigo-400">
                         {pr.title}
                     </Link>
+                    <PoBadge count={pr.review?.poDecisions} strings={strings} />
                     {pr.state !== 'OPEN' && <StateBadge state={pr.state} strings={strings} />}
                     {pr.running && <RunningDot running={pr.running} strings={strings} />}
                 </div>

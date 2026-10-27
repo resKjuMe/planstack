@@ -32,6 +32,7 @@ return [
     'level_IMPORTANT' => 'Wichtig',
     'level_HINT' => 'Hinweis',
     'po_decision' => 'PO-Entscheidung nötig',
+    'po_decisions' => ':count Befund(e) brauchen eine PO-Entscheidung',
     'summary_finding' => 'Allgemein',
     'back' => 'Alle Pull Requests',
     'open_on_github' => 'Auf GitHub öffnen',
