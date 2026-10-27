@@ -65,6 +65,8 @@ class PullRequestController extends Controller
                     'reviewer' => $pr->runningReview->reviewer?->name,
                 ] : null,
             ])->values(),
+            'grouped' => $user->pull_requests_grouped,
+            'groupingUrl' => route('pull-requests.grouping'),
             'syncUrl' => route('pull-requests.sync', ['state' => $state, 'role' => $role]),
             'skillDownloadUrl' => route('skill.ps-review.download'),
             'flash' => ['status' => session('status'), 'error' => session('error')],
@@ -102,6 +104,17 @@ class PullRequestController extends Controller
         }
 
         return $back->with('status', $message);
+    }
+
+    /**
+     * Merkt am Nutzer, ob die Liste gruppiert oder flach angezeigt wird.
+     */
+    public function grouping(Request $request): RedirectResponse
+    {
+        $validated = $request->validate(['grouped' => ['required', 'boolean']]);
+        $request->user()->update(['pull_requests_grouped' => $validated['grouped']]);
+
+        return back();
     }
 
     /**

@@ -9,7 +9,8 @@ import { ApprovalChips, ColumnIcon, StackedIcon, DecisionIcon, FindingCounts, Po
 // Eigene Pull Requests aus ps-review. Filter (Status, Rolle) laufen über den
 // Server, Aufteilung und Sortierung clientseitig. Gruppen: laufende Reviews, was
 // ein Review braucht (keins, oder seit dem letzten gepusht), empfohlene, aber
-// noch nicht von mir approvte, Reviewtes, schon ausreichend Approvtes. Default ist der Titel; gestapelte PRs hängen dann
+// noch nicht von mir approvte, Reviewtes, schon ausreichend Approvtes – abschaltbar,
+// am Nutzer gespeichert. Default ist der Titel; gestapelte PRs hängen dann
 // eingerückt unter ihrem Parent.
 
 const byTitle = (a, b) => (a.title ?? '').localeCompare(b.title ?? '', undefined, { numeric: true, sensitivity: 'base' });
@@ -86,21 +87,27 @@ const section = (pr) => {
     return 'reviewed';
 };
 
-export default function PullRequestsIndex({ filters, filterUrls, syncUrl, skillDownloadUrl, flash, pullRequests, strings }) {
+export default function PullRequestsIndex({ filters, filterUrls, grouped: initialGrouped, groupingUrl, syncUrl, skillDownloadUrl, flash, pullRequests, strings }) {
     const [sort, setSort] = useState({ key: 'title', dir: 'asc' });
     const [syncing, setSyncing] = useState(false);
+    const [grouped, setGrouped] = useState(initialGrouped);
+    const toggleGrouped = () => {
+        setGrouped(!grouped);
+        router.post(groupingUrl, { grouped: !grouped }, { preserveScroll: true, preserveState: true });
+    };
     usePullRequestLiveReload(['pullRequests']);
     const sync = () => router.post(syncUrl, {}, {
         preserveScroll: true,
         onStart: () => setSyncing(true),
         onFinish: () => setSyncing(false),
     });
-    const sections = useMemo(() => [
-        ...['running', 'needs_review', 'approve_pending', 'reviewed', 'approved'].map((key) => ({
+    const sections = useMemo(() => (grouped
+        ? ['running', 'needs_review', 'approve_pending', 'reviewed', 'approved'].map((key) => ({
             key,
             rows: arrange(pullRequests.filter((pr) => section(pr) === key), sort),
-        })),
-    ].filter((section) => section.rows.length > 0), [pullRequests, sort]);
+        })).filter((section) => section.rows.length > 0)
+        : [{ key: 'all', rows: arrange(pullRequests, sort) }]
+    ), [pullRequests, sort, grouped]);
 
     const toggleSort = (key) => setSort((current) => (
         current.key === key
@@ -122,6 +129,20 @@ export default function PullRequestsIndex({ filters, filterUrls, syncUrl, skillD
                         <div className="flex flex-wrap items-center gap-2">
                             <Pills current={filters.role} urls={filterUrls.role} label={(r) => (r === filters.role ? <>{strings[`role_${r}`]} <span className="opacity-75">({pullRequests.length})</span></> : strings[`role_${r}`])} />
                             <Pills current={filters.state} urls={filterUrls.state} label={(s) => strings[`state_${s}`]} />
+                            <button
+                                type="button"
+                                onClick={toggleGrouped}
+                                aria-pressed={grouped}
+                                title={strings.grouping_hint}
+                                className={`inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium border shadow-sm ${grouped
+                                    ? 'bg-indigo-600 border-indigo-600 text-white hover:bg-indigo-700'
+                                    : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700'}`}
+                            >
+                                <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                                    <path d="M3 5h18M7 10h14M7 14h14M3 19h18" />
+                                </svg>
+                                {strings.grouping}
+                            </button>
                             <button
                                 type="button"
                                 onClick={sync}
@@ -176,11 +197,13 @@ export default function PullRequestsIndex({ filters, filterUrls, syncUrl, skillD
                                 </thead>
                                 {sections.map((section) => (
                                     <tbody key={section.key} className="divide-y divide-gray-100 dark:divide-gray-700">
-                                        <tr className="bg-gray-50/60 dark:bg-gray-900/20">
-                                            <th colSpan={10} className="px-2 pt-4 pb-1.5 text-left text-xs font-semibold text-gray-700 dark:text-gray-200">
-                                                {strings[`section_${section.key}`]} <span className="font-normal text-gray-400">({section.rows.length})</span>
-                                            </th>
-                                        </tr>
+                                        {grouped && (
+                                            <tr className="bg-gray-50/60 dark:bg-gray-900/20">
+                                                <th colSpan={10} className="px-2 pt-4 pb-1.5 text-left text-xs font-semibold text-gray-700 dark:text-gray-200">
+                                                    {strings[`section_${section.key}`]} <span className="font-normal text-gray-400">({section.rows.length})</span>
+                                                </th>
+                                            </tr>
+                                        )}
                                         {section.rows.map(({ pr, level }) => <Row key={pr.id} pr={pr} level={level} canShare={filters.role === 'authored'} strings={strings} />)}
                                     </tbody>
                                 ))}
@@ -228,6 +251,13 @@ function SortHeader({ id, sort, onSort, children, title, align = 'left' }) {
     );
 }
 
+// „Christian Mietze“ → „CM“; ein einzelnes Wort (z. B. GitHub-Login) → die ersten zwei Zeichen.
+function initials(name) {
+    const words = (name ?? '').trim().split(/[\s._-]+/).filter(Boolean);
+    if (words.length === 0) return '—';
+    return (words.length === 1 ? words[0].slice(0, 2) : words[0][0] + words[words.length - 1][0]).toUpperCase();
+}
+
 // Eine Zeile je PR; Nebeninfos (Repo, Dateien, Begründungen) stehen im Tooltip.
 function Row({ pr, level, canShare, strings }) {
     const review = pr.review;
@@ -248,7 +278,7 @@ function Row({ pr, level, canShare, strings }) {
                     {pr.running && <RunningDot running={pr.running} strings={strings} />}
                 </div>
             </td>
-            <td className={`${cell} text-gray-700 dark:text-gray-300`}>{pr.author ?? '—'}</td>
+            <td className={`${cell} text-gray-700 dark:text-gray-300`} title={pr.author ?? undefined}>{initials(pr.author)}</td>
             <td className={`${cell} text-right font-mono text-[11px] leading-tight`} title={`${pr.changedFiles} ${strings.files}`}>
                 <div className="text-green-600 dark:text-green-400">+{pr.additions}</div>
                 <div className="text-red-600 dark:text-red-400">−{pr.deletions}</div>

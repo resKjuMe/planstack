@@ -290,6 +290,20 @@ class PullRequestPagesTest extends TestCase
         $this->assertNull($pullRequest->refresh()->shared_at);
     }
 
+    public function test_grouping_is_saved_on_the_user(): void
+    {
+        $me = $this->member('Ich Selbst');
+
+        $this->actingAs($me)->get(route('pull-requests.index'))
+            ->assertInertia(fn (Assert $page) => $page->where('grouped', true));
+
+        $this->actingAs($me)->post(route('pull-requests.grouping'), ['grouped' => false])->assertRedirect();
+        $this->assertFalse($me->refresh()->pull_requests_grouped);
+
+        $this->actingAs($me)->get(route('pull-requests.index'))
+            ->assertInertia(fn (Assert $page) => $page->where('grouped', false));
+    }
+
     public function test_only_the_author_can_share(): void
     {
         $author = $this->member('Autor');

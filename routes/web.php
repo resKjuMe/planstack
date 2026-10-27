@@ -170,6 +170,7 @@ Route::middleware('auth')->group(function () {
     // Pull Requests aus ps-review: Liste (eigene, Default offen), GitHub-Sync + Detailseite.
     Route::get('pull-requests', [PullRequestController::class, 'index'])->name('pull-requests.index');
     Route::post('pull-requests/sync', [PullRequestController::class, 'sync'])->name('pull-requests.sync');
+    Route::post('pull-requests/grouping', [PullRequestController::class, 'grouping'])->name('pull-requests.grouping');
     Route::get('pull-requests/{pullRequest}', [PullRequestController::class, 'show'])->name('pull-requests.show');
     Route::post('pull-requests/{pullRequest}/share', [PullRequestController::class, 'toggleShare'])->name('pull-requests.share');
 

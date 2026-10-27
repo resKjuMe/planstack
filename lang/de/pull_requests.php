@@ -88,4 +88,6 @@ return [
     'share_off' => 'Als Shared Review für die Organisation markieren',
     'skill_download' => 'ps-review-Skill',
     'skill_download_hint' => 'Skill ps-review als ZIP herunterladen (mit neuem API-Token), nach ~/.claude/skills/ entpacken, dann „/ps-review <PR>“ in Claude Code',
+    'grouping' => 'Gruppiert',
+    'grouping_hint' => 'Liste nach Handlungsbedarf gruppieren oder flach anzeigen (wird gespeichert)',
 ];
