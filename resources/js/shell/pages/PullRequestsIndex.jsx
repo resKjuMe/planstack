@@ -86,7 +86,7 @@ const section = (pr) => {
     return 'reviewed';
 };
 
-export default function PullRequestsIndex({ filters, filterUrls, syncUrl, flash, pullRequests, strings }) {
+export default function PullRequestsIndex({ filters, filterUrls, syncUrl, skillDownloadUrl, flash, pullRequests, strings }) {
     const [sort, setSort] = useState({ key: 'title', dir: 'asc' });
     const [syncing, setSyncing] = useState(false);
     const sync = () => router.post(syncUrl, {}, {
@@ -133,6 +133,17 @@ export default function PullRequestsIndex({ filters, filterUrls, syncUrl, flash,
                                 </svg>
                                 {syncing ? strings.syncing : strings.sync}
                             </button>
+                            {/* Kein Inertia-Link: der Download braucht eine normale Navigation. */}
+                            <a
+                                href={skillDownloadUrl}
+                                title={strings.skill_download_hint}
+                                className="inline-flex items-center gap-1.5 rounded-md bg-white dark:bg-gray-800 px-3 py-1.5 text-xs font-medium text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-600 shadow-sm hover:bg-gray-50 dark:hover:bg-gray-700"
+                            >
+                                <svg className="h-3.5 w-3.5 text-gray-500 dark:text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                                    <path d="M12 3v12M7 10l5 5 5-5M5 21h14" />
+                                </svg>
+                                {strings.skill_download}
+                            </a>
                         </div>
                     </div>
                 }

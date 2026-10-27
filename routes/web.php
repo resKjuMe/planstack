@@ -10,6 +10,7 @@ use App\Http\Controllers\GitWebhookController;
 use App\Http\Controllers\PlanstackCiSetupController;
 use App\Http\Controllers\SkillSetupController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\PsReviewSkillDownloadController;
 use App\Http\Controllers\ProjectCalibrationController;
 use App\Http\Controllers\ProjectChangelogController;
 use App\Http\Controllers\ProjectClaudeController;
@@ -148,6 +149,8 @@ Route::middleware('auth')->group(function () {
     // dynamisch als Argument übergeben (/planstack <PROJECT>).
     Route::get('/skill', SkillSetupController::class)->name('skill.setup');
     Route::get('/skill/download', SkillDownloadController::class)->name('skill.download');
+    // Skill ps-review (Reviews nach Planstack), verlinkt von „Pull Requests“.
+    Route::get('/skill/ps-review/download', PsReviewSkillDownloadController::class)->name('skill.ps-review.download');
 
     // Einrichtungs-/Anleitungsseite für die CI-Status-Anzeige (Userscript +
     // lokaler ci-server) — reguläre App-Seite mit Menü.

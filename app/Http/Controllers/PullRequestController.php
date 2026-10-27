@@ -58,6 +58,7 @@ class PullRequestController extends Controller
                 ] : null,
             ])->values(),
             'syncUrl' => route('pull-requests.sync', ['state' => $state, 'role' => $role]),
+            'skillDownloadUrl' => route('skill.ps-review.download'),
             'flash' => ['status' => session('status'), 'error' => session('error')],
             'strings' => __('pull_requests'),
         ]);
