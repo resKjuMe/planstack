@@ -6,6 +6,22 @@
 return [
     'releases' => [
         [
+            'version' => '2.5.0',
+            'date' => '2026-10-27',
+            'tldr' => [
+                'de' => ['Neue Seite „Pull Requests“'],
+                'en' => ['New "Pull requests" page'],
+            ],
+            'changes' => [
+                'de' => [
+                    'Neu: Unter „Pull Requests“ findest du alle PRs, die du mit dem Skill ps-review geprüft oder selbst geschrieben hast – standardmäßig nur offene. Sortiert wird nach Handlungsbedarf: Ganz oben stehen PRs mit hohem Risiko, die eine KI schlecht allein beurteilen kann. Die Detailseite zeigt alle Reviews mit Zusammenfassung und Befunden.',
+                ],
+                'en' => [
+                    'New: "Pull requests" lists every PR you reviewed with the ps-review skill or authored yourself – open ones by default. They are sorted by need: risky PRs that an AI cannot judge well on its own come first. The detail page shows every review with its summary and findings.',
+                ],
+            ],
+        ],
+        [
             'version' => '2.4.0',
             'date' => '2026-07-24',
             'tldr' => [
