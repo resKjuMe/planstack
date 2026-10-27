@@ -5,6 +5,8 @@ import BladePage from './shell/pages/BladePage.jsx';
 import Dashboard from './shell/pages/Dashboard.jsx';
 import ProjectWorkspace from './shell/pages/ProjectWorkspace.jsx';
 import ProjectsIndex from './shell/pages/ProjectsIndex.jsx';
+import PullRequestsIndex from './shell/pages/PullRequestsIndex.jsx';
+import PullRequestShow from './shell/pages/PullRequestShow.jsx';
 import ProjectCreate from './shell/pages/ProjectCreate.jsx';
 import ProjectEdit from './shell/pages/ProjectEdit.jsx';
 import ProjectAccess from './shell/pages/ProjectAccess.jsx';
@@ -44,6 +46,8 @@ const pages = {
     Dashboard,
     ProjectWorkspace,
     ProjectsIndex,
+    PullRequestsIndex,
+    PullRequestShow,
     ProjectCreate,
     ProjectEdit,
     ProjectAccess,

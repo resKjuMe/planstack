@@ -25,3 +25,9 @@ Schedule::command('planstack:sync-pr-status --repo=clockodo-intern/main')
     ->everyMinute()
     ->withoutOverlapping()
     ->onOneServer();
+
+// Offene PRs aus ps-review: gemergt/geschlossen, neuer Commit, Umfang.
+Schedule::command('planstack:sync-pull-requests')
+    ->everyFiveMinutes()
+    ->withoutOverlapping()
+    ->onOneServer();

@@ -27,6 +27,7 @@ use App\Http\Controllers\ProjectPrSequenceController;
 use App\Http\Controllers\ProjectPrSyncController;
 use App\Http\Controllers\ProjectSummaryController;
 use App\Http\Controllers\ProjectTimelineController;
+use App\Http\Controllers\PullRequestController;
 use App\Http\Controllers\SkillDownloadController;
 use App\Http\Controllers\ProjectTeamController;
 use App\Http\Controllers\TaskChecklistController;
@@ -162,6 +163,10 @@ Route::middleware('auth')->group(function () {
         Route::get('/status-logic', [FaqController::class, 'statusLogic'])->name('status-logic');
         Route::get('/commands', [FaqController::class, 'commands'])->name('commands');
     });
+
+    // Pull Requests aus ps-review: Liste (eigene, Default offen) + Detailseite.
+    Route::get('pull-requests', [PullRequestController::class, 'index'])->name('pull-requests.index');
+    Route::get('pull-requests/{pullRequest}', [PullRequestController::class, 'show'])->name('pull-requests.show');
 
     // Teams
     Route::resource('teams', TeamController::class)

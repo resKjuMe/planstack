@@ -565,6 +565,45 @@ curl -s https://planstack.eskju.net/api/user \
       ]}'</pre>
         </section>
 
+        <h2 id="pull-requests-h">Pull Requests</h2>
+
+        <section id="pull-requests-upsert" class="endpoint">
+            <div class="route"><span class="method m-put">PUT</span><span class="path">/api/pull-requests</span></div>
+            <p class="desc">Legt einen PR der eigenen Organisation an oder aktualisiert ihn (Schlüssel: <code>repository</code> + <code>pull_request_id</code>). <code>author_id</code> ergibt sich aus <code>author_login</code> (<code>vorname-nachname_clockodo</code> → Slug). <span class="status-pill s2">201</span> beim Anlegen, <span class="status-pill s2">200</span> beim Aktualisieren.</p>
+            <table>
+                <thead><tr><th>{{ __('common.field') }}</th><th>{{ __('api.type') }}</th><th>{{ __('api.rules') }}</th></tr></thead>
+                <tbody>
+                    <tr><td><code>repository</code></td><td>string</td><td><span class="req">{{ __('api.required') }}</span> · owner/name</td></tr>
+                    <tr><td><code>pull_request_id</code></td><td>integer</td><td><span class="req">{{ __('api.required') }}</span> · PR-Nummer</td></tr>
+                    <tr><td><code>title</code>, <code>branch</code>, <code>target_branch</code></td><td>string</td><td><span class="req">{{ __('api.required') }}</span></td></tr>
+                    <tr><td><code>author_login</code>, <code>last_commit</code>, <code>description</code></td><td>string</td><td><span class="opt">{{ __('api.optional') }}</span></td></tr>
+                    <tr><td><code>state</code></td><td>string</td><td><span class="opt">{{ __('api.optional') }}</span> · OPEN · CLOSED · MERGED</td></tr>
+                    <tr><td><code>changed_files</code>, <code>additions</code>, <code>deletions</code>, <code>commits</code>, <code>comments</code>, <code>review_comments</code></td><td>integer</td><td><span class="opt">{{ __('api.optional') }}</span> · ≥ 0</td></tr>
+                    <tr><td><code>opened_at</code>, <code>merged_at</code>, <code>closed_at</code></td><td>datetime</td><td><span class="opt">{{ __('api.optional') }}</span></td></tr>
+                </tbody>
+            </table>
+        </section>
+
+        <section id="pull-requests-review" class="endpoint">
+            <div class="route"><span class="method m-post">POST</span><span class="path">/api/pull-requests/<b>{id}</b>/reviews</span></div>
+            <p class="desc">Ein Review mit Findings. Die Zähler (<code>findings</code>, <code>findings_critical</code> …) berechnet der Server aus <code>findings[]</code>. <span class="status-pill s2">201</span></p>
+            <table>
+                <thead><tr><th>{{ __('common.field') }}</th><th>{{ __('api.type') }}</th><th>{{ __('api.rules') }}</th></tr></thead>
+                <tbody>
+                    <tr><td><code>decision</code></td><td>string</td><td><span class="req">{{ __('api.required') }}</span> · APPROVE · REQUEST_CHANGES</td></tr>
+                    <tr><td><code>criticality</code>, <code>ai_reviewability</code></td><td>integer</td><td><span class="req">{{ __('api.required') }}</span> · 0–100</td></tr>
+                    <tr><td><code>criticality_reason</code>, <code>ai_reviewability_reason</code></td><td>string</td><td><span class="opt">{{ __('api.optional') }}</span> · max 500</td></tr>
+                    <tr><td><code>summary</code></td><td>markdown</td><td><span class="opt">{{ __('api.optional') }}</span></td></tr>
+                    <tr><td><code>commit_sha</code>, <code>strictness</code>, <code>thoroughness</code>, <code>model</code></td><td>string</td><td><span class="opt">{{ __('api.optional') }}</span></td></tr>
+                    <tr><td><code>findings</code></td><td>array</td><td><span class="req">{{ __('api.required') }}</span> · darf leer sein</td></tr>
+                    <tr><td><code>findings[].level</code></td><td>string</td><td><span class="req">{{ __('api.required') }}</span> · CRITICAL · IMPORTANT · HINT</td></tr>
+                    <tr><td><code>findings[].type</code></td><td>string</td><td><span class="req">{{ __('api.required') }}</span> · INLINE (mit <code>file</code> + <code>line</code>) · SUMMARY</td></tr>
+                    <tr><td><code>findings[].requires_po_decision</code></td><td>boolean</td><td><span class="opt">{{ __('api.optional') }}</span></td></tr>
+                    <tr><td><code>findings[].title</code>, <code>findings[].message</code></td><td>string</td><td><span class="req">{{ __('api.required') }}</span> · message als Markdown</td></tr>
+                </tbody>
+            </table>
+        </section>
+
         <h2 id="schemata-h">{{ __('api.response_schemas') }}</h2>
 
         <section id="schema-project">

@@ -8,6 +8,7 @@ use App\Http\Controllers\Api\PhaseController;
 use App\Http\Controllers\Api\ChangelogController;
 use App\Http\Controllers\Api\ProjectConfigController;
 use App\Http\Controllers\Api\ProjectController;
+use App\Http\Controllers\Api\PullRequestController;
 use App\Http\Controllers\Api\SkillController;
 use App\Http\Controllers\Api\StatusActivityController;
 use App\Http\Controllers\Api\StatusConfigController;
@@ -35,6 +36,11 @@ Route::middleware('auth:sanctum')->group(function () {
     // Aktueller Skill-Text (SKILL.md) + Revision — damit ein installierter Skill
     // seinen eigenen, ggf. veralteten Snapshot überschreiben kann.
     Route::get('skill', SkillController::class);
+
+    // PR-Reviews (Skill ps-review): PR per Repo + Nummer anlegen/aktualisieren,
+    // danach je Review ein Datensatz samt Findings.
+    Route::put('pull-requests', [PullRequestController::class, 'upsert']);
+    Route::post('pull-requests/{pullRequest}/reviews', [PullRequestController::class, 'storeReview']);
 
     // Fortschritts-Events (task_id + event); wendet die je Event konfigurierte
     // Automation an und protokolliert das Event. Siehe docs/event-api.md.

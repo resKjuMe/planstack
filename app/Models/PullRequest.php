@@ -1,0 +1,102 @@
+<?php
+
+namespace App\Models;
+
+use App\Enums\PullRequestState;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Support\Str;
+
+class PullRequest extends Model
+{
+    /** GitHub-Konvention: `vorname-nachname_clockodo` ↔ Planstack-Slug `vorname-nachname`. */
+    private const LOGIN_SUFFIX = '_clockodo';
+
+    protected $attributes = [
+        'state' => 'OPEN',
+    ];
+
+    protected $fillable = [
+        'organization_id',
+        'repository',
+        'pull_request_id',
+        'author_id',
+        'author_login',
+        'title',
+        'branch',
+        'target_branch',
+        'last_commit',
+        'description',
+        'state',
+        'changed_files',
+        'additions',
+        'deletions',
+        'commits',
+        'comments',
+        'review_comments',
+        'opened_at',
+        'merged_at',
+        'closed_at',
+    ];
+
+    protected function casts(): array
+    {
+        return [
+            'pull_request_id' => 'integer',
+            'state' => PullRequestState::class,
+            'changed_files' => 'integer',
+            'additions' => 'integer',
+            'deletions' => 'integer',
+            'commits' => 'integer',
+            'comments' => 'integer',
+            'review_comments' => 'integer',
+            'opened_at' => 'datetime',
+            'merged_at' => 'datetime',
+            'closed_at' => 'datetime',
+        ];
+    }
+
+    public function organization(): BelongsTo
+    {
+        return $this->belongsTo(Organization::class);
+    }
+
+    public function author(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'author_id');
+    }
+
+    public function reviews(): HasMany
+    {
+        return $this->hasMany(PullRequestReview::class);
+    }
+
+    public function latestReview(): HasOne
+    {
+        return $this->hasOne(PullRequestReview::class)->ofMany(['created_at' => 'max', 'id' => 'max']);
+    }
+
+    public function url(): string
+    {
+        return "https://github.com/{$this->repository}/pull/{$this->pull_request_id}";
+    }
+
+    /**
+     * Planstack-User der Organisation zum GitHub-Login, oder null.
+     */
+    public static function resolveAuthor(int $organizationId, ?string $login): ?User
+    {
+        if ($login === null || $login === '') {
+            return null;
+        }
+
+        $slug = Str::lower(Str::beforeLast($login, self::LOGIN_SUFFIX));
+
+        return User::query()
+            ->where('organization_id', $organizationId)
+            ->where('slug', $slug)
+            ->first();
+    }
+}
