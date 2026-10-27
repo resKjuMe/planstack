@@ -15,7 +15,7 @@ use Illuminate\Validation\Rule;
 
 /**
  * PR-Reviews aus dem Skill ps-review: erst der PR (UPSERT über Repo + Nummer),
- * dann je Review ein Datensatz samt Findings. Alles hängt an der Organisation
+ * dann je Review Start und Abschluss (mit Findings). Alles hängt an der Organisation
  * des Token-Users.
  */
 class PullRequestController extends ApiController
@@ -66,12 +66,42 @@ class PullRequestController extends ApiController
     }
 
     /**
-     * POST /api/pull-requests/{pullRequest}/reviews — ein Review mit Findings.
-     * Die Zähler leiten sich aus den Findings ab.
+     * POST /api/pull-requests/{pullRequest}/reviews — vermerkt den Start eines
+     * Reviews; Bewertung und Findings folgen mit finishReview.
      */
-    public function storeReview(Request $request, PullRequest $pullRequest): JsonResponse
+    public function startReview(Request $request, PullRequest $pullRequest): JsonResponse
     {
         abort_unless($pullRequest->organization_id === $this->organizationId($request), 404);
+
+        $data = $request->validate([
+            'commit_sha' => ['nullable', 'string', 'max:40'],
+            'strictness' => ['nullable', 'string', 'max:20'],
+            'thoroughness' => ['nullable', 'string', 'max:20'],
+            'model' => ['nullable', 'string', 'max:100'],
+        ]);
+
+        $review = $pullRequest->reviews()->create([
+            ...$data,
+            'reviewer_id' => $request->user()->id,
+            'review_started_at' => now(),
+        ]);
+
+        return response()->json(['data' => $this->reviewPayload($review, $pullRequest)], 201);
+    }
+
+    /**
+     * PUT /api/pull-requests/{pullRequest}/reviews/{review} — schließt das Review
+     * mit Bewertung und Findings ab. Die Zähler leiten sich aus den Findings ab.
+     */
+    public function finishReview(Request $request, PullRequest $pullRequest, PullRequestReview $review): JsonResponse
+    {
+        abort_unless($pullRequest->organization_id === $this->organizationId($request), 404);
+        abort_unless($review->pull_request_id === $pullRequest->id, 404);
+        abort_unless($review->reviewer_id === $request->user()->id, 403);
+
+        if ($review->isFinished()) {
+            return response()->json(['message' => 'Das Review ist bereits abgeschlossen.'], 409);
+        }
 
         $data = $request->validate([
             'decision' => ['required', Rule::enum(ReviewRecommendation::class)],
@@ -97,10 +127,10 @@ class PullRequestController extends ApiController
         $findings = collect($data['findings']);
         $count = fn (ReviewFindingLevel $level) => $findings->where('level', $level->value)->count();
 
-        $review = DB::transaction(function () use ($request, $pullRequest, $data, $findings, $count) {
-            $review = $pullRequest->reviews()->create([
+        DB::transaction(function () use ($review, $data, $findings, $count) {
+            $review->update([
                 ...collect($data)->except('findings')->all(),
-                'reviewer_id' => $request->user()->id,
+                'review_finished_at' => now(),
                 'findings' => $findings->count(),
                 'findings_critical' => $count(ReviewFindingLevel::CRITICAL),
                 'findings_important' => $count(ReviewFindingLevel::IMPORTANT),
@@ -116,11 +146,9 @@ class PullRequestController extends ApiController
                 'title' => $finding['title'],
                 'message' => $finding['message'],
             ])->all());
-
-            return $review;
         });
 
-        return response()->json(['data' => $this->reviewPayload($review, $pullRequest)], 201);
+        return response()->json(['data' => $this->reviewPayload($review, $pullRequest)]);
     }
 
     private function organizationId(Request $request): int
@@ -150,7 +178,9 @@ class PullRequestController extends ApiController
         return [
             'id' => $review->id,
             'pull_request_id' => $pullRequest->id,
-            'decision' => $review->decision->value,
+            'review_started_at' => $review->review_started_at?->toIso8601String(),
+            'review_finished_at' => $review->review_finished_at?->toIso8601String(),
+            'decision' => $review->decision?->value,
             'findings' => $review->findings,
             'findings_critical' => $review->findings_critical,
             'findings_important' => $review->findings_important,

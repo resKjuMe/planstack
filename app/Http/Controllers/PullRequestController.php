@@ -34,7 +34,7 @@ class PullRequestController extends Controller
             ->when($role === 'reviewed', fn (Builder $q) => $q->whereHas('reviews', fn (Builder $r) => $r->where('reviewer_id', $user->id)))
             ->when($role === 'authored', fn (Builder $q) => $q->where('author_id', $user->id))
             ->when($state !== 'all', fn (Builder $q) => $q->where('state', strtoupper($state)))
-            ->with(['author', 'latestReview'])
+            ->with(['author', 'latestReview', 'runningReview.reviewer'])
             ->withCount('reviews')
             ->latest('updated_at')
             ->limit(self::LIMIT)
@@ -50,6 +50,10 @@ class PullRequestController extends Controller
                 ...$this->pullRequestRow($pr),
                 'reviewsCount' => $pr->reviews_count,
                 'review' => $pr->latestReview ? $this->reviewRow($pr->latestReview, $pr) : null,
+                'running' => $pr->runningReview ? [
+                    'startedAt' => $pr->runningReview->review_started_at?->toIso8601String(),
+                    'reviewer' => $pr->runningReview->reviewer?->name,
+                ] : null,
             ])->values(),
             'strings' => __('pull_requests'),
         ]);
@@ -59,7 +63,7 @@ class PullRequestController extends Controller
     {
         abort_unless($pullRequest->organization_id === $request->user()->organization_id, 404);
 
-        $pullRequest->load(['author', 'reviews' => fn ($q) => $q->latest()->latest('id'), 'reviews.reviewer', 'reviews.findingItems']);
+        $pullRequest->load(['author', 'reviews' => fn ($q) => $q->latest('review_started_at')->latest('id'), 'reviews.reviewer', 'reviews.findingItems']);
 
         return Inertia::render('PullRequestShow', [
             'pullRequest' => [
@@ -126,7 +130,10 @@ class PullRequestController extends Controller
     {
         return [
             'id' => $review->id,
-            'decision' => $review->decision->value,
+            'status' => $review->isFinished() ? 'finished' : ($review->isAbandoned() ? 'abandoned' : 'running'),
+            'startedAt' => $review->review_started_at?->toIso8601String(),
+            'finishedAt' => $review->review_finished_at?->toIso8601String(),
+            'decision' => $review->decision?->value,
             'findings' => $review->findings,
             'critical' => $review->findings_critical,
             'important' => $review->findings_important,
@@ -136,7 +143,7 @@ class PullRequestController extends Controller
             'aiReviewability' => $review->ai_reviewability,
             'aiReviewabilityReason' => $review->ai_reviewability_reason,
             'needScore' => $review->needScore(),
-            'reviewedAt' => $review->created_at?->toIso8601String(),
+            'reviewedAt' => ($review->review_finished_at ?? $review->review_started_at)?->toIso8601String(),
             // Seit dem Review gepusht: der geprüfte Stand ist nicht mehr der aktuelle.
             'stale' => $review->commit_sha !== null && $pr->last_commit !== null
                 && ! Str::startsWith($pr->last_commit, $review->commit_sha)

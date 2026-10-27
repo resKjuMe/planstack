@@ -32,6 +32,22 @@ export function StateBadge({ state, strings }) {
     );
 }
 
+export function RunningBadge({ running, strings }) {
+    return (
+        <span className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[11px] font-medium bg-sky-100 text-sky-800 dark:bg-sky-900/40 dark:text-sky-300">
+            <span className="h-1.5 w-1.5 rounded-full bg-sky-500 animate-pulse" />
+            {strings.review_running.replace(':time', formatDate(running.startedAt))}
+            {running.reviewer ? ` · ${running.reviewer}` : ''}
+        </span>
+    );
+}
+
+export function formatDuration(startIso, endIso) {
+    if (!startIso || !endIso) return null;
+    const minutes = Math.max(0, Math.round((new Date(endIso) - new Date(startIso)) / 60000));
+    return minutes < 60 ? `${minutes} min` : `${Math.floor(minutes / 60)} h ${minutes % 60} min`;
+}
+
 export const LEVEL_TONE = {
     CRITICAL: 'bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300',
     IMPORTANT: 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300',

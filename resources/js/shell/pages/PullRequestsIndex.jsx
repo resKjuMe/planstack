@@ -2,7 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { Head, Link } from '@inertiajs/react';
 import AppShell from '../AppShell.jsx';
 import PageBands from '../components/PageBands.jsx';
-import { DecisionBadge, FindingCounts, ScoreBar, StateBadge, formatDate } from '../components/PullRequestParts.jsx';
+import { DecisionBadge, FindingCounts, RunningBadge, ScoreBar, StateBadge, formatDate } from '../components/PullRequestParts.jsx';
 
 // Eigene Pull Requests aus ps-review. Filter (Status, Rolle) laufen über den
 // Server, die Sortierung clientseitig; Default ist der Handlungsbedarf.
@@ -143,6 +143,7 @@ function Row({ pr, strings }) {
                     <a href={pr.githubUrl} target="_blank" rel="noreferrer" className="font-mono hover:underline">{pr.repository}#{pr.number}</a>
                     <span className="font-mono truncate max-w-[16rem]" title={`${pr.branch} → ${pr.targetBranch}`}>{pr.branch} → {pr.targetBranch}</span>
                     {pr.state !== 'OPEN' && <StateBadge state={pr.state} strings={strings} />}
+                    {pr.running && <RunningBadge running={pr.running} strings={strings} />}
                 </div>
             </td>
             <td className="px-3 py-2 whitespace-nowrap text-gray-700 dark:text-gray-300">{pr.author ?? '—'}</td>
@@ -164,7 +165,7 @@ function Row({ pr, strings }) {
                     <td className="px-3 py-2 whitespace-nowrap text-xs text-gray-500 dark:text-gray-400">{formatDate(review.reviewedAt)}</td>
                 </>
             ) : (
-                <td colSpan={6} className="px-3 py-2 text-xs text-gray-400 dark:text-gray-500">{strings.not_reviewed}</td>
+                <td colSpan={6} className="px-3 py-2 text-xs text-gray-400 dark:text-gray-500">{pr.running ? '' : strings.not_reviewed}</td>
             )}
         </tr>
     );

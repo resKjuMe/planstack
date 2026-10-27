@@ -75,7 +75,18 @@ class PullRequest extends Model
 
     public function latestReview(): HasOne
     {
-        return $this->hasOne(PullRequestReview::class)->ofMany(['created_at' => 'max', 'id' => 'max']);
+        return $this->hasOne(PullRequestReview::class)->ofMany(
+            ['review_finished_at' => 'max', 'id' => 'max'],
+            fn ($query) => $query->whereNotNull('review_finished_at'),
+        );
+    }
+
+    public function runningReview(): HasOne
+    {
+        return $this->hasOne(PullRequestReview::class)->ofMany(
+            ['review_started_at' => 'max', 'id' => 'max'],
+            fn ($query) => $query->running(),
+        );
     }
 
     public function url(): string
