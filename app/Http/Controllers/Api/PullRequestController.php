@@ -8,6 +8,7 @@ use App\Enums\ReviewFindingType;
 use App\Enums\ReviewRecommendation;
 use App\Models\PullRequest;
 use App\Models\PullRequestReview;
+use App\Support\PullRequestApprovals;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -46,9 +47,21 @@ class PullRequestController extends ApiController
             'opened_at' => ['nullable', 'date'],
             'merged_at' => ['nullable', 'date'],
             'closed_at' => ['nullable', 'date'],
+            // Rohdaten von GitHub; ausgewertet wird auf dem Server.
+            'github_reviews' => ['sometimes', 'array'],
+            'github_reviews.*.login' => ['required', 'string', 'max:100'],
+            'github_reviews.*.state' => ['required', 'string', 'max:30'],
+            'github_reviews.*.submitted_at' => ['nullable', 'date'],
+            'github_reviews.*.commit_id' => ['nullable', 'string', 'max:40'],
+            'approval_check_summary' => ['sometimes', 'nullable', 'string'],
         ]);
 
-        $data['author_id'] = PullRequest::resolveAuthor($organizationId, $data['author_login'] ?? null)?->id;
+        $attributes = collect($data)->except(['github_reviews', 'approval_check_summary'])->all();
+        $attributes['author_id'] = PullRequest::resolveAuthor($organizationId, $data['author_login'] ?? null)?->id;
+
+        if (array_key_exists('approval_check_summary', $data)) {
+            $attributes['approval_groups'] = PullRequestApprovals::parseGroups($data['approval_check_summary']);
+        }
 
         $pullRequest = PullRequest::updateOrCreate(
             [
@@ -56,8 +69,17 @@ class PullRequestController extends ApiController
                 'repository' => $data['repository'],
                 'pull_request_id' => $data['pull_request_id'],
             ],
-            $data,
+            $attributes,
         );
+
+        if (array_key_exists('github_reviews', $data)) {
+            PullRequestApprovals::sync($pullRequest, collect($data['github_reviews'])->map(fn (array $r) => [
+                'login' => $r['login'],
+                'state' => $r['state'],
+                'submitted_at' => $r['submitted_at'] ?? null,
+                'commit_sha' => $r['commit_id'] ?? null,
+            ]));
+        }
 
         return response()->json(
             ['data' => $this->pullRequestPayload($pullRequest)],
@@ -169,6 +191,7 @@ class PullRequestController extends ApiController
             'author_login' => $pullRequest->author_login,
             'state' => $pullRequest->state->value,
             'last_commit' => $pullRequest->last_commit,
+            'approvals' => PullRequestApprovals::status($pullRequest, $pullRequest->approvals()->get()),
             'url' => route('pull-requests.show', $pullRequest),
         ];
     }

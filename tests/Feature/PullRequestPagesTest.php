@@ -168,6 +168,28 @@ class PullRequestPagesTest extends TestCase
                 ->where('reviews.0.findings', []));
     }
 
+    public function test_list_and_detail_show_the_approvals(): void
+    {
+        $me = $this->member('Ich Selbst');
+        $vera = $this->member('Vera Rolf');
+        $pullRequest = $this->pullRequest(1, ['approval_groups' => [['label' => 'Backend', 'team' => 'backend-dev', 'approved' => 1, 'required' => 2]]]);
+        $this->review($pullRequest, $me);
+        $pullRequest->approvals()->create(['login' => 'vera-rolf_clockodo', 'user_id' => $vera->id, 'state' => 'APPROVED', 'commit_sha' => 'old']);
+
+        $this->actingAs($me)
+            ->get(route('pull-requests.index'))
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('pullRequests.0.approvals.approved', 1)
+                ->where('pullRequests.0.approvals.groups.0.required', 2)
+                ->where('pullRequests.0.approvals.fulfilled', false));
+
+        $this->actingAs($me)
+            ->get(route('pull-requests.show', $pullRequest))
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('pullRequest.approvals.reviewers.0.name', 'Vera Rolf')
+                ->where('pullRequest.approvals.reviewers.0.outdated', true));
+    }
+
     public function test_detail_page_of_another_organization_is_not_found(): void
     {
         $pullRequest = $this->pullRequest(7);
