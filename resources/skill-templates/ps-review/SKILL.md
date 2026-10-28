@@ -209,12 +209,14 @@ Auf 0–100 begrenzen. Die Planstack-Seite sortiert nach `criticality × (100 �
 
 #### `po_review_likelihood` — will der PO den PR vor dem GoLive sehen?
 
-Wie wahrscheinlich der Product Owner diese Änderung vor dem GoLive selbst anschauen möchte — **unabhängig von Risiko und Befunden**. Am schwersten wiegt, was Nutzer **sehen oder spüren**: UX/UI. Ein riskanter Index-Umbau interessiert den PO nicht; ein neuer Button-Text schon.
+Wie wahrscheinlich der Product Owner diese Änderung vor dem GoLive selbst anschauen möchte — **unabhängig von Risiko und Befunden**. Maßstab ist, wie stark sich das Produkt für Kunden ändert. Ein riskanter Index-Umbau interessiert den PO nicht; eine geänderte Geschäftsregel schon.
+
+Info: Dem PO sind User-Facing-Änderungen (UX/UI) besonders wichtig — das fließt in die Einordnung ein, ist aber kein Übergewicht gegenüber anderen fachlichen Änderungen.
 
 | Band | Typische Änderung |
 |---|---|
-| 80–100 | sichtbare UX/UI-Änderung für Kunden: neue Seite, neuer Dialog/Workflow, geänderte Interaktion oder Navigation, neue/umbenannte Texte und Begriffe, E-Mails/Benachrichtigungen an Kunden |
-| 60–79 | fachliches Verhalten, das Kunden spüren, ohne neue Oberfläche: Berechnung, Rechte, Defaults, Export-/Import-Format, Breaking Change der öffentlichen API |
+| 80–100 | neue Funktion oder neuer Ablauf für Kunden, geänderte Geschäftsregel oder Berechnung, Breaking Change für Kunden |
+| 60–79 | geändertes Verhalten einer bestehenden Funktion: Rechte, Defaults, Export-/Import-Format, sichtbare UI-/Text-Änderung, E-Mails/Benachrichtigungen |
 | 40–59 | kleine sichtbare Anpassung (Abstand, Farbe, Fehlermeldung, Sortierung), interne Admin-/Support-Oberfläche, Freischaltung eines Feature-Flags |
 | 20–39 | Verhalten ändert sich nur in Randfällen; für Nutzer spürbare Performance |
 | 0–19 | rein technisch: Refactoring, Tests, Infra, Abhängigkeiten, Doku, Bugfix ohne sichtbare Änderung |

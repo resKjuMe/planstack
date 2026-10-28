@@ -22,7 +22,7 @@ return [
     'col_criticality' => 'Kritikalität',
     'col_ai_reviewability' => 'KI-Prüfbarkeit',
     'col_po_review_likelihood' => 'PO-Sichtung',
-    'po_review_likelihood_hint' => 'Wie wahrscheinlich der PO den PR vor dem GoLive sehen will (UX/UI zählt am meisten)',
+    'po_review_likelihood_hint' => 'Wie wahrscheinlich der PO den PR vor dem GoLive sehen will',
     'col_need' => 'Handlungsbedarf',
     'col_reviewed_at' => 'Reviewt',
     'need_hint' => 'Kritikalität × (100 − KI-Prüfbarkeit): hoch = menschliches Review lohnt sich am meisten',
