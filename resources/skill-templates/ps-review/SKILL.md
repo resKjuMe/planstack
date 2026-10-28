@@ -340,14 +340,16 @@ PR: #9050 · Fix overtime calculation for part-time users
 Kritikalität: 45
 KI-Prüfbarkeit: 55
 PO-Sichtung: 80
+
 Findings: 12
 Kritisch: 2
 Wichtig: 4
 Hinweis: 6
+
 Empfehlung: REQUEST_CHANGES
 ```
 
-`Kritikalität`, `KI-Prüfbarkeit` und `PO-Sichtung` sind die Werte 0–100 aus Schritt 4 (ohne Begründung, die steht unter `## Bewertung`). `Findings` ist die **Gesamtzahl** aller Befunde (Kritisch + Wichtig + Hinweis), `Kritisch` die Teilmenge der Blocker, `Wichtig` und `Hinweis` die übrigen Schweregrade — die drei Teilzahlen ergeben zusammen `Findings`, `Empfehlung` genau `APPROVE` oder `REQUEST_CHANGES`. Keine weiteren Zeilen dahinter, keine Zusammenfassung des eben Getanen, kein Angebot, die Findings gleich zu fixen — die Review ist mit diesen acht Zeilen abgeschlossen. Einzige Ausnahme ist die Rückfrage aus Schritt 7; sie läuft über `AskUserQuestion` und nicht als weitere Textzeile.
+`Kritikalität`, `KI-Prüfbarkeit` und `PO-Sichtung` sind die Werte 0–100 aus Schritt 4 (ohne Begründung, die steht unter `## Bewertung`). `Findings` ist die **Gesamtzahl** aller Befunde (Kritisch + Wichtig + Hinweis), `Kritisch` die Teilmenge der Blocker, `Wichtig` und `Hinweis` die übrigen Schweregrade — die drei Teilzahlen ergeben zusammen `Findings`, `Empfehlung` genau `APPROVE` oder `REQUEST_CHANGES`. Zwischen `PO-Sichtung` und `Findings` sowie zwischen `Hinweis` und `Empfehlung` steht je genau eine Leerzeile. Keine weiteren Zeilen dahinter, keine Zusammenfassung des eben Getanen, kein Angebot, die Findings gleich zu fixen — die Review ist mit diesen acht Zeilen abgeschlossen. Einzige Ausnahme ist die Rückfrage aus Schritt 7; sie läuft über `AskUserQuestion` und nicht als weitere Textzeile.
 
 ### 7. Nachfragen, ob gepostet werden soll
 
