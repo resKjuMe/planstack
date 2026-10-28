@@ -25,6 +25,8 @@ return [
     'col_reviewed_at' => 'Reviewt',
     'need_hint' => 'Kritikalität × (100 − KI-Prüfbarkeit): hoch = menschliches Review lohnt sich am meisten',
     'not_reviewed' => 'Noch kein Review',
+    'ci_failed' => 'CI: Steps fehlgeschlagen',
+    'ci_running' => 'CI läuft noch',
     'stale' => 'seit Review gepusht',
     'decision_APPROVE' => 'Approve',
     'decision_REQUEST_CHANGES' => 'Request Changes',

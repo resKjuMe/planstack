@@ -92,6 +92,47 @@ class PullRequestStateSyncTest extends TestCase
         $this->assertSame('CLOSED', $closed->refresh()->state->value);
     }
 
+    public function test_it_derives_the_ci_state_and_ignores_approval_gates(): void
+    {
+        $failed = $this->pullRequest(1);
+        $running = $this->pullRequest(2);
+        $gatesOnly = $this->pullRequest(3);
+        $noChecks = $this->pullRequest(4);
+
+        $ci = fn (array $contexts) => ['nodes' => [['commit' => ['statusCheckRollup' => ['contexts' => ['nodes' => $contexts]]]]]];
+        $node = fn (array $extra) => [
+            'state' => 'OPEN', 'mergedAt' => null, 'closedAt' => null, 'title' => 'PR', 'headRefOid' => 'aaa',
+            'additions' => 1, 'deletions' => 0, 'changedFiles' => 1, ...$extra,
+        ];
+
+        Http::fake([
+            'api.github.com/graphql' => Http::response(['data' => ['repository' => [
+                'pr1' => $node(['ci' => $ci([
+                    ['__typename' => 'CheckRun', 'name' => '[BE] Unit Tests', 'status' => 'COMPLETED', 'conclusion' => 'FAILURE'],
+                    ['__typename' => 'CheckRun', 'name' => '[FE] Main | Unit', 'status' => 'IN_PROGRESS', 'conclusion' => null],
+                ])]),
+                'pr2' => $node(['ci' => $ci([
+                    ['__typename' => 'CheckRun', 'name' => '[BE] Unit Tests', 'status' => 'COMPLETED', 'conclusion' => 'SUCCESS'],
+                    ['__typename' => 'StatusContext', 'context' => 'deploy/preview', 'state' => 'PENDING'],
+                    ['__typename' => 'CheckRun', 'name' => 'pr-bot / Review Requirement', 'status' => 'COMPLETED', 'conclusion' => 'FAILURE'],
+                ])]),
+                'pr3' => $node(['ci' => $ci([
+                    ['__typename' => 'CheckRun', 'name' => 'pr-bot / Check Todo List Completion', 'status' => 'COMPLETED', 'conclusion' => 'FAILURE'],
+                    ['__typename' => 'CheckRun', 'name' => 'CodeRabbit', 'status' => 'COMPLETED', 'conclusion' => 'CANCELLED'],
+                    ['__typename' => 'CheckRun', 'name' => '[CI] License Compliance', 'status' => 'COMPLETED', 'conclusion' => 'SKIPPED'],
+                ])]),
+                'pr4' => $node(['ci' => ['nodes' => [['commit' => ['statusCheckRollup' => null]]]]]),
+            ]]]),
+        ]);
+
+        app(PullRequestStateSync::class)->sync();
+
+        $this->assertSame('failed', $failed->refresh()->ci_state);
+        $this->assertSame('running', $running->refresh()->ci_state);
+        $this->assertSame('success', $gatesOnly->refresh()->ci_state);
+        $this->assertNull($noChecks->refresh()->ci_state);
+    }
+
     public function test_a_failing_repository_is_reported_and_leaves_the_data_untouched(): void
     {
         $pullRequest = $this->pullRequest(1);

@@ -217,6 +217,7 @@ class PullRequestController extends Controller
             'branch' => $pr->branch,
             'targetBranch' => $pr->target_branch,
             'state' => $pr->state->value,
+            'ciState' => $pr->ci_state,
             'changedFiles' => $pr->changed_files,
             'additions' => $pr->additions,
             'deletions' => $pr->deletions,

@@ -41,6 +41,7 @@ class PullRequest extends Model
         'review_comments',
         'approval_groups',
         'review_requirement',
+        'ci_state',
         'opened_at',
         'merged_at',
         'closed_at',

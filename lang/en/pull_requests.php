@@ -25,6 +25,8 @@ return [
     'col_reviewed_at' => 'Reviewed',
     'need_hint' => 'Criticality × (100 − AI reviewability): high = a human review pays off most',
     'not_reviewed' => 'Not reviewed yet',
+    'ci_failed' => 'CI: steps failed',
+    'ci_running' => 'CI still running',
     'stale' => 'pushed since review',
     'decision_APPROVE' => 'Approve',
     'decision_REQUEST_CHANGES' => 'Request changes',
