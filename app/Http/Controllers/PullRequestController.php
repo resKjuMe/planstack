@@ -276,6 +276,8 @@ class PullRequestController extends Controller
             'criticalityReason' => $review->criticality_reason,
             'aiReviewability' => $review->ai_reviewability,
             'aiReviewabilityReason' => $review->ai_reviewability_reason,
+            'poReviewLikelihood' => $review->po_review_likelihood,
+            'poReviewLikelihoodReason' => $review->po_review_likelihood_reason,
             'needScore' => $review->needScore(),
             // Befunde, die eine fachliche Entscheidung des PO brauchen.
             'poDecisions' => $review->po_decisions_count

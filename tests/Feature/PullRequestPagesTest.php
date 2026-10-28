@@ -128,13 +128,14 @@ class PullRequestPagesTest extends TestCase
     {
         $me = $this->member('Ich Selbst');
         $pullRequest = $this->pullRequest(1);
-        $this->review($pullRequest, $me, ['criticality' => 80]);
+        $this->review($pullRequest, $me, ['criticality' => 80, 'po_review_likelihood' => 90]);
         $pullRequest->reviews()->create(['reviewer_id' => $me->id, 'review_started_at' => now()]);
 
         $this->actingAs($me)
             ->get(route('pull-requests.index'))
             ->assertInertia(fn (Assert $page) => $page
                 ->where('pullRequests.0.review.criticality', 80)
+                ->where('pullRequests.0.review.poReviewLikelihood', 90)
                 ->where('pullRequests.0.review.status', 'finished')
                 ->where('pullRequests.0.running.reviewer', 'Ich Selbst'));
     }

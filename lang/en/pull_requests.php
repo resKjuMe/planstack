@@ -21,6 +21,8 @@ return [
     'col_findings' => 'C / I / H',
     'col_criticality' => 'Criticality',
     'col_ai_reviewability' => 'AI reviewability',
+    'col_po_review_likelihood' => 'PO look',
+    'po_review_likelihood_hint' => 'How likely the PO wants to see the PR before go-live (UX/UI weighs most)',
     'col_need' => 'Need',
     'col_reviewed_at' => 'Reviewed',
     'need_hint' => 'Criticality × (100 − AI reviewability): high = a human review pays off most',

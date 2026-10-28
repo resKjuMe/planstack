@@ -1,6 +1,6 @@
 ---
 name: ps-review
-description: Code-Review eines GitHub-PR mit Ablage in Planstack — reviewt den PR (inklusive Prüfung der Code-Kommentare auf Richtigkeit, Mehrwert und Knappheit), bewertet Kritikalität und KI-Prüfbarkeit, sendet PR-Daten und Review samt Findings an die Planstack-API (sichtbar unter planstack.eskju.net/pull-requests), gibt die Review im Chat aus und schließt mit Findings-/Kritisch-/Wichtig-/Hinweis-/Empfehlung-Zeilen ab. Am PR wird nur nach ausdrücklicher Rückfrage gepostet. Nutze diesen Skill bei „ps-review 1234", „review PR 1234 nach Planstack", „/ps-review".
+description: Code-Review eines GitHub-PR mit Ablage in Planstack — reviewt den PR (inklusive Prüfung der Code-Kommentare auf Richtigkeit, Mehrwert und Knappheit), bewertet Kritikalität, KI-Prüfbarkeit und PO-Sichtung, sendet PR-Daten und Review samt Findings an die Planstack-API (sichtbar unter planstack.eskju.net/pull-requests), gibt die Review im Chat aus und schließt mit Findings-/Kritisch-/Wichtig-/Hinweis-/Empfehlung-Zeilen ab. Am PR wird nur nach ausdrücklicher Rückfrage gepostet. Nutze diesen Skill bei „ps-review 1234", „review PR 1234 nach Planstack", „/ps-review".
 argument-hint: "[<pr-nummer|pr-url|branch>] [--lenient|--strict] [--relaxed|--meticulous] [--post|--comment|--no-post]"
 ---
 
@@ -40,7 +40,7 @@ Schalter überschreiben für diesen Lauf die Einstellungen (s. u.): `--lenient` 
 |---|---|---|---|
 | `review_strictness` | `lenient` · `default` · `strict` | `strict` | Wie hart bewertet wird: `lenient` nur echte Blocker (im Zweifel `APPROVE`), `default` normal, `strict` auch kleinere Mängel, Stil, Edge-Cases (eher `REQUEST_CHANGES`). |
 | `review_thoroughness` | `relaxed` · `default` · `meticulous` | `meticulous` | Wie gründlich geschaut wird: `relaxed` schneller Überblick, `default` normal, `meticulous` jede Datei/Zeile und alle Edge-Cases. |
-| `verbosity` | `minimal` · `default` · `maximal` | `minimal` | Wie viel Fließtext während des Laufs im Chat landet. `minimal` = keine Vorreden, keine Ankündigungen, keine Zwischenzusammenfassungen; die Review selbst, der Link und die Abschlusszeilen (Schritt 6) sind davon unberührt und werden nie gekürzt. |
+| `verbosity` | `minimal` · `default` · `maximal` | `minimal` | Wie viel Fließtext während des Laufs im Chat landet. `minimal` = keine Vorreden, keine Ankündigungen, keine Zwischenzusammenfassungen; die Review selbst, Link und PR-Nummer sowie die Abschlusszeilen (Schritt 6) sind davon unberührt und werden nie gekürzt. |
 | `planstack_config` | Pfad | `~/.claude/skills/planstack/config.json` | Woher `base_url` und `token` kommen, wenn neben dieser SKILL.md keine eigene `config.json` liegt — dieselbe Datei wie beim Skill `planstack`. |
 
 Zugang: Liegt neben dieser SKILL.md eine `config.json` (so kommt der Skill aus dem Download unter Planstack → Pull Requests), gilt sie. Sonst die des Skills `planstack`.
@@ -140,7 +140,7 @@ Als Befund melden:
 - **Auskommentierter Code** — gehört gelöscht, die History hat ihn.
 - **Fehlend** — die seltene Gegenrichtung: ein echter Trick ohne jede Erklärung.
 
-Einstufung: falscher oder irreführender Kommentar an sicherheits-/datenrelevanter Stelle → **Wichtig**, sonst falsch/veraltet → **Wichtig**, redundant/Slop/zu lang → **Hinweis** (bei `strict` in Summe erwähnenswert, einzeln aber kein Blocker). Bei `lenient` nur falsche Kommentare melden.
+Einstufung: Kommentar-Befunde sind **immer Hinweis** — auch falsche/veraltete (siehe Deckelung in Schritt 3). Bei `lenient` nur falsche Kommentare melden.
 
 Im Vorschlag konkret werden: die gekürzte Fassung hinschreiben oder „streichen" sagen — nicht nur „Kommentar überarbeiten".
 
@@ -154,6 +154,16 @@ Im Vorschlag konkret werden: die gekürzte Fassung hinschreiben oder „streiche
 | **Wichtig** | `IMPORTANT` | echter Mangel, der vor dem Merge gehört, aber nichts zerstört |
 | **Hinweis** | `HINT` | Stil, Lesbarkeit, Nit, Verbesserungsidee |
 
+**Deckelung — nie Wichtig oder Kritisch, höchstens Hinweis**, egal wie gravierend der Einzelfall wirkt:
+
+- Code-Kommentare (falsch, veraltet, redundant, fehlend)
+- `AGENTS.md` (fehlende oder veraltete Einträge, Verstöße gegen dessen Konventionen)
+- PR-Beschreibung (unvollständig, veraltet, falsch)
+- Merge-Konflikte mit dem Parent-/Base-Branch
+- Tests (fehlend, lückenhaft, nichtdeterministisch, falsche Assertions)
+
+Diese Befunde zählen nie zu `Wichtig`/`Kritisch` und beeinflussen damit die Empfehlung nicht.
+
 **Empfehlung** (`decision`) leitet sich daraus ab:
 
 - `Kritisch ≥ 1` → **REQUEST_CHANGES**
@@ -162,9 +172,9 @@ Im Vorschlag konkret werden: die gekürzte Fassung hinschreiben oder „streiche
 
 Die Regel ist mechanisch: was in den Zahlen steht, muss zur Empfehlung passen. Weicht die Einschätzung davon ab, gehört die Begründung in die Summary — nicht eine stillschweigend andere Empfehlung.
 
-### 4. Bewerten: Kritikalität, KI-Prüfbarkeit, PO-Entscheidung, Typ
+### 4. Bewerten: Kritikalität, KI-Prüfbarkeit, PO-Sichtung, PO-Entscheidung, Typ
 
-Jedes Review bekommt zwei Werte von 0–100 mit je **einem Satz** Begründung, der die ausschlaggebenden Punkte nennt.
+Jedes Review bekommt drei Werte von 0–100 mit je **einem Satz** Begründung, der die ausschlaggebenden Punkte nennt.
 
 #### `criticality` — Risiko der Änderung
 
@@ -196,6 +206,20 @@ Niedrig heißt: **hier lohnt ein menschliches Review am meisten.** Start bei 100
 | −10 je Befund | mit `requires_po_decision` (höchstens −30) |
 
 Auf 0–100 begrenzen. Die Planstack-Seite sortiert nach `criticality × (100 − ai_reviewability)` — beide Werte ehrlich setzen, nicht auf die Mitte ausweichen.
+
+#### `po_review_likelihood` — will der PO den PR vor dem GoLive sehen?
+
+Wie wahrscheinlich der Product Owner diese Änderung vor dem GoLive selbst anschauen möchte — **unabhängig von Risiko und Befunden**. Am schwersten wiegt, was Nutzer **sehen oder spüren**: UX/UI. Ein riskanter Index-Umbau interessiert den PO nicht; ein neuer Button-Text schon.
+
+| Band | Typische Änderung |
+|---|---|
+| 80–100 | sichtbare UX/UI-Änderung für Kunden: neue Seite, neuer Dialog/Workflow, geänderte Interaktion oder Navigation, neue/umbenannte Texte und Begriffe, E-Mails/Benachrichtigungen an Kunden |
+| 60–79 | fachliches Verhalten, das Kunden spüren, ohne neue Oberfläche: Berechnung, Rechte, Defaults, Export-/Import-Format, Breaking Change der öffentlichen API |
+| 40–59 | kleine sichtbare Anpassung (Abstand, Farbe, Fehlermeldung, Sortierung), interne Admin-/Support-Oberfläche, Freischaltung eines Feature-Flags |
+| 20–39 | Verhalten ändert sich nur in Randfällen; für Nutzer spürbare Performance |
+| 0–19 | rein technisch: Refactoring, Tests, Infra, Abhängigkeiten, Doku, Bugfix ohne sichtbare Änderung |
+
+Innerhalb des Bands nach oben: viele betroffene Kunden, prominente Stelle (Startseite, Zeiterfassung, Abrechnung), PR oder Ticket nennt Abnahme/Design. Je Befund mit `requires_po_decision` +10 (höchstens +30). Auf 0–100 begrenzen.
 
 #### `requires_po_decision` je Befund
 
@@ -252,6 +276,7 @@ Schließt das in Schritt 1 gestartete Review ab (`PUT …/reviews/$REVIEWID`); d
 | `decision` | `APPROVE` oder `REQUEST_CHANGES` (Regel aus Schritt 3) |
 | `criticality`, `criticality_reason` | aus Schritt 4 |
 | `ai_reviewability`, `ai_reviewability_reason` | aus Schritt 4 |
+| `po_review_likelihood`, `po_review_likelihood_reason` | aus Schritt 4 |
 | `summary` | Markdown in dieser Reihenfolge: `## TLDR` · `## Analyse je Datei` · `## Risiken & Nebenwirkungen` · `## Tests` · `## Kommentare` · `## Nicht geprüft` · `## CI` (Stand aus `gh pr checks`). Leere Abschnitte entfallen. **Keine** Befunde — die stehen in `findings`. |
 | `commit_sha` | der geprüfte Head-SHA aus Schritt 1 |
 | `strictness`, `thoroughness` | die tatsächlich verwendeten Werte |
@@ -292,7 +317,7 @@ Die Antwort hat drei Teile, in dieser Reihenfolge:
 **1. Die Review**, inhaltlich identisch mit dem Gesendeten:
 
 - `## TLDR`
-- `## Bewertung` — zwei Zeilen: `Kritikalität: <n> — <Begründung>` und `KI-Prüfbarkeit: <n> — <Begründung>`
+- `## Bewertung` — drei Zeilen: `Kritikalität: <n> — <Begründung>`, `KI-Prüfbarkeit: <n> — <Begründung>` und `PO-Sichtung: <n> — <Begründung>`
 - `## Befunde` — Übersichtstabelle (`#`, Schwere, `Datei:Zeile`, Befund, PO), darunter je Befund der Abschnitt `### <n>. <Titel> — <Schwere>` mit `**Wo:** <Datei:Zeile>` und der `message`; bei `requires_po_decision` zusätzlich `**PO-Entscheidung nötig**`
 - danach die übrigen Abschnitte der `summary` (Analyse je Datei, Risiken & Nebenwirkungen, Tests, Kommentare, Nicht geprüft, CI)
 
@@ -300,15 +325,19 @@ Gibt es keine Befunde, bleibt `## Befunde` mit dem Satz `Keine Befunde.` stehen.
 
 **Nicht kürzen und nicht umschreiben** — Chat und Planstack tragen dieselbe Review. Was zu lang für den Chat wirkt, war schon in der Payload zu lang: dann beides kürzen (siehe „Sprache"). Der Detailgrad folgt der Gründlichkeit, nicht dem Medium: bei `relaxed` ist die Review kurz.
 
-**2. Der Link** (`data.url` aus Aufruf 2), eine Zeile — oder der Fehler aus Schritt 5:
+**2. Link und PR** — immer beide, direkt untereinander: `data.url` aus Aufruf 2 und PR-Nummer und Titel, getrennt durch ` · ` (`.number` und `.title` aus Schritt 1). Ist Aufruf 2 gescheitert, steht statt der Planstack-URL der Fehler aus Schritt 5; die PR-Zeile bleibt.
 
 ```
 Planstack: https://planstack.eskju.net/pull-requests/123
+PR: #9050 · Fix overtime calculation for part-time users
 ```
 
 **3. Die Abschlusszeilen** — **letzter** Block der Antwort, exakt in dieser Form und Reihenfolge:
 
 ```
+Kritikalität: 45
+KI-Prüfbarkeit: 55
+PO-Sichtung: 80
 Findings: 12
 Kritisch: 2
 Wichtig: 4
@@ -316,7 +345,7 @@ Hinweis: 6
 Empfehlung: REQUEST_CHANGES
 ```
 
-`Findings` ist die **Gesamtzahl** aller Befunde (Kritisch + Wichtig + Hinweis), `Kritisch` die Teilmenge der Blocker, `Wichtig` und `Hinweis` die übrigen Schweregrade — die drei Teilzahlen ergeben zusammen `Findings`, `Empfehlung` genau `APPROVE` oder `REQUEST_CHANGES`. Keine weiteren Zeilen dahinter, keine Zusammenfassung des eben Getanen, kein Angebot, die Findings gleich zu fixen — die Review ist mit diesen fünf Zeilen abgeschlossen. Einzige Ausnahme ist die Rückfrage aus Schritt 7; sie läuft über `AskUserQuestion` und nicht als weitere Textzeile.
+`Kritikalität`, `KI-Prüfbarkeit` und `PO-Sichtung` sind die Werte 0–100 aus Schritt 4 (ohne Begründung, die steht unter `## Bewertung`). `Findings` ist die **Gesamtzahl** aller Befunde (Kritisch + Wichtig + Hinweis), `Kritisch` die Teilmenge der Blocker, `Wichtig` und `Hinweis` die übrigen Schweregrade — die drei Teilzahlen ergeben zusammen `Findings`, `Empfehlung` genau `APPROVE` oder `REQUEST_CHANGES`. Keine weiteren Zeilen dahinter, keine Zusammenfassung des eben Getanen, kein Angebot, die Findings gleich zu fixen — die Review ist mit diesen acht Zeilen abgeschlossen. Einzige Ausnahme ist die Rückfrage aus Schritt 7; sie läuft über `AskUserQuestion` und nicht als weitere Textzeile.
 
 ### 7. Nachfragen, ob gepostet werden soll
 
@@ -443,4 +472,5 @@ Gepostet: https://github.com/<repo>/pull/9050#pullrequestreview-… — 7 inline
 - Alle Befunde der Review beheben (Kritisch → Wichtig → Hinweis); einen Befund nur auslassen, wenn der Fix strittig ist oder `requires_po_decision` gesetzt ist — dann im Chat begründen.
 - Repo-Konventionen beachten (Commit-Hooks, Tooling, Commit-Message-Stil, Attribution). Ein Commit, Message nennt die behobenen Befunde.
 - Auf den PR-Branch pushen (`git push origin HEAD:<headRefName>`), kein Force-Push. Ist der Remote-Branch seit dem Review weitergelaufen: abbrechen und melden.
-- Nichts am PR posten. Abschluss im Chat: eine Zeile je Befund (behoben / ausgelassen mit Grund) und der neue Commit-SHA.
+- **PR-Beschreibung aktuell halten:** Jede Aussage im Body, die ein Fix überholt (Verhalten, Tabellen, Einstufungen, Testliste, offene Punkte), im selben Durchgang anpassen — per `gh api …/pulls/<pr> --method PATCH --input <json>` mit dem vollständigen neuen Body (UTF-8-Datei). Das ist die einzige erlaubte Änderung am PR in diesem Schritt.
+- Sonst nichts am PR posten. Abschluss im Chat: eine Zeile je Befund (behoben / ausgelassen mit Grund) und der neue Commit-SHA.

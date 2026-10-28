@@ -30,6 +30,8 @@ class PullRequestReview extends Model
         'criticality_reason',
         'ai_reviewability',
         'ai_reviewability_reason',
+        'po_review_likelihood',
+        'po_review_likelihood_reason',
         'summary',
         'commit_sha',
         'strictness',
@@ -49,6 +51,7 @@ class PullRequestReview extends Model
             'findings_hint' => 'integer',
             'criticality' => 'integer',
             'ai_reviewability' => 'integer',
+            'po_review_likelihood' => 'integer',
         ];
     }
 

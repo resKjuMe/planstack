@@ -82,6 +82,8 @@ const COLUMN_ICONS = {
     criticality: <path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.07-2.14-.22-4.05 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.15.43-2.29 1-3a2.5 2.5 0 0 0 2.5 2.5z" />,
     // Funken: KI-Prüfbarkeit
     aiReviewability: <><path d="M9.94 15.5a2 2 0 0 0-1.44-1.44l-6.13-1.58a.5.5 0 0 1 0-.96l6.13-1.58a2 2 0 0 0 1.44-1.44l1.58-6.13a.5.5 0 0 1 .96 0l1.58 6.13a2 2 0 0 0 1.44 1.44l6.13 1.58a.5.5 0 0 1 0 .96l-6.13 1.58a2 2 0 0 0-1.44 1.44l-1.58 6.13a.5.5 0 0 1-.96 0z" /><path d="M20 3v4M22 5h-4" /></>,
+    // Auge: PO will den PR vor dem GoLive sehen
+    poReviewLikelihood: <><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z" /><circle cx="12" cy="12" r="3" /></>,
     // Person: menschliches Review nötig
     need: <><circle cx="12" cy="8" r="4" /><path d="M4 21a8 8 0 0 1 16 0" /></>,
     // Uhr: Zeitpunkt des Reviews
@@ -305,8 +307,15 @@ export function FindingCounts({ review }) {
 
 // risk: hoch = schlecht (rot), ai: niedrig = schlecht (rot).
 export function ScoreBar({ value, title, tone }) {
+    // Ältere Reviews haben keine PO-Bewertung.
+    if (value === null || value === undefined) {
+        return <span className="font-mono text-xs text-gray-400 dark:text-gray-500">–</span>;
+    }
     const bad = tone === 'risk' ? value : 100 - value;
-    const color = bad >= 67 ? 'bg-red-500' : bad >= 34 ? 'bg-amber-500' : 'bg-green-500';
+    // PO-Sichtung ist kein Gut/Schlecht, nur Aufmerksamkeit.
+    const color = tone === 'po'
+        ? (value >= 67 ? 'bg-indigo-600' : value >= 34 ? 'bg-indigo-400' : 'bg-indigo-200')
+        : bad >= 67 ? 'bg-red-500' : bad >= 34 ? 'bg-amber-500' : 'bg-green-500';
     return (
         <div className="flex items-center gap-2" title={title ?? undefined}>
             <div className="h-1.5 w-12 rounded bg-gray-200 dark:bg-gray-700 overflow-hidden">

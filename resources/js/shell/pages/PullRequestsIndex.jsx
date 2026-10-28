@@ -25,6 +25,7 @@ const SORTS = {
     findings: (pr) => (pr.review ? pr.review.critical * 10000 + pr.review.important * 100 + pr.review.hint : null),
     criticality: (pr) => pr.review?.criticality ?? null,
     aiReviewability: (pr) => pr.review?.aiReviewability ?? null,
+    poReviewLikelihood: (pr) => pr.review?.poReviewLikelihood ?? null,
     need: (pr) => pr.review?.needScore ?? null,
     reviewedAt: (pr) => pr.review?.reviewedAt ?? null,
 };
@@ -234,6 +235,7 @@ export default function PullRequestsIndex({ filters, filterUrls, grouped: initia
                                         <SortHeader id="findings" sort={sort} onSort={toggleSort} title={`${strings.findings}: ${strings.level_CRITICAL} / ${strings.level_IMPORTANT} / ${strings.level_HINT}`}><ColumnIcon name="findings" /></SortHeader>
                                         <SortHeader id="criticality" sort={sort} onSort={toggleSort} title={strings.col_criticality}><ColumnIcon name="criticality" /></SortHeader>
                                         <SortHeader id="aiReviewability" sort={sort} onSort={toggleSort} title={strings.col_ai_reviewability}><ColumnIcon name="aiReviewability" /></SortHeader>
+                                        <SortHeader id="poReviewLikelihood" sort={sort} onSort={toggleSort} title={`${strings.col_po_review_likelihood}: ${strings.po_review_likelihood_hint}`}><ColumnIcon name="poReviewLikelihood" /></SortHeader>
                                         <SortHeader id="need" sort={sort} onSort={toggleSort} title={`${strings.col_need}: ${strings.need_hint}`} align="right"><ColumnIcon name="need" /></SortHeader>
                                         <SortHeader id="reviewedAt" sort={sort} onSort={toggleSort} title={strings.col_reviewed_at}><ColumnIcon name="reviewedAt" /></SortHeader>
                                     </tr>
@@ -242,7 +244,7 @@ export default function PullRequestsIndex({ filters, filterUrls, grouped: initia
                                     <tbody key={section.key} className="divide-y divide-gray-100 dark:divide-gray-700">
                                         {grouped && (
                                             <tr className="bg-gray-50/60 dark:bg-gray-900/20">
-                                                <th colSpan={10} className="px-2 pt-4 pb-1.5 text-left text-xs font-semibold text-gray-700 dark:text-gray-200">
+                                                <th colSpan={11} className="px-2 pt-4 pb-1.5 text-left text-xs font-semibold text-gray-700 dark:text-gray-200">
                                                     {strings[`section_${section.key}`]} <span className="font-normal text-gray-400">({section.rows.length})</span>
                                                 </th>
                                             </tr>
@@ -355,11 +357,12 @@ function Row({ pr, level, stack, canShare, strings }) {
                     <td className={cell}><FindingCounts review={review} /></td>
                     <td className={cell}><ScoreBar value={review.criticality} title={review.criticalityReason} tone="risk" /></td>
                     <td className={cell}><ScoreBar value={review.aiReviewability} title={review.aiReviewabilityReason} tone="ai" /></td>
+                    <td className={cell}><ScoreBar value={review.poReviewLikelihood} title={review.poReviewLikelihoodReason} tone="po" /></td>
                     <td className={`${cell} text-right font-mono text-xs text-gray-700 dark:text-gray-300`} title={strings.need_hint}>{Math.round(review.needScore / 100)}</td>
                     <td className={`${cell} text-xs text-gray-500 dark:text-gray-400`} title={formatDate(review.reviewedAt)}>{formatRelative(review.reviewedAt, now, strings)}</td>
                 </>
             ) : (
-                <td colSpan={6} className={`${cell} text-xs text-gray-400 dark:text-gray-500`}>
+                <td colSpan={7} className={`${cell} text-xs text-gray-400 dark:text-gray-500`}>
                     <span className="inline-flex items-center gap-1.5">
                         <ReviewStartLink pr={pr} strings={strings} />
                         {pr.running ? '' : strings.not_reviewed}

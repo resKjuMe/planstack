@@ -607,7 +607,8 @@ curl -s https://planstack.eskju.net/api/user \
                 <tbody>
                     <tr><td><code>decision</code></td><td>string</td><td><span class="req">{{ __('api.required') }}</span> · APPROVE · REQUEST_CHANGES</td></tr>
                     <tr><td><code>criticality</code>, <code>ai_reviewability</code></td><td>integer</td><td><span class="req">{{ __('api.required') }}</span> · 0–100</td></tr>
-                    <tr><td><code>criticality_reason</code>, <code>ai_reviewability_reason</code></td><td>string</td><td><span class="opt">{{ __('api.optional') }}</span> · max 500</td></tr>
+                    <tr><td><code>po_review_likelihood</code></td><td>integer</td><td><span class="opt">{{ __('api.optional') }}</span> · 0–100 · wie wahrscheinlich der PO den PR vor dem GoLive sehen will</td></tr>
+                    <tr><td><code>criticality_reason</code>, <code>ai_reviewability_reason</code>, <code>po_review_likelihood_reason</code></td><td>string</td><td><span class="opt">{{ __('api.optional') }}</span> · max 500</td></tr>
                     <tr><td><code>summary</code></td><td>markdown</td><td><span class="opt">{{ __('api.optional') }}</span></td></tr>
                     <tr><td><code>commit_sha</code>, <code>strictness</code>, <code>thoroughness</code>, <code>model</code></td><td>string</td><td><span class="opt">{{ __('api.optional') }}</span></td></tr>
                     <tr><td><code>findings</code></td><td>array</td><td><span class="req">{{ __('api.required') }}</span> · darf leer sein</td></tr>

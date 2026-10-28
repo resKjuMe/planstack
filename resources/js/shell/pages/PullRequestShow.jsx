@@ -112,9 +112,10 @@ function Review({ review, strings }) {
                 {review.stale && <span className="text-xs text-amber-600 dark:text-amber-400">{strings.stale}</span>}
             </header>
 
-            <div className="grid gap-4 sm:grid-cols-2 px-5 py-4 border-b border-gray-100 dark:border-gray-700">
+            <div className="grid gap-4 sm:grid-cols-3 px-5 py-4 border-b border-gray-100 dark:border-gray-700">
                 <Score label={strings.col_criticality} value={review.criticality} reason={review.criticalityReason} tone="risk" />
                 <Score label={strings.col_ai_reviewability} value={review.aiReviewability} reason={review.aiReviewabilityReason} tone="ai" />
+                <Score label={strings.col_po_review_likelihood} value={review.poReviewLikelihood} reason={review.poReviewLikelihoodReason} tone="po" />
             </div>
 
             <div className="px-5 py-4 space-y-3">

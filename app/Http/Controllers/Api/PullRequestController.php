@@ -133,6 +133,8 @@ class PullRequestController extends ApiController
             'criticality_reason' => ['nullable', 'string', 'max:500'],
             'ai_reviewability' => ['required', 'integer', 'between:0,100'],
             'ai_reviewability_reason' => ['nullable', 'string', 'max:500'],
+            'po_review_likelihood' => ['nullable', 'integer', 'between:0,100'],
+            'po_review_likelihood_reason' => ['nullable', 'string', 'max:500'],
             'summary' => ['nullable', 'string'],
             'commit_sha' => ['nullable', 'string', 'max:40'],
             'strictness' => ['nullable', 'string', 'max:20'],
@@ -283,6 +285,7 @@ class PullRequestController extends ApiController
             'findings_hint' => $review->findings_hint,
             'criticality' => $review->criticality,
             'ai_reviewability' => $review->ai_reviewability,
+            'po_review_likelihood' => $review->po_review_likelihood,
             'url' => route('pull-requests.show', $pullRequest),
         ];
     }
