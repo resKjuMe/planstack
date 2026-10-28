@@ -60,6 +60,8 @@ class PullRequestApiTest extends TestCase
             'criticality_reason' => 'Rechte-Merge betrifft alle Mandanten.',
             'ai_reviewability' => 40,
             'ai_reviewability_reason' => 'Fachregel braucht Domänenwissen.',
+            'po_review_likelihood' => 85,
+            'po_review_likelihood_reason' => 'Neuer Dialog im Kunden-UI.',
             'summary' => "## TLDR\n\nFix korrekt, Test fehlt.",
             'commit_sha' => 'abc1234def5678abc1234def5678abc1234def56',
             'strictness' => 'strict',
@@ -171,12 +173,26 @@ class PullRequestApiTest extends TestCase
             ->assertJsonPath('data.findings_critical', 1)
             ->assertJsonPath('data.findings_important', 1)
             ->assertJsonPath('data.findings_hint', 2)
+            ->assertJsonPath('data.po_review_likelihood', 85)
             ->assertJsonPath('data.url', route('pull-requests.show', $id));
 
         $review = PullRequest::findOrFail($id)->reviews()->sole();
         $this->assertNotNull($review->review_finished_at);
         $this->assertSame('REQUEST_CHANGES', $review->decision->value);
         $this->assertSame(1, $review->findingItems()->where('requires_po_decision', true)->count());
+        $this->assertSame('Neuer Dialog im Kunden-UI.', $review->po_review_likelihood_reason);
+    }
+
+    public function test_finish_review_accepts_a_review_without_po_review_likelihood(): void
+    {
+        Sanctum::actingAs($this->member());
+        [$id, $reviewId] = $this->startedReview();
+        $payload = $this->reviewPayload();
+        unset($payload['po_review_likelihood'], $payload['po_review_likelihood_reason']);
+
+        $this->putJson("/api/pull-requests/{$id}/reviews/{$reviewId}", $payload)
+            ->assertOk()
+            ->assertJsonPath('data.po_review_likelihood', null);
     }
 
     public function test_starting_and_finishing_a_review_broadcast_the_pull_request(): void
@@ -247,9 +263,9 @@ class PullRequestApiTest extends TestCase
         Sanctum::actingAs($this->member());
         [$id, $reviewId] = $this->startedReview();
 
-        $this->putJson("/api/pull-requests/{$id}/reviews/{$reviewId}", $this->reviewPayload(['criticality' => 101, 'ai_reviewability' => -1]))
+        $this->putJson("/api/pull-requests/{$id}/reviews/{$reviewId}", $this->reviewPayload(['criticality' => 101, 'ai_reviewability' => -1, 'po_review_likelihood' => 101]))
             ->assertUnprocessable()
-            ->assertJsonValidationErrors(['criticality', 'ai_reviewability']);
+            ->assertJsonValidationErrors(['criticality', 'ai_reviewability', 'po_review_likelihood']);
     }
 
     public function test_reviews_on_pull_requests_of_another_organization_are_not_found(): void
