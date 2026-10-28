@@ -94,4 +94,6 @@ return [
     'skill_download_hint' => 'Skill ps-review als ZIP herunterladen (mit neuem API-Token), nach ~/.claude/skills/ entpacken, dann „/ps-review <PR>“ in Claude Code',
     'grouping' => 'Gruppiert',
     'grouping_hint' => 'Liste nach Handlungsbedarf gruppieren oder flach anzeigen (wird gespeichert)',
+    'stack_collapse' => 'Gestapelte PRs einklappen',
+    'stack_expand' => 'Gestapelte PRs ausklappen',
 ];

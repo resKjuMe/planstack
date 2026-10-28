@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Head, Link, router } from '@inertiajs/react';
 import AppShell from '../AppShell.jsx';
 import { useNow } from '../../board/useNow.js';
@@ -11,7 +11,7 @@ import { ApprovalChips, ColumnIcon, StackedIcon, DecisionIcon, FindingCounts, Po
 // ein Review braucht (keins, oder seit dem letzten gepusht), empfohlene, aber
 // noch nicht von mir approvte, Reviewtes, schon ausreichend Approvtes – abschaltbar,
 // am Nutzer gespeichert. Default ist der Titel; gestapelte PRs hängen dann
-// eingerückt unter ihrem Parent.
+// eingerückt unter ihrem Parent und sind ungruppiert einklappbar.
 
 const byTitle = (a, b) => (a.title ?? '').localeCompare(b.title ?? '', undefined, { numeric: true, sensitivity: 'base' });
 
@@ -42,7 +42,8 @@ function compare(a, b, key, dir) {
 
 // Parent ist der PR im selben Repo, dessen Branch das Ziel dieses PR ist (wie im
 // Tampermonkey-Skript git-colors). Liegt der Parent nicht in der Liste, ist der
-// PR selbst Wurzel. Ergebnis: Zeilen in Baumreihenfolge mit Einrücktiefe.
+// PR selbst Wurzel. Ergebnis: Zeilen in Baumreihenfolge mit Einrücktiefe und
+// Zahl der Nachfahren (folgen direkt darauf).
 function asTree(list, dir) {
     const sign = dir === 'desc' ? -1 : 1;
     const byBranch = new Map(list.map((pr) => [`${pr.repository}:${pr.branch}`, pr]));
@@ -60,8 +61,11 @@ function asTree(list, dir) {
     const walk = (pr, level) => {
         if (seen.has(pr.id)) return; // Zyklus (A → B → A) nicht endlos verfolgen
         seen.add(pr.id);
-        rows.push({ pr, level });
+        const row = { pr, level, descendants: 0 };
+        rows.push(row);
+        const start = rows.length;
         children.get(pr.id).sort((a, b) => sign * byTitle(a, b)).forEach((child) => walk(child, level + 1));
+        row.descendants = rows.length - start;
     };
     roots.sort((a, b) => sign * byTitle(a, b)).forEach((pr) => walk(pr, 0));
     // PRs, die nur in einem Zyklus hängen, haben keine Wurzel: ans Ende.
@@ -73,7 +77,43 @@ function asTree(list, dir) {
 function arrange(list, sort) {
     return sort.key === 'title'
         ? asTree(list, sort.dir)
-        : [...list].sort((a, b) => compare(a, b, sort.key, sort.dir)).map((pr) => ({ pr, level: 0 }));
+        : [...list].sort((a, b) => compare(a, b, sort.key, sort.dir)).map((pr) => ({ pr, level: 0, descendants: 0 }));
+}
+
+// Nachfahren eingeklappter Zeilen auslassen.
+function withoutCollapsed(rows, collapsed) {
+    const visible = [];
+    for (let i = 0; i < rows.length; i++) {
+        visible.push(rows[i]);
+        if (collapsed.has(rows[i].pr.id)) i += rows[i].descendants;
+    }
+    return visible;
+}
+
+const COLLAPSED_KEY = 'pull-requests:collapsed';
+
+// Eingeklappte Parents je Browser merken.
+function useCollapsed() {
+    const [collapsed, setCollapsed] = useState(() => {
+        try {
+            return new Set(JSON.parse(localStorage.getItem(COLLAPSED_KEY) ?? '[]'));
+        } catch {
+            return new Set();
+        }
+    });
+    useEffect(() => {
+        try {
+            localStorage.setItem(COLLAPSED_KEY, JSON.stringify([...collapsed]));
+        } catch {
+            /* Privatmodus / Quota */
+        }
+    }, [collapsed]);
+    const toggle = (id) => setCollapsed((current) => {
+        const next = new Set(current);
+        if (!next.delete(id)) next.add(id);
+        return next;
+    });
+    return [collapsed, toggle];
 }
 
 // Ein laufendes Review geht vor, danach ausreichend approvt: dann braucht es
@@ -91,6 +131,8 @@ export default function PullRequestsIndex({ filters, filterUrls, grouped: initia
     const [sort, setSort] = useState({ key: 'title', dir: 'asc' });
     const [syncing, setSyncing] = useState(false);
     const [grouped, setGrouped] = useState(initialGrouped);
+    const [collapsed, toggleCollapsed] = useCollapsed();
+    const collapsible = !grouped && sort.key === 'title';
     const toggleGrouped = () => {
         setGrouped(!grouped);
         router.post(groupingUrl, { grouped: !grouped }, { preserveScroll: true, preserveState: true });
@@ -108,6 +150,7 @@ export default function PullRequestsIndex({ filters, filterUrls, grouped: initia
         })).filter((section) => section.rows.length > 0)
         : [{ key: 'all', rows: arrange(pullRequests, sort) }]
     ), [pullRequests, sort, grouped]);
+    const hasStacks = collapsible && sections.some((section) => section.rows.some((row) => row.descendants > 0));
 
     const toggleSort = (key) => setSort((current) => (
         current.key === key
@@ -204,7 +247,16 @@ export default function PullRequestsIndex({ filters, filterUrls, grouped: initia
                                                 </th>
                                             </tr>
                                         )}
-                                        {section.rows.map(({ pr, level }) => <Row key={pr.id} pr={pr} level={level} canShare={filters.role === 'authored'} strings={strings} />)}
+                                        {(collapsible ? withoutCollapsed(section.rows, collapsed) : section.rows).map(({ pr, level, descendants }) => (
+                                            <Row
+                                                key={pr.id}
+                                                pr={pr}
+                                                level={level}
+                                                stack={hasStacks ? { descendants, collapsed: collapsed.has(pr.id), toggle: () => toggleCollapsed(pr.id) } : null}
+                                                canShare={filters.role === 'authored'}
+                                                strings={strings}
+                                            />
+                                        ))}
                                     </tbody>
                                 ))}
                             </table>
@@ -265,7 +317,7 @@ const CI_ROW = {
 };
 
 // Eine Zeile je PR; Nebeninfos (Repo, Dateien, Begründungen) stehen im Tooltip.
-function Row({ pr, level, canShare, strings }) {
+function Row({ pr, level, stack, canShare, strings }) {
     const review = pr.review;
     const now = useNow();
     const cell = 'px-2 py-1.5 whitespace-nowrap';
@@ -274,6 +326,7 @@ function Row({ pr, level, canShare, strings }) {
         <tr className={ci ?? 'hover:bg-gray-50 dark:hover:bg-gray-700/40'} title={ci ? strings[`ci_${pr.ciState}`] : undefined}>
             <td className={`${cell} max-w-xs`} style={level > 0 ? { paddingLeft: `calc(0.5rem + ${level * 30}px)` } : undefined}>
                 <div className="flex items-center gap-2 min-w-0">
+                    {stack && <StackToggle stack={stack} strings={strings} />}
                     {canShare && <ShareToggle pr={pr} strings={strings} />}
                     <a href={pr.githubUrl} target="_blank" rel="noreferrer" className="shrink-0 font-mono text-xs text-gray-500 dark:text-gray-400 hover:underline" title={`${pr.repository}#${pr.number}`}>{pr.number}</a>
                     <StackedIcon pr={pr} strings={strings} />
@@ -314,6 +367,26 @@ function Row({ pr, level, canShare, strings }) {
                 </td>
             )}
         </tr>
+    );
+}
+
+// Pfeil zum Ein-/Ausklappen der gestapelten PRs; ohne Kinder nur Platzhalter, damit
+// die Spalte bündig bleibt. Eingeklappt steht die Zahl der verborgenen PRs daneben.
+function StackToggle({ stack, strings }) {
+    if (stack.descendants === 0) return <span className="shrink-0 w-4" aria-hidden="true" />;
+    return (
+        <button
+            type="button"
+            onClick={stack.toggle}
+            aria-expanded={!stack.collapsed}
+            title={stack.collapsed ? strings.stack_expand : strings.stack_collapse}
+            className="shrink-0 inline-flex items-center text-gray-400 hover:text-gray-700 dark:text-gray-500 dark:hover:text-gray-200"
+        >
+            <svg viewBox="0 0 20 20" fill="currentColor" className={`h-4 w-4 transition-transform ${stack.collapsed ? '' : 'rotate-90'}`} aria-hidden="true">
+                <path fillRule="evenodd" d="M7.21 14.77a.75.75 0 01.02-1.06L11.168 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06-.02z" clipRule="evenodd" />
+            </svg>
+            {stack.collapsed && <span className="ml-0.5 font-mono text-[11px]">+{stack.descendants}</span>}
+        </button>
     );
 }
 
