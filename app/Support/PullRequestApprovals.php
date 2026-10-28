@@ -10,15 +10,40 @@ use Illuminate\Support\Facades\DB;
 
 /**
  * Approvals eines PR: letzte Entscheidung je Reviewer und die Pflicht-Approvals
- * je Gruppe kritischer Dateien (aus dem Check-Run des pr-bot).
+ * aus dem Check-Run des pr-bot.
  */
 class PullRequestApprovals
 {
-    /** Jeder PR braucht mindestens so viele Approvals. */
+    /** Pflicht-Approvals, solange der pr-bot keine Anforderung liefert. */
     public const REQUIRED = 1;
 
     /**
-     * Gruppen aus der Check-Summary: `| Backend | backend-dev | 1 / 2 | 6 | 1 missing |`.
+     * Anforderung aus der Summary von „pr-bot / Review Requirement“: Stufe,
+     * Pflicht-Approvals (`**Approvals:** 0 von 2`) und berührte Critical-Files-Gruppen.
+     * null, wenn die Summary fehlt oder nicht erkennbar ist.
+     *
+     * @return array{level: string, required: int, criticalGroups: array<int, string>}|null
+     */
+    public static function parseRequirement(?string $summary): ?array
+    {
+        if ($summary === null
+            || ! preg_match('/\*\*Stufe:\*\*\s*`([a-z]+)`/', $summary, $level)
+            || ! preg_match('/\*\*Approvals:\*\*\s*\d+\s+von\s+(\d+)/', $summary, $required)) {
+            return null;
+        }
+
+        preg_match_all('/^-\s*Gruppe\s+\*\*([^*]+)\*\*:/m', $summary, $groups);
+
+        return [
+            'level' => $level[1],
+            'required' => (int) $required[1],
+            'criticalGroups' => array_values(array_unique($groups[1])),
+        ];
+    }
+
+    /**
+     * Gruppen aus der Summary des früheren Checks „pr-bot / Check Critical Files
+     * Approvals“: `| Backend | backend-dev | 1 / 2 | 6 | 1 missing |`.
      * null, wenn die Summary fehlt oder nicht erkennbar ist; [] ohne betroffene Gruppe.
      *
      * @return array<int, array{label: string, team: string, approved: int, required: int}>|null
@@ -81,20 +106,24 @@ class PullRequestApprovals
      * Stand für die Anzeige.
      *
      * @param  Collection<int, PullRequestApproval>  $approvals
-     * @return array{approved: int, required: int, changesRequested: int, groups: ?array, fulfilled: bool}
+     * @return array{approved: int, required: int, changesRequested: int, level: ?string, criticalGroups: array<int, string>, groups: ?array, fulfilled: bool}
      */
     public static function status(PullRequest $pullRequest, Collection $approvals): array
     {
         $approved = $approvals->where('state', PullRequestApproval::APPROVED)->count();
         $changesRequested = $approvals->where('state', PullRequestApproval::CHANGES_REQUESTED)->count();
+        $requirement = $pullRequest->review_requirement;
+        $required = $requirement['required'] ?? self::REQUIRED;
         $groups = $pullRequest->approval_groups;
 
         return [
             'approved' => $approved,
-            'required' => self::REQUIRED,
+            'required' => $required,
             'changesRequested' => $changesRequested,
+            'level' => $requirement['level'] ?? null,
+            'criticalGroups' => $requirement['criticalGroups'] ?? [],
             'groups' => $groups,
-            'fulfilled' => $approved >= self::REQUIRED
+            'fulfilled' => $approved >= $required
                 && $changesRequested === 0
                 && collect($groups ?? [])->every(fn ($g) => $g['approved'] >= $g['required']),
         ];
