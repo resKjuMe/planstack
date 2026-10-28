@@ -258,13 +258,20 @@ function initials(name) {
     return (words.length === 1 ? words[0].slice(0, 2) : words[0][0] + words[words.length - 1][0]).toUpperCase();
 }
 
+// Zeilenhintergrund nach CI (wie git-colors): rot = fehlgeschlagene Steps, blau = läuft noch.
+const CI_ROW = {
+    failed: 'bg-red-50 hover:bg-red-100 dark:bg-red-900/20 dark:hover:bg-red-900/30',
+    running: 'bg-blue-50 hover:bg-blue-100 dark:bg-blue-900/20 dark:hover:bg-blue-900/30',
+};
+
 // Eine Zeile je PR; Nebeninfos (Repo, Dateien, Begründungen) stehen im Tooltip.
 function Row({ pr, level, canShare, strings }) {
     const review = pr.review;
     const now = useNow();
     const cell = 'px-2 py-1.5 whitespace-nowrap';
+    const ci = pr.state === 'OPEN' ? CI_ROW[pr.ciState] : null;
     return (
-        <tr className="hover:bg-gray-50 dark:hover:bg-gray-700/40">
+        <tr className={ci ?? 'hover:bg-gray-50 dark:hover:bg-gray-700/40'} title={ci ? strings[`ci_${pr.ciState}`] : undefined}>
             <td className={`${cell} max-w-xs`} style={level > 0 ? { paddingLeft: `calc(0.5rem + ${level * 30}px)` } : undefined}>
                 <div className="flex items-center gap-2 min-w-0">
                     {canShare && <ShareToggle pr={pr} strings={strings} />}

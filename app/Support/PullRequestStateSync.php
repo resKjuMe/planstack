@@ -9,10 +9,11 @@ use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Str;
 
 /**
  * Hält die offenen PRs aus ps-review aktuell: Status (gemergt/geschlossen),
- * letzter Commit, Titel, Umfang und Approvals (je Reviewer und je Gruppe
+ * letzter Commit, Titel, Umfang, CI-Zustand und Approvals (je Reviewer und je Gruppe
  * kritischer Dateien) kommen je Repo per GraphQL, je Anfrage bis zu CHUNK PRs
  * als Aliase. Ein fehlgeschlagenes Repo bricht den Lauf nicht ab.
  * syncAuthored() findet zusätzlich die eigenen offenen PRs, die noch fehlen.
@@ -23,7 +24,12 @@ class PullRequestStateSync
 
     private const SEARCH_PAGES = 8;
 
-    private const FIELDS = 'state mergedAt closedAt title headRefOid additions deletions changedFiles commitCount: commits { totalCount } comments { totalCount }';
+    private const FIELDS = 'state mergedAt closedAt title headRefOid additions deletions changedFiles commitCount: commits { totalCount } comments { totalCount } '
+        .'ci: commits(last: 1) { nodes { commit { statusCheckRollup { contexts(first: 100) { nodes { __typename '
+        .'... on CheckRun { name status conclusion } ... on StatusContext { context state } } } } } } }';
+
+    /** Fehlgeschlagene Checks wie im Tampermonkey-Skript git-colors; CANCELLED zählt nicht. */
+    private const FAILED = ['FAILURE', 'ERROR', 'TIMED_OUT', 'STARTUP_FAILURE', 'ACTION_REQUIRED'];
 
     /**
      * @param  Collection<int, PullRequest>|null  $pullRequests  Default: alle offenen
@@ -254,6 +260,10 @@ class PullRequestStateSync
             'comments' => data_get($node, 'comments.totalCount', $pullRequest->comments ?? 0),
         ]);
 
+        if (array_key_exists('ci', $node)) {
+            $pullRequest->ci_state = $this->ciState(data_get($node, 'ci.nodes.0.commit.statusCheckRollup.contexts.nodes'));
+        }
+
         $check = collect(data_get($node, 'commits.nodes.0.commit.checkSuites.nodes', []))
             ->flatMap(fn ($suite) => data_get($suite, 'checkRuns.nodes', []) ?? [])
             ->first();
@@ -277,6 +287,38 @@ class PullRequestStateSync
         }
 
         return $changed;
+    }
+
+    /**
+     * failed vor running vor success; null ohne (lesbare) Checks. Ignorierte
+     * Gates färben nicht rot, zählen aber als laufend.
+     *
+     * @param  array<int, array<string, mixed>|null>|null  $contexts
+     */
+    private function ciState(?array $contexts): ?string
+    {
+        $contexts = array_filter($contexts ?? [], 'is_array');
+        if ($contexts === []) {
+            return null;
+        }
+
+        $ignored = (array) config('planstack.ci_ignored_checks', []);
+        $running = false;
+
+        foreach ($contexts as $ctx) {
+            $isCheckRun = ($ctx['__typename'] ?? null) === 'CheckRun';
+            $state = $isCheckRun
+                ? (($ctx['status'] ?? null) === 'COMPLETED' ? ($ctx['conclusion'] ?? null) : 'PENDING')
+                : ($ctx['state'] ?? null);
+            $name = (string) ($isCheckRun ? ($ctx['name'] ?? '') : ($ctx['context'] ?? ''));
+
+            if (in_array($state, self::FAILED, true) && ! Str::contains($name, $ignored)) {
+                return 'failed';
+            }
+            $running = $running || $state === 'PENDING';
+        }
+
+        return $running ? 'running' : 'success';
     }
 
     /**

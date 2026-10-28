@@ -6,6 +6,22 @@
 return [
     'releases' => [
         [
+            'version' => '2.8.3',
+            'date' => '2026-10-28',
+            'tldr' => [
+                'de' => ['Pull Requests zeigen den CI-Zustand'],
+                'en' => ['Pull requests show the CI state'],
+            ],
+            'changes' => [
+                'de' => [
+                    'Neu: In der Liste unter „Pull Requests“ sind offene PRs rot hinterlegt, wenn die CI fehlgeschlagene Steps hat, und blau, solange sie noch läuft. Reine Freigabe-Checks (Todo-Liste, Pflicht-Approvals) zählen dabei nicht als Fehler.',
+                ],
+                'en' => [
+                    'New: In the list under "Pull requests", open PRs get a red background when CI has failed steps and a blue one while it is still running. Pure approval checks (todo list, required approvals) do not count as failures.',
+                ],
+            ],
+        ],
+        [
             'version' => '2.8.2',
             'date' => '2026-10-27',
             'tldr' => [

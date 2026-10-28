@@ -71,6 +71,22 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | CI-Zustand (Pull Requests aus ps-review)
+    |--------------------------------------------------------------------------
+    |
+    | Organisatorische Gates, deren Fehlschlag einen PR nicht als „CI rot“
+    | markiert (Teilstring des Check-Namens, wie im Tampermonkey-Skript git-colors).
+    |
+    */
+
+    'ci_ignored_checks' => [
+        'Check Todo List Completion',
+        'Check Critical Files Approvals',
+        'Review Requirement',
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | next-action: Fix-Lease
     |--------------------------------------------------------------------------
     |
