@@ -56,7 +56,7 @@ class PullRequestStateSyncTest extends TestCase
                             ['author' => ['login' => 'vera-rolf_clockodo'], 'state' => 'APPROVED', 'submittedAt' => '2026-10-26T09:00:00Z', 'commit' => ['oid' => 'bbb']],
                         ]],
                         'commits' => ['nodes' => [['commit' => ['checkSuites' => ['nodes' => [
-                            ['checkRuns' => ['nodes' => [['summary' => "| Group | Team | Approvals | Files | Status |\n| --- | --- | --- | --- | --- |\n| Backend | backend-dev | 1 / 2 | 3 | 1 missing |"]]]],
+                            ['checkRuns' => ['nodes' => [['summary' => "## Review Requirement\n\n**Stufe:** `critical` — KI-Einschätzung `critical`\n\n**Approvals:** 1 von 2 (gezählt auf dem aktuellen Commit, ohne Autor)\n\n- Gruppe **Backend**: `backend/public/index.php`"]]]],
                         ]]]]]],
                     ],
                     'pr2' => [
@@ -77,10 +77,11 @@ class PullRequestStateSyncTest extends TestCase
         $this->assertNotNull($merged->merged_at);
         $this->assertSame('bbb', $merged->last_commit);
         $this->assertSame(3, $merged->commits);
-        $this->assertEquals([['label' => 'Backend', 'team' => 'backend-dev', 'approved' => 1, 'required' => 2]], $merged->approval_groups);
+        $this->assertSame(['level' => 'critical', 'required' => 2, 'criticalGroups' => ['Backend']], $merged->review_requirement);
+        $this->assertNull($merged->approval_groups);
         $this->assertSame(['vera-rolf_clockodo'], $merged->approvals()->pluck('login')->all());
-        // Ohne Check-Daten bleiben die Gruppen unbekannt.
-        $this->assertNull($open->refresh()->approval_groups);
+        // Ohne Check-Daten bleibt die Anforderung unbekannt.
+        $this->assertNull($open->refresh()->review_requirement);
         $this->assertSame('PR 2 neu', $open->title);
         $this->assertSame(9, $open->additions);
         $this->assertSame('OPEN', $missing->refresh()->state->value);

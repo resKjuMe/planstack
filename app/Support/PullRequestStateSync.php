@@ -258,6 +258,7 @@ class PullRequestStateSync
             ->flatMap(fn ($suite) => data_get($suite, 'checkRuns.nodes', []) ?? [])
             ->first();
         if ($check !== null) {
+            $pullRequest->review_requirement = PullRequestApprovals::parseRequirement($check['summary'] ?? null);
             $pullRequest->approval_groups = PullRequestApprovals::parseGroups($check['summary'] ?? null);
         }
 

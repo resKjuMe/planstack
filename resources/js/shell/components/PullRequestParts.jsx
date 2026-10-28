@@ -202,20 +202,31 @@ function reviewersTitle(approvals, strings) {
     ].filter(Boolean).join('\n') || strings.no_approvals;
 }
 
-// Kompakt für die Liste: „1/1“, je Gruppe „BE 1/2“, offene Änderungswünsche „✗ 1“.
+const levelTone = 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-200';
+
+const requirementUnknown = (approvals) => approvals.level == null && approvals.groups === null;
+
+// Kompakt für die Liste: „1/2“, Stufe mit Critical-Files-Gruppen „critical·BE“,
+// je Gruppe des früheren Checks „BE 1/2“, offene Änderungswünsche „✗ 1“.
 export function ApprovalChips({ approvals, strings }) {
     const chip = 'rounded px-1.5 py-0.5 font-mono text-[11px]';
+    const critical = (approvals.criticalGroups ?? []).map((g) => GROUP_SHORT[g] ?? g);
     return (
         <span className="inline-flex items-center gap-1 whitespace-nowrap" title={`${reviewersTitle(approvals, strings)}\n\n${strings.approvals_hint}`}>
             <span className={`${chip} ${approvals.approved >= approvals.required ? okTone : openTone}`}>
                 {approvals.approved >= approvals.required ? '✓ ' : ''}{approvals.approved}/{approvals.required}
             </span>
+            {approvals.level && (
+                <span className={`${chip} ${levelTone}`} title={[`${strings.review_level}: ${approvals.level}`, critical.length ? `${strings.critical_files}: ${(approvals.criticalGroups ?? []).join(', ')}` : null].filter(Boolean).join('\n')}>
+                    {[approvals.level, ...critical].join('·')}
+                </span>
+            )}
             {(approvals.groups ?? []).map((g) => (
                 <span key={g.label} className={`${chip} ${g.approved >= g.required ? okTone : openTone}`}>
                     {GROUP_SHORT[g.label] ?? g.label} {g.approved}/{g.required}
                 </span>
             ))}
-            {approvals.groups === null && <span className={`${chip} text-gray-400`} title={strings.approvals_unknown}>?</span>}
+            {requirementUnknown(approvals) && <span className={`${chip} text-gray-400`} title={strings.approvals_unknown}>?</span>}
             {approvals.changesRequested > 0 && (
                 <span className={`${chip} bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300`}>✗ {approvals.changesRequested}</span>
             )}
@@ -243,8 +254,15 @@ export function ApprovalPanel({ approvals, strings }) {
                 {(approvals.groups ?? []).map((g) => (
                     <React.Fragment key={g.label}>{row(`${g.label}${g.team ? ` (${g.team})` : ''}`, g.approved, g.required)}</React.Fragment>
                 ))}
-                {approvals.groups === null && <p className="text-xs text-gray-400">{strings.approvals_unknown}</p>}
-                {approvals.groups?.length === 0 && <p className="text-xs text-gray-400">{strings.no_critical_files}</p>}
+                {approvals.level && (
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                        {strings.review_level}: <span className="font-mono">{approvals.level}</span>
+                        {' · '}
+                        {approvals.criticalGroups?.length ? `${strings.critical_files}: ${(approvals.criticalGroups ?? []).join(', ')}` : strings.no_critical_files}
+                    </p>
+                )}
+                {requirementUnknown(approvals) && <p className="text-xs text-gray-400">{strings.approvals_unknown}</p>}
+                {!approvals.level && approvals.groups?.length === 0 && <p className="text-xs text-gray-400">{strings.no_critical_files}</p>}
             </div>
             {approvals.reviewers.length === 0 ? (
                 <p className="text-sm text-gray-500 dark:text-gray-400">{strings.no_approvals}</p>

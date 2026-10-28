@@ -74,10 +74,10 @@ Rein lesend:
 ```bash
 REPO=$(gh repo view --json nameWithOwner -q .nameWithOwner)   # bzw. aus der PR-URL
 gh api "repos/$REPO/pulls/<pr>"   # alle PR-Kennzahlen für Schritt 5 (Zuordnung dort)
-# Approvals der Kollegen und Pflicht-Approvals je Gruppe kritischer Dateien:
+# Approvals der Kollegen und Pflicht-Approvals (Stufe des pr-bot):
 gh api --paginate "repos/$REPO/pulls/<pr>/reviews" \
   --jq '.[] | {login: .user.login, state, submitted_at, commit_id}'   # ein JSON-Objekt je Zeile
-gh api "repos/$REPO/commits/<head.sha>/check-runs?check_name=pr-bot%20%2F%20Check%20Critical%20Files%20Approvals" \
+gh api "repos/$REPO/commits/<head.sha>/check-runs?check_name=pr-bot%20%2F%20Review%20Requirement" \
   --jq '.check_runs[0].output.summary // empty'
 gh pr diff <pr>
 gh pr checks <pr>                 # CI-Stand gehört in die Summary, wird aber nicht repariert
@@ -239,7 +239,7 @@ Zuordnung aus `gh api repos/$REPO/pulls/<pr>`:
 | `changed_files`, `additions`, `deletions`, `commits`, `comments`, `review_comments` | gleichnamige Felder |
 | `opened_at`, `merged_at`, `closed_at` | `.created_at`, `.merged_at`, `.closed_at` |
 | `github_reviews` | **alle** Reviews aus `pulls/<pr>/reviews` unverändert als `[{login, state, submitted_at, commit_id}]` — der Server ermittelt daraus die letzte Entscheidung je Kollege |
-| `approval_check_summary` | `output.summary` des Checks „pr-bot / Check Critical Files Approvals“ unverändert; **weglassen**, wenn es den Check nicht gibt (anderes Repo, Check noch nicht gelaufen) |
+| `approval_check_summary` | `output.summary` des Checks „pr-bot / Review Requirement“ unverändert; **weglassen**, wenn es den Check nicht gibt (anderes Repo, Check noch nicht gelaufen) |
 
 Die Approvals hält Planstack danach selbst aktuell (Sync alle 5 Minuten); der Skill wertet sie nicht aus und nennt sie nur in der Summary unter `## CI`, wenn Freigaben fehlen.
 

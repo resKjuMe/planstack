@@ -55,16 +55,17 @@ return [
 
     /*
     |--------------------------------------------------------------------------
-    | Pflicht-Approvals je Gruppe (Pull Requests aus ps-review)
+    | Pflicht-Approvals (Pull Requests aus ps-review)
     |--------------------------------------------------------------------------
     |
-    | Check-Run, der die Approvals je Gruppe kritischer Dateien als Tabelle
-    | ausgibt (| Group | Team | Approvals | Files | Status |). Die App-ID hält
-    | die GraphQL-Abfrage klein; ohne sie werden die Gruppen nicht synchronisiert.
+    | Check-Run des pr-bot mit Stufe und Pflicht-Approvals (**Stufe:**,
+    | **Approvals:** 0 von 2); er läuft schon beim Push, nicht erst beim Approve.
+    | Die App-ID hält die GraphQL-Abfrage klein; ohne sie wird die Anforderung
+    | nicht synchronisiert.
     |
     */
 
-    'approval_check_name' => env('GITHUB_APPROVAL_CHECK_NAME', 'pr-bot / Check Critical Files Approvals'),
+    'approval_check_name' => env('GITHUB_APPROVAL_CHECK_NAME', 'pr-bot / Review Requirement'),
 
     'approval_check_app_id' => env('GITHUB_APPROVAL_CHECK_APP_ID', 5393133),
 

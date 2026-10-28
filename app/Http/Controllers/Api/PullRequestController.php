@@ -61,6 +61,7 @@ class PullRequestController extends ApiController
         $attributes['author_id'] = PullRequest::resolveAuthor($organizationId, $data['author_login'] ?? null)?->id;
 
         if (array_key_exists('approval_check_summary', $data)) {
+            $attributes['review_requirement'] = PullRequestApprovals::parseRequirement($data['approval_check_summary']);
             $attributes['approval_groups'] = PullRequestApprovals::parseGroups($data['approval_check_summary']);
         }
 
