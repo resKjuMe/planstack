@@ -11,7 +11,7 @@ import { ApprovalChips, ColumnIcon, StackedIcon, DecisionIcon, FindingCounts, Po
 // ein Review braucht (keins, oder seit dem letzten gepusht), empfohlene, aber
 // noch nicht von mir approvte, Reviewtes, schon ausreichend Approvtes – abschaltbar,
 // am Nutzer gespeichert. Default ist der Titel; gestapelte PRs hängen dann
-// eingerückt unter ihrem Parent und sind ungruppiert einklappbar.
+// eingerückt unter ihrem Parent und sind einklappbar.
 
 const byTitle = (a, b) => (a.title ?? '').localeCompare(b.title ?? '', undefined, { numeric: true, sensitivity: 'base' });
 
@@ -132,7 +132,7 @@ export default function PullRequestsIndex({ filters, filterUrls, grouped: initia
     const [syncing, setSyncing] = useState(false);
     const [grouped, setGrouped] = useState(initialGrouped);
     const [collapsed, toggleCollapsed] = useCollapsed();
-    const collapsible = !grouped && sort.key === 'title';
+    const collapsible = sort.key === 'title';
     const toggleGrouped = () => {
         setGrouped(!grouped);
         router.post(groupingUrl, { grouped: !grouped }, { preserveScroll: true, preserveState: true });
