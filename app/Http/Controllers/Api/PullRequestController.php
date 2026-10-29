@@ -202,7 +202,8 @@ class PullRequestController extends ApiController
             $review->update(['fix_started_at' => now()]);
         }
 
-        $review->load(['fixRequestedBy', 'findingItems']);
+        // Nur offene Entscheidungen: ein Einzel-Fix zieht früher erledigte Befunde nicht erneut mit.
+        $review->load(['fixRequestedBy', 'findingItems' => fn ($q) => $q->whereNotNull('fix_decision')->whereNull('fix_outcome')]);
 
         return response()->json(['data' => [
             'review_id' => $review->id,

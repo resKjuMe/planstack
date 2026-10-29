@@ -363,6 +363,19 @@ class PullRequestApiTest extends TestCase
         $this->assertNotNull($review->fresh()->fix_started_at);
     }
 
+    public function test_claim_fix_skips_findings_finished_by_an_earlier_fix(): void
+    {
+        $user = $this->member();
+        Sanctum::actingAs($user);
+        [$id, $review] = $this->requestedFix($user);
+        $review->findingItems()->where('requires_po_decision', false)->update(['fix_outcome' => 'SKIPPED']);
+
+        $this->postJson("/api/pull-requests/{$id}/fix/claim")
+            ->assertOk()
+            ->assertJsonCount(1, 'data.findings')
+            ->assertJsonPath('data.findings.0.title', 'Verhalten für Bestandsdaten');
+    }
+
     public function test_claim_fix_without_a_requested_fix_is_not_found(): void
     {
         Sanctum::actingAs($this->member());
