@@ -18,7 +18,7 @@ class PullRequestCommits
       repository(owner: $owner, name: $name) {
         pullRequest(number: $number) {
           commits(first: 100) {
-            nodes { commit { oid committedDate additions deletions messageHeadline } }
+            nodes { commit { oid committedDate additions deletions messageHeadline parents(first: 1) { totalCount } } }
           }
         }
       }
@@ -26,7 +26,7 @@ class PullRequestCommits
     GQL;
 
     /**
-     * @return array<int, array{sha: string, committedAt: string, additions: int, deletions: int, message: string}>
+     * @return array<int, array{sha: string, committedAt: string, additions: int, deletions: int, message: string, merge: bool}>
      */
     public function for(PullRequest $pr): array
     {
@@ -37,7 +37,7 @@ class PullRequestCommits
             return [];
         }
 
-        $key = "pr-commits:{$pr->repository}#{$pr->pull_request_id}:{$pr->last_commit}";
+        $key = "pr-commits:v2:{$pr->repository}#{$pr->pull_request_id}:{$pr->last_commit}";
         $cached = Cache::get($key);
         if (is_array($cached)) {
             return $cached;
@@ -52,7 +52,7 @@ class PullRequestCommits
     }
 
     /**
-     * @return array<int, array{sha: string, committedAt: string, additions: int, deletions: int, message: string}>|null null bei Fehler
+     * @return array<int, array{sha: string, committedAt: string, additions: int, deletions: int, message: string, merge: bool}>|null null bei Fehler
      */
     private function fetch(string $token, string $owner, string $name, int $number): ?array
     {
@@ -85,6 +85,8 @@ class PullRequestCommits
                 'additions' => (int) ($c['additions'] ?? 0),
                 'deletions' => (int) ($c['deletions'] ?? 0),
                 'message' => (string) ($c['messageHeadline'] ?? ''),
+                // Merge-Commits (z. B. main in den Branch) tragen fremden Diff.
+                'merge' => (int) data_get($c, 'parents.totalCount', 1) > 1,
             ])
             ->values()
             ->all();
