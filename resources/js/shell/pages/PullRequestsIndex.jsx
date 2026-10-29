@@ -318,12 +318,24 @@ const CI_ROW = {
     running: 'bg-blue-50 hover:bg-blue-100 dark:bg-blue-900/20 dark:hover:bg-blue-900/30',
 };
 
+function ConflictIcon({ strings }) {
+    return (
+        <span className="shrink-0 text-red-600 dark:text-red-400" title={strings.conflicting}>
+            <svg viewBox="0 0 24 24" fill="currentColor" className="h-4 w-4" aria-hidden="true">
+                <path fillRule="evenodd" d="M10.27 3.5a2 2 0 0 1 3.46 0l8.04 13.93A2 2 0 0 1 20.04 20.5H3.96a2 2 0 0 1-1.73-3.07L10.27 3.5zM12 9a1 1 0 0 0-1 1v4a1 1 0 1 0 2 0v-4a1 1 0 0 0-1-1zm0 9a1.25 1.25 0 1 0 0-2.5A1.25 1.25 0 0 0 12 18z" clipRule="evenodd" />
+            </svg>
+        </span>
+    );
+}
+
 // Eine Zeile je PR; Nebeninfos (Repo, Dateien, Begründungen) stehen im Tooltip.
 function Row({ pr, level, stack, canShare, strings }) {
     const review = pr.review;
     const now = useNow();
     const cell = 'px-2 py-1.5 whitespace-nowrap';
-    const ci = pr.state === 'OPEN' ? CI_ROW[pr.ciState] : null;
+    const open = pr.state === 'OPEN';
+    const ci = open ? CI_ROW[pr.ciState] : null;
+    const failedChecks = open && pr.ciState === 'failed' ? pr.ciFailedChecks : [];
     return (
         <tr className={ci ?? 'hover:bg-gray-50 dark:hover:bg-gray-700/40'} title={ci ? strings[`ci_${pr.ciState}`] : undefined}>
             <td className={`${cell} max-w-xs`} style={level > 0 ? { paddingLeft: `calc(0.5rem + ${level * 30}px)` } : undefined}>
@@ -332,6 +344,7 @@ function Row({ pr, level, stack, canShare, strings }) {
                     {canShare && <ShareToggle pr={pr} strings={strings} />}
                     <a href={pr.githubUrl} target="_blank" rel="noreferrer" className="shrink-0 font-mono text-xs text-gray-500 dark:text-gray-400 hover:underline" title={`${pr.repository}#${pr.number}`}>{pr.number}</a>
                     <StackedIcon pr={pr} strings={strings} />
+                    {open && pr.conflicting && <ConflictIcon strings={strings} />}
                     <Link href={pr.showUrl} title={pr.title} className="truncate font-medium text-gray-900 dark:text-gray-100 hover:text-indigo-600 dark:hover:text-indigo-400">
                         {pr.title}
                     </Link>
@@ -339,6 +352,11 @@ function Row({ pr, level, stack, canShare, strings }) {
                     {pr.state !== 'OPEN' && <StateBadge state={pr.state} strings={strings} />}
                     {pr.running && <RunningDot running={pr.running} strings={strings} />}
                 </div>
+                {failedChecks.length > 0 && (
+                    <small className="block truncate text-red-700 dark:text-red-400" title={failedChecks.join('\n')}>
+                        {failedChecks.join(' · ')}
+                    </small>
+                )}
             </td>
             <td className={`${cell} text-gray-700 dark:text-gray-300`} title={pr.author ?? undefined}>{initials(pr.author)}</td>
             <td className={`${cell} text-right font-mono text-[11px] leading-tight`} title={`${pr.changedFiles} ${strings.files}`}>
