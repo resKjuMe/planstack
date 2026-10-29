@@ -29,6 +29,7 @@ return [
     'not_reviewed' => 'Not reviewed yet',
     'ci_failed' => 'CI: steps failed',
     'ci_running' => 'CI still running',
+    'unresolved_comments' => 'Unresolved comments',
     'conflicting' => 'Merge conflict with the target branch',
     'stale' => 'pushed since review',
     'decision_APPROVE' => 'Approve',

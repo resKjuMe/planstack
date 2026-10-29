@@ -328,6 +328,17 @@ function ConflictIcon({ strings }) {
     );
 }
 
+function ThreadsBadge({ count, strings }) {
+    return (
+        <span className="inline-flex shrink-0 items-center gap-0.5 rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold text-amber-700 dark:bg-amber-900/50 dark:text-amber-300" title={strings.unresolved_comments}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-3 w-3" aria-hidden="true">
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+            </svg>
+            {count}
+        </span>
+    );
+}
+
 // Eine Zeile je PR; Nebeninfos (Repo, Dateien, Begründungen) stehen im Tooltip.
 function Row({ pr, level, stack, canShare, strings }) {
     const review = pr.review;
@@ -354,6 +365,7 @@ function Row({ pr, level, stack, canShare, strings }) {
                                 {pr.title}
                             </Link>
                             <PoBadge count={pr.review?.poDecisions} strings={strings} />
+                            {open && pr.unresolvedThreads > 0 && <ThreadsBadge count={pr.unresolvedThreads} strings={strings} />}
                             {pr.state !== 'OPEN' && <StateBadge state={pr.state} strings={strings} />}
                             {pr.running && <RunningDot running={pr.running} strings={strings} />}
                         </div>
