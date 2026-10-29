@@ -45,6 +45,8 @@ return [
     'description' => 'Beschreibung',
     'reviews' => 'Reviews',
     'timeline_title' => 'Offen und gefixt pro Review',
+    'timeline_expand' => 'Ausklappen',
+    'timeline_collapse' => 'Einklappen',
     'timeline_hint' => 'Ein Slot pro Review, Tage ohne Review werden gestaucht. Commits gebündelt in eigener Spur mit +/− Zeilen (ohne Merges aus dem Ziel-Branch).',
     'timeline_range' => 'Zeitraum',
     'timeline_days' => ':count Tage',
