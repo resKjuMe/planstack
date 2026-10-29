@@ -1,7 +1,7 @@
 ---
 name: ps-review
-description: Code-Review eines GitHub-PR mit Ablage in Planstack — reviewt den PR (inklusive Prüfung der Code-Kommentare auf Richtigkeit, Mehrwert und Knappheit), bewertet Kritikalität, KI-Prüfbarkeit und PO-Sichtung, sendet PR-Daten und Review samt Findings an die Planstack-API (sichtbar unter planstack.eskju.net/pull-requests), gibt die Review im Chat aus und schließt mit Findings-/Kritisch-/Wichtig-/Hinweis-/Empfehlung-Zeilen ab. Am PR wird nur nach ausdrücklicher Rückfrage gepostet. Nutze diesen Skill bei „ps-review 1234", „review PR 1234 nach Planstack", „/ps-review".
-argument-hint: "[<pr-nummer|pr-url|branch>] [--lenient|--strict] [--relaxed|--meticulous] [--post|--comment|--no-post]"
+description: Code-Review eines GitHub-PR mit Ablage in Planstack — reviewt den PR (inklusive Prüfung der Code-Kommentare auf Richtigkeit, Mehrwert und Knappheit), bewertet Kritikalität, KI-Prüfbarkeit und PO-Sichtung, sendet PR-Daten und Review samt Findings an die Planstack-API (sichtbar unter planstack.eskju.net/pull-requests), gibt die Review im Chat aus und schließt mit Findings-/Kritisch-/Wichtig-/Hinweis-/Empfehlung-Zeilen ab. Am PR wird nur nach ausdrücklicher Rückfrage gepostet. Mit „fix“ setzt er die in Planstack je Befund getroffenen Entscheidungen um, hält sie im PR-Body fest, pusht und reviewt neu. Nutze diesen Skill bei „ps-review 1234", „review PR 1234 nach Planstack", „/ps-review", „/ps-review fix 1234".
+argument-hint: "[fix] [<pr-nummer|pr-url|branch>] [--lenient|--strict] [--relaxed|--meticulous] [--post|--comment|--no-post]"
 ---
 
 # ps-review — Review mit Ablage in Planstack
@@ -11,14 +11,14 @@ Ein vollständiges Code-Review; das Ergebnis landet **nicht** als Datei, sondern
 ## Harte Regeln (nicht verhandelbar)
 
 1. **Nichts am PR posten, bevor der Nutzer zugestimmt hat.** Während des Reviews sind nur lesende `gh`-Aufrufe erlaubt (`gh pr view`, `gh pr diff`, `gh pr checks`, `gh api` mit `GET`). Geschrieben wird am PR erst in Schritt 8 — nach expliziter Zustimmung, und nur das, was der Nutzer in Schritt 7 ausgewählt hat. Ohne Antwort wird nichts gepostet; Schweigen ist kein Ja.
-2. **Planstack nur über drei Aufrufe**: `PUT /api/pull-requests` und `POST /api/pull-requests/{id}/reviews` (Start) in Schritt 1, `PUT /api/pull-requests/{id}/reviews/{review}` (Abschluss) in Schritt 5. Keine Board-Aufrufe (`review-claim`, `review-next`, Events) — dieser Skill kennt kein Board.
+2. **Planstack nur über drei Aufrufe**: `PUT /api/pull-requests` und `POST /api/pull-requests/{id}/reviews` (Start) in Schritt 1, `PUT /api/pull-requests/{id}/reviews/{review}` (Abschluss) in Schritt 5. Im Fix-Modus kommen `POST /api/pull-requests/{id}/fix/claim` und `PUT /api/pull-requests/{id}/reviews/{review}/fix` dazu. Keine Board-Aufrufe (`review-claim`, `review-next`, Events) — dieser Skill kennt kein Board.
 3. **Keine lokale Report-Datei.** Die Payload-Dateien für `curl` liegen nur temporär (Scratchpad bzw. `mktemp -d`) und werden nach dem Senden gelöscht. Schlägt die API fehl, wird das gemeldet — nicht als Datei abgelegt.
-4. **Nichts am Code ändern.** Das Review ist rein lesend: keine Edits, keine Commits, kein Push, kein Checkout, der lokale Änderungen gefährdet. Einzige Ausnahme: der Nutzer wählt in Schritt 7 „Fixe Findings im gleichen PR“ — dann gilt Schritt 9.
+4. **Nichts am Code ändern.** Das Review ist rein lesend: keine Edits, keine Commits, kein Push, kein Checkout, der lokale Änderungen gefährdet. Ausnahmen: der Nutzer wählt in Schritt 7 „Fixe Findings im gleichen PR“ — dann gilt Schritt 9; oder der Aufruf ist `/ps-review fix` — dann gilt der Fix-Modus.
 5. **Das Review wird immer abgeschlossen** — auch bei `APPROVE` ohne einen einzigen Befund. Ein gestartetes, nie abgeschlossenes Review zeigt Planstack zwei Stunden lang als laufend, danach als abgebrochen.
 
 ## Aufruf
 
-`/ps-review [<ZIEL>] [<Schalter>]`
+`/ps-review [<ZIEL>] [<Schalter>]` · `/ps-review fix <ZIEL>` (Fix-Modus, siehe unten)
 
 Das Ziel muss sich zu einem **GitHub-PR** auflösen, denn Planstack speichert Reviews je PR:
 
@@ -478,3 +478,69 @@ Gepostet: https://github.com/<repo>/pull/9050#pullrequestreview-… — 7 inline
 - Auf den PR-Branch pushen (`git push origin HEAD:<headRefName>`), kein Force-Push. Ist der Remote-Branch seit dem Review weitergelaufen: abbrechen und melden.
 - **PR-Beschreibung aktuell halten:** Jede Aussage im Body, die ein Fix überholt (Verhalten, Tabellen, Einstufungen, Testliste, offene Punkte), im selben Durchgang anpassen — per `gh api …/pulls/<pr> --method PATCH --input <json>` mit dem vollständigen neuen Body (UTF-8-Datei). Das ist die einzige erlaubte Änderung am PR in diesem Schritt.
 - Sonst nichts am PR posten. Abschluss im Chat: eine Zeile je Befund (behoben / ausgelassen mit Grund) und der neue Commit-SHA.
+
+## Fix-Modus: `/ps-review fix <PR>`
+
+Gestartet über den Button **Findings fixen** auf der Planstack-Detailseite (per `claudetask:`). Dort hat der Nutzer im Dialog je Befund entschieden: **Fixen** oder **Nicht fixen**, mit Anmerkung; bei Befunden mit `requires_po_decision` ist die Anmerkung die **PO-Entscheidung** (Pflicht). Der Modus setzt diese Entscheidungen um, hält sie im PR-Body fest, pusht und reviewt danach neu. Er läuft unbeaufsichtigt: **keine Rückfragen**, auch nicht nach dem Posten.
+
+#### F1. Fix abholen
+
+PR auflösen und UPSERT wie in Schritt 1 (rein lesend, `PRID` aus der Antwort), dann:
+
+```bash
+curl -s -w '\n%{http_code}\n' -X POST "$BASE/pull-requests/$PRID/fix/claim" "${AUTH[@]}"
+# 200: data.review_id, data.commit_sha (geprüfter Stand), data.requested_by, data.requested_at,
+#      data.findings[] mit id, level, type, requires_po_decision, file, line, title, message, decision, note
+# 404: kein Fix angefordert → abbrechen und das melden
+```
+
+Planstack zeigt den Fix damit als laufend. Ein laufender Fix darf erneut abgeholt werden (Wiederaufnahme nach Abbruch).
+
+#### F2. Umsetzen
+
+- Worktree auf dem aktuellen Head des PR (`git worktree add <pfad> <headRefOid>`), nie im Haupt-Checkout.
+- Ist der Head seit `data.commit_sha` weitergelaufen, jeden Befund gegen den aktuellen Code prüfen: schon erledigt → `FIXED` mit Hinweis auf den Commit, nicht doppelt ändern.
+- `decision = FIX`: beheben (Kritisch → Wichtig → Hinweis). Die Anmerkung ist **verbindlich** und geht dem Vorschlag im Befund vor. Bei PO-Befunden genau die PO-Entscheidung umsetzen — nicht die eigene Lesart.
+- `decision = SKIP`: Code nicht anfassen. Ergebnis `SKIPPED`, Grund = Anmerkung (fehlt sie: „bewusst nicht umgesetzt“).
+- Lässt sich ein `FIX` nicht sinnvoll umsetzen (Anmerkung widerspricht dem Code, Fix bräche etwas anderes): `SKIPPED` mit konkretem Grund — nicht raten.
+- Repo-Konventionen wie in Schritt 9 (Hooks, Tooling, Commit-Message-Stil, Attribution). Ein Commit; die Message nennt die behobenen Befunde.
+- Push auf den PR-Branch (`git push origin HEAD:<headRefName>`), kein Force-Push. Ist der Remote-Branch während des Fixes weitergelaufen: abbrechen und melden; der Fix bleibt in Planstack offen und kann neu gestartet werden.
+
+#### F3. PR-Body aktualisieren
+
+Mit dem Push den Body per `gh api repos/$REPO/pulls/<pr> --method PATCH --input <json>` ersetzen (vollständiger Body, UTF-8-Datei):
+
+- Jede Aussage, die ein Fix überholt, anpassen (wie in Schritt 9).
+- Den Abschnitt `## Review-Entscheidungen` anlegen bzw. ersetzen — vor einer abschließenden Attributionszeile, sonst ans Ende:
+
+```markdown
+## Review-Entscheidungen
+
+Review vom <Datum> (<Planstack-URL>), umgesetzt in <sha7>.
+
+| Befund | Schwere | Entscheidung | Ergebnis |
+|---|---|---|---|
+| <Titel> | Wichtig | Fixen: <Anmerkung> | Behoben |
+| <Titel> | Hinweis | Nicht fixen: <Anmerkung> | Ausgelassen |
+
+### PO-Entscheidungen
+
+- **<Titel>:** <PO-Entscheidung> (<requested_by>, <Datum>)
+```
+
+Leere Anmerkung → nur „Fixen“ bzw. „Nicht fixen“. `### PO-Entscheidungen` entfällt ohne PO-Befunde. Gab es den Abschnitt schon aus einem früheren Fix, bleiben dessen PO-Entscheidungen stehen; neue kommen dazu.
+
+#### F4. Fix in Planstack abschließen
+
+```bash
+# fix.json mit dem Write-Tool in $T anlegen:
+# {"commit_sha":"<neuer Head>","findings":[{"id":12,"outcome":"FIXED","note":"<wie, ein Satz>"},{"id":13,"outcome":"SKIPPED","note":"<Grund>"}]}
+curl -s -w '\n%{http_code}\n' -X PUT "$BASE/pull-requests/$PRID/reviews/<data.review_id>/fix" "${AUTH[@]}" --data-binary @"$T/fix.json"
+# 200; 409 = schon abgeschlossen, nicht wiederholen
+```
+
+Jeder Befund aus F1 bekommt genau ein Ergebnis.
+
+#### F5. Neues Review
+
+Direkt danach ein vollständiges Review des neuen Head (Schritte 1–6, mit neuem Review-Start in Planstack) mit `--no-post`: Schritt 7 entfällt. Davor im Chat eine Zeile je Befund (behoben / ausgelassen mit Grund) und der Fix-Commit; die Antwort endet wie immer mit den Abschlusszeilen aus Schritt 6.

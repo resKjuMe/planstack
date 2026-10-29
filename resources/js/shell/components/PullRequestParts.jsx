@@ -121,6 +121,11 @@ export function reviewCommandHref(pr) {
     return `claudetask:${encodeURIComponent(`/ps-review ${pr.githubUrl}`)}`;
 }
 
+// Fix-Lauf: ps-review holt die Entscheidungen aus dem Fix-Dialog ab.
+export function fixCommandHref(pr) {
+    return `claudetask:${encodeURIComponent(`/ps-review fix ${pr.githubUrl}`)}`;
+}
+
 // Startknopf für ps-review: ↻ wenn seit dem letzten Review gepusht wurde, sonst ▶.
 export function ReviewStartLink({ pr, strings }) {
     const stale = pr.review?.stale;

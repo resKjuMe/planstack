@@ -173,6 +173,7 @@ Route::middleware('auth')->group(function () {
     Route::post('pull-requests/grouping', [PullRequestController::class, 'grouping'])->name('pull-requests.grouping');
     Route::get('pull-requests/{pullRequest}', [PullRequestController::class, 'show'])->name('pull-requests.show');
     Route::post('pull-requests/{pullRequest}/share', [PullRequestController::class, 'toggleShare'])->name('pull-requests.share');
+    Route::post('pull-requests/{pullRequest}/reviews/{review}/fix', [PullRequestController::class, 'requestFix'])->name('pull-requests.fix');
 
     // Teams
     Route::resource('teams', TeamController::class)

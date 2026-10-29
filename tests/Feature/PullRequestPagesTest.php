@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Organization;
 use App\Models\PullRequest;
+use App\Models\PullRequestReview;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
@@ -361,6 +362,113 @@ class PullRequestPagesTest extends TestCase
 
         $this->actingAs($stranger)
             ->get(route('pull-requests.show', $pullRequest))
+            ->assertNotFound();
+    }
+
+    /** @return array{0: PullRequest, 1: PullRequestReview} */
+    private function reviewWithPoFinding(User $reviewer, array $prAttributes = []): array
+    {
+        $pullRequest = $this->pullRequest(31, $prAttributes);
+        $this->review($pullRequest, $reviewer, ['decision' => 'REQUEST_CHANGES', 'findings' => 2]);
+        $review = $pullRequest->reviews()->sole();
+        $review->findingItems()->create([
+            'level' => 'IMPORTANT', 'type' => 'SUMMARY', 'requires_po_decision' => true, 'title' => 'Fachregel', 'message' => 'Offen.',
+        ]);
+
+        return [$pullRequest, $review];
+    }
+
+    /** @return list<array{id: int, decision: string, note: string}> */
+    private function decisions(PullRequestReview $review, string $poNote): array
+    {
+        return $review->findingItems()->get()->map(fn ($f) => [
+            'id' => $f->id,
+            'decision' => $f->requires_po_decision ? 'FIX' : 'SKIP',
+            'note' => $f->requires_po_decision ? $poNote : '',
+        ])->all();
+    }
+
+    public function test_requesting_a_fix_records_the_decisions_per_finding(): void
+    {
+        $me = $this->member('Ich Selbst');
+        [$pullRequest, $review] = $this->reviewWithPoFinding($me);
+
+        $this->actingAs($me)
+            ->get(route('pull-requests.show', $pullRequest))
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('reviews.0.fixUrl', route('pull-requests.fix', [$pullRequest, $review]))
+                ->where('reviews.0.fix', null));
+
+        $this->actingAs($me)
+            ->post(route('pull-requests.fix', [$pullRequest, $review]), ['findings' => $this->decisions($review, 'Bestandsdaten bleiben.')])
+            ->assertRedirect();
+
+        $review->refresh();
+        $this->assertSame('requested', $review->fixStatus());
+        $this->assertSame($me->id, $review->fix_requested_by_id);
+        $po = $review->findingItems()->where('requires_po_decision', true)->sole();
+        $this->assertSame('FIX', $po->fix_decision->value);
+        $this->assertSame('Bestandsdaten bleiben.', $po->fix_note);
+        $this->assertSame('SKIP', $review->findingItems()->where('requires_po_decision', false)->sole()->fix_decision->value);
+
+        $this->actingAs($me)
+            ->get(route('pull-requests.show', $pullRequest))
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('reviews.0.fix.status', 'requested')
+                ->where('reviews.0.fix.requestedBy', 'Ich Selbst'));
+    }
+
+    public function test_a_po_finding_needs_a_recorded_decision(): void
+    {
+        $me = $this->member('Ich Selbst');
+        [$pullRequest, $review] = $this->reviewWithPoFinding($me);
+
+        $this->actingAs($me)
+            ->post(route('pull-requests.fix', [$pullRequest, $review]), ['findings' => $this->decisions($review, '  ')])
+            ->assertSessionHasErrors('findings.1.note');
+
+        $this->assertNull($review->fresh()->fix_requested_at);
+    }
+
+    public function test_a_fix_needs_a_decision_for_every_finding(): void
+    {
+        $me = $this->member('Ich Selbst');
+        [$pullRequest, $review] = $this->reviewWithPoFinding($me);
+
+        $this->actingAs($me)
+            ->post(route('pull-requests.fix', [$pullRequest, $review]), ['findings' => array_slice($this->decisions($review, 'ok'), 0, 1)])
+            ->assertSessionHasErrors('findings');
+    }
+
+    public function test_only_the_latest_review_of_an_open_pull_request_is_fixable(): void
+    {
+        $me = $this->member('Ich Selbst');
+        [$pullRequest, $review] = $this->reviewWithPoFinding($me, ['state' => 'MERGED']);
+
+        $this->actingAs($me)
+            ->get(route('pull-requests.show', $pullRequest))
+            ->assertInertia(fn (Assert $page) => $page->where('reviews.0.fixUrl', null));
+
+        $this->actingAs($me)
+            ->post(route('pull-requests.fix', [$pullRequest, $review]), ['findings' => $this->decisions($review, 'ok')])
+            ->assertStatus(409);
+
+        $pullRequest->update(['state' => 'OPEN']);
+        $this->review($pullRequest, $me, ['review_finished_at' => now()->addMinute()]);
+
+        $this->actingAs($me)
+            ->post(route('pull-requests.fix', [$pullRequest, $review]), ['findings' => $this->decisions($review, 'ok')])
+            ->assertStatus(409);
+    }
+
+    public function test_requesting_a_fix_in_another_organization_is_not_found(): void
+    {
+        $me = $this->member('Ich Selbst');
+        [$pullRequest, $review] = $this->reviewWithPoFinding($me);
+        $stranger = $this->member('Eve Fremd', Organization::factory()->create());
+
+        $this->actingAs($stranger)
+            ->post(route('pull-requests.fix', [$pullRequest, $review]), ['findings' => $this->decisions($review, 'ok')])
             ->assertNotFound();
     }
 }

@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Enums\FindingFixDecision;
+use App\Enums\FindingFixOutcome;
 use App\Enums\ReviewFindingLevel;
 use App\Enums\ReviewFindingType;
 use Illuminate\Database\Eloquent\Model;
@@ -20,6 +22,10 @@ class ReviewFinding extends Model
         'line',
         'title',
         'message',
+        'fix_decision',
+        'fix_note',
+        'fix_outcome',
+        'fix_outcome_note',
     ];
 
     protected function casts(): array
@@ -29,6 +35,8 @@ class ReviewFinding extends Model
             'type' => ReviewFindingType::class,
             'requires_po_decision' => 'boolean',
             'line' => 'integer',
+            'fix_decision' => FindingFixDecision::class,
+            'fix_outcome' => FindingFixOutcome::class,
         ];
     }
 

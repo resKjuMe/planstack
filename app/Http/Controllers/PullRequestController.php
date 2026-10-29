@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\FindingFixDecision;
+use App\Enums\PullRequestState;
 use App\Models\PullRequest;
 use App\Models\PullRequestApproval;
 use App\Models\PullRequestReview;
@@ -12,7 +14,10 @@ use App\Support\PullRequestStateSync;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response as InertiaResponse;
 
@@ -136,11 +141,62 @@ class PullRequestController extends Controller
         return back();
     }
 
+    /**
+     * Hält die Entscheidungen aus dem Fix-Dialog je Befund fest und fordert den
+     * Fix-Lauf an; ausgeführt wird er lokal von ps-review (claudetask:).
+     */
+    public function requestFix(Request $request, PullRequest $pullRequest, PullRequestReview $review): RedirectResponse
+    {
+        $user = $request->user();
+        abort_unless($pullRequest->organization_id === $user->organization_id, 404);
+        abort_unless($review->pull_request_id === $pullRequest->id, 404);
+        abort_unless($this->isFixable($pullRequest, $review), 409);
+
+        $findings = $review->findingItems()->get()->keyBy('id');
+        $data = $request->validate([
+            'findings' => ['required', 'array', 'size:'.$findings->count()],
+            'findings.*.id' => ['required', 'integer', 'distinct', Rule::in($findings->keys()->all())],
+            'findings.*.decision' => ['required', Rule::enum(FindingFixDecision::class)],
+            'findings.*.note' => ['nullable', 'string', 'max:5000'],
+        ]);
+
+        // PO-Befunde lassen sich nur mit festgehaltener Entscheidung fixen.
+        $missing = collect($data['findings'])
+            ->filter(fn (array $f) => $findings[$f['id']]->requires_po_decision && trim((string) ($f['note'] ?? '')) === '')
+            ->keys()
+            ->mapWithKeys(fn (int $index) => ["findings.{$index}.note" => __('pull_requests.fix_po_note_required')]);
+        if ($missing->isNotEmpty()) {
+            throw ValidationException::withMessages($missing->all());
+        }
+
+        DB::transaction(function () use ($review, $findings, $data, $user) {
+            foreach ($data['findings'] as $item) {
+                $note = trim((string) ($item['note'] ?? ''));
+                $findings[$item['id']]->update([
+                    'fix_decision' => $item['decision'],
+                    'fix_note' => $note === '' ? null : $note,
+                    'fix_outcome' => null,
+                    'fix_outcome_note' => null,
+                ]);
+            }
+
+            $review->update([
+                'fix_requested_by_id' => $user->id,
+                'fix_requested_at' => now(),
+                'fix_started_at' => null,
+                'fix_finished_at' => null,
+                'fix_commit_sha' => null,
+            ]);
+        });
+
+        return back();
+    }
+
     public function show(Request $request, PullRequest $pullRequest): InertiaResponse
     {
         abort_unless($pullRequest->organization_id === $request->user()->organization_id, 404);
 
-        $pullRequest->load(['author', 'approvals.user', 'reviews' => fn ($q) => $q->latest('review_started_at')->latest('id'), 'reviews.reviewer', 'reviews.findingItems']);
+        $pullRequest->load(['author', 'approvals.user', 'reviews' => fn ($q) => $q->latest('review_started_at')->latest('id'), 'reviews.reviewer', 'reviews.fixRequestedBy', 'reviews.findingItems']);
 
         return Inertia::render('PullRequestShow', [
             'pullRequest' => [
@@ -162,6 +218,15 @@ class PullRequestController extends Controller
                 'strictness' => $review->strictness,
                 'thoroughness' => $review->thoroughness,
                 'model' => $review->model,
+                'fix' => $review->fixStatus() === null ? null : [
+                    'status' => $review->fixStatus(),
+                    'requestedAt' => $review->fix_requested_at?->toIso8601String(),
+                    'requestedBy' => $review->fixRequestedBy?->name,
+                    'startedAt' => $review->fix_started_at?->toIso8601String(),
+                    'finishedAt' => $review->fix_finished_at?->toIso8601String(),
+                    'commitSha' => $review->fix_commit_sha,
+                ],
+                'fixUrl' => $this->isFixable($pullRequest, $review) ? route('pull-requests.fix', [$pullRequest, $review]) : null,
                 'findings' => $review->findingItems
                     ->sortBy(fn (ReviewFinding $f) => [array_search($f->level->value, ['CRITICAL', 'IMPORTANT', 'HINT'], true), $f->file, $f->line])
                     ->map(fn (ReviewFinding $f) => [
@@ -176,11 +241,30 @@ class PullRequestController extends Controller
                             : null,
                         'title' => $f->title,
                         'messageHtml' => $this->md($f->message),
+                        'fixDecision' => $f->fix_decision?->value,
+                        'fixNote' => $f->fix_note,
+                        'fixOutcome' => $f->fix_outcome?->value,
+                        'fixOutcomeNote' => $f->fix_outcome_note,
                     ])->values(),
             ])->values(),
             'backUrl' => route('pull-requests.index'),
             'strings' => __('pull_requests'),
         ]);
+    }
+
+    /**
+     * Fixbar ist nur das neueste abgeschlossene Review eines offenen PR mit
+     * Befunden, solange kein Fix-Lauf dafür läuft.
+     */
+    private function isFixable(PullRequest $pullRequest, PullRequestReview $review): bool
+    {
+        if ($pullRequest->state !== PullRequestState::OPEN || ! $review->isFinished() || $review->findings < 1 || $review->fixStatus() === 'running') {
+            return false;
+        }
+
+        $latestId = $pullRequest->reviews()->finished()->latest('review_finished_at')->latest('id')->value('id');
+
+        return $latestId === $review->id;
     }
 
     /**

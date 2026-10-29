@@ -37,6 +37,11 @@ class PullRequestReview extends Model
         'strictness',
         'thoroughness',
         'model',
+        'fix_requested_by_id',
+        'fix_requested_at',
+        'fix_started_at',
+        'fix_finished_at',
+        'fix_commit_sha',
     ];
 
     protected function casts(): array
@@ -52,6 +57,9 @@ class PullRequestReview extends Model
             'criticality' => 'integer',
             'ai_reviewability' => 'integer',
             'po_review_likelihood' => 'integer',
+            'fix_requested_at' => 'datetime',
+            'fix_started_at' => 'datetime',
+            'fix_finished_at' => 'datetime',
         ];
     }
 
@@ -79,6 +87,11 @@ class PullRequestReview extends Model
         return $this->belongsTo(User::class, 'reviewer_id');
     }
 
+    public function fixRequestedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'fix_requested_by_id');
+    }
+
     public function findingItems(): HasMany
     {
         return $this->hasMany(ReviewFinding::class);
@@ -104,6 +117,19 @@ class PullRequestReview extends Model
     {
         return ! $this->isFinished()
             && ($this->review_started_at === null || $this->review_started_at->lt(now()->subHours(self::ABANDONED_AFTER_HOURS)));
+    }
+
+    /**
+     * Stand des Fix-Laufs: null (nie angefordert) · requested · running · finished.
+     */
+    public function fixStatus(): ?string
+    {
+        return match (true) {
+            $this->fix_requested_at === null => null,
+            $this->fix_finished_at !== null => 'finished',
+            $this->fix_started_at !== null => 'running',
+            default => 'requested',
+        };
     }
 
     /**

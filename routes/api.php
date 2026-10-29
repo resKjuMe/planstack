@@ -44,6 +44,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('pull-requests/review-states', [PullRequestController::class, 'reviewStates']);
     Route::post('pull-requests/{pullRequest}/reviews', [PullRequestController::class, 'startReview']);
     Route::put('pull-requests/{pullRequest}/reviews/{review}', [PullRequestController::class, 'finishReview']);
+    // Fix-Lauf aus dem Dialog der Detailseite: abholen (startet ihn) und abschließen.
+    Route::post('pull-requests/{pullRequest}/fix/claim', [PullRequestController::class, 'claimFix']);
+    Route::put('pull-requests/{pullRequest}/reviews/{review}/fix', [PullRequestController::class, 'finishFix']);
 
     // Fortschritts-Events (task_id + event); wendet die je Event konfigurierte
     // Automation an und protokolliert das Event. Siehe docs/event-api.md.
