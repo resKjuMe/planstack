@@ -11,9 +11,9 @@ const X1 = W - 16;
 const PLOT_TOP = 44;
 const PLOT_BOTTOM = 222;
 const LANE_TOP = 236;
-const LANE_H = 48;
-const AXIS_Y = 300;
-const H = 342;
+const LANE_H = 60;
+const AXIS_Y = 312;
+const H = 354;
 const RANGES = [7, 30, null];
 const DAY = 86_400_000;
 
@@ -201,8 +201,8 @@ export default function PullRequestTimeline({ pr, reviews, commits, strings }) {
                         <tspan className="fill-gray-500 dark:fill-gray-400">{`${target} ↓`}</tspan>
                     ) : (
                         <>
-                            <tspan className="fill-green-700 dark:fill-green-400">{`+${list.reduce((n, c) => n + c.additions, 0)}`}</tspan>
-                            <tspan className="fill-red-700 dark:fill-red-400">{` −${list.reduce((n, c) => n + c.deletions, 0)}`}</tspan>
+                            <tspan x={x} className="fill-green-700 dark:fill-green-400">{`+${list.reduce((n, c) => n + c.additions, 0)}`}</tspan>
+                            <tspan x={x} dy="12" className="fill-red-700 dark:fill-red-400">{`−${list.reduce((n, c) => n + c.deletions, 0)}`}</tspan>
                         </>
                     )}
                 </text>
