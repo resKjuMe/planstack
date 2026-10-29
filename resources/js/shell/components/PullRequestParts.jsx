@@ -217,14 +217,41 @@ function reviewersTitle(approvals, strings) {
 
 const levelTone = 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-200';
 
+// Stufe als Schild: normal schlicht, high mit „!“, critical gefüllt rot.
+const SHIELD = 'M12 3l8 3v6c0 5-3.5 8-8 9c-4.5-1-8-4-8-9V6z';
+const LEVELS = {
+    normal: { tone: levelTone, icon: <path d={SHIELD} /> },
+    high: { tone: 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300', icon: <><path d={SHIELD} /><path d="M12 8v4M12 16h.01" /></> },
+    critical: { tone: 'bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300', icon: <><path d={SHIELD} fill="currentColor" /><path d="M12 8v4M12 16h.01" stroke="white" /></> },
+};
+
+// Server = Backend, Monitor = Frontend; unbekannte Gruppen als Kürzel.
+const GROUP_ICONS = {
+    Backend: <><rect x="3" y="4" width="18" height="7" rx="1" /><rect x="3" y="13" width="18" height="7" rx="1" /><path d="M7 7.5h.01M7 16.5h.01" /></>,
+    Frontend: <><rect x="3" y="4" width="18" height="12" rx="1" /><path d="M8 20h8M12 16v4" /></>,
+};
+
+function ChipIcon({ children }) {
+    return (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-3.5 w-3.5" aria-hidden="true">
+            {children}
+        </svg>
+    );
+}
+
+function GroupIcon({ group }) {
+    return GROUP_ICONS[group] ? <ChipIcon>{GROUP_ICONS[group]}</ChipIcon> : <span>{GROUP_SHORT[group] ?? group}</span>;
+}
+
 const requirementUnknown = (approvals) => approvals.level == null && approvals.groups === null;
 
-// Kompakt für die Liste: „1/2“, Stufe mit Critical-Files-Gruppen „critical·BE“,
-// je Gruppe des früheren Checks „BE 1/2“, offene Änderungswünsche „✗ 1“.
+// Kompakt für die Liste: „1/2“, Stufe als Schild mit Icons der Critical-Files-Gruppen,
+// je Gruppe des früheren Checks Icon + „1/2“, offene Änderungswünsche „✗ 1“.
 // Ungelöste Review-Threads verdrängen den Approve-Zähler: erst Kommentare klären.
 export function ApprovalChips({ approvals, unresolvedThreads = 0, strings }) {
     const chip = 'rounded px-1.5 py-0.5 font-mono text-[11px]';
-    const critical = (approvals.criticalGroups ?? []).map((g) => GROUP_SHORT[g] ?? g);
+    const critical = approvals.criticalGroups ?? [];
+    const level = LEVELS[approvals.level];
     return (
         <span className="inline-flex items-center gap-1 whitespace-nowrap" title={`${reviewersTitle(approvals, strings)}\n\n${strings.approvals_hint}`}>
             {unresolvedThreads > 0 ? <ThreadsBadge count={unresolvedThreads} strings={strings} /> : (
@@ -233,13 +260,14 @@ export function ApprovalChips({ approvals, unresolvedThreads = 0, strings }) {
                 </span>
             )}
             {approvals.level && (
-                <span className={`${chip} ${levelTone}`} title={[`${strings.review_level}: ${approvals.level}`, critical.length ? `${strings.critical_files}: ${(approvals.criticalGroups ?? []).join(', ')}` : null].filter(Boolean).join('\n')}>
-                    {[approvals.level, ...critical].join('·')}
+                <span className={`${chip} inline-flex items-center gap-0.5 ${level?.tone ?? levelTone}`} title={[`${strings.review_level}: ${approvals.level}`, critical.length ? `${strings.critical_files}: ${critical.join(', ')}` : null].filter(Boolean).join('\n')}>
+                    {level ? <ChipIcon>{level.icon}</ChipIcon> : approvals.level}
+                    {critical.map((g) => <GroupIcon key={g} group={g} />)}
                 </span>
             )}
             {(approvals.groups ?? []).map((g) => (
-                <span key={g.label} className={`${chip} ${g.approved >= g.required ? okTone : openTone}`}>
-                    {GROUP_SHORT[g.label] ?? g.label} {g.approved}/{g.required}
+                <span key={g.label} className={`${chip} inline-flex items-center gap-0.5 ${g.approved >= g.required ? okTone : openTone}`} title={g.label}>
+                    <GroupIcon group={g.label} /> {g.approved}/{g.required}
                 </span>
             ))}
             {requirementUnknown(approvals) && <span className={`${chip} text-gray-400`} title={strings.approvals_unknown}>?</span>}
