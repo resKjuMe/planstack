@@ -332,4 +332,77 @@ class PullRequestApiTest extends TestCase
             ->assertUnprocessable()
             ->assertJsonValidationErrors(['prs']);
     }
+
+    /** @return array{0: int, 1: PullRequestReview} PR-ID und abgeschlossenes Review mit angefordertem Fix */
+    private function requestedFix(User $requester): array
+    {
+        [$id, $reviewId] = $this->startedReview();
+        $this->putJson("/api/pull-requests/{$id}/reviews/{$reviewId}", $this->reviewPayload())->assertOk();
+
+        $review = PullRequestReview::findOrFail($reviewId);
+        $review->update(['fix_requested_by_id' => $requester->id, 'fix_requested_at' => now()]);
+        $review->findingItems()->where('requires_po_decision', true)->update(['fix_decision' => 'FIX', 'fix_note' => 'Bestandsdaten bleiben.']);
+        $review->findingItems()->where('requires_po_decision', false)->update(['fix_decision' => 'SKIP']);
+
+        return [$id, $review];
+    }
+
+    public function test_claim_fix_returns_the_decisions_and_marks_the_fix_as_started(): void
+    {
+        $user = $this->member();
+        Sanctum::actingAs($user);
+        [$id, $review] = $this->requestedFix($user);
+
+        $this->postJson("/api/pull-requests/{$id}/fix/claim")
+            ->assertOk()
+            ->assertJsonPath('data.review_id', $review->id)
+            ->assertJsonPath('data.requested_by', $user->name)
+            ->assertJsonCount(4, 'data.findings')
+            ->assertJsonFragment(['title' => 'Verhalten für Bestandsdaten', 'decision' => 'FIX', 'note' => 'Bestandsdaten bleiben.']);
+
+        $this->assertNotNull($review->fresh()->fix_started_at);
+    }
+
+    public function test_claim_fix_without_a_requested_fix_is_not_found(): void
+    {
+        Sanctum::actingAs($this->member());
+        [$id] = $this->startedReview();
+
+        $this->postJson("/api/pull-requests/{$id}/fix/claim")->assertNotFound();
+    }
+
+    public function test_finish_fix_stores_commit_and_outcomes_once(): void
+    {
+        $user = $this->member();
+        Sanctum::actingAs($user);
+        [$id, $review] = $this->requestedFix($user);
+        $finding = $review->findingItems()->where('requires_po_decision', true)->sole();
+
+        $payload = [
+            'commit_sha' => 'fff1234',
+            'findings' => [['id' => $finding->id, 'outcome' => 'FIXED', 'note' => 'Migration lässt Bestandsdaten unverändert.']],
+        ];
+        $this->putJson("/api/pull-requests/{$id}/reviews/{$review->id}/fix", $payload)
+            ->assertOk()
+            ->assertJsonPath('data.fix_commit_sha', 'fff1234');
+
+        $review->refresh();
+        $this->assertNotNull($review->fix_finished_at);
+        $this->assertSame('finished', $review->fixStatus());
+        $this->assertSame('FIXED', $finding->fresh()->fix_outcome->value);
+
+        $this->putJson("/api/pull-requests/{$id}/reviews/{$review->id}/fix", $payload)->assertConflict();
+        $this->postJson("/api/pull-requests/{$id}/fix/claim")->assertNotFound();
+    }
+
+    public function test_finish_fix_rejects_findings_of_another_review(): void
+    {
+        $user = $this->member();
+        Sanctum::actingAs($user);
+        [$id, $review] = $this->requestedFix($user);
+
+        $this->putJson("/api/pull-requests/{$id}/reviews/{$review->id}/fix", [
+            'findings' => [['id' => 999999, 'outcome' => 'FIXED']],
+        ])->assertUnprocessable()->assertJsonValidationErrors(['findings.0.id']);
+    }
 }

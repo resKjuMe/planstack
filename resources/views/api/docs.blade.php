@@ -620,6 +620,26 @@ curl -s https://planstack.eskju.net/api/user \
             </table>
         </section>
 
+        <section id="pull-requests-fix-claim" class="endpoint">
+            <div class="route"><span class="method m-post">POST</span><span class="path">/api/pull-requests/<b>{id}</b>/fix/claim</span></div>
+            <p class="desc">Holt den offenen Fix-Lauf des PR ab, angefordert über „Findings fixen“ auf der Detailseite, und vermerkt den Start. Die Antwort enthält <code>review_id</code>, den geprüften <code>commit_sha</code>, <code>requested_by</code> und je Befund <code>decision</code> (FIX · SKIP) und <code>note</code>. Bei Befunden mit <code>requires_po_decision</code> ist <code>note</code> die PO-Entscheidung. Ein laufender Fix-Lauf kann erneut abgeholt werden. <span class="status-pill s2">200</span> · <span class="status-pill s4">404</span> ohne angeforderten Fix</p>
+        </section>
+
+        <section id="pull-requests-fix-finish" class="endpoint">
+            <div class="route"><span class="method m-put">PUT</span><span class="path">/api/pull-requests/<b>{id}</b>/reviews/<b>{review}</b>/fix</span></div>
+            <p class="desc">Schließt den Fix-Lauf mit dem gepushten Commit und dem Ergebnis je Befund ab. Ohne laufenden Fix: <span class="status-pill s4">409</span>. <span class="status-pill s2">200</span></p>
+            <table>
+                <thead><tr><th>{{ __('common.field') }}</th><th>{{ __('api.type') }}</th><th>{{ __('api.rules') }}</th></tr></thead>
+                <tbody>
+                    <tr><td><code>commit_sha</code></td><td>string</td><td><span class="opt">{{ __('api.optional') }}</span> · der Fix-Commit</td></tr>
+                    <tr><td><code>findings</code></td><td>array</td><td><span class="req">{{ __('api.required') }}</span> · darf leer sein</td></tr>
+                    <tr><td><code>findings[].id</code></td><td>integer</td><td><span class="req">{{ __('api.required') }}</span> · Befund dieses Reviews</td></tr>
+                    <tr><td><code>findings[].outcome</code></td><td>string</td><td><span class="req">{{ __('api.required') }}</span> · FIXED · SKIPPED</td></tr>
+                    <tr><td><code>findings[].note</code></td><td>string</td><td><span class="opt">{{ __('api.optional') }}</span> · wie behoben bzw. warum ausgelassen</td></tr>
+                </tbody>
+            </table>
+        </section>
+
         <h2 id="schemata-h">{{ __('api.response_schemas') }}</h2>
 
         <section id="schema-project">

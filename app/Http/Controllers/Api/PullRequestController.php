@@ -2,12 +2,14 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Enums\FindingFixOutcome;
 use App\Enums\PullRequestState;
 use App\Enums\ReviewFindingLevel;
 use App\Enums\ReviewFindingType;
 use App\Enums\ReviewRecommendation;
 use App\Models\PullRequest;
 use App\Models\PullRequestReview;
+use App\Models\ReviewFinding;
 use App\Support\PullRequestApprovals;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -175,6 +177,97 @@ class PullRequestController extends ApiController
         });
 
         return response()->json(['data' => $this->reviewPayload($review, $pullRequest)]);
+    }
+
+    /**
+     * POST /api/pull-requests/{pullRequest}/fix/claim — holt den offenen Fix-Lauf
+     * (zuletzt angefordert) samt Entscheidungen je Befund und vermerkt den Start.
+     * Erneutes Abholen eines laufenden Fix-Laufs ist erlaubt (Wiederaufnahme).
+     */
+    public function claimFix(Request $request, PullRequest $pullRequest): JsonResponse
+    {
+        abort_unless($pullRequest->organization_id === $this->organizationId($request), 404);
+
+        $review = $pullRequest->reviews()
+            ->whereNotNull('fix_requested_at')
+            ->whereNull('fix_finished_at')
+            ->latest('fix_requested_at')
+            ->first();
+
+        if ($review === null) {
+            return response()->json(['message' => 'Für diesen PR ist kein Fix angefordert.'], 404);
+        }
+
+        if ($review->fix_started_at === null) {
+            $review->update(['fix_started_at' => now()]);
+        }
+
+        $review->load(['fixRequestedBy', 'findingItems']);
+
+        return response()->json(['data' => [
+            'review_id' => $review->id,
+            'pull_request_id' => $pullRequest->id,
+            'commit_sha' => $review->commit_sha,
+            'requested_by' => $review->fixRequestedBy?->name,
+            'requested_at' => $review->fix_requested_at?->toIso8601String(),
+            'findings' => $review->findingItems->map(fn (ReviewFinding $f) => [
+                'id' => $f->id,
+                'level' => $f->level->value,
+                'type' => $f->type->value,
+                'requires_po_decision' => $f->requires_po_decision,
+                'file' => $f->file,
+                'line' => $f->line,
+                'title' => $f->title,
+                'message' => $f->message,
+                'decision' => $f->fix_decision?->value,
+                'note' => $f->fix_note,
+            ])->values(),
+        ]]);
+    }
+
+    /**
+     * PUT /api/pull-requests/{pullRequest}/reviews/{review}/fix — schließt den
+     * Fix-Lauf mit dem gepushten Commit und dem Ergebnis je Befund ab.
+     */
+    public function finishFix(Request $request, PullRequest $pullRequest, PullRequestReview $review): JsonResponse
+    {
+        abort_unless($pullRequest->organization_id === $this->organizationId($request), 404);
+        abort_unless($review->pull_request_id === $pullRequest->id, 404);
+
+        if ($review->fix_requested_at === null || $review->fix_finished_at !== null) {
+            return response()->json(['message' => 'Für dieses Review läuft kein Fix.'], 409);
+        }
+
+        $findings = $review->findingItems()->get()->keyBy('id');
+        $data = $request->validate([
+            'commit_sha' => ['nullable', 'string', 'max:40'],
+            'findings' => ['present', 'array'],
+            'findings.*.id' => ['required', 'integer', 'distinct', Rule::in($findings->keys()->all())],
+            'findings.*.outcome' => ['required', Rule::enum(FindingFixOutcome::class)],
+            'findings.*.note' => ['nullable', 'string', 'max:5000'],
+        ]);
+
+        DB::transaction(function () use ($review, $findings, $data) {
+            foreach ($data['findings'] as $item) {
+                $findings[$item['id']]->update([
+                    'fix_outcome' => $item['outcome'],
+                    'fix_outcome_note' => $item['note'] ?? null,
+                ]);
+            }
+
+            $review->update([
+                'fix_started_at' => $review->fix_started_at ?? now(),
+                'fix_finished_at' => now(),
+                'fix_commit_sha' => $data['commit_sha'] ?? null,
+            ]);
+        });
+
+        return response()->json(['data' => [
+            'review_id' => $review->id,
+            'fix_finished_at' => $review->fix_finished_at?->toIso8601String(),
+            'fix_commit_sha' => $review->fix_commit_sha,
+            'url' => route('pull-requests.show', $pullRequest),
+        ]]);
     }
 
     /**

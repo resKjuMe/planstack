@@ -1,8 +1,8 @@
-import React from 'react';
-import { Head, Link } from '@inertiajs/react';
+import React, { useState } from 'react';
+import { Head, Link, useForm } from '@inertiajs/react';
 import AppShell from '../AppShell.jsx';
 import PageBands from '../components/PageBands.jsx';
-import { ApprovalPanel, PoBadge, StackedIcon, DecisionBadge, FindingCounts, LEVEL_TONE, Markdown, RunningBadge, ScoreBar, StateBadge, formatDate, formatDuration, usePullRequestLiveReload } from '../components/PullRequestParts.jsx';
+import { ApprovalPanel, PoBadge, StackedIcon, DecisionBadge, FindingCounts, LEVEL_TONE, Markdown, RunningBadge, ScoreBar, StateBadge, fixCommandHref, formatDate, formatDuration, usePullRequestLiveReload } from '../components/PullRequestParts.jsx';
 
 // Detailseite eines Pull Requests: Metadaten, Beschreibung und alle Reviews
 // (neuestes oben) mit Zusammenfassung und Befunden. Markdown rendert der Server.
@@ -37,7 +37,7 @@ export default function PullRequestShow({ pullRequest: pr, reviews, backUrl, str
                         {reviews.length === 0 ? (
                             <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-8 text-center text-gray-500 dark:text-gray-400">{strings.no_reviews}</div>
                         ) : (
-                            reviews.map((review) => <Review key={review.id} review={review} strings={strings} />)
+                            reviews.map((review) => <Review key={review.id} review={review} pr={pr} strings={strings} />)
                         )}
                     </div>
 
@@ -80,7 +80,8 @@ function Fact({ label, value }) {
     );
 }
 
-function Review({ review, strings }) {
+function Review({ review, pr, strings }) {
+    const [fixing, setFixing] = useState(false);
     if (review.status !== 'finished') {
         return (
             <section className="bg-white dark:bg-gray-800 rounded-lg shadow px-5 py-3 flex flex-wrap items-center gap-3">
@@ -110,7 +111,19 @@ function Review({ review, strings }) {
                     {duration ? ` · ${strings.duration} ${duration}` : ''}
                 </span>
                 {review.stale && <span className="text-xs text-amber-600 dark:text-amber-400">{strings.stale}</span>}
+                <FixStatus fix={review.fix} pr={pr} strings={strings} />
+                {review.fixUrl && (
+                    <button
+                        type="button"
+                        onClick={() => setFixing(true)}
+                        title={strings.fix_hint}
+                        className="ml-auto inline-flex items-center rounded-md bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-indigo-500"
+                    >
+                        {strings.fix}
+                    </button>
+                )}
             </header>
+            {fixing && <FixDialog review={review} pr={pr} strings={strings} onClose={() => setFixing(false)} />}
 
             <div className="grid gap-4 sm:grid-cols-3 px-5 py-4 border-b border-gray-100 dark:border-gray-700">
                 <Score label={strings.col_criticality} value={review.criticality} reason={review.criticalityReason} tone="risk" />
@@ -175,7 +188,218 @@ function Finding({ finding, strings }) {
                 ) : strings.summary_finding}
             </div>
             <div className="mt-2 text-sm"><Markdown html={finding.messageHtml} /></div>
+            <FixDecision finding={finding} strings={strings} />
         </article>
+    );
+}
+
+const FIX_TONE = {
+    FIX: 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900/40 dark:text-indigo-300',
+    SKIP: 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300',
+    FIXED: 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300',
+    SKIPPED: 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300',
+};
+
+// Entscheidung aus dem Fix-Dialog und Ergebnis des Fix-Laufs.
+function FixDecision({ finding, strings }) {
+    if (!finding.fixDecision && !finding.fixOutcome) return null;
+    return (
+        <div className="mt-3 space-y-1 border-t border-gray-100 dark:border-gray-700 pt-2 text-sm">
+            {finding.fixDecision && (
+                <div className="flex flex-wrap items-baseline gap-2">
+                    <span className={`rounded px-1.5 py-0.5 text-xs font-medium ${FIX_TONE[finding.fixDecision]}`}>{strings[`fix_decision_${finding.fixDecision}`]}</span>
+                    {finding.fixNote && (
+                        <span className="whitespace-pre-wrap text-gray-700 dark:text-gray-300">
+                            {finding.requiresPoDecision && <span className="font-medium">{strings.fix_po_note}: </span>}
+                            {finding.fixNote}
+                        </span>
+                    )}
+                </div>
+            )}
+            {finding.fixOutcome && (
+                <div className="flex flex-wrap items-baseline gap-2">
+                    <span className={`rounded px-1.5 py-0.5 text-xs font-medium ${FIX_TONE[finding.fixOutcome]}`}>{strings[`fix_outcome_${finding.fixOutcome}`]}</span>
+                    {finding.fixOutcomeNote && <span className="whitespace-pre-wrap text-gray-700 dark:text-gray-300">{finding.fixOutcomeNote}</span>}
+                </div>
+            )}
+        </div>
+    );
+}
+
+function FixStatus({ fix, pr, strings }) {
+    if (!fix) return null;
+    const text = {
+        requested: strings.fix_status_requested.replace(':time', formatDate(fix.requestedAt)),
+        running: strings.fix_status_running.replace(':time', formatDate(fix.startedAt)),
+        finished: strings.fix_status_finished.replace(':time', formatDate(fix.finishedAt)),
+    }[fix.status];
+    const tone = fix.status === 'finished'
+        ? 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300'
+        : 'bg-sky-100 text-sky-800 dark:bg-sky-900/40 dark:text-sky-300';
+    return (
+        <span className={`inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[11px] font-medium ${tone}`}>
+            {fix.status === 'running' && <span className="h-1.5 w-1.5 rounded-full bg-sky-500 animate-pulse" />}
+            {text}
+            {fix.requestedBy ? ` · ${fix.requestedBy}` : ''}
+            {fix.commitSha ? ` · ${fix.commitSha.slice(0, 7)}` : ''}
+            {/* Angefordert, aber nie abgeholt: der Start über claudetask: lief ins Leere. */}
+            {fix.status === 'requested' && (
+                <a href={fixCommandHref(pr)} title={strings.fix_relaunch} className="ml-1 hover:underline">▶</a>
+            )}
+        </span>
+    );
+}
+
+// Ein Schritt je Befund (Entscheidung + Anmerkung), danach die Übersicht.
+// Nach dem Speichern startet claudetask: den Fix-Lauf von ps-review.
+function FixDialog({ review, pr, strings, onClose }) {
+    const findings = review.findings;
+    const [step, setStep] = useState(0);
+    const form = useForm({
+        findings: findings.map((f) => ({ id: f.id, decision: f.fixDecision ?? 'FIX', note: f.fixNote ?? '' })),
+    });
+    const overview = step === findings.length;
+
+    const set = (index, key, value) => form.setData('findings', form.data.findings.map((f, i) => (i === index ? { ...f, [key]: value } : f)));
+    const noteError = (index) => form.errors[`findings.${index}.note`];
+
+    const submit = () => form.post(review.fixUrl, {
+        preserveScroll: true,
+        onSuccess: () => {
+            onClose();
+            window.location.href = fixCommandHref(pr);
+        },
+        onError: (errors) => {
+            const first = findings.findIndex((_, i) => errors[`findings.${i}.note`]);
+            if (first >= 0) setStep(first);
+        },
+    });
+
+    const button = 'inline-flex items-center rounded-md px-4 py-2 text-sm font-semibold';
+    const secondary = `${button} border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700`;
+    const primary = `${button} bg-indigo-600 text-white hover:bg-indigo-500 disabled:opacity-50`;
+
+    return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <div className="fixed inset-0 bg-gray-500/75 dark:bg-gray-900/75" onClick={onClose}></div>
+            <div role="dialog" aria-modal="true" aria-labelledby="fix-dialog-title" className="relative flex max-h-[90vh] w-full max-w-2xl flex-col rounded-lg bg-white dark:bg-gray-800 shadow-xl">
+                <header className="border-b border-gray-100 dark:border-gray-700 px-6 py-4">
+                    <h2 id="fix-dialog-title" className="text-lg font-medium text-gray-900 dark:text-gray-100">{strings.fix}</h2>
+                    <ol className="mt-3 flex gap-1" aria-hidden="true">
+                        {[...findings, null].map((f, i) => (
+                            <li key={f?.id ?? 'overview'}>
+                                <button
+                                    type="button"
+                                    tabIndex={-1}
+                                    onClick={() => setStep(i)}
+                                    className={`h-1.5 w-6 rounded ${i === step ? 'bg-indigo-600' : noteError(i) ? 'bg-red-400' : i < findings.length && form.data.findings[i].decision === 'SKIP' ? 'bg-gray-300 dark:bg-gray-600' : 'bg-indigo-200 dark:bg-indigo-900'}`}
+                                />
+                            </li>
+                        ))}
+                    </ol>
+                </header>
+
+                <div className="overflow-y-auto px-6 py-4">
+                    {overview ? (
+                        <FixOverview findings={findings} data={form.data.findings} strings={strings} onPick={setStep} />
+                    ) : (
+                        <FixStep
+                            finding={findings[step]}
+                            data={form.data.findings[step]}
+                            error={noteError(step)}
+                            label={strings.fix_step.replace(':n', step + 1).replace(':total', findings.length)}
+                            strings={strings}
+                            onChange={(key, value) => set(step, key, value)}
+                        />
+                    )}
+                </div>
+
+                <footer className="flex justify-between gap-3 border-t border-gray-100 dark:border-gray-700 px-6 py-4">
+                    <button type="button" onClick={onClose} className={secondary}>{strings.fix_cancel}</button>
+                    <div className="flex gap-3">
+                        {step > 0 && <button type="button" onClick={() => setStep(step - 1)} className={secondary}>{strings.fix_back}</button>}
+                        {overview ? (
+                            <button type="button" onClick={submit} disabled={form.processing} className={primary}>{strings.fix_submit}</button>
+                        ) : (
+                            <button type="button" onClick={() => setStep(step + 1)} className={primary}>{strings.fix_next}</button>
+                        )}
+                    </div>
+                </footer>
+            </div>
+        </div>
+    );
+}
+
+function FixStep({ finding, data, error, label, strings, onChange }) {
+    const po = finding.requiresPoDecision;
+    return (
+        <div className="space-y-4">
+            <div>
+                <div className="text-xs text-gray-500 dark:text-gray-400">{label}</div>
+                <div className="mt-1 flex flex-wrap items-center gap-2 text-sm">
+                    <span className={`rounded px-1.5 py-0.5 text-xs font-medium ${LEVEL_TONE[finding.level]}`}>{strings[`level_${finding.level}`]}</span>
+                    {po && <span className="rounded px-1.5 py-0.5 text-xs font-medium bg-indigo-100 text-indigo-800 dark:bg-indigo-900/40 dark:text-indigo-300">{strings.po_decision}</span>}
+                    <span className="font-medium text-gray-900 dark:text-gray-100">{finding.title}</span>
+                </div>
+                {finding.file && (
+                    <div className="mt-1 text-xs font-mono text-gray-500 dark:text-gray-400">{finding.file}{finding.line ? `:${finding.line}` : ''}</div>
+                )}
+                <div className="mt-2 max-h-64 overflow-y-auto rounded-md bg-gray-50 dark:bg-gray-900/40 p-3 text-sm"><Markdown html={finding.messageHtml} /></div>
+            </div>
+
+            <div className="flex gap-4">
+                {['FIX', 'SKIP'].map((value) => (
+                    <label key={value} className="inline-flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+                        <input
+                            type="radio"
+                            name={`fix-decision-${finding.id}`}
+                            value={value}
+                            checked={data.decision === value}
+                            onChange={() => onChange('decision', value)}
+                            className="text-indigo-600 focus:ring-indigo-500"
+                        />
+                        {strings[`fix_decision_${value}`]}
+                    </label>
+                ))}
+            </div>
+
+            <div>
+                <label htmlFor={`fix-note-${finding.id}`} className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    {po ? strings.fix_po_note : strings.fix_note}
+                </label>
+                <textarea
+                    id={`fix-note-${finding.id}`}
+                    rows={4}
+                    value={data.note}
+                    onChange={(e) => onChange('note', e.target.value)}
+                    placeholder={po ? strings.fix_po_note_placeholder : strings.fix_note_placeholder}
+                    className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                />
+                {error && <p className="mt-1 text-sm text-red-600 dark:text-red-400">{error}</p>}
+            </div>
+        </div>
+    );
+}
+
+function FixOverview({ findings, data, strings, onPick }) {
+    return (
+        <div className="space-y-3">
+            <h3 className="font-semibold text-gray-900 dark:text-gray-100">{strings.fix_overview}</h3>
+            <ul className="divide-y divide-gray-100 dark:divide-gray-700 text-sm">
+                {findings.map((f, i) => (
+                    <li key={f.id} className="py-2">
+                        <button type="button" onClick={() => onPick(i)} className="flex w-full flex-wrap items-baseline gap-2 text-left hover:underline">
+                            <span className={`rounded px-1.5 py-0.5 text-xs font-medium ${FIX_TONE[data[i].decision]}`}>{strings[`fix_decision_${data[i].decision}`]}</span>
+                            <span className="text-gray-900 dark:text-gray-100">{f.title}</span>
+                        </button>
+                        <p className="mt-0.5 whitespace-pre-wrap text-xs text-gray-500 dark:text-gray-400">
+                            {f.requiresPoDecision && data[i].note ? `${strings.fix_po_note}: ` : ''}{data[i].note || strings.fix_no_note}
+                        </p>
+                    </li>
+                ))}
+            </ul>
+            <p className="text-sm text-gray-600 dark:text-gray-400">{strings.fix_overview_hint}</p>
+        </div>
     );
 }
 
