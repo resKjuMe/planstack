@@ -221,14 +221,17 @@ const requirementUnknown = (approvals) => approvals.level == null && approvals.g
 
 // Kompakt für die Liste: „1/2“, Stufe mit Critical-Files-Gruppen „critical·BE“,
 // je Gruppe des früheren Checks „BE 1/2“, offene Änderungswünsche „✗ 1“.
-export function ApprovalChips({ approvals, strings }) {
+// Ungelöste Review-Threads verdrängen den Approve-Zähler: erst Kommentare klären.
+export function ApprovalChips({ approvals, unresolvedThreads = 0, strings }) {
     const chip = 'rounded px-1.5 py-0.5 font-mono text-[11px]';
     const critical = (approvals.criticalGroups ?? []).map((g) => GROUP_SHORT[g] ?? g);
     return (
         <span className="inline-flex items-center gap-1 whitespace-nowrap" title={`${reviewersTitle(approvals, strings)}\n\n${strings.approvals_hint}`}>
-            <span className={`${chip} ${approvals.approved >= approvals.required ? okTone : openTone}`}>
-                {approvals.approved >= approvals.required ? '✓ ' : ''}{approvals.approved}/{approvals.required}
-            </span>
+            {unresolvedThreads > 0 ? <ThreadsBadge count={unresolvedThreads} strings={strings} /> : (
+                <span className={`${chip} ${approvals.approved >= approvals.required ? okTone : openTone}`}>
+                    {approvals.approved >= approvals.required ? '✓ ' : ''}{approvals.approved}/{approvals.required}
+                </span>
+            )}
             {approvals.level && (
                 <span className={`${chip} ${levelTone}`} title={[`${strings.review_level}: ${approvals.level}`, critical.length ? `${strings.critical_files}: ${(approvals.criticalGroups ?? []).join(', ')}` : null].filter(Boolean).join('\n')}>
                     {[approvals.level, ...critical].join('·')}
@@ -243,6 +246,17 @@ export function ApprovalChips({ approvals, strings }) {
             {approvals.changesRequested > 0 && (
                 <span className={`${chip} bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300`}>✗ {approvals.changesRequested}</span>
             )}
+        </span>
+    );
+}
+
+function ThreadsBadge({ count, strings }) {
+    return (
+        <span className="inline-flex shrink-0 items-center gap-0.5 rounded-full bg-orange-100 px-1.5 py-0.5 text-[10px] font-semibold text-orange-700 dark:bg-orange-900/50 dark:text-orange-300" title={strings.unresolved_comments}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-3 w-3" aria-hidden="true">
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+            </svg>
+            {count}
         </span>
     );
 }
