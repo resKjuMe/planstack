@@ -217,12 +217,12 @@ function reviewersTitle(approvals, strings) {
 
 const levelTone = 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-200';
 
-// Stufe als Schild: normal schlicht, high mit „!“, critical gefüllt rot.
+// Stufe als Schild auf grauem Chip: normal schlicht, high amber mit „!“, critical rot gefüllt.
 const SHIELD = 'M12 3l8 3v6c0 5-3.5 8-8 9c-4.5-1-8-4-8-9V6z';
 const LEVELS = {
-    normal: { tone: levelTone, icon: <path d={SHIELD} /> },
-    high: { tone: 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300', icon: <><path d={SHIELD} /><path d="M12 8v4M12 16h.01" /></> },
-    critical: { tone: 'bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300', icon: <><path d={SHIELD} fill="currentColor" /><path d="M12 8v4M12 16h.01" stroke="white" /></> },
+    normal: { color: '', icon: <path d={SHIELD} /> },
+    high: { color: 'text-amber-600 dark:text-amber-400', icon: <><path d={SHIELD} /><path d="M12 8v4M12 16h.01" /></> },
+    critical: { color: 'text-red-600 dark:text-red-400', icon: <><path d={SHIELD} fill="currentColor" /><path d="M12 8v4M12 16h.01" stroke="white" /></> },
 };
 
 // Server = Backend, Monitor = Frontend; unbekannte Gruppen als Kürzel.
@@ -231,9 +231,9 @@ const GROUP_ICONS = {
     Frontend: <><rect x="3" y="4" width="18" height="12" rx="1" /><path d="M8 20h8M12 16v4" /></>,
 };
 
-function ChipIcon({ children }) {
+function ChipIcon({ children, className = '' }) {
     return (
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-3.5 w-3.5" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={`h-3.5 w-3.5 ${className}`} aria-hidden="true">
             {children}
         </svg>
     );
@@ -259,9 +259,9 @@ export function ApprovalChips({ approvals, unresolvedThreads = 0, strings }) {
                     {approvals.approved >= approvals.required ? '✓ ' : ''}{approvals.approved}/{approvals.required}
                 </span>
             )}
-            {approvals.level && (
-                <span className={`${chip} inline-flex items-center gap-0.5 ${level?.tone ?? levelTone}`} title={[`${strings.review_level}: ${approvals.level}`, critical.length ? `${strings.critical_files}: ${critical.join(', ')}` : null].filter(Boolean).join('\n')}>
-                    {level ? <ChipIcon>{level.icon}</ChipIcon> : approvals.level}
+            {approvals.level && unresolvedThreads === 0 && (
+                <span className={`${chip} inline-flex items-center gap-0.5 ${levelTone}`} title={[`${strings.review_level}: ${approvals.level}`, critical.length ? `${strings.critical_files}: ${critical.join(', ')}` : null].filter(Boolean).join('\n')}>
+                    {level ? <ChipIcon className={level.color}>{level.icon}</ChipIcon> : approvals.level}
                     {critical.map((g) => <GroupIcon key={g} group={g} />)}
                 </span>
             )}
