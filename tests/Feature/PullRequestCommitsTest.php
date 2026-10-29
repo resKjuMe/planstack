@@ -41,8 +41,9 @@ class PullRequestCommitsTest extends TestCase
     {
         Http::fake([
             'api.github.com/graphql' => Http::response(['data' => ['repository' => ['pullRequest' => ['commits' => ['nodes' => [
-                ['commit' => ['oid' => 'aaa', 'committedDate' => '2026-10-27T10:00:00Z', 'additions' => 41, 'deletions' => 120, 'messageHeadline' => 'feat: a']],
+                ['commit' => ['oid' => 'aaa', 'committedDate' => '2026-10-27T10:00:00Z', 'additions' => 41, 'deletions' => 120, 'messageHeadline' => 'feat: a', 'parents' => ['totalCount' => 1]]],
                 ['commit' => ['oid' => 'bbb', 'committedDate' => '2026-10-28T10:00:00Z', 'additions' => 4, 'deletions' => 4, 'messageHeadline' => 'fix: b']],
+                ['commit' => ['oid' => 'ccc', 'committedDate' => '2026-10-28T11:00:00Z', 'additions' => 900, 'deletions' => 50, 'messageHeadline' => 'Merge main', 'parents' => ['totalCount' => 2]]],
             ]]]]]]),
         ]);
 
@@ -51,8 +52,9 @@ class PullRequestCommitsTest extends TestCase
         app(PullRequestCommits::class)->for($pr);
 
         $this->assertSame([
-            ['sha' => 'aaa', 'committedAt' => '2026-10-27T10:00:00Z', 'additions' => 41, 'deletions' => 120, 'message' => 'feat: a'],
-            ['sha' => 'bbb', 'committedAt' => '2026-10-28T10:00:00Z', 'additions' => 4, 'deletions' => 4, 'message' => 'fix: b'],
+            ['sha' => 'aaa', 'committedAt' => '2026-10-27T10:00:00Z', 'additions' => 41, 'deletions' => 120, 'message' => 'feat: a', 'merge' => false],
+            ['sha' => 'bbb', 'committedAt' => '2026-10-28T10:00:00Z', 'additions' => 4, 'deletions' => 4, 'message' => 'fix: b', 'merge' => false],
+            ['sha' => 'ccc', 'committedAt' => '2026-10-28T11:00:00Z', 'additions' => 900, 'deletions' => 50, 'message' => 'Merge main', 'merge' => true],
         ], $commits);
         Http::assertSentCount(1);
     }
