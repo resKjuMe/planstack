@@ -8,9 +8,9 @@ import { formatDuration } from './PullRequestParts.jsx';
 const W = 1000;
 const X0 = 70;
 const X1 = W - 16;
-// Klein (Standard): nur Balken; groß zusätzlich Commit-Spur und Zeitachse.
+// Klein (Standard): nur Balken ohne Labels; groß zusätzlich Commit-Spur und Zeitachse.
 const FULL = { top: 44, bottom: 222, h: 354 };
-const COMPACT = { top: 30, bottom: 150, h: 170 };
+const COMPACT = { top: 20, bottom: 96, h: 104 };
 const LANE_TOP = 236;
 const LANE_H = 60;
 const AXIS_Y = 312;
@@ -227,7 +227,7 @@ export default function PullRequestTimeline({ pr, reviews, commits, strings }) {
     };
 
     return (
-        <section className={`bg-white dark:bg-gray-800 rounded-lg shadow ${expanded ? 'p-5' : 'px-5 py-3'}`}>
+        <section className={`bg-white dark:bg-gray-800 rounded-lg shadow ${expanded ? 'p-5' : 'px-5 py-2'}`}>
             <div className="flex flex-wrap items-start justify-between gap-3">
                 <div className="flex items-start gap-2">
                     <button
@@ -356,13 +356,13 @@ export default function PullRequestTimeline({ pr, reviews, commits, strings }) {
                                 })}
                                 {open === 0 && <rect x={left} y={zero - 3} width={bar} height="3" rx="1.5" className="fill-green-500 dark:fill-green-400" />}
                                 <text x={s.cx} y={yUp - 8} fontSize="11" fontWeight="600" textAnchor="middle" className="fill-current">{open}</text>
-                                {r.first && !r.latest && (
+                                {expanded && r.first && !r.latest && (
                                     <text x={s.cx} y={yUp - 22} fontSize="10" textAnchor="middle" className="fill-gray-500 dark:fill-gray-400">{strings.timeline_first}</text>
                                 )}
                                 {fixed > 0 && (
                                     <text x={s.cx} y={yDown + 14} fontSize="11" fontWeight="600" textAnchor="middle" className="fill-green-700 dark:fill-green-400">{`−${fixed}`}</text>
                                 )}
-                                {r.latest && (
+                                {expanded && r.latest && (
                                     <g>
                                         <rect x={s.cx - 37} y="12" width="74" height="16" rx="8" className="fill-indigo-600 dark:fill-indigo-500" />
                                         <text x={s.cx} y="23.5" fontSize="10" fontWeight="600" textAnchor="middle" fill="#fff">{strings.timeline_latest}</text>
