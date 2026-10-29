@@ -339,24 +339,31 @@ function Row({ pr, level, stack, canShare, strings }) {
     return (
         <tr className={ci ?? 'hover:bg-gray-50 dark:hover:bg-gray-700/40'} title={ci ? strings[`ci_${pr.ciState}`] : undefined}>
             <td className={`${cell} max-w-xs`} style={level > 0 ? { paddingLeft: `calc(0.5rem + ${level * 30}px)` } : undefined}>
-                <div className="flex items-center gap-2 min-w-0">
-                    {stack && <StackToggle stack={stack} strings={strings} />}
-                    {canShare && <ShareToggle pr={pr} strings={strings} />}
-                    <a href={pr.githubUrl} target="_blank" rel="noreferrer" className="shrink-0 font-mono text-xs text-gray-500 dark:text-gray-400 hover:underline" title={`${pr.repository}#${pr.number}`}>{pr.number}</a>
-                    <StackedIcon pr={pr} strings={strings} />
-                    {open && pr.conflicting && <ConflictIcon strings={strings} />}
-                    <Link href={pr.showUrl} title={pr.title} className="truncate font-medium text-gray-900 dark:text-gray-100 hover:text-indigo-600 dark:hover:text-indigo-400">
-                        {pr.title}
-                    </Link>
-                    <PoBadge count={pr.review?.poDecisions} strings={strings} />
-                    {pr.state !== 'OPEN' && <StateBadge state={pr.state} strings={strings} />}
-                    {pr.running && <RunningDot running={pr.running} strings={strings} />}
+                <div className="flex items-start gap-2 min-w-0">
+                    <div className="flex h-5 shrink-0 items-center gap-2">
+                        {stack && <StackToggle stack={stack} strings={strings} />}
+                        {canShare && <ShareToggle pr={pr} strings={strings} />}
+                        <a href={pr.githubUrl} target="_blank" rel="noreferrer" className="shrink-0 font-mono text-xs text-gray-500 dark:text-gray-400 hover:underline" title={`${pr.repository}#${pr.number}`}>{pr.number}</a>
+                        <StackedIcon pr={pr} strings={strings} />
+                        {open && pr.conflicting && <ConflictIcon strings={strings} />}
+                    </div>
+                    {/* Fehlgeschlagene Steps bündig unter dem Titel. */}
+                    <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2 min-w-0">
+                            <Link href={pr.showUrl} title={pr.title} className="truncate font-medium text-gray-900 dark:text-gray-100 hover:text-indigo-600 dark:hover:text-indigo-400">
+                                {pr.title}
+                            </Link>
+                            <PoBadge count={pr.review?.poDecisions} strings={strings} />
+                            {pr.state !== 'OPEN' && <StateBadge state={pr.state} strings={strings} />}
+                            {pr.running && <RunningDot running={pr.running} strings={strings} />}
+                        </div>
+                        {failedChecks.length > 0 && (
+                            <small className="block truncate text-red-700 dark:text-red-400" title={failedChecks.join('\n')}>
+                                {failedChecks.join(' · ')}
+                            </small>
+                        )}
+                    </div>
                 </div>
-                {failedChecks.length > 0 && (
-                    <small className="block truncate text-red-700 dark:text-red-400" title={failedChecks.join('\n')}>
-                        {failedChecks.join(' · ')}
-                    </small>
-                )}
             </td>
             <td className={`${cell} text-gray-700 dark:text-gray-300`} title={pr.author ?? undefined}>{initials(pr.author)}</td>
             <td className={`${cell} text-right font-mono text-[11px] leading-tight`} title={`${pr.changedFiles} ${strings.files}`}>
