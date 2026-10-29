@@ -29,6 +29,7 @@ return [
     'not_reviewed' => 'Noch kein Review',
     'ci_failed' => 'CI: Steps fehlgeschlagen',
     'ci_running' => 'CI läuft noch',
+    'unresolved_comments' => 'Ungelöste Kommentare',
     'conflicting' => 'Merge-Konflikt mit dem Zielbranch',
     'stale' => 'seit Review gepusht',
     'decision_APPROVE' => 'Approve',

@@ -13,7 +13,7 @@ use Illuminate\Support\Str;
 
 /**
  * Hält die offenen PRs aus ps-review aktuell: Status (gemergt/geschlossen),
- * letzter Commit, Titel, Umfang, CI-Zustand samt fehlgeschlagener Checks, Konflikte und Approvals (je Reviewer und je Gruppe
+ * letzter Commit, Titel, Umfang, CI-Zustand samt fehlgeschlagener Checks, Konflikte, ungelöste Threads und Approvals (je Reviewer und je Gruppe
  * kritischer Dateien) kommen je Repo per GraphQL, je Anfrage bis zu CHUNK PRs
  * als Aliase. Ein fehlgeschlagenes Repo bricht den Lauf nicht ab.
  * syncAuthored() findet zusätzlich die eigenen offenen PRs, die noch fehlen.
@@ -24,7 +24,7 @@ class PullRequestStateSync
 
     private const SEARCH_PAGES = 8;
 
-    private const FIELDS = 'state mergeable mergedAt closedAt title headRefOid additions deletions changedFiles commitCount: commits { totalCount } comments { totalCount } '
+    private const FIELDS = 'state mergeable mergedAt closedAt title headRefOid additions deletions changedFiles commitCount: commits { totalCount } comments { totalCount } reviewThreads(first: 100) { nodes { isResolved } } '
         .'ci: commits(last: 1) { nodes { commit { statusCheckRollup { contexts(first: 100) { nodes { __typename '
         .'... on CheckRun { name status conclusion } ... on StatusContext { context state } } } } } } }';
 
@@ -263,6 +263,10 @@ class PullRequestStateSync
         if (array_key_exists('ci', $node)) {
             [$pullRequest->ci_state, $failed] = $this->ciState(data_get($node, 'ci.nodes.0.commit.statusCheckRollup.contexts.nodes'));
             $pullRequest->ci_failed_checks = $failed ?: null;
+        }
+
+        if (is_array(data_get($node, 'reviewThreads.nodes'))) {
+            $pullRequest->unresolved_threads = collect($node['reviewThreads']['nodes'])->where('isResolved', false)->count();
         }
 
         // UNKNOWN = GitHub rechnet noch; dann bleibt der letzte bekannte Wert.

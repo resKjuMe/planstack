@@ -107,7 +107,7 @@ class PullRequestStateSyncTest extends TestCase
 
         Http::fake([
             'api.github.com/graphql' => Http::response(['data' => ['repository' => [
-                'pr1' => $node(['mergeable' => 'CONFLICTING', 'ci' => $ci([
+                'pr1' => $node(['mergeable' => 'CONFLICTING', 'reviewThreads' => ['nodes' => [['isResolved' => false], ['isResolved' => true], ['isResolved' => false]]], 'ci' => $ci([
                     ['__typename' => 'CheckRun', 'name' => '[BE] Unit Tests', 'status' => 'COMPLETED', 'conclusion' => 'FAILURE'],
                     ['__typename' => 'StatusContext', 'context' => 'deploy/preview', 'state' => 'ERROR'],
                     ['__typename' => 'CheckRun', 'name' => '[FE] Main | Unit', 'status' => 'IN_PROGRESS', 'conclusion' => null],
@@ -131,9 +131,11 @@ class PullRequestStateSyncTest extends TestCase
         $this->assertSame('failed', $failed->refresh()->ci_state);
         $this->assertSame(['[BE] Unit Tests', 'deploy/preview'], $failed->ci_failed_checks);
         $this->assertSame('CONFLICTING', $failed->mergeable);
+        $this->assertSame(2, $failed->unresolved_threads);
         $this->assertSame('running', $running->refresh()->ci_state);
         $this->assertNull($running->ci_failed_checks);
         $this->assertNull($running->mergeable);
+        $this->assertNull($running->unresolved_threads);
         $this->assertSame('success', $gatesOnly->refresh()->ci_state);
         $this->assertNull($noChecks->refresh()->ci_state);
     }
