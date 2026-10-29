@@ -297,7 +297,7 @@ function Pills({ current, urls, label }) {
 function SortHeader({ id, sort, onSort, children, title, narrow = false }) {
     const active = sort.key === id;
     return (
-        <th className={`${narrow ? 'w-px px-1 text-center' : 'px-2'} py-2 font-medium whitespace-nowrap`} title={title}>
+        <th className={`${narrow ? 'w-px px-[9px] text-center' : 'px-2'} py-2 font-medium whitespace-nowrap`} title={title}>
             <button type="button" onClick={() => onSort(id)} className={`uppercase tracking-wide ${active ? 'text-gray-900 dark:text-gray-100' : ''}`}>
                 {children}{active ? (sort.dir === 'desc' ? ' ↓' : ' ↑') : ''}
             </button>
@@ -345,7 +345,7 @@ function Row({ pr, level, stack, canShare, strings }) {
     const now = useNow();
     const cell = 'px-2 py-1.5 whitespace-nowrap';
     // Spalten rechts vom Titel: nur so breit wie ihr Inhalt.
-    const narrow = 'w-px px-1 py-1.5 whitespace-nowrap';
+    const narrow = 'w-px px-[9px] py-1.5 whitespace-nowrap';
     const open = pr.state === 'OPEN';
     const ci = open ? CI_ROW[pr.ciState] : null;
     const failedChecks = open && pr.ciState === 'failed' ? pr.ciFailedChecks : [];
