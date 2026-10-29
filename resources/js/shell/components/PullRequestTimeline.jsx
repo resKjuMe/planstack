@@ -1,19 +1,24 @@
-import React from 'react';
-import { formatDate, formatDuration } from './PullRequestParts.jsx';
+import React, { useState } from 'react';
+import { formatDuration } from './PullRequestParts.jsx';
 
-// Verlauf der letzten höchstens 30 Tage als divergierende Balken je Review: nach oben die offenen
-// Befunde, nach unten die seit dem vorigen Review gefixten. Commits sitzen auf der Nulllinie.
+// Verlauf als divergierende Balken auf einer Ereignis-Achse: ein Slot je Review (offen nach
+// oben, seit dem vorigen Review gefixt nach unten), Tage ohne Review gestaucht, Commits
+// gebündelt in eigener Spur. Höchstens 30 Tage rückwirkend.
 
 const W = 1000;
-const X0 = 60;
-const X1 = W - 20;
-const PLOT_TOP = 24;
-const PLOT_BOTTOM = 250;
-const AXIS_Y = 268;
-const H = 292;
-const BAR = 24;
-const LABEL_GAP = 120;
-const WINDOW = 30 * 86_400_000;
+const X0 = 70;
+const X1 = W - 16;
+const PLOT_TOP = 44;
+const PLOT_BOTTOM = 222;
+const LANE_TOP = 236;
+const LANE_H = 32;
+const AXIS_Y = 282;
+const H = 324;
+const RANGES = [7, 30];
+const DAY = 86_400_000;
+
+// Slot-Breiten in Einheiten, auf die Plotbreite skaliert.
+const UNITS = { review: 1, day: 0.6, gap: 0.45, tail: 0.5 };
 
 // Von der Nulllinie nach außen: oben Hinweis zuerst, unten Kritisch zuerst.
 const LEVELS = [
@@ -23,7 +28,10 @@ const LEVELS = [
 ];
 
 const time = (iso) => (iso ? new Date(iso).getTime() : null);
+const dayStart = (ms) => new Date(ms).setHours(0, 0, 0, 0);
+const dayDiff = (a, b) => Math.round((dayStart(b) - dayStart(a)) / DAY);
 const shortDate = (ms) => new Date(ms).toLocaleDateString(undefined, { day: '2-digit', month: '2-digit' });
+const clock = (ms) => new Date(ms).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
 const sum = (counts) => counts.critical + counts.important + counts.hint;
 
 // Gefixt: was der Fix-Lauf am vorigen Review als behoben gemeldet hat; ohne Fix-Lauf
@@ -43,37 +51,79 @@ function niceStep(max) {
     return [1, 2, 5, 10].map((m) => m * pow).find((s) => s >= raw) ?? 10 * pow;
 }
 
+// Slots von links nach rechts: Commit-Tage vor dem ersten Review, Lücken, Reviews,
+// Commits nach dem letzten Review. Commits zwischen zwei Reviews hängen als Bündel davor.
+function layout(runs, points) {
+    const slots = [];
+    const first = runs[0]?.t ?? Infinity;
+    const gap = (from, to, bundle = null) => {
+        const days = dayDiff(from, to) - 1;
+        if (days > 0 || bundle) slots.push({ kind: 'gap', days: Math.max(0, days), bundle });
+    };
+
+    let lastDay = null;
+    for (const c of points.filter((p) => p.t < first)) {
+        if (lastDay !== null && dayStart(c.t) === lastDay) {
+            slots[slots.length - 1].bundle.push(c);
+            continue;
+        }
+        if (lastDay !== null) gap(lastDay, c.t);
+        slots.push({ kind: 'day', t: c.t, bundle: [c] });
+        lastDay = dayStart(c.t);
+    }
+    if (lastDay !== null && runs.length) gap(lastDay, first);
+
+    runs.forEach((r, i) => {
+        if (i > 0) {
+            const between = points.filter((p) => p.t >= runs[i - 1].t && p.t < r.t);
+            if (dayDiff(runs[i - 1].t, r.t) > 1) gap(runs[i - 1].t, r.t, between);
+            else if (between.length) slots.push({ kind: 'boundary', bundle: between });
+        }
+        slots.push({ kind: 'review', run: r });
+    });
+
+    const after = runs.length ? points.filter((p) => p.t >= runs[runs.length - 1].t) : [];
+    if (after.length) slots.push({ kind: 'tail', bundle: after });
+
+    const total = slots.reduce((s, slot) => s + (UNITS[slot.kind] ?? 0), 0) || 1;
+    const scale = (X1 - X0) / total;
+    let cursor = X0;
+    for (const slot of slots) {
+        const w = (UNITS[slot.kind] ?? 0) * scale;
+        slot.x = cursor;
+        slot.w = w;
+        slot.cx = cursor + w / 2;
+        cursor += w;
+    }
+
+    return { slots, unitWidth: scale };
+}
+
 export default function PullRequestTimeline({ pr, reviews, commits, strings }) {
+    const [range, setRange] = useState(30);
+    const [tip, setTip] = useState(null);
+
     const end = time(pr.mergedAt) ?? time(pr.closedAt) ?? Date.now();
-    const start = end - WINDOW;
+    const start = end - range * DAY;
     // Gefixt wird vor dem Zuschneiden berechnet, damit das erste sichtbare Review seinen Vorgänger kennt.
     const allRuns = reviews
         .filter((r) => r.status === 'finished' && r.reviewedAt)
         .map((r) => ({ ...r, t: time(r.reviewedAt) }))
         .sort((a, b) => a.t - b.t)
-        .map((r, i, all) => ({ ...r, first: i === 0, latest: i === all.length - 1, fixed: fixedSince(all[i - 1], r) }));
+        .map((r, i, all) => ({ ...r, first: i === 0, latest: i === all.length - 1, previous: all[i - 1] ?? null, fixed: fixedSince(all[i - 1], r) }));
     const runs = allRuns.filter((r) => r.t >= start);
     const points = (commits ?? [])
         .map((c) => ({ ...c, t: time(c.committedAt) }))
         .filter((c) => c.t >= start)
         .sort((a, b) => a.t - b.t);
 
-    const stamps = [Math.max(time(pr.openedAt) ?? start, start), end, ...runs.map((r) => r.t), ...points.map((c) => c.t)];
-    let from = Math.min(...stamps);
-    let to = Math.max(...stamps);
-    if (to - from < 3_600_000) {
-        from -= 1_800_000;
-        to += 1_800_000;
-    }
-    const pad = (to - from) * 0.03;
-    from -= pad;
-    to += pad;
-    const x = (t) => X0 + ((t - from) / (to - from)) * (X1 - X0);
+    const { slots, unitWidth } = layout(runs, points);
+    const bar = Math.min(32, unitWidth * 0.36);
 
     // Unter der Nulllinie bleibt immer Platz für die Gefixt-Beschriftung.
     const up = Math.max(1, ...runs.map(sum));
     const down = Math.max(up / 3, 1, ...runs.map((r) => sum(r.fixed)));
-    const unit = (PLOT_BOTTOM - PLOT_TOP) / (up + down);
+    const unit = (PLOT_BOTTOM - PLOT_TOP - 20) / (up + down);
     const zero = PLOT_TOP + up * unit;
     const step = niceStep(up);
     const grid = [
@@ -81,28 +131,45 @@ export default function PullRequestTimeline({ pr, reviews, commits, strings }) {
         ...Array.from({ length: Math.floor(down / step) }, (_, i) => -(i + 1) * step),
     ];
 
-    const ticks = Array.from({ length: 5 }, (_, i) => from + ((to - from) * i) / 4);
-    const tickLabel = (t) => (to - from < 2 * 86_400_000
-        ? new Date(t).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })
-        : shortDate(t));
+    const reviewSlots = slots.filter((s) => s.kind === 'review');
+    const firstReview = reviewSlots[0];
+    const latestSlot = reviewSlots.find((s) => s.run.latest);
+    // Datum je Tag einmal, mittig über dessen Reviews.
+    const reviewDays = Object.values(reviewSlots.reduce((days, s) => {
+        const key = dayStart(s.run.t);
+        (days[key] ??= { t: s.run.t, xs: [] }).xs.push(s.cx);
+        return days;
+    }, {}));
 
-    // Beschriftung nur, wenn sie nicht in die vorige ragt; die Details stehen im Tooltip.
-    let lastRun = -Infinity;
-    const runLabels = runs.map((r) => {
-        const show = x(r.t) - lastRun >= LABEL_GAP;
-        if (show) lastRun = x(r.t);
-        return show;
+    const levelText = (counts) => LEVELS.map((l) => `${counts[l.key]} ${strings[`level_${l.level}`].toLocaleLowerCase()}`).join(' · ');
+    const reviewTip = (s) => {
+        const r = s.run;
+        const duration = formatDuration(r.startedAt, r.finishedAt);
+        const lines = [
+            { text: `${strings.timeline_review_tip.replace(':time', `${shortDate(r.t)} ${clock(r.t)}`)}${duration ? ` · ${duration}` : ''}`, strong: true },
+            { text: levelText(r) },
+        ];
+        if (r.previous) {
+            const by = points.filter((p) => p.t >= r.previous.t && p.t < r.t).length;
+            lines.push({
+                text: strings.timeline_fixed_by.replace(':fixed', sum(r.fixed)).replace(':commits', by).replace(':time', clock(r.previous.t)),
+                tone: 'good',
+            });
+        }
+        return { x: s.cx, y: Math.min(zero + 100, H - 4), lines };
+    };
+    const bundleTip = (x, bundle) => ({
+        x,
+        y: LANE_TOP - 6,
+        lines: [
+            ...bundle.slice(0, 8).map((c) => ({ text: `${c.sha.slice(0, 7)}  +${c.additions} −${c.deletions}  ${clock(c.t)}`, mono: true })),
+            ...(bundle.length > 8 ? [{ text: strings.timeline_more.replace(':count', bundle.length - 8) }] : []),
+        ],
     });
-    let lastCommit = -Infinity;
-    const commitLabels = points.map((c) => {
-        const show = x(c.t) - lastCommit >= 70 && !runs.some((r) => Math.abs(x(r.t) - x(c.t)) < 60);
-        if (show) lastCommit = x(c.t);
-        return show;
-    });
-    const anchorEnd = (t) => x(t) > X1 - LABEL_GAP;
-    const breakdown = (counts) => LEVELS.filter((l) => counts[l.key])
-        .map((l) => `${counts[l.key]} ${strings[`level_${l.level}`].toLocaleLowerCase()}`)
-        .join(' · ');
+
+    const jump = (id) => document.getElementById(`review-${id}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    const bundleX = (s) => (s.kind === 'boundary' ? s.x : s.cx);
+    const bundles = slots.filter((s) => s.bundle?.length);
 
     return (
         <section className="bg-white dark:bg-gray-800 rounded-lg shadow p-5">
@@ -111,17 +178,30 @@ export default function PullRequestTimeline({ pr, reviews, commits, strings }) {
                     <h3 className="font-semibold text-gray-900 dark:text-gray-100">{strings.timeline_title}</h3>
                     <p className="text-xs text-gray-500 dark:text-gray-400">{strings.timeline_hint}</p>
                 </div>
-                <div className="flex gap-3 text-xs text-gray-600 dark:text-gray-300">
-                    {LEVELS.map((l) => (
-                        <span key={l.key} className="inline-flex items-center gap-1.5">
-                            <svg width="10" height="10" aria-hidden="true"><rect width="10" height="10" rx="2" className={l.fill} /></svg>
-                            {strings[`level_${l.level}`]}
-                        </span>
-                    ))}
-                    <span className="inline-flex items-center gap-1.5 ml-2">
-                        <svg width="12" height="12" aria-hidden="true"><circle cx="6" cy="6" r="4.5" strokeWidth="2" className="fill-white stroke-indigo-600 dark:fill-gray-800 dark:stroke-indigo-400" /></svg>
-                        {strings.timeline_commit}
-                    </span>
+                <div className="flex flex-wrap items-center gap-4">
+                    <div role="group" aria-label={strings.timeline_range} className="inline-flex overflow-hidden rounded-md border border-gray-300 dark:border-gray-600 text-xs">
+                        {RANGES.map((days, i) => (
+                            <button
+                                key={days}
+                                type="button"
+                                aria-pressed={range === days}
+                                onClick={() => setRange(days)}
+                                className={`px-2.5 py-1.5 ${i ? 'border-l border-gray-300 dark:border-gray-600' : ''} ${range === days
+                                    ? 'bg-indigo-50 text-indigo-800 font-medium dark:bg-indigo-900/40 dark:text-indigo-300'
+                                    : 'bg-white text-gray-700 hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700'}`}
+                            >
+                                {strings.timeline_days.replace(':count', days)}
+                            </button>
+                        ))}
+                    </div>
+                    <div className="flex gap-3 text-xs text-gray-600 dark:text-gray-300">
+                        {LEVELS.map((l) => (
+                            <span key={l.key} className="inline-flex items-center gap-1.5">
+                                <svg width="10" height="10" aria-hidden="true"><rect width="10" height="10" rx="2" className={l.fill} /></svg>
+                                {strings[`level_${l.level}`]}
+                            </span>
+                        ))}
+                    </div>
                 </div>
             </div>
 
@@ -131,62 +211,88 @@ export default function PullRequestTimeline({ pr, reviews, commits, strings }) {
                     className="w-full min-w-[640px] text-gray-700 dark:text-gray-300"
                     role="img"
                     aria-label={strings.timeline_title}
+                    onMouseLeave={() => setTip(null)}
                 >
-                    <text x={X0} y="12" fontSize="11" fontWeight="500" className="fill-gray-500 dark:fill-gray-400">{strings.timeline_open_axis}</text>
-                    <text x={X0} y={PLOT_BOTTOM + 4} fontSize="11" fontWeight="500" className="fill-gray-500 dark:fill-gray-400">{strings.timeline_fixed_axis}</text>
+                    {firstReview && (
+                        <rect x={firstReview.x} y="8" width={X1 - firstReview.x} height={PLOT_BOTTOM + 4} rx="6" className="fill-gray-50 dark:fill-gray-900/40" />
+                    )}
+                    {latestSlot && (
+                        <rect x={latestSlot.x + 2} y="8" width={latestSlot.w - 4} height={PLOT_BOTTOM + 4} rx="6" className="fill-indigo-50 dark:fill-indigo-900/30" />
+                    )}
 
                     <g strokeDasharray="2 4" className="stroke-gray-200 dark:stroke-gray-700">
                         {grid.map((v) => <line key={v} x1={X0} x2={X1} y1={zero - v * unit} y2={zero - v * unit} />)}
                     </g>
                     <g fontSize="11" textAnchor="end" className="fill-gray-500 dark:fill-gray-400">
-                        {grid.map((v) => <text key={v} x={X0 - 10} y={zero - v * unit + 4}>{Math.abs(v)}</text>)}
+                        {grid.map((v) => <text key={v} x={X0 - 8} y={zero - v * unit + 4}>{Math.abs(v)}</text>)}
+                    </g>
+                    <g fontSize="10" fontWeight="600" className="fill-gray-500 dark:fill-gray-400">
+                        <text x="4" y={PLOT_TOP + 12}>{strings.timeline_open_axis}</text>
+                        <text x="4" y={PLOT_BOTTOM - 8}>{strings.timeline_fixed_axis}</text>
+                        <text x="4" y={LANE_TOP + LANE_H / 2 + 4}>{strings.timeline_commits_axis}</text>
                     </g>
 
-                    {runs.map((r, i) => {
-                        const left = x(r.t) - BAR / 2;
+                    {slots.filter((s) => s.kind === 'gap').map((s) => (
+                        <g key={`gap-${s.x}`} textAnchor="middle" className="fill-gray-400 dark:fill-gray-500">
+                            <text x={s.cx} y={zero + 5} fontSize="14">⋯</text>
+                            {s.days > 0 && <text x={s.cx} y={zero + 20} fontSize="10">{strings.timeline_days.replace(':count', s.days)}</text>}
+                        </g>
+                    ))}
+
+                    {!runs.length && (
+                        <text x={(X0 + X1) / 2} y={zero - 10} fontSize="12" textAnchor="middle" className="fill-gray-400 dark:fill-gray-500">{strings.timeline_empty}</text>
+                    )}
+
+                    {reviewSlots.map((s) => {
+                        const r = s.run;
+                        const left = s.cx - bar / 2;
                         const open = sum(r);
                         const fixed = sum(r.fixed);
-                        const end = anchorEnd(r.t);
-                        const lx = end ? left - 8 : left + BAR + 8;
-                        const anchor = end ? 'end' : 'start';
                         let yUp = zero;
                         let yDown = zero;
-                        const note = r.first ? strings.timeline_first : r.latest ? strings.timeline_latest : null;
                         return (
-                            <g key={r.id}>
-                                <title>
-                                    {`${formatDate(r.reviewedAt)}${r.commitSha ? ` · ${r.commitSha.slice(0, 7)}` : ''}${formatDuration(r.startedAt, r.finishedAt) ? ` · ${formatDuration(r.startedAt, r.finishedAt)}` : ''}\n`
-                                        + `${strings.timeline_open.replace(':count', open)}${open ? `: ${breakdown(r)}` : ''}\n`
-                                        + `${strings.timeline_fixed.replace(':count', fixed)}${fixed ? `: ${breakdown(r.fixed)}` : ''}`}
-                                </title>
+                            <g
+                                key={r.id}
+                                role="link"
+                                tabIndex={0}
+                                aria-label={reviewTip(s).lines.map((l) => l.text).join(', ')}
+                                className="cursor-pointer outline-none"
+                                onClick={() => jump(r.id)}
+                                onKeyDown={(e) => {
+                                    if (e.key !== 'Enter' && e.key !== ' ') return;
+                                    e.preventDefault();
+                                    jump(r.id);
+                                }}
+                                onMouseEnter={() => setTip(reviewTip(s))}
+                                onFocus={() => setTip(reviewTip(s))}
+                                onBlur={() => setTip(null)}
+                            >
+                                <rect x={s.x} y="8" width={s.w} height={PLOT_BOTTOM + 4} fill="transparent" />
                                 {[...LEVELS].reverse().map((l) => {
                                     const h = r[l.key] * unit;
                                     if (!h) return null;
                                     yUp -= h;
-                                    return <rect key={`o-${l.key}`} x={left} y={yUp} width={BAR} height={h} className={l.fill} />;
+                                    return <rect key={`o-${l.key}`} x={left} y={yUp} width={bar} height={h} rx="2" className={l.fill} />;
                                 })}
                                 {LEVELS.map((l) => {
                                     const h = r.fixed[l.key] * unit;
                                     if (!h) return null;
                                     yDown += h;
-                                    return <rect key={`f-${l.key}`} x={left} y={yDown - h} width={BAR} height={h} opacity="0.4" className={l.fill} />;
+                                    return <rect key={`f-${l.key}`} x={left} y={yDown - h} width={bar} height={h} rx="2" opacity="0.4" className={l.fill} />;
                                 })}
-                                {open === 0 && <rect x={left} y={zero - 3} width={BAR} height="3" rx="1.5" className="fill-green-500 dark:fill-green-400" />}
-                                {runLabels[i] && (
-                                    <>
-                                        <text x={lx} y={Math.max(PLOT_TOP, yUp) + 10} fontSize="11" textAnchor={anchor}>
-                                            <tspan fontWeight="600" className="fill-current">{strings.timeline_open.replace(':count', open)}</tspan>
-                                            <tspan x={lx} dy="14" fontSize="10" className="fill-gray-500 dark:fill-gray-400">
-                                                {note ? `${shortDate(r.t)} · ${note}` : shortDate(r.t)}
-                                            </tspan>
-                                        </text>
-                                        {fixed > 0 && (
-                                            <text x={lx} y={zero + 14} fontSize="11" textAnchor={anchor}>
-                                                <tspan fontWeight="600" className="fill-green-700 dark:fill-green-400">{strings.timeline_fixed.replace(':count', fixed)}</tspan>
-                                                <tspan x={lx} dy="14" fontSize="10" className="fill-gray-500 dark:fill-gray-400">{breakdown(r.fixed)}</tspan>
-                                            </text>
-                                        )}
-                                    </>
+                                {open === 0 && <rect x={left} y={zero - 3} width={bar} height="3" rx="1.5" className="fill-green-500 dark:fill-green-400" />}
+                                <text x={s.cx} y={yUp - 8} fontSize="11" fontWeight="600" textAnchor="middle" className="fill-current">{open}</text>
+                                {r.first && !r.latest && (
+                                    <text x={s.cx} y={yUp - 22} fontSize="10" textAnchor="middle" className="fill-gray-500 dark:fill-gray-400">{strings.timeline_first}</text>
+                                )}
+                                {fixed > 0 && (
+                                    <text x={s.cx} y={yDown + 14} fontSize="11" fontWeight="600" textAnchor="middle" className="fill-green-700 dark:fill-green-400">{`−${fixed}`}</text>
+                                )}
+                                {r.latest && (
+                                    <g>
+                                        <rect x={s.cx - 37} y="12" width="74" height="16" rx="8" className="fill-indigo-600 dark:fill-indigo-500" />
+                                        <text x={s.cx} y="23.5" fontSize="10" fontWeight="600" textAnchor="middle" fill="#fff">{strings.timeline_latest}</text>
+                                    </g>
                                 )}
                             </g>
                         );
@@ -194,43 +300,68 @@ export default function PullRequestTimeline({ pr, reviews, commits, strings }) {
 
                     <line x1={X0} x2={X1} y1={zero} y2={zero} strokeWidth="1.5" className="stroke-gray-700 dark:stroke-gray-300" />
 
+                    <rect x={X0} y={LANE_TOP} width={X1 - X0} height={LANE_H} rx="6" className="fill-gray-100 dark:fill-gray-900/60" />
                     {!commits && (
-                        <text x={X1} y={zero - 8} fontSize="11" textAnchor="end" className="fill-gray-400 dark:fill-gray-500">{strings.timeline_loading}</text>
+                        <text x={X0 + 10} y={LANE_TOP + LANE_H / 2 + 4} fontSize="11" className="fill-gray-400 dark:fill-gray-500">{strings.timeline_loading}</text>
                     )}
-                    {points.map((c, i) => (
-                        <g key={c.sha}>
-                            <title>{`${c.sha.slice(0, 7)} · ${formatDate(c.committedAt)} · +${c.additions} −${c.deletions}\n${c.message}`}</title>
-                            <circle cx={x(c.t)} cy={zero} r="6" strokeWidth="2" className="fill-white stroke-indigo-600 dark:fill-gray-800 dark:stroke-indigo-400" />
-                            {commitLabels[i] && (
-                                <text
-                                    x={anchorEnd(c.t) ? x(c.t) - 10 : x(c.t) + 10}
-                                    y={zero - 6}
-                                    fontSize="10"
-                                    fontFamily="ui-monospace, Menlo, monospace"
-                                    textAnchor={anchorEnd(c.t) ? 'end' : 'start'}
-                                    className="fill-indigo-600 dark:fill-indigo-400"
-                                >
-                                    {c.sha.slice(0, 7)}
-                                </text>
-                            )}
-                        </g>
-                    ))}
+                    {bundles.map((s) => {
+                        const x = bundleX(s);
+                        const cy = LANE_TOP + LANE_H / 2;
+                        const tipFor = () => setTip(bundleTip(x, s.bundle));
+                        return (
+                            <g key={`b-${s.bundle[0].sha}`} tabIndex={0} className="outline-none" onMouseEnter={tipFor} onFocus={tipFor} onBlur={() => setTip(null)}>
+                                {s.bundle.length === 1 ? (
+                                    <circle cx={x} cy={cy} r="7" strokeWidth="1.5" className="fill-white stroke-indigo-600 dark:fill-gray-800 dark:stroke-indigo-400" />
+                                ) : (
+                                    <>
+                                        <rect x={x - 19} y={cy - 10} width="38" height="20" rx="10" strokeWidth="1.5" className="fill-white stroke-indigo-600 dark:fill-gray-800 dark:stroke-indigo-400" />
+                                        <text x={x} y={cy + 4} fontSize="11" fontWeight="600" textAnchor="middle" className="fill-indigo-800 dark:fill-indigo-300">{s.bundle.length}</text>
+                                    </>
+                                )}
+                            </g>
+                        );
+                    })}
 
                     <line x1={X0} x2={X1} y1={AXIS_Y} y2={AXIS_Y} className="stroke-gray-300 dark:stroke-gray-600" />
-                    {ticks.map((t, i) => (
-                        <text
-                            key={t}
-                            x={x(t)}
-                            y={H - 4}
-                            fontSize="11"
-                            textAnchor={i === 0 ? 'start' : i === ticks.length - 1 ? 'end' : 'middle'}
-                            className="fill-gray-500 dark:fill-gray-400"
-                        >
-                            {tickLabel(t)}
-                        </text>
-                    ))}
+                    <g fontSize="11" fontWeight="500" textAnchor="middle" className="fill-gray-700 dark:fill-gray-300">
+                        {slots.filter((s) => s.kind === 'day').map((s) => <text key={`d-${s.t}`} x={s.cx} y={AXIS_Y + 18}>{shortDate(s.t)}</text>)}
+                        {reviewDays.map((d) => (
+                            <text key={`rd-${d.t}`} x={(Math.min(...d.xs) + Math.max(...d.xs)) / 2} y={AXIS_Y + 18}>{shortDate(d.t)}</text>
+                        ))}
+                    </g>
+                    <g fontSize="10" textAnchor="middle" className="fill-gray-500 dark:fill-gray-400">
+                        {reviewSlots.map((s) => <text key={`t-${s.run.id}`} x={s.cx} y={AXIS_Y + 34}>{clock(s.run.t)}</text>)}
+                    </g>
+
+                    {tip && <Tooltip tip={tip} />}
                 </svg>
             </div>
         </section>
+    );
+}
+
+// Dunkle Box an der Maus-Position, innerhalb der Zeichenfläche gehalten.
+function Tooltip({ tip }) {
+    const width = Math.max(...tip.lines.map((l) => l.text.length)) * 6.2 + 24;
+    const height = tip.lines.length * 15 + 12;
+    const x = Math.min(Math.max(tip.x - width / 2, 4), W - width - 4);
+    const y = Math.max(4, tip.y - height - 6);
+    return (
+        <g pointerEvents="none">
+            <rect x={x} y={y} width={width} height={height} rx="6" fill="#111827" />
+            {tip.lines.map((l, i) => (
+                <text
+                    key={i}
+                    x={x + 12}
+                    y={y + 19 + i * 15}
+                    fontSize={l.strong ? 11 : 10}
+                    fontWeight={l.strong ? 600 : 400}
+                    fontFamily={l.mono ? 'ui-monospace, Menlo, monospace' : undefined}
+                    fill={l.tone === 'good' ? '#86EFAC' : l.strong ? '#F9FAFB' : '#D1D5DB'}
+                >
+                    {l.text}
+                </text>
+            ))}
+        </g>
     );
 }
