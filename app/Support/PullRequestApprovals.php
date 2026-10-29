@@ -19,7 +19,7 @@ class PullRequestApprovals
 
     /**
      * Anforderung aus der Summary von „pr-bot / Review Requirement“: Stufe,
-     * Pflicht-Approvals (`**Approvals:** 0 von 2`) und berührte Critical-Files-Gruppen.
+     * Pflicht-Approvals (`**Approvals:** 0 von 2`, bei trivial `keine nötig`) und berührte Critical-Files-Gruppen.
      * null, wenn die Summary fehlt oder nicht erkennbar ist.
      *
      * @return array{level: string, required: int, criticalGroups: array<int, string>}|null
@@ -28,7 +28,7 @@ class PullRequestApprovals
     {
         if ($summary === null
             || ! preg_match('/\*\*Stufe:\*\*\s*`([a-z]+)`/', $summary, $level)
-            || ! preg_match('/\*\*Approvals:\*\*\s*\d+\s+von\s+(\d+)/', $summary, $required)) {
+            || ! preg_match('/\*\*Approvals:\*\*\s*(?:\d+\s+von\s+(\d+)|keine nötig)/u', $summary, $required)) {
             return null;
         }
 
@@ -36,7 +36,7 @@ class PullRequestApprovals
 
         return [
             'level' => $level[1],
-            'required' => (int) $required[1],
+            'required' => (int) ($required[1] ?? 0),
             'criticalGroups' => array_values(array_unique($groups[1])),
         ];
     }

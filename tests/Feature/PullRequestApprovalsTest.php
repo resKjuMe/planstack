@@ -80,6 +80,9 @@ class PullRequestApprovalsTest extends TestCase
             'ohne kritische Dateien' => ["## Review Requirement\n\n**Stufe:** `normal` — KI-Einschätzung `normal`\n\n**Approvals:** 1 von 1 (gezählt auf dem aktuellen Commit, ohne Autor)", [
                 'level' => 'normal', 'required' => 1, 'criticalGroups' => [],
             ]],
+            'trivial ohne Approvals' => ["## Review Requirement\n\n**Stufe:** `trivial` — KI-Einschätzung `trivial`, Confidence 70 %\n\n**Approvals:** keine nötig", [
+                'level' => 'trivial', 'required' => 0, 'criticalGroups' => [],
+            ]],
             'mit kritischen Dateien' => [self::REQUIREMENT, [
                 'level' => 'high', 'required' => 2, 'criticalGroups' => ['Backend'],
             ]],
