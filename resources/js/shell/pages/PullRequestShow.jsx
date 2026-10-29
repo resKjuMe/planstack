@@ -2,13 +2,14 @@ import React, { useState } from 'react';
 import { Head, Link, useForm } from '@inertiajs/react';
 import AppShell from '../AppShell.jsx';
 import PageBands from '../components/PageBands.jsx';
+import PullRequestTimeline from '../components/PullRequestTimeline.jsx';
 import { ApprovalPanel, PoBadge, StackedIcon, DecisionBadge, FindingCounts, LEVEL_TONE, Markdown, RunningBadge, ScoreBar, StateBadge, fixCommandHref, formatDate, formatDuration, usePullRequestLiveReload } from '../components/PullRequestParts.jsx';
 
 // Detailseite eines Pull Requests: Metadaten, Beschreibung und alle Reviews
 // (neuestes oben) mit Zusammenfassung und Befunden. Markdown rendert der Server.
 
-export default function PullRequestShow({ pullRequest: pr, reviews, backUrl, strings }) {
-    usePullRequestLiveReload(['pullRequest', 'reviews'], pr.id);
+export default function PullRequestShow({ pullRequest: pr, reviews, commitHistory, backUrl, strings }) {
+    usePullRequestLiveReload(['pullRequest', 'reviews', 'commitHistory'], pr.id);
     return (
         <>
             <Head><title>{`${pr.repository}#${pr.number} · ${strings.title}`}</title></Head>
@@ -33,6 +34,9 @@ export default function PullRequestShow({ pullRequest: pr, reviews, backUrl, str
 
             <div className="py-8">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid gap-6 lg:grid-cols-3">
+                    <div className="lg:col-span-3">
+                        <PullRequestTimeline pr={pr} reviews={reviews} commits={commitHistory} strings={strings} />
+                    </div>
                     <div className="lg:col-span-2 space-y-6">
                         {reviews.length === 0 ? (
                             <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-8 text-center text-gray-500 dark:text-gray-400">{strings.no_reviews}</div>
