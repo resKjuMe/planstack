@@ -217,9 +217,10 @@ function reviewersTitle(approvals, strings) {
 
 const levelTone = 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-200';
 
-// Stufe als Schild auf grauem Chip: normal schlicht, high amber mit „!“, critical rot gefüllt.
+// Stufe als Schild auf grauem Chip: trivial blass mit Haken, normal schlicht, high amber mit „!“, critical rot gefüllt.
 const SHIELD = 'M12 3l8 3v6c0 5-3.5 8-8 9c-4.5-1-8-4-8-9V6z';
 const LEVELS = {
+    trivial: { color: 'text-gray-400 dark:text-gray-500', icon: <><path d={SHIELD} /><path d="M9 12l2 2l4-4" /></> },
     normal: { color: '', icon: <path d={SHIELD} /> },
     high: { color: 'text-amber-600 dark:text-amber-400', icon: <><path d={SHIELD} /><path d="M12 8v4M12 16h.01" /></> },
     critical: { color: 'text-red-600 dark:text-red-400', icon: <><path d={SHIELD} fill="currentColor" /><path d="M12 8v4M12 16h.01" stroke="white" /></> },
