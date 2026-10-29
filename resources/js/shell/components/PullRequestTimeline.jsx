@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { formatDuration } from './PullRequestParts.jsx';
 
 // Verlauf als divergierende Balken auf einer Ereignis-Achse: ein Slot je Review (offen nach
@@ -8,12 +8,13 @@ import { formatDuration } from './PullRequestParts.jsx';
 const W = 1000;
 const X0 = 70;
 const X1 = W - 16;
-const PLOT_TOP = 44;
-const PLOT_BOTTOM = 222;
+// Klein (Standard): nur Balken; groß zusätzlich Commit-Spur und Zeitachse.
+const FULL = { top: 44, bottom: 222, h: 354 };
+const COMPACT = { top: 30, bottom: 150, h: 170 };
 const LANE_TOP = 236;
 const LANE_H = 60;
 const AXIS_Y = 312;
-const H = 354;
+const EXPANDED_KEY = 'pull-requests:timeline:expanded';
 const RANGES = [7, 30, null];
 const DAY = 86_400_000;
 
@@ -107,6 +108,21 @@ function layout(runs, points) {
 export default function PullRequestTimeline({ pr, reviews, commits, strings }) {
     const [range, setRange] = useState(30);
     const [tip, setTip] = useState(null);
+    const [expanded, setExpanded] = useState(() => {
+        try {
+            return localStorage.getItem(EXPANDED_KEY) === '1';
+        } catch {
+            return false;
+        }
+    });
+    useEffect(() => {
+        try {
+            localStorage.setItem(EXPANDED_KEY, expanded ? '1' : '0');
+        } catch {
+            /* ignore */
+        }
+    }, [expanded]);
+    const { top: PLOT_TOP, bottom: PLOT_BOTTOM, h: H } = expanded ? FULL : COMPACT;
 
     const end = time(pr.mergedAt) ?? time(pr.closedAt) ?? Date.now();
     const start = range ? end - range * DAY : -Infinity;
@@ -211,11 +227,25 @@ export default function PullRequestTimeline({ pr, reviews, commits, strings }) {
     };
 
     return (
-        <section className="bg-white dark:bg-gray-800 rounded-lg shadow p-5">
+        <section className={`bg-white dark:bg-gray-800 rounded-lg shadow ${expanded ? 'p-5' : 'px-5 py-3'}`}>
             <div className="flex flex-wrap items-start justify-between gap-3">
-                <div>
-                    <h3 className="font-semibold text-gray-900 dark:text-gray-100">{strings.timeline_title}</h3>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">{strings.timeline_hint}</p>
+                <div className="flex items-start gap-2">
+                    <button
+                        type="button"
+                        aria-expanded={expanded}
+                        aria-label={expanded ? strings.timeline_collapse : strings.timeline_expand}
+                        title={expanded ? strings.timeline_collapse : strings.timeline_expand}
+                        onClick={() => setExpanded((e) => !e)}
+                        className="mt-0.5 rounded p-0.5 text-gray-500 hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-gray-200"
+                    >
+                        <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true" className={`transition-transform ${expanded ? 'rotate-90' : ''}`}>
+                            <path fillRule="evenodd" d="M7.2 14.8a.75.75 0 0 1 0-1.06L10.94 10 7.2 6.26a.75.75 0 1 1 1.06-1.06l4.27 4.27a.75.75 0 0 1 0 1.06l-4.27 4.27a.75.75 0 0 1-1.06 0Z" clipRule="evenodd" />
+                        </svg>
+                    </button>
+                    <div>
+                        <h3 className="font-semibold text-gray-900 dark:text-gray-100">{strings.timeline_title}</h3>
+                        {expanded && <p className="text-xs text-gray-500 dark:text-gray-400">{strings.timeline_hint}</p>}
+                    </div>
                 </div>
                 <div className="flex flex-wrap items-center gap-4">
                     <div role="group" aria-label={strings.timeline_range} className="inline-flex overflow-hidden rounded-md border border-gray-300 dark:border-gray-600 text-xs">
@@ -244,7 +274,7 @@ export default function PullRequestTimeline({ pr, reviews, commits, strings }) {
                 </div>
             </div>
 
-            <div className="mt-3 overflow-x-auto">
+            <div className={`${expanded ? 'mt-3' : 'mt-1'} overflow-x-auto`}>
                 <svg
                     viewBox={`0 0 ${W} ${H}`}
                     className="w-full min-w-[640px] text-gray-700 dark:text-gray-300"
@@ -268,8 +298,12 @@ export default function PullRequestTimeline({ pr, reviews, commits, strings }) {
                     <g fontSize="10" fontWeight="600" className="fill-gray-500 dark:fill-gray-400">
                         <text x="4" y={PLOT_TOP + 12}>{strings.timeline_open_axis}</text>
                         <text x="4" y={PLOT_BOTTOM - 8}>{strings.timeline_fixed_axis}</text>
-                        <text x="4" y={LANE_TOP + 20}>{strings.timeline_commits_axis}</text>
-                        <text x="4" y={LANE_TOP + 34} fontWeight="400">{strings.timeline_without.replace(':branch', target)}</text>
+                        {expanded && (
+                            <>
+                                <text x="4" y={LANE_TOP + 20}>{strings.timeline_commits_axis}</text>
+                                <text x="4" y={LANE_TOP + 34} fontWeight="400">{strings.timeline_without.replace(':branch', target)}</text>
+                            </>
+                        )}
                     </g>
 
                     {slots.filter((s) => s.kind === 'gap').map((s) => (
@@ -340,38 +374,42 @@ export default function PullRequestTimeline({ pr, reviews, commits, strings }) {
 
                     <line x1={X0} x2={X1} y1={zero} y2={zero} strokeWidth="1.5" className="stroke-gray-700 dark:stroke-gray-300" />
 
-                    <rect x={X0} y={LANE_TOP} width={X1 - X0} height={LANE_H} rx="6" className="fill-gray-100 dark:fill-gray-900/60" />
-                    {!commits && (
-                        <text x={X0 + 10} y={LANE_TOP + 20} fontSize="11" className="fill-gray-400 dark:fill-gray-500">{strings.timeline_loading}</text>
-                    )}
-                    {bundles.flatMap((s) => {
-                        const x = bundleX(s);
-                        const regular = s.bundle.filter((c) => !c.merge);
-                        const merges = s.bundle.filter((c) => c.merge);
-                        // Beides im selben Abschnitt: nebeneinander statt übereinander.
-                        const shift = regular.length && merges.length ? 30 : 0;
-                        return [
-                            regular.length > 0 && marker(`b-${regular[0].sha}`, x - shift, regular, false),
-                            merges.length > 0 && marker(`m-${merges[0].sha}`, x + shift, merges, true),
-                        ].filter(Boolean);
-                    })}
+                    {expanded && (
+                        <>
+                            <rect x={X0} y={LANE_TOP} width={X1 - X0} height={LANE_H} rx="6" className="fill-gray-100 dark:fill-gray-900/60" />
+                            {!commits && (
+                                <text x={X0 + 10} y={LANE_TOP + 20} fontSize="11" className="fill-gray-400 dark:fill-gray-500">{strings.timeline_loading}</text>
+                            )}
+                            {bundles.flatMap((s) => {
+                                const x = bundleX(s);
+                                const regular = s.bundle.filter((c) => !c.merge);
+                                const merges = s.bundle.filter((c) => c.merge);
+                                // Beides im selben Abschnitt: nebeneinander statt übereinander.
+                                const shift = regular.length && merges.length ? 30 : 0;
+                                return [
+                                    regular.length > 0 && marker(`b-${regular[0].sha}`, x - shift, regular, false),
+                                    merges.length > 0 && marker(`m-${merges[0].sha}`, x + shift, merges, true),
+                                ].filter(Boolean);
+                            })}
 
-                    <line x1={X0} x2={X1} y1={AXIS_Y} y2={AXIS_Y} className="stroke-gray-300 dark:stroke-gray-600" />
-                    {firstReview && <line x1={firstReview.x} x2={X1} y1={AXIS_Y + 4} y2={AXIS_Y + 4} className="stroke-gray-400 dark:stroke-gray-500" />}
-                    <g fontSize="11" fontWeight="500" textAnchor="middle" className="fill-gray-700 dark:fill-gray-300">
-                        {slots.filter((s) => s.kind === 'day').map((s) => <text key={`d-${s.t}`} x={s.cx} y={AXIS_Y + 18}>{shortDate(s.t)}</text>)}
-                        {reviewDays.map((d) => (
-                            <text key={`rd-${d.t}`} x={(Math.min(...d.xs) + Math.max(...d.xs)) / 2} y={AXIS_Y + 18}>{shortDate(d.t)}</text>
-                        ))}
-                    </g>
-                    <g fontSize="10" textAnchor="middle" className="fill-gray-500 dark:fill-gray-400">
-                        {reviewSlots.map((s) => <text key={`t-${s.run.id}`} x={s.cx} y={AXIS_Y + 34}>{clock(s.run.t)}</text>)}
-                    </g>
+                            <line x1={X0} x2={X1} y1={AXIS_Y} y2={AXIS_Y} className="stroke-gray-300 dark:stroke-gray-600" />
+                            {firstReview && <line x1={firstReview.x} x2={X1} y1={AXIS_Y + 4} y2={AXIS_Y + 4} className="stroke-gray-400 dark:stroke-gray-500" />}
+                            <g fontSize="11" fontWeight="500" textAnchor="middle" className="fill-gray-700 dark:fill-gray-300">
+                                {slots.filter((s) => s.kind === 'day').map((s) => <text key={`d-${s.t}`} x={s.cx} y={AXIS_Y + 18}>{shortDate(s.t)}</text>)}
+                                {reviewDays.map((d) => (
+                                    <text key={`rd-${d.t}`} x={(Math.min(...d.xs) + Math.max(...d.xs)) / 2} y={AXIS_Y + 18}>{shortDate(d.t)}</text>
+                                ))}
+                            </g>
+                            <g fontSize="10" textAnchor="middle" className="fill-gray-500 dark:fill-gray-400">
+                                {reviewSlots.map((s) => <text key={`t-${s.run.id}`} x={s.cx} y={AXIS_Y + 34}>{clock(s.run.t)}</text>)}
+                            </g>
+                        </>
+                    )}
 
                     {tip && <Tooltip tip={tip} />}
                 </svg>
             </div>
-            <p className="mt-2 text-xs text-gray-400 dark:text-gray-500">{strings.timeline_footnote.replace(':branch', target)}</p>
+            {expanded && <p className="mt-2 text-xs text-gray-400 dark:text-gray-500">{strings.timeline_footnote.replace(':branch', target)}</p>}
         </section>
     );
 }

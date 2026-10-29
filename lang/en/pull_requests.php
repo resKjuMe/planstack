@@ -45,6 +45,8 @@ return [
     'description' => 'Description',
     'reviews' => 'Reviews',
     'timeline_title' => 'Open and fixed per review',
+    'timeline_expand' => 'Expand',
+    'timeline_collapse' => 'Collapse',
     'timeline_hint' => 'One slot per review, days without a review are compressed. Commits bundled in their own lane with +/− lines (without merges from the target branch).',
     'timeline_range' => 'Range',
     'timeline_days' => ':count days',
