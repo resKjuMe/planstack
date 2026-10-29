@@ -11,6 +11,7 @@ use App\Models\ReviewFinding;
 use App\Models\User;
 use App\Support\PullRequestApprovals;
 use App\Support\PullRequestCommits;
+use App\Support\PullRequestSkippedFindings;
 use App\Support\PullRequestStateSync;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
@@ -21,6 +22,7 @@ use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response as InertiaResponse;
+use RuntimeException;
 
 /**
  * Pull Requests aus ps-review: die eigenen (reviewt oder geschrieben), per
@@ -193,6 +195,66 @@ class PullRequestController extends Controller
         return back();
     }
 
+    /**
+     * Einzelner Befund: „Fixen“ reiht ihn in den Fix-Lauf ein, „Nicht fixen“
+     * hält die Begründung im PR-Body fest und nimmt ihn aus dem Review.
+     */
+    public function requestFindingFix(Request $request, PullRequest $pullRequest, PullRequestReview $review, ReviewFinding $finding, PullRequestSkippedFindings $skipped): RedirectResponse
+    {
+        $user = $request->user();
+        abort_unless($pullRequest->organization_id === $user->organization_id, 404);
+        abort_unless($review->pull_request_id === $pullRequest->id && $finding->pull_request_review_id === $review->id, 404);
+        abort_unless($this->isFixable($pullRequest, $review), 409);
+
+        $data = $request->validate([
+            'decision' => ['required', Rule::enum(FindingFixDecision::class)],
+            'note' => ['nullable', 'string', 'max:5000'],
+        ]);
+        $note = trim((string) ($data['note'] ?? ''));
+        $skip = $data['decision'] === FindingFixDecision::SKIP->value;
+
+        if ($note === '' && ($skip || $finding->requires_po_decision)) {
+            throw ValidationException::withMessages(['note' => __($finding->requires_po_decision ? 'pull_requests.fix_po_note_required' : 'pull_requests.fix_skip_reason_required')]);
+        }
+
+        if ($skip) {
+            try {
+                $body = $skipped->record($pullRequest, $finding, $note, $user);
+            } catch (RuntimeException $e) {
+                throw ValidationException::withMessages(['note' => $e->getMessage()]);
+            }
+
+            DB::transaction(function () use ($pullRequest, $review, $finding, $body) {
+                $pullRequest->update(['description' => $body]);
+                $counter = 'findings_'.strtolower($finding->level->value);
+                $review->update([
+                    'findings' => max(0, $review->findings - 1),
+                    $counter => max(0, (int) $review->{$counter} - 1),
+                ]);
+                $finding->delete();
+            });
+
+            return back();
+        }
+
+        DB::transaction(function () use ($review, $finding, $note, $user) {
+            $finding->update(['fix_decision' => FindingFixDecision::FIX, 'fix_note' => $note === '' ? null : $note, 'fix_outcome' => null, 'fix_outcome_note' => null]);
+
+            // Ein schon angeforderter Lauf nimmt den Befund mit; sonst startet ein neuer.
+            if ($review->fixStatus() !== 'requested') {
+                $review->update([
+                    'fix_requested_by_id' => $user->id,
+                    'fix_requested_at' => now(),
+                    'fix_started_at' => null,
+                    'fix_finished_at' => null,
+                    'fix_commit_sha' => null,
+                ]);
+            }
+        });
+
+        return back();
+    }
+
     public function show(Request $request, PullRequest $pullRequest): InertiaResponse
     {
         abort_unless($pullRequest->organization_id === $request->user()->organization_id, 404);
@@ -227,11 +289,12 @@ class PullRequestController extends Controller
                     'finishedAt' => $review->fix_finished_at?->toIso8601String(),
                     'commitSha' => $review->fix_commit_sha,
                 ],
-                'fixUrl' => $this->isFixable($pullRequest, $review) ? route('pull-requests.fix', [$pullRequest, $review]) : null,
+                'fixUrl' => ($fixable = $this->isFixable($pullRequest, $review)) ? route('pull-requests.fix', [$pullRequest, $review]) : null,
                 'findings' => $review->findingItems
                     ->sortBy(fn (ReviewFinding $f) => [array_search($f->level->value, ['CRITICAL', 'IMPORTANT', 'HINT'], true), $f->file, $f->line])
                     ->map(fn (ReviewFinding $f) => [
                         'id' => $f->id,
+                        'fixUrl' => $fixable ? route('pull-requests.finding-fix', [$pullRequest, $review, $f]) : null,
                         'level' => $f->level->value,
                         'type' => $f->type->value,
                         'requiresPoDecision' => $f->requires_po_decision,

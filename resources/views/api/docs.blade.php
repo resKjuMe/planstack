@@ -622,7 +622,7 @@ curl -s https://planstack.eskju.net/api/user \
 
         <section id="pull-requests-fix-claim" class="endpoint">
             <div class="route"><span class="method m-post">POST</span><span class="path">/api/pull-requests/<b>{id}</b>/fix/claim</span></div>
-            <p class="desc">Holt den offenen Fix-Lauf des PR ab, angefordert über „Findings fixen“ auf der Detailseite, und vermerkt den Start. Die Antwort enthält <code>review_id</code>, den geprüften <code>commit_sha</code>, <code>requested_by</code> und je Befund <code>decision</code> (FIX · SKIP) und <code>note</code>. Bei Befunden mit <code>requires_po_decision</code> ist <code>note</code> die PO-Entscheidung. Ein laufender Fix-Lauf kann erneut abgeholt werden. <span class="status-pill s2">200</span> · <span class="status-pill s4">404</span> ohne angeforderten Fix</p>
+            <p class="desc">Holt den offenen Fix-Lauf des PR ab, angefordert über „Findings fixen“ auf der Detailseite, und vermerkt den Start. Die Antwort enthält <code>review_id</code>, den geprüften <code>commit_sha</code>, <code>requested_by</code> und je Befund <code>decision</code> (FIX · SKIP) und <code>note</code>. Bei Befunden mit <code>requires_po_decision</code> ist <code>note</code> die PO-Entscheidung. Enthalten sind nur Befunde mit offener Entscheidung (ohne Ergebnis eines früheren Laufs) — nach „Fixen“ an einem einzelnen Befund also ggf. nur dieser. Ein laufender Fix-Lauf kann erneut abgeholt werden. <span class="status-pill s2">200</span> · <span class="status-pill s4">404</span> ohne angeforderten Fix</p>
         </section>
 
         <section id="pull-requests-fix-finish" class="endpoint">

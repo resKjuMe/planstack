@@ -140,7 +140,7 @@ function Review({ review, pr, strings }) {
                 {review.findings.length === 0 ? (
                     <p className="text-sm text-gray-500 dark:text-gray-400">{strings.no_findings}</p>
                 ) : (
-                    review.findings.map((finding) => <Finding key={finding.id} finding={finding} strings={strings} />)
+                    review.findings.map((finding) => <Finding key={finding.id} finding={finding} pr={pr} strings={strings} />)
                 )}
             </div>
 
@@ -174,7 +174,8 @@ function Score({ label, value, reason, tone }) {
     );
 }
 
-function Finding({ finding, strings }) {
+function Finding({ finding, pr, strings }) {
+    const [fixing, setFixing] = useState(false);
     return (
         <article className="rounded-md border border-gray-200 dark:border-gray-700 p-3">
             <div className="flex flex-wrap items-center gap-2 text-sm">
@@ -183,7 +184,18 @@ function Finding({ finding, strings }) {
                     <span className="rounded px-1.5 py-0.5 text-xs font-medium bg-indigo-100 text-indigo-800 dark:bg-indigo-900/40 dark:text-indigo-300">{strings.po_decision}</span>
                 )}
                 <span className="font-medium text-gray-900 dark:text-gray-100">{finding.title}</span>
+                {finding.fixUrl && (
+                    <button
+                        type="button"
+                        onClick={() => setFixing(true)}
+                        title={strings.fix_finding_hint}
+                        className="ml-auto inline-flex items-center rounded-md bg-indigo-600 px-2.5 py-1 text-xs font-semibold text-white hover:bg-indigo-500"
+                    >
+                        {strings.fix_finding}
+                    </button>
+                )}
             </div>
+            {fixing && <FindingFixDialog finding={finding} pr={pr} strings={strings} onClose={() => setFixing(false)} />}
             <div className="mt-1 text-xs font-mono text-gray-500 dark:text-gray-400">
                 {finding.file ? (
                     <a href={finding.fileUrl} target="_blank" rel="noreferrer" className="hover:underline">
@@ -334,12 +346,13 @@ function FixDialog({ review, pr, strings, onClose }) {
     );
 }
 
-function FixStep({ finding, data, error, label, strings, onChange }) {
+function FixStep({ finding, data, error, label, strings, onChange, skipNeedsReason = false }) {
     const po = finding.requiresPoDecision;
+    const reason = skipNeedsReason && !po && data.decision === 'SKIP';
     return (
         <div className="space-y-4">
             <div>
-                <div className="text-xs text-gray-500 dark:text-gray-400">{label}</div>
+                {label && <div className="text-xs text-gray-500 dark:text-gray-400">{label}</div>}
                 <div className="mt-1 flex flex-wrap items-center gap-2 text-sm">
                     <span className={`rounded px-1.5 py-0.5 text-xs font-medium ${LEVEL_TONE[finding.level]}`}>{strings[`level_${finding.level}`]}</span>
                     {po && <span className="rounded px-1.5 py-0.5 text-xs font-medium bg-indigo-100 text-indigo-800 dark:bg-indigo-900/40 dark:text-indigo-300">{strings.po_decision}</span>}
@@ -369,17 +382,66 @@ function FixStep({ finding, data, error, label, strings, onChange }) {
 
             <div>
                 <label htmlFor={`fix-note-${finding.id}`} className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    {po ? strings.fix_po_note : strings.fix_note}
+                    {po ? strings.fix_po_note : reason ? strings.fix_skip_reason : strings.fix_note}
                 </label>
                 <textarea
                     id={`fix-note-${finding.id}`}
                     rows={4}
                     value={data.note}
                     onChange={(e) => onChange('note', e.target.value)}
-                    placeholder={po ? strings.fix_po_note_placeholder : strings.fix_note_placeholder}
+                    placeholder={po ? strings.fix_po_note_placeholder : reason ? strings.fix_skip_reason_placeholder : strings.fix_note_placeholder}
                     className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
                 />
                 {error && <p className="mt-1 text-sm text-red-600 dark:text-red-400">{error}</p>}
+            </div>
+            {skipNeedsReason && data.decision === 'SKIP' && <p className="text-sm text-gray-600 dark:text-gray-400">{strings.fix_skip_hint}</p>}
+        </div>
+    );
+}
+
+// Einzelner Befund: „Fixen“ startet den Fix-Lauf per claudetask:, „Nicht fixen“
+// schreibt die Begründung in den PR-Body und entfernt den Befund.
+function FindingFixDialog({ finding, pr, strings, onClose }) {
+    const form = useForm({ decision: 'FIX', note: finding.fixNote ?? '' });
+    const skip = form.data.decision === 'SKIP';
+
+    const submit = () => form.post(finding.fixUrl, {
+        preserveScroll: true,
+        onSuccess: () => {
+            onClose();
+            if (!skip) window.location.href = fixCommandHref(pr);
+        },
+    });
+
+    const button = 'inline-flex items-center rounded-md px-4 py-2 text-sm font-semibold';
+    return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <div className="fixed inset-0 bg-gray-500/75 dark:bg-gray-900/75" onClick={onClose}></div>
+            <div role="dialog" aria-modal="true" aria-labelledby={`finding-fix-title-${finding.id}`} className="relative flex max-h-[90vh] w-full max-w-2xl flex-col rounded-lg bg-white dark:bg-gray-800 shadow-xl">
+                <header className="border-b border-gray-100 dark:border-gray-700 px-6 py-4">
+                    <h2 id={`finding-fix-title-${finding.id}`} className="text-lg font-medium text-gray-900 dark:text-gray-100">{strings.fix_finding_title}</h2>
+                </header>
+                <div className="overflow-y-auto px-6 py-4">
+                    <FixStep
+                        finding={finding}
+                        data={form.data}
+                        error={form.errors.note}
+                        strings={strings}
+                        skipNeedsReason
+                        onChange={(key, value) => form.setData(key, value)}
+                    />
+                </div>
+                <footer className="flex justify-between gap-3 border-t border-gray-100 dark:border-gray-700 px-6 py-4">
+                    <button type="button" onClick={onClose} className={`${button} border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700`}>{strings.fix_cancel}</button>
+                    <button
+                        type="button"
+                        onClick={submit}
+                        disabled={form.processing}
+                        className={`${button} text-white disabled:opacity-50 ${skip ? 'bg-gray-700 hover:bg-gray-600 dark:bg-gray-600 dark:hover:bg-gray-500' : 'bg-indigo-600 hover:bg-indigo-500'}`}
+                    >
+                        {skip ? strings.fix_skip_submit : strings.fix_submit}
+                    </button>
+                </footer>
             </div>
         </div>
     );

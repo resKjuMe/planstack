@@ -471,4 +471,93 @@ class PullRequestPagesTest extends TestCase
             ->post(route('pull-requests.fix', [$pullRequest, $review]), ['findings' => $this->decisions($review, 'ok')])
             ->assertNotFound();
     }
+
+    public function test_fixing_a_single_finding_requests_a_fix_for_just_that_finding(): void
+    {
+        $me = $this->member('Ich Selbst');
+        [$pullRequest, $review] = $this->reviewWithPoFinding($me);
+        $nit = $review->findingItems()->where('requires_po_decision', false)->sole();
+        $nit->update(['fix_decision' => 'SKIP', 'fix_outcome' => 'SKIPPED']);
+        $po = $review->findingItems()->where('requires_po_decision', true)->sole();
+
+        $this->actingAs($me)
+            ->get(route('pull-requests.show', $pullRequest))
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('reviews.0.findings.0.fixUrl', route('pull-requests.finding-fix', [$pullRequest, $review, $po])));
+
+        $this->actingAs($me)
+            ->post(route('pull-requests.finding-fix', [$pullRequest, $review, $po]), ['decision' => 'FIX', 'note' => ''])
+            ->assertSessionHasErrors('note');
+
+        $this->actingAs($me)
+            ->post(route('pull-requests.finding-fix', [$pullRequest, $review, $po]), ['decision' => 'FIX', 'note' => 'Bestandsdaten bleiben.'])
+            ->assertRedirect();
+
+        $this->assertSame('requested', $review->fresh()->fixStatus());
+        $this->assertSame('FIX', $po->fresh()->fix_decision->value);
+        $this->assertSame('Bestandsdaten bleiben.', $po->fresh()->fix_note);
+        $this->assertSame('SKIPPED', $nit->fresh()->fix_outcome->value);
+    }
+
+    public function test_skipping_a_single_finding_records_the_reason_in_the_pr_body_and_removes_it(): void
+    {
+        config(['planstack.github_token' => 'test-token', 'planstack.github_api' => 'https://api.github.com']);
+        Http::fake([
+            'api.github.com/repos/clockodo-intern/main/pulls/31' => Http::sequence()
+                ->push(['body' => "Beschreibung\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)"])
+                ->push(['number' => 31]),
+        ]);
+        $me = $this->member('Ich Selbst');
+        [$pullRequest, $review] = $this->reviewWithPoFinding($me);
+        $review->update(['findings_hint' => 1, 'findings_important' => 1]);
+        $nit = $review->findingItems()->where('requires_po_decision', false)->sole();
+
+        $this->actingAs($me)
+            ->post(route('pull-requests.finding-fix', [$pullRequest, $review, $nit]), ['decision' => 'SKIP', 'note' => ' '])
+            ->assertSessionHasErrors('note');
+        Http::assertNothingSent();
+
+        $this->actingAs($me)
+            ->post(route('pull-requests.finding-fix', [$pullRequest, $review, $nit]), ['decision' => 'SKIP', 'note' => 'Bewusst so belassen.'])
+            ->assertRedirect()
+            ->assertSessionHasNoErrors();
+
+        Http::assertSent(fn ($request) => $request->method() === 'PATCH'
+            && str_contains($request['body'], "## Review-Entscheidungen\n\n### Nicht umgesetzt\n\n- **Nit** (Hinweis): Bewusst so belassen. — Ich Selbst")
+            && str_ends_with($request['body'], '🤖 Generated with [Claude Code](https://claude.com/claude-code)'));
+        $this->assertNull($nit->fresh());
+        $review->refresh();
+        $this->assertSame(1, $review->findings);
+        $this->assertSame(0, $review->findings_hint);
+        $this->assertSame(1, $review->findings_important);
+        $this->assertStringContainsString('Bewusst so belassen.', $pullRequest->fresh()->description);
+    }
+
+    public function test_a_finding_stays_when_github_rejects_the_pr_body(): void
+    {
+        config(['planstack.github_token' => 'test-token', 'planstack.github_api' => 'https://api.github.com']);
+        Http::fake(['api.github.com/*' => Http::response([], 403)]);
+        $me = $this->member('Ich Selbst');
+        [$pullRequest, $review] = $this->reviewWithPoFinding($me);
+        $nit = $review->findingItems()->where('requires_po_decision', false)->sole();
+
+        $this->actingAs($me)
+            ->post(route('pull-requests.finding-fix', [$pullRequest, $review, $nit]), ['decision' => 'SKIP', 'note' => 'Bewusst so belassen.'])
+            ->assertSessionHasErrors('note');
+
+        $this->assertNotNull($nit->fresh());
+        $this->assertSame(2, $review->fresh()->findings);
+    }
+
+    public function test_a_finding_of_another_review_is_not_found(): void
+    {
+        $me = $this->member('Ich Selbst');
+        [$pullRequest, $review] = $this->reviewWithPoFinding($me);
+        $this->review($other = $this->pullRequest(32), $me);
+        $foreign = $other->reviews()->sole()->findingItems()->sole();
+
+        $this->actingAs($me)
+            ->post(route('pull-requests.finding-fix', [$pullRequest, $review, $foreign]), ['decision' => 'FIX'])
+            ->assertNotFound();
+    }
 }

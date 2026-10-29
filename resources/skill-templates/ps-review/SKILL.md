@@ -491,6 +491,7 @@ PR auflösen und UPSERT wie in Schritt 1 (rein lesend, `PRID` aus der Antwort), 
 curl -s -w '\n%{http_code}\n' -X POST "$BASE/pull-requests/$PRID/fix/claim" "${AUTH[@]}"
 # 200: data.review_id, data.commit_sha (geprüfter Stand), data.requested_by, data.requested_at,
 #      data.findings[] mit id, level, type, requires_po_decision, file, line, title, message, decision, note
+#      (nur noch offene Entscheidungen — bei „Fixen“ an einem einzelnen Befund ggf. nur einer)
 # 404: kein Fix angefordert → abbrechen und das melden
 ```
 
@@ -528,7 +529,7 @@ Review vom <Datum> (<Planstack-URL>), umgesetzt in <sha7>.
 - **<Titel>:** <PO-Entscheidung> (<requested_by>, <Datum>)
 ```
 
-Leere Anmerkung → nur „Fixen“ bzw. „Nicht fixen“. `### PO-Entscheidungen` entfällt ohne PO-Befunde. Gab es den Abschnitt schon aus einem früheren Fix, bleiben dessen PO-Entscheidungen stehen; neue kommen dazu.
+Leere Anmerkung → nur „Fixen“ bzw. „Nicht fixen“. `### PO-Entscheidungen` entfällt ohne PO-Befunde. Gab es den Abschnitt schon aus einem früheren Fix, bleiben dessen PO-Entscheidungen stehen; neue kommen dazu. Ein vorhandenes `### Nicht umgesetzt` (Planstack trägt dort einzeln verworfene Befunde samt Begründung ein) bleibt unverändert erhalten.
 
 #### F4. Fix in Planstack abschließen
 
