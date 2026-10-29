@@ -107,11 +107,12 @@ class PullRequestStateSyncTest extends TestCase
 
         Http::fake([
             'api.github.com/graphql' => Http::response(['data' => ['repository' => [
-                'pr1' => $node(['ci' => $ci([
+                'pr1' => $node(['mergeable' => 'CONFLICTING', 'ci' => $ci([
                     ['__typename' => 'CheckRun', 'name' => '[BE] Unit Tests', 'status' => 'COMPLETED', 'conclusion' => 'FAILURE'],
+                    ['__typename' => 'StatusContext', 'context' => 'deploy/preview', 'state' => 'ERROR'],
                     ['__typename' => 'CheckRun', 'name' => '[FE] Main | Unit', 'status' => 'IN_PROGRESS', 'conclusion' => null],
                 ])]),
-                'pr2' => $node(['ci' => $ci([
+                'pr2' => $node(['mergeable' => 'UNKNOWN', 'ci' => $ci([
                     ['__typename' => 'CheckRun', 'name' => '[BE] Unit Tests', 'status' => 'COMPLETED', 'conclusion' => 'SUCCESS'],
                     ['__typename' => 'StatusContext', 'context' => 'deploy/preview', 'state' => 'PENDING'],
                     ['__typename' => 'CheckRun', 'name' => 'pr-bot / Review Requirement', 'status' => 'COMPLETED', 'conclusion' => 'FAILURE'],
@@ -128,7 +129,11 @@ class PullRequestStateSyncTest extends TestCase
         app(PullRequestStateSync::class)->sync();
 
         $this->assertSame('failed', $failed->refresh()->ci_state);
+        $this->assertSame(['[BE] Unit Tests', 'deploy/preview'], $failed->ci_failed_checks);
+        $this->assertSame('CONFLICTING', $failed->mergeable);
         $this->assertSame('running', $running->refresh()->ci_state);
+        $this->assertNull($running->ci_failed_checks);
+        $this->assertNull($running->mergeable);
         $this->assertSame('success', $gatesOnly->refresh()->ci_state);
         $this->assertNull($noChecks->refresh()->ci_state);
     }

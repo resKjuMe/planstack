@@ -302,6 +302,8 @@ class PullRequestController extends Controller
             'targetBranch' => $pr->target_branch,
             'state' => $pr->state->value,
             'ciState' => $pr->ci_state,
+            'ciFailedChecks' => $pr->ci_failed_checks ?? [],
+            'conflicting' => $pr->mergeable === 'CONFLICTING',
             'changedFiles' => $pr->changed_files,
             'additions' => $pr->additions,
             'deletions' => $pr->deletions,
