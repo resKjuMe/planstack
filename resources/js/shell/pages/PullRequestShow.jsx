@@ -88,7 +88,7 @@ function Review({ review, pr, strings }) {
     const [fixing, setFixing] = useState(false);
     if (review.status !== 'finished') {
         return (
-            <section className="bg-white dark:bg-gray-800 rounded-lg shadow px-5 py-3 flex flex-wrap items-center gap-3">
+            <section id={`review-${review.id}`} className="scroll-mt-4 bg-white dark:bg-gray-800 rounded-lg shadow px-5 py-3 flex flex-wrap items-center gap-3">
                 {review.status === 'running' ? (
                     <RunningBadge running={review} strings={strings} />
                 ) : (
@@ -104,7 +104,7 @@ function Review({ review, pr, strings }) {
 
     const duration = formatDuration(review.startedAt, review.finishedAt);
     return (
-        <section className="bg-white dark:bg-gray-800 rounded-lg shadow">
+        <section id={`review-${review.id}`} className="scroll-mt-4 bg-white dark:bg-gray-800 rounded-lg shadow">
             <header className="flex flex-wrap items-center gap-3 border-b border-gray-100 dark:border-gray-700 px-5 py-3">
                 <DecisionBadge decision={review.decision} strings={strings} />
                 <FindingCounts review={review} />
