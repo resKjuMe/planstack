@@ -168,7 +168,7 @@ export default function PullRequestTimeline({ pr, reviews, commits, strings }) {
         y: LANE_TOP - 6,
         lines: [
             ...bundle.slice(0, 8).map((c) => ({
-                text: `${c.sha.slice(0, 7)}  ${c.merge ? `${target} ↓` : `+${c.additions} −${c.deletions}`}  ${clock(c.t)}`,
+                text: `${c.sha.slice(0, 7)}  ${c.merge ? '↓' : `+${c.additions} −${c.deletions}`}  ${clock(c.t)}`,
                 mono: true,
             })),
             ...(bundle.length > 8 ? [{ text: strings.timeline_more.replace(':count', bundle.length - 8) }] : []),
@@ -198,7 +198,7 @@ export default function PullRequestTimeline({ pr, reviews, commits, strings }) {
                 )}
                 <text x={x} y={LANE_TOP + 40} fontSize="10" fontFamily="ui-monospace, Menlo, monospace" textAnchor="middle">
                     {merge ? (
-                        <tspan className="fill-gray-500 dark:fill-gray-400">{`${target} ↓`}</tspan>
+                        <tspan className="fill-gray-500 dark:fill-gray-400">↓</tspan>
                     ) : (
                         <>
                             <tspan x={x} className="fill-green-700 dark:fill-green-400">{`+${list.reduce((n, c) => n + c.additions, 0)}`}</tspan>
