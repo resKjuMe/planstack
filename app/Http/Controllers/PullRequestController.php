@@ -10,6 +10,7 @@ use App\Models\PullRequestReview;
 use App\Models\ReviewFinding;
 use App\Models\User;
 use App\Support\PullRequestApprovals;
+use App\Support\PullRequestCommits;
 use App\Support\PullRequestStateSync;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
@@ -247,6 +248,8 @@ class PullRequestController extends Controller
                         'fixOutcomeNote' => $f->fix_outcome_note,
                     ])->values(),
             ])->values(),
+            // Der GitHub-Abruf soll den ersten Seitenaufbau nicht bremsen.
+            'commitHistory' => Inertia::defer(fn () => app(PullRequestCommits::class)->for($pullRequest)),
             'backUrl' => route('pull-requests.index'),
             'strings' => __('pull_requests'),
         ]);
