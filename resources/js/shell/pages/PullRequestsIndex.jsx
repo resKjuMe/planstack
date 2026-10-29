@@ -229,15 +229,15 @@ export default function PullRequestsIndex({ filters, filterUrls, grouped: initia
                                     <tr>
                                         <SortHeader id="title" sort={sort} onSort={toggleSort}>{strings.col_pr}</SortHeader>
                                         <SortHeader id="author" sort={sort} onSort={toggleSort} title={strings.col_author} narrow><ColumnIcon name="author" /></SortHeader>
-                                        <SortHeader id="size" sort={sort} onSort={toggleSort} align="right">{strings.col_size}</SortHeader>
-                                        <SortHeader id="approvals" sort={sort} onSort={toggleSort} title={strings.approvals_hint}>{strings.approvals}</SortHeader>
-                                        <SortHeader id="decision" sort={sort} onSort={toggleSort} title={strings.col_decision}><ColumnIcon name="decision" /></SortHeader>
-                                        <SortHeader id="findings" sort={sort} onSort={toggleSort} title={`${strings.findings}: ${strings.level_CRITICAL} / ${strings.level_IMPORTANT} / ${strings.level_HINT}`}><ColumnIcon name="findings" /></SortHeader>
-                                        <SortHeader id="criticality" sort={sort} onSort={toggleSort} title={strings.col_criticality}><ColumnIcon name="criticality" /></SortHeader>
-                                        <SortHeader id="aiReviewability" sort={sort} onSort={toggleSort} title={strings.col_ai_reviewability}><ColumnIcon name="aiReviewability" /></SortHeader>
-                                        <SortHeader id="poReviewLikelihood" sort={sort} onSort={toggleSort} title={`${strings.col_po_review_likelihood}: ${strings.po_review_likelihood_hint}`}><ColumnIcon name="poReviewLikelihood" /></SortHeader>
-                                        <SortHeader id="need" sort={sort} onSort={toggleSort} title={`${strings.col_need}: ${strings.need_hint}`} align="right"><ColumnIcon name="need" /></SortHeader>
-                                        <SortHeader id="reviewedAt" sort={sort} onSort={toggleSort} title={strings.col_reviewed_at}><ColumnIcon name="reviewedAt" /></SortHeader>
+                                        <SortHeader id="size" sort={sort} onSort={toggleSort} title={strings.col_size} narrow><ColumnIcon name="size" /></SortHeader>
+                                        <SortHeader id="approvals" sort={sort} onSort={toggleSort} title={`${strings.approvals}: ${strings.approvals_hint}`} narrow><ColumnIcon name="approvals" /></SortHeader>
+                                        <SortHeader id="decision" sort={sort} onSort={toggleSort} title={strings.col_decision} narrow><ColumnIcon name="decision" /></SortHeader>
+                                        <SortHeader id="findings" sort={sort} onSort={toggleSort} title={`${strings.findings}: ${strings.level_CRITICAL} / ${strings.level_IMPORTANT} / ${strings.level_HINT}`} narrow><ColumnIcon name="findings" /></SortHeader>
+                                        <SortHeader id="criticality" sort={sort} onSort={toggleSort} title={strings.col_criticality} narrow><ColumnIcon name="criticality" /></SortHeader>
+                                        <SortHeader id="aiReviewability" sort={sort} onSort={toggleSort} title={strings.col_ai_reviewability} narrow><ColumnIcon name="aiReviewability" /></SortHeader>
+                                        <SortHeader id="poReviewLikelihood" sort={sort} onSort={toggleSort} title={`${strings.col_po_review_likelihood}: ${strings.po_review_likelihood_hint}`} narrow><ColumnIcon name="poReviewLikelihood" /></SortHeader>
+                                        <SortHeader id="need" sort={sort} onSort={toggleSort} title={`${strings.col_need}: ${strings.need_hint}`} narrow><ColumnIcon name="need" /></SortHeader>
+                                        <SortHeader id="reviewedAt" sort={sort} onSort={toggleSort} title={strings.col_reviewed_at} narrow><ColumnIcon name="reviewedAt" /></SortHeader>
                                     </tr>
                                 </thead>
                                 {sections.map((section) => (
@@ -294,10 +294,10 @@ function Pills({ current, urls, label }) {
     );
 }
 
-function SortHeader({ id, sort, onSort, children, title, align = 'left', narrow = false }) {
+function SortHeader({ id, sort, onSort, children, title, narrow = false }) {
     const active = sort.key === id;
     return (
-        <th className={`${narrow ? 'w-px px-1' : 'px-2'} py-2 font-medium whitespace-nowrap ${align === 'right' ? 'text-right' : ''}`} title={title}>
+        <th className={`${narrow ? 'w-px px-1 text-center' : 'px-2'} py-2 font-medium whitespace-nowrap`} title={title}>
             <button type="button" onClick={() => onSort(id)} className={`uppercase tracking-wide ${active ? 'text-gray-900 dark:text-gray-100' : ''}`}>
                 {children}{active ? (sort.dir === 'desc' ? ' ↓' : ' ↑') : ''}
             </button>
@@ -344,6 +344,8 @@ function Row({ pr, level, stack, canShare, strings }) {
     const review = pr.review;
     const now = useNow();
     const cell = 'px-2 py-1.5 whitespace-nowrap';
+    // Spalten rechts vom Titel: nur so breit wie ihr Inhalt.
+    const narrow = 'w-px px-1 py-1.5 whitespace-nowrap';
     const open = pr.state === 'OPEN';
     const ci = open ? CI_ROW[pr.ciState] : null;
     const failedChecks = open && pr.ciState === 'failed' ? pr.ciFailedChecks : [];
@@ -377,26 +379,26 @@ function Row({ pr, level, stack, canShare, strings }) {
                     </div>
                 </div>
             </td>
-            <td className="w-px px-1 py-1.5 whitespace-nowrap text-gray-700 dark:text-gray-300" title={pr.author ?? undefined}>{initials(pr.author)}</td>
-            <td className={`${cell} text-right font-mono text-[11px] leading-tight`} title={`${pr.changedFiles} ${strings.files}`}>
+            <td className={`${narrow} text-gray-700 dark:text-gray-300`} title={pr.author ?? undefined}>{initials(pr.author)}</td>
+            <td className={`${narrow} text-right font-mono text-[11px] leading-tight`} title={`${pr.changedFiles} ${strings.files}`}>
                 <div className="text-green-600 dark:text-green-400">+{pr.additions}</div>
                 <div className="text-red-600 dark:text-red-400">−{pr.deletions}</div>
             </td>
-            <td className={cell}><ApprovalChips approvals={pr.approvals} strings={strings} /></td>
+            <td className={narrow}><ApprovalChips approvals={pr.approvals} strings={strings} /></td>
             {review ? (
                 <>
-                    <td className={cell}>
+                    <td className={narrow}>
                         <span className="inline-flex items-center gap-1.5">
                             <DecisionIcon decision={review.decision} strings={strings} />
                             <ReviewStartLink pr={pr} strings={strings} />
                         </span>
                     </td>
-                    <td className={cell}><FindingCounts review={review} /></td>
-                    <td className={cell}><ScoreBar value={review.criticality} title={review.criticalityReason} tone="risk" /></td>
-                    <td className={cell}><ScoreBar value={review.aiReviewability} title={review.aiReviewabilityReason} tone="ai" /></td>
-                    <td className={cell}><ScoreBar value={review.poReviewLikelihood} title={review.poReviewLikelihoodReason} tone="po" /></td>
-                    <td className={`${cell} text-right font-mono text-xs text-gray-700 dark:text-gray-300`} title={strings.need_hint}>{Math.round(review.needScore / 100)}</td>
-                    <td className={`${cell} text-xs text-gray-500 dark:text-gray-400`} title={formatDate(review.reviewedAt)}>{formatRelative(review.reviewedAt, now, strings)}</td>
+                    <td className={narrow}><FindingCounts review={review} /></td>
+                    <td className={narrow}><ScoreBar value={review.criticality} title={review.criticalityReason} tone="risk" /></td>
+                    <td className={narrow}><ScoreBar value={review.aiReviewability} title={review.aiReviewabilityReason} tone="ai" /></td>
+                    <td className={narrow}><ScoreBar value={review.poReviewLikelihood} title={review.poReviewLikelihoodReason} tone="po" /></td>
+                    <td className={`${narrow} text-right font-mono text-xs text-gray-700 dark:text-gray-300`} title={strings.need_hint}>{Math.round(review.needScore / 100)}</td>
+                    <td className={`${narrow} text-xs text-gray-500 dark:text-gray-400`} title={formatDate(review.reviewedAt)}>{formatRelative(review.reviewedAt, now, strings)}</td>
                 </>
             ) : (
                 <td colSpan={7} className={`${cell} text-xs text-gray-400 dark:text-gray-500`}>
