@@ -228,7 +228,7 @@ export default function PullRequestsIndex({ filters, filterUrls, grouped: initia
                                 <thead className="bg-gray-50 dark:bg-gray-900/40 text-left text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">
                                     <tr>
                                         <SortHeader id="title" sort={sort} onSort={toggleSort}>{strings.col_pr}</SortHeader>
-                                        <SortHeader id="author" sort={sort} onSort={toggleSort}>{strings.col_author}</SortHeader>
+                                        <SortHeader id="author" sort={sort} onSort={toggleSort} title={strings.col_author} narrow><ColumnIcon name="author" /></SortHeader>
                                         <SortHeader id="size" sort={sort} onSort={toggleSort} align="right">{strings.col_size}</SortHeader>
                                         <SortHeader id="approvals" sort={sort} onSort={toggleSort} title={strings.approvals_hint}>{strings.approvals}</SortHeader>
                                         <SortHeader id="decision" sort={sort} onSort={toggleSort} title={strings.col_decision}><ColumnIcon name="decision" /></SortHeader>
@@ -294,10 +294,10 @@ function Pills({ current, urls, label }) {
     );
 }
 
-function SortHeader({ id, sort, onSort, children, title, align = 'left' }) {
+function SortHeader({ id, sort, onSort, children, title, align = 'left', narrow = false }) {
     const active = sort.key === id;
     return (
-        <th className={`px-2 py-2 font-medium whitespace-nowrap ${align === 'right' ? 'text-right' : ''}`} title={title}>
+        <th className={`${narrow ? 'w-px px-1' : 'px-2'} py-2 font-medium whitespace-nowrap ${align === 'right' ? 'text-right' : ''}`} title={title}>
             <button type="button" onClick={() => onSort(id)} className={`uppercase tracking-wide ${active ? 'text-gray-900 dark:text-gray-100' : ''}`}>
                 {children}{active ? (sort.dir === 'desc' ? ' ↓' : ' ↑') : ''}
             </button>
@@ -377,7 +377,7 @@ function Row({ pr, level, stack, canShare, strings }) {
                     </div>
                 </div>
             </td>
-            <td className={`${cell} text-gray-700 dark:text-gray-300`} title={pr.author ?? undefined}>{initials(pr.author)}</td>
+            <td className="w-px px-1 py-1.5 whitespace-nowrap text-gray-700 dark:text-gray-300" title={pr.author ?? undefined}>{initials(pr.author)}</td>
             <td className={`${cell} text-right font-mono text-[11px] leading-tight`} title={`${pr.changedFiles} ${strings.files}`}>
                 <div className="text-green-600 dark:text-green-400">+{pr.additions}</div>
                 <div className="text-red-600 dark:text-red-400">−{pr.deletions}</div>
