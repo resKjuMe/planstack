@@ -4,7 +4,7 @@ import AppShell from '../AppShell.jsx';
 import { useNow } from '../../board/useNow.js';
 import Flash from '../components/Flash.jsx';
 import PageBands from '../components/PageBands.jsx';
-import { ApprovalChips, ColumnIcon, StackedIcon, DecisionIcon, FindingCounts, PoBadge, RunningDot, ScoreBar, StateBadge, formatDate, formatRelative, ReviewStartLink, usePullRequestLiveReload } from '../components/PullRequestParts.jsx';
+import { ApprovalChips, ColumnIcon, StackedIcon, DecisionIcon, FindingCounts, JiraTitle, PoBadge, RunningDot, ScoreBar, StateBadge, formatDate, formatRelative, ReviewStartLink, usePullRequestLiveReload } from '../components/PullRequestParts.jsx';
 
 // Eigene Pull Requests aus ps-review. Filter (Status, Rolle) laufen über den
 // Server, Aufteilung und Sortierung clientseitig. Gruppen: laufende Reviews, was
@@ -352,9 +352,12 @@ function Row({ pr, level, stack, canShare, strings }) {
                     {/* Fehlgeschlagene Steps bündig unter dem Titel. */}
                     <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2 min-w-0">
-                            <Link href={pr.showUrl} title={pr.title} className="truncate font-medium text-gray-900 dark:text-gray-100 hover:text-indigo-600 dark:hover:text-indigo-400">
-                                {pr.title}
-                            </Link>
+                            <span title={pr.title} className="truncate font-medium text-gray-900 dark:text-gray-100">
+                                <JiraTitle
+                                    title={pr.title}
+                                    renderText={(text) => <Link href={pr.showUrl} className="hover:text-indigo-600 dark:hover:text-indigo-400">{text}</Link>}
+                                />
+                            </span>
                             <PoBadge count={pr.review?.poDecisions} strings={strings} />
                             {pr.state !== 'OPEN' && <StateBadge state={pr.state} strings={strings} />}
                             {pr.running && <RunningDot running={pr.running} strings={strings} />}

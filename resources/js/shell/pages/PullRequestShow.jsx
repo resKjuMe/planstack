@@ -3,7 +3,7 @@ import { Head, Link, useForm } from '@inertiajs/react';
 import AppShell from '../AppShell.jsx';
 import PageBands from '../components/PageBands.jsx';
 import PullRequestTimeline from '../components/PullRequestTimeline.jsx';
-import { ApprovalPanel, PoBadge, StackedIcon, DecisionBadge, FindingCounts, LEVEL_TONE, Markdown, RunningBadge, ScoreBar, StateBadge, fixCommandHref, formatDate, formatDuration, usePullRequestLiveReload } from '../components/PullRequestParts.jsx';
+import { ApprovalPanel, PoBadge, StackedIcon, DecisionBadge, FindingCounts, JiraTitle, LEVEL_TONE, Markdown, RunningBadge, ScoreBar, StateBadge, fixCommandHref, formatDate, formatDuration, usePullRequestLiveReload } from '../components/PullRequestParts.jsx';
 
 // Detailseite eines Pull Requests: Metadaten, Beschreibung und alle Reviews
 // (neuestes oben) mit Zusammenfassung und Befunden. Markdown rendert der Server.
@@ -20,7 +20,7 @@ export default function PullRequestShow({ pullRequest: pr, reviews, commitHistor
                         <Link href={backUrl} className="text-xs text-indigo-600 dark:text-indigo-400 hover:underline">← {strings.back}</Link>
                         <h2 className="font-semibold text-xl text-gray-800 dark:text-gray-100 leading-tight">
                             <StackedIcon pr={pr} strings={strings} className="h-5 w-5" />
-                            {pr.title}
+                            <JiraTitle title={pr.title} />
                         </h2>
                         <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-gray-500 dark:text-gray-400">
                             <StateBadge state={pr.state} strings={strings} />
