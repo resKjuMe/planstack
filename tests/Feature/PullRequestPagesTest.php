@@ -306,6 +306,35 @@ class PullRequestPagesTest extends TestCase
             ->assertInertia(fn (Assert $page) => $page->where('grouped', false));
     }
 
+    public function test_hidden_pull_requests_leave_only_my_lists(): void
+    {
+        $me = $this->member('Ich Selbst');
+        $colleague = $this->member('Kollegin');
+        $pullRequest = $this->pullRequest(1, ['author_id' => $me->id, 'shared_at' => now()]);
+        $this->pullRequest(2, ['author_id' => $me->id]);
+
+        $this->actingAs($me)->post(route('pull-requests.hide', $pullRequest))->assertRedirect();
+
+        $this->actingAs($me)->get(route('pull-requests.index', ['role' => 'authored']))
+            ->assertInertia(fn (Assert $page) => $page
+                ->has('pullRequests', 1)
+                ->where('pullRequests.0.number', 2)
+                ->where('hiddenCount', 1));
+        $this->actingAs($me)->get(route('pull-requests.index', ['role' => 'authored', 'hidden' => 1]))
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('filters.hidden', true)
+                ->has('pullRequests', 1)
+                ->where('pullRequests.0.number', 1));
+        $this->actingAs($me)->get(route('pull-requests.show', $pullRequest))
+            ->assertInertia(fn (Assert $page) => $page->where('pullRequest.hidden', true));
+        $this->actingAs($colleague)->get(route('pull-requests.index', ['role' => 'shared']))
+            ->assertInertia(fn (Assert $page) => $page->has('pullRequests', 1)->where('hiddenCount', 0));
+
+        $this->actingAs($me)->post(route('pull-requests.hide', $pullRequest))->assertRedirect();
+        $this->actingAs($me)->get(route('pull-requests.index', ['role' => 'authored']))
+            ->assertInertia(fn (Assert $page) => $page->has('pullRequests', 2)->where('hiddenCount', 0));
+    }
+
     public function test_only_the_author_can_share(): void
     {
         $author = $this->member('Autor');

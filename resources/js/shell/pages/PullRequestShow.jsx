@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Head, Link, useForm } from '@inertiajs/react';
+import { Head, Link, router, useForm } from '@inertiajs/react';
 import AppShell from '../AppShell.jsx';
 import PageBands from '../components/PageBands.jsx';
 import PullRequestTimeline from '../components/PullRequestTimeline.jsx';
@@ -27,6 +27,7 @@ export default function PullRequestShow({ pullRequest: pr, reviews, commitHistor
                             <a href={pr.githubUrl} target="_blank" rel="noreferrer" className="font-mono hover:underline">{pr.repository}#{pr.number} ↗</a>
                             <span className="font-mono">{pr.branch} → {pr.targetBranch}</span>
                             {pr.author && <span>{pr.author}</span>}
+                            <HideToggle pr={pr} strings={strings} />
                         </div>
                     </div>
                 }
@@ -72,6 +73,27 @@ export default function PullRequestShow({ pullRequest: pr, reviews, commitHistor
                 </div>
             </div>
         </>
+    );
+}
+
+// PR in den eigenen Listen aus- bzw. wieder einblenden.
+function HideToggle({ pr, strings }) {
+    const toggle = () => router.post(pr.hideUrl, {}, { preserveScroll: true, preserveState: true });
+    return (
+        <button
+            type="button"
+            onClick={toggle}
+            title={pr.hidden ? strings.unhide_hint : strings.hide_hint}
+            aria-pressed={pr.hidden}
+            className={`ml-auto inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-medium border shadow-sm ${pr.hidden
+                ? 'bg-amber-50 border-amber-200 text-amber-800 hover:bg-amber-100 dark:bg-amber-900/30 dark:border-amber-700 dark:text-amber-300'
+                : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700'}`}
+        >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-3.5 w-3.5" aria-hidden="true">
+                {pr.hidden ? <><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" /><circle cx="12" cy="12" r="3" /></> : <path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19M14.12 14.12a3 3 0 11-4.24-4.24M1 1l22 22" />}
+            </svg>
+            {pr.hidden ? strings.unhide : strings.hide}
+        </button>
     );
 }
 

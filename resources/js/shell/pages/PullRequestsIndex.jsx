@@ -129,7 +129,7 @@ const section = (pr) => {
     return 'reviewed';
 };
 
-export default function PullRequestsIndex({ filters, filterUrls, grouped: initialGrouped, groupingUrl, syncUrl, skillDownloadUrl, flash, pullRequests, strings }) {
+export default function PullRequestsIndex({ filters, filterUrls, hiddenCount, grouped: initialGrouped, groupingUrl, syncUrl, skillDownloadUrl, flash, pullRequests, strings }) {
     const [sort, setSort] = useState({ key: 'title', dir: 'asc' });
     const [syncing, setSyncing] = useState(false);
     const [grouped, setGrouped] = useState(initialGrouped);
@@ -174,6 +174,22 @@ export default function PullRequestsIndex({ filters, filterUrls, grouped: initia
                         <div className="flex flex-wrap items-center gap-2">
                             <Pills current={filters.role} urls={filterUrls.role} label={(r) => (r === filters.role ? <>{strings[`role_${r}`]} <span className="opacity-75">({pullRequests.length})</span></> : strings[`role_${r}`])} />
                             <Pills current={filters.state} urls={filterUrls.state} label={(s) => strings[`state_${s}`]} />
+                            {(hiddenCount > 0 || filters.hidden) && (
+                                <Link
+                                    href={filterUrls.hidden}
+                                    preserveScroll
+                                    aria-pressed={filters.hidden}
+                                    title={strings.hidden_filter_hint}
+                                    className={`inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium border shadow-sm ${filters.hidden
+                                        ? 'bg-indigo-600 border-indigo-600 text-white hover:bg-indigo-700'
+                                        : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700'}`}
+                                >
+                                    <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                                        <path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19M14.12 14.12a3 3 0 11-4.24-4.24M1 1l22 22" />
+                                    </svg>
+                                    {strings.hidden_filter} <span className="opacity-75">({hiddenCount})</span>
+                                </Link>
+                            )}
                             <button
                                 type="button"
                                 onClick={toggleGrouped}

@@ -153,4 +153,10 @@ return [
     'fix_skip_submit' => 'Dismiss',
     'fix_skip_no_token' => 'No GitHub token configured – cannot update the PR description.',
     'fix_skip_github_failed' => 'Could not update the PR description on GitHub (:status).',
+    'hide' => 'Hide',
+    'hide_hint' => 'Hide this PR in your lists',
+    'unhide' => 'Unhide',
+    'unhide_hint' => 'Hidden in your lists – click to show it again',
+    'hidden_filter' => 'Hidden',
+    'hidden_filter_hint' => 'Show only the PRs hidden in your lists',
 ];
