@@ -3,6 +3,7 @@ import { Head, Link, router } from '@inertiajs/react';
 import AppShell from '../AppShell.jsx';
 import { useNow } from '../../board/useNow.js';
 import Flash from '../components/Flash.jsx';
+import StatusToast from '../components/StatusToast.jsx';
 import PageBands from '../components/PageBands.jsx';
 import { ApprovalChips, ColumnIcon, StackedIcon, DecisionIcon, FindingCounts, JiraTitle, PoBadge, RunningDot, ScoreBar, StateBadge, formatDate, formatRelative, ReviewStartLink, usePullRequestLiveReload } from '../components/PullRequestParts.jsx';
 
@@ -217,7 +218,8 @@ export default function PullRequestsIndex({ filters, filterUrls, grouped: initia
 
             <div className="py-8">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <Flash status={flash?.status} error={flash?.error} />
+                    <Flash error={flash?.error} />
+                    <StatusToast flash={flash} />
                     {pullRequests.length === 0 ? (
                         <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-8 text-center text-gray-500 dark:text-gray-400">
                             {strings.empty}
