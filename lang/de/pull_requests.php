@@ -153,4 +153,10 @@ return [
     'fix_skip_submit' => 'Verwerfen',
     'fix_skip_no_token' => 'Kein GitHub-Token konfiguriert – PR-Body lässt sich nicht aktualisieren.',
     'fix_skip_github_failed' => 'PR-Body konnte auf GitHub nicht aktualisiert werden (:status).',
+    'hide' => 'Ausblenden',
+    'hide_hint' => 'Diesen PR in deinen Listen ausblenden',
+    'unhide' => 'Einblenden',
+    'unhide_hint' => 'In deinen Listen ausgeblendet – klicken zum Wieder-Einblenden',
+    'hidden_filter' => 'Ausgeblendete',
+    'hidden_filter_hint' => 'Nur die in deinen Listen ausgeblendeten PRs zeigen',
 ];

@@ -39,9 +39,9 @@ class PullRequestController extends Controller
     public function index(Request $request): InertiaResponse
     {
         $user = $request->user();
-        [$state, $role] = $this->filters($request);
+        [$state, $role, $hidden] = $this->filters($request);
 
-        $pullRequests = $this->listQuery($user, $role, $state)
+        $pullRequests = $this->listQuery($user, $role, $state, $hidden)
             ->with(['author', 'latestReview', 'runningReview.reviewer', 'approvals.user'])
             ->withCount('reviews')
             ->latest('updated_at')
@@ -57,11 +57,13 @@ class PullRequestController extends Controller
         $pullRequests->each(fn (PullRequest $pr) => $pr->latestReview?->setAttribute('po_decisions_count', (int) ($poCounts[$pr->latestReview->id] ?? 0)));
 
         return Inertia::render('PullRequestsIndex', [
-            'filters' => ['state' => $state, 'role' => $role],
+            'filters' => ['state' => $state, 'role' => $role, 'hidden' => $hidden],
             'filterUrls' => [
-                'state' => collect(self::STATES)->mapWithKeys(fn ($s) => [$s => route('pull-requests.index', ['state' => $s, 'role' => $role])]),
-                'role' => collect(self::ROLES)->mapWithKeys(fn ($r) => [$r => route('pull-requests.index', ['state' => $state, 'role' => $r])]),
+                'state' => collect(self::STATES)->mapWithKeys(fn ($s) => [$s => route('pull-requests.index', ['state' => $s, 'role' => $role, 'hidden' => $hidden ?: null])]),
+                'role' => collect(self::ROLES)->mapWithKeys(fn ($r) => [$r => route('pull-requests.index', ['state' => $state, 'role' => $r, 'hidden' => $hidden ?: null])]),
+                'hidden' => route('pull-requests.index', ['state' => $state, 'role' => $role, 'hidden' => $hidden ? null : 1]),
             ],
+            'hiddenCount' => $hidden ? $pullRequests->count() : $this->listQuery($user, $role, $state, true)->count(),
             'pullRequests' => $pullRequests->map(fn (PullRequest $pr) => [
                 ...$this->pullRequestRow($pr),
                 'reviewsCount' => $pr->reviews_count,
@@ -75,7 +77,7 @@ class PullRequestController extends Controller
             ])->values(),
             'grouped' => $user->pull_requests_grouped,
             'groupingUrl' => route('pull-requests.grouping'),
-            'syncUrl' => route('pull-requests.sync', ['state' => $state, 'role' => $role]),
+            'syncUrl' => route('pull-requests.sync', ['state' => $state, 'role' => $role, 'hidden' => $hidden ?: null]),
             'skillDownloadUrl' => route('skill.ps-review.download'),
             'flash' => ['status' => session('status'), 'error' => session('error')],
             'strings' => __('pull_requests'),
@@ -89,13 +91,13 @@ class PullRequestController extends Controller
     public function sync(Request $request, PullRequestStateSync $sync): RedirectResponse
     {
         $user = $request->user();
-        [$state, $role] = $this->filters($request);
-        $back = redirect()->route('pull-requests.index', ['state' => $state, 'role' => $role]);
+        [$state, $role, $hidden] = $this->filters($request);
+        $back = redirect()->route('pull-requests.index', ['state' => $state, 'role' => $role, 'hidden' => $hidden ?: null]);
 
         if ($role === 'authored') {
             $result = $sync->syncAuthored($user);
         } else {
-            $open = $this->listQuery($user, $role, $state)->where('state', 'OPEN')->limit(self::LIMIT)->get();
+            $open = $this->listQuery($user, $role, $state, $hidden)->where('state', 'OPEN')->limit(self::LIMIT)->get();
             if ($open->isEmpty()) {
                 return $back->with('status', __('flash.pull_request_sync_none'));
             }
@@ -140,6 +142,21 @@ class PullRequestController extends Controller
             'shared_at' => $shared ? now() : null,
             'shared_by_id' => $shared ? $user->id : null,
         ]);
+
+        return back();
+    }
+
+    /**
+     * Blendet einen PR in den eigenen Listen aus bzw. wieder ein.
+     */
+    public function toggleHidden(Request $request, PullRequest $pullRequest): RedirectResponse
+    {
+        $user = $request->user();
+        abort_unless($pullRequest->organization_id === $user->organization_id, 404);
+
+        if ($pullRequest->hiddenBy()->detach($user->id) === 0) {
+            $pullRequest->hiddenBy()->attach($user->id, ['created_at' => now()]);
+        }
 
         return back();
     }
@@ -257,7 +274,8 @@ class PullRequestController extends Controller
 
     public function show(Request $request, PullRequest $pullRequest): InertiaResponse
     {
-        abort_unless($pullRequest->organization_id === $request->user()->organization_id, 404);
+        $user = $request->user();
+        abort_unless($pullRequest->organization_id === $user->organization_id, 404);
 
         $pullRequest->load(['author', 'approvals.user', 'reviews' => fn ($q) => $q->latest('review_started_at')->latest('id'), 'reviews.reviewer', 'reviews.fixRequestedBy', 'reviews.findingItems']);
 
@@ -272,6 +290,8 @@ class PullRequestController extends Controller
                 'mergedAt' => $pullRequest->merged_at?->toIso8601String(),
                 'closedAt' => $pullRequest->closed_at?->toIso8601String(),
                 'approvals' => $this->approvals($pullRequest),
+                'hidden' => $pullRequest->hiddenBy()->whereKey($user->id)->exists(),
+                'hideUrl' => route('pull-requests.hide', $pullRequest),
             ],
             'reviews' => $pullRequest->reviews->map(fn (PullRequestReview $review) => [
                 ...$this->reviewRow($review, $pullRequest),
@@ -334,20 +354,24 @@ class PullRequestController extends Controller
     }
 
     /**
-     * @return array{0: string, 1: string} Status, Rolle
+     * @return array{0: string, 1: string, 2: bool} Status, Rolle, nur ausgeblendete
      */
     private function filters(Request $request): array
     {
         return [
             in_array($request->input('state'), self::STATES, true) ? $request->input('state') : 'open',
             in_array($request->input('role'), self::ROLES, true) ? $request->input('role') : 'reviewed',
+            $request->boolean('hidden'),
         ];
     }
 
-    private function listQuery(User $user, string $role, string $state): Builder
+    private function listQuery(User $user, string $role, string $state, bool $hidden = false): Builder
     {
+        $hiddenByMe = fn (Builder $q) => $q->whereKey($user->id);
+
         return PullRequest::query()
             ->where('organization_id', $user->organization_id)
+            ->when($hidden, fn (Builder $q) => $q->whereHas('hiddenBy', $hiddenByMe), fn (Builder $q) => $q->whereDoesntHave('hiddenBy', $hiddenByMe))
             ->when($role === 'reviewed', fn (Builder $q) => $q->whereHas('reviews', fn (Builder $r) => $r->where('reviewer_id', $user->id)))
             ->when($role === 'authored', fn (Builder $q) => $q->where('author_id', $user->id))
             ->when($role === 'shared', fn (Builder $q) => $q->whereNotNull('shared_at'))

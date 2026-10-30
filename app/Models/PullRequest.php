@@ -6,6 +6,7 @@ use App\Concerns\BroadcastsEntityChange;
 use App\Enums\PullRequestState;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Str;
@@ -92,6 +93,14 @@ class PullRequest extends Model
     public function approvals(): HasMany
     {
         return $this->hasMany(PullRequestApproval::class);
+    }
+
+    /**
+     * Nutzer, die den PR in ihren Listen ausgeblendet haben.
+     */
+    public function hiddenBy(): BelongsToMany
+    {
+        return $this->belongsToMany(User::class, 'pull_request_hidden')->withPivot('created_at');
     }
 
     public function latestReview(): HasOne
