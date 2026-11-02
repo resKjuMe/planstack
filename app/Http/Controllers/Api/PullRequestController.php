@@ -311,7 +311,7 @@ class PullRequestController extends ApiController
         $finished = $pullRequest->reviews->filter->isFinished()->sortByDesc('review_finished_at')->first();
         $running = $pullRequest->reviews
             ->reject->isFinished()
-            ->reject->isAbandoned()
+            ->reject(fn (PullRequestReview $review) => $review->isAbandoned($pullRequest->reviews))
             ->sortByDesc('review_started_at')
             ->first();
 

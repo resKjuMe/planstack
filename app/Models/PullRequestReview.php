@@ -5,9 +5,11 @@ namespace App\Models;
 use App\Concerns\BroadcastsEntityChange;
 use App\Enums\ReviewRecommendation;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Query\Builder as QueryBuilder;
 
 class PullRequestReview extends Model
 {
@@ -105,7 +107,13 @@ class PullRequestReview extends Model
     public function scopeRunning(Builder $query): void
     {
         $query->whereNull('review_finished_at')
-            ->where('review_started_at', '>=', now()->subHours(self::ABANDONED_AFTER_HOURS));
+            ->where('review_started_at', '>=', now()->subHours(self::ABANDONED_AFTER_HOURS))
+            // Ein später gestartetes, abgeschlossenes Review löst ein liegengebliebenes ab.
+            ->whereNotExists(fn (QueryBuilder $later) => $later
+                ->from($this->getTable().' as later')
+                ->whereColumn('later.pull_request_id', $query->qualifyColumn('pull_request_id'))
+                ->whereNotNull('later.review_finished_at')
+                ->whereColumn('later.review_started_at', '>', $query->qualifyColumn('review_started_at')));
     }
 
     public function isFinished(): bool
@@ -113,10 +121,22 @@ class PullRequestReview extends Model
         return $this->review_finished_at !== null;
     }
 
-    public function isAbandoned(): bool
+    /**
+     * @param  Collection<int, self>|null  $reviews  weitere Reviews des PR; ein später gestartetes, abgeschlossenes löst dieses ab
+     */
+    public function isAbandoned(?Collection $reviews = null): bool
     {
-        return ! $this->isFinished()
-            && ($this->review_started_at === null || $this->review_started_at->lt(now()->subHours(self::ABANDONED_AFTER_HOURS)));
+        if ($this->isFinished()) {
+            return false;
+        }
+
+        if ($this->review_started_at === null || $this->review_started_at->lt(now()->subHours(self::ABANDONED_AFTER_HOURS))) {
+            return true;
+        }
+
+        return $reviews !== null && $reviews->contains(fn (self $other) => $other->pull_request_id === $this->pull_request_id
+            && $other->isFinished()
+            && $other->review_started_at?->gt($this->review_started_at));
     }
 
     /**
