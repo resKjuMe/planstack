@@ -159,4 +159,7 @@ return [
     'unhide_hint' => 'Hidden in your lists – click to show it again',
     'hidden_filter' => 'Hidden',
     'hidden_filter_hint' => 'Show only the PRs hidden in your lists',
+    'check_none' => 'Not manually checked yet – click to tick off',
+    'check_done' => 'Manually checked – click to undo',
+    'check_outdated' => 'Manually checked, new commits since – click to tick off again',
 ];

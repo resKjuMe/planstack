@@ -103,6 +103,14 @@ class PullRequest extends Model
         return $this->belongsToMany(User::class, 'pull_request_hidden')->withPivot('created_at');
     }
 
+    /**
+     * Nutzer, die den PR manuell geprüft haben, mit dem Commit von damals.
+     */
+    public function checkedBy(): BelongsToMany
+    {
+        return $this->belongsToMany(User::class, 'pull_request_checks')->withPivot('commit_sha', 'checked_at');
+    }
+
     public function latestReview(): HasOne
     {
         return $this->hasOne(PullRequestReview::class)->ofMany(

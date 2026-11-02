@@ -335,6 +335,29 @@ class PullRequestPagesTest extends TestCase
             ->assertInertia(fn (Assert $page) => $page->has('pullRequests', 2)->where('hiddenCount', 0));
     }
 
+    public function test_the_manual_check_turns_outdated_after_new_commits(): void
+    {
+        $me = $this->member('Ich Selbst');
+        $colleague = $this->member('Kollegin');
+        $pullRequest = $this->pullRequest(1, ['author_id' => $me->id, 'shared_at' => now()]);
+        $check = fn (User $user) => $this->actingAs($user)->get(route('pull-requests.index', ['role' => 'shared']));
+
+        $check($me)->assertInertia(fn (Assert $page) => $page->where('pullRequests.0.check', 'none'));
+
+        $this->actingAs($me)->post(route('pull-requests.check', $pullRequest))->assertRedirect();
+        $check($me)->assertInertia(fn (Assert $page) => $page->where('pullRequests.0.check', 'done'));
+        $check($colleague)->assertInertia(fn (Assert $page) => $page->where('pullRequests.0.check', 'none'));
+
+        $pullRequest->update(['last_commit' => 'bbb']);
+        $check($me)->assertInertia(fn (Assert $page) => $page->where('pullRequests.0.check', 'outdated'));
+
+        $this->actingAs($me)->post(route('pull-requests.check', $pullRequest))->assertRedirect();
+        $check($me)->assertInertia(fn (Assert $page) => $page->where('pullRequests.0.check', 'done'));
+
+        $this->actingAs($me)->post(route('pull-requests.check', $pullRequest))->assertRedirect();
+        $check($me)->assertInertia(fn (Assert $page) => $page->where('pullRequests.0.check', 'none'));
+    }
+
     public function test_only_the_author_can_share(): void
     {
         $author = $this->member('Autor');

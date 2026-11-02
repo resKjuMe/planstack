@@ -42,7 +42,7 @@ class PullRequestController extends Controller
         [$state, $role, $hidden] = $this->filters($request);
 
         $pullRequests = $this->listQuery($user, $role, $state, $hidden)
-            ->with(['author', 'latestReview', 'runningReview.reviewer', 'approvals.user'])
+            ->with(['author', 'latestReview', 'runningReview.reviewer', 'approvals.user', 'checkedBy' => fn ($q) => $q->whereKey($user->id)])
             ->withCount('reviews')
             ->latest('updated_at')
             ->limit(self::LIMIT)
@@ -69,6 +69,8 @@ class PullRequestController extends Controller
                 'reviewsCount' => $pr->reviews_count,
                 'approvals' => $this->approvals($pr),
                 'mine' => $this->viewerState($pr, $user),
+                'check' => $this->checkState($pr),
+                'checkUrl' => route('pull-requests.check', $pr),
                 'review' => $pr->latestReview ? $this->reviewRow($pr->latestReview, $pr) : null,
                 'running' => $pr->runningReview ? [
                     'startedAt' => $pr->runningReview->review_started_at?->toIso8601String(),
@@ -156,6 +158,25 @@ class PullRequestController extends Controller
 
         if ($pullRequest->hiddenBy()->detach($user->id) === 0) {
             $pullRequest->hiddenBy()->attach($user->id, ['created_at' => now()]);
+        }
+
+        return back();
+    }
+
+    /**
+     * Manuell geprüft: ungeprüft bzw. veraltet → geprüft auf dem aktuellen
+     * Commit, geprüft → zurückgenommen.
+     */
+    public function toggleChecked(Request $request, PullRequest $pullRequest): RedirectResponse
+    {
+        $user = $request->user();
+        abort_unless($pullRequest->organization_id === $user->organization_id, 404);
+
+        $pullRequest->load(['checkedBy' => fn ($q) => $q->whereKey($user->id)]);
+        if ($this->checkState($pullRequest) === 'done') {
+            $pullRequest->checkedBy()->detach($user->id);
+        } else {
+            $pullRequest->checkedBy()->syncWithoutDetaching([$user->id => ['commit_sha' => $pullRequest->last_commit, 'checked_at' => now()]]);
         }
 
         return back();
@@ -419,6 +440,21 @@ class PullRequestController extends Controller
                 ?->state,
             'isAuthor' => $pr->author_id === $user->id || strcasecmp((string) $pr->author_login, $login) === 0,
         ];
+    }
+
+    /**
+     * Erwartet `checkedBy` auf den Betrachter eingeschränkt geladen.
+     *
+     * @return 'none'|'done'|'outdated'
+     */
+    private function checkState(PullRequest $pr): string
+    {
+        $check = $pr->checkedBy->first()?->pivot;
+        if ($check === null) {
+            return 'none';
+        }
+
+        return $check->commit_sha === $pr->last_commit ? 'done' : 'outdated';
     }
 
     private function approvals(PullRequest $pr): array

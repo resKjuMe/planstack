@@ -159,4 +159,7 @@ return [
     'unhide_hint' => 'In deinen Listen ausgeblendet – klicken zum Wieder-Einblenden',
     'hidden_filter' => 'Ausgeblendete',
     'hidden_filter_hint' => 'Nur die in deinen Listen ausgeblendeten PRs zeigen',
+    'check_none' => 'Noch nicht manuell geprüft – klicken zum Abhaken',
+    'check_done' => 'Manuell geprüft – klicken zum Zurücknehmen',
+    'check_outdated' => 'Manuell geprüft, seitdem neue Commits – klicken zum erneut Abhaken',
 ];
