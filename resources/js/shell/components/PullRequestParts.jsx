@@ -132,6 +132,11 @@ export function fixCommandHref(pr) {
     return `claudetask:${encodeURIComponent(`/ps-review fix ${pr.githubUrl}`)}`;
 }
 
+// Konflikt-Lauf: Merge-Konflikt, rote CI und offene Kommentare beheben, pushen, neu reviewen.
+export function resolveCommandHref(pr) {
+    return `claudetask:${encodeURIComponent(`/ps-review resolve ${pr.githubUrl}`)}`;
+}
+
 // Startknopf für ps-review: ↻ wenn seit dem letzten Review gepusht wurde, sonst ▶.
 export function ReviewStartLink({ pr, strings }) {
     const stale = pr.review?.stale;
