@@ -126,7 +126,13 @@ function Review({ review, pr, strings, latest }) {
     }
 
     const duration = formatDuration(review.startedAt, review.finishedAt);
-    const resolvable = latest && pr.state === 'OPEN' && pr.conflicting;
+    // Dieselben Signale wie in der Liste: Konflikt, rote CI, offene Review-Threads.
+    const resolveLabel = !latest || pr.state !== 'OPEN' ? null
+        : pr.conflicting ? strings.resolve_conflict
+        : pr.ciState === 'failed' ? strings.resolve_ci
+        : pr.unresolvedThreads > 0 ? strings.resolve_threads
+        : null;
+    const resolvable = resolveLabel !== null;
     return (
         <section id={`review-${review.id}`} className="scroll-mt-4 bg-white dark:bg-gray-800 rounded-lg shadow">
             <header className="flex flex-wrap items-center gap-3 border-b border-gray-100 dark:border-gray-700 px-5 py-3">
@@ -148,7 +154,7 @@ function Review({ review, pr, strings, latest }) {
                                 title={strings.resolve_conflict_hint}
                                 className="inline-flex items-center rounded-md bg-red-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-red-500"
                             >
-                                {strings.resolve_conflict}
+                                {resolveLabel}
                             </a>
                         )}
                         {review.fixUrl && (

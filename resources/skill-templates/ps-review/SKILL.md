@@ -550,7 +550,7 @@ Direkt danach ein vollständiges Review des neuen Head (Schritte 1–6, mit neue
 
 ## Konflikt-Modus: `/ps-review resolve <PR>`
 
-Gestartet über den Button **Merge-Konflikt lösen** auf der Planstack-Detailseite (per `claudetask:`), sichtbar solange der PR offen ist und GitHub ihn als `CONFLICTING` meldet. Der Modus bringt den PR wieder in einen mergebaren Zustand, pusht und reviewt danach neu. Er läuft unbeaufsichtigt: **keine Rückfragen**. In Planstack gibt es dafür keinen eigenen Aufruf — nur das neue Review aus R6.
+Gestartet über den Button **Merge-Konflikt lösen** / **CI fixen** / **Kommentare abarbeiten** auf der Planstack-Detailseite (per `claudetask:`), sichtbar solange der PR offen ist und GitHub einen Merge-Konflikt, rote CI (ohne ignorierte Checks) oder offene Review-Threads meldet. Alle drei Varianten durchlaufen R1–R6; was nicht zutrifft, entfällt. Der Modus bringt den PR wieder in einen mergebaren Zustand, pusht und reviewt danach neu. Er läuft unbeaufsichtigt: **keine Rückfragen**. In Planstack gibt es dafür keinen eigenen Aufruf — nur das neue Review aus R6.
 
 #### R1. Lage erfassen
 
