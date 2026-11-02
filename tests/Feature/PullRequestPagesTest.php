@@ -171,6 +171,24 @@ class PullRequestPagesTest extends TestCase
                 ->where('reviews.0.findings', []));
     }
 
+    public function test_an_unfinished_review_followed_by_a_finished_one_no_longer_counts_as_running(): void
+    {
+        $me = $this->member('Ich Selbst');
+        $pullRequest = $this->pullRequest(1);
+        $pullRequest->reviews()->create(['reviewer_id' => $me->id, 'review_started_at' => now()->subMinutes(30)]);
+        $this->review($pullRequest, $me);
+
+        $this->actingAs($me)
+            ->get(route('pull-requests.index'))
+            ->assertInertia(fn (Assert $page) => $page->where('pullRequests.0.running', null));
+
+        $this->actingAs($me)
+            ->get(route('pull-requests.show', $pullRequest))
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('reviews.0.status', 'finished')
+                ->where('reviews.1.status', 'abandoned'));
+    }
+
     public function test_list_marks_my_github_decision_and_own_pull_requests(): void
     {
         $me = $this->member('Ich Selbst');

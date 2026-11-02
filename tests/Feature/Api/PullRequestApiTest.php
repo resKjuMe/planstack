@@ -310,8 +310,11 @@ class PullRequestApiTest extends TestCase
         $finish($running, 'head', $me->id);
         $running->reviews()->create(['reviewer_id' => $me->id, 'review_started_at' => now()->subMinutes(5)]);
         $finish($make(4), 'head', $colleague->id);
+        $superseded = $make(5);
+        $superseded->reviews()->create(['reviewer_id' => $me->id, 'review_started_at' => now()->subMinutes(90)]);
+        $finish($superseded, 'head', $me->id);
 
-        $this->getJson('/api/pull-requests/review-states?repository=clockodo-intern/main&prs=1,2,3,4,5')
+        $this->getJson('/api/pull-requests/review-states?repository=clockodo-intern/main&prs=1,2,3,4,5,6')
             ->assertOk()
             ->assertJsonPath('data.1.state', 'current')
             ->assertJsonPath('data.1.findings', 3)
@@ -321,7 +324,8 @@ class PullRequestApiTest extends TestCase
             ->assertJsonPath('data.3.state', 'running')
             ->assertJsonPath('data.3.recommendation', 'APPROVE')
             ->assertJsonPath('data.4.state', 'none')
-            ->assertJsonPath('data.5.state', 'none');
+            ->assertJsonPath('data.5.state', 'current')
+            ->assertJsonPath('data.6.state', 'none');
     }
 
     public function test_review_states_validate_the_pr_list(): void

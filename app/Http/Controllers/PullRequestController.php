@@ -477,7 +477,7 @@ class PullRequestController extends Controller
     {
         return [
             'id' => $review->id,
-            'status' => $review->isFinished() ? 'finished' : ($review->isAbandoned() ? 'abandoned' : 'running'),
+            'status' => $review->isFinished() ? 'finished' : ($review->isAbandoned($pr->relationLoaded('reviews') ? $pr->reviews : null) ? 'abandoned' : 'running'),
             'startedAt' => $review->review_started_at?->toIso8601String(),
             'finishedAt' => $review->review_finished_at?->toIso8601String(),
             'decision' => $review->decision?->value,
