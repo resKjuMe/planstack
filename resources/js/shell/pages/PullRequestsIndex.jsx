@@ -362,6 +362,7 @@ function Row({ pr, level, stack, canShare, strings }) {
                 <div className="flex items-start gap-2 min-w-0">
                     <div className="flex h-5 shrink-0 items-center gap-2">
                         {stack && <StackToggle stack={stack} strings={strings} />}
+                        <CheckToggle pr={pr} strings={strings} />
                         {canShare && <ShareToggle pr={pr} strings={strings} />}
                         <a href={pr.githubUrl} target="_blank" rel="noreferrer" className="shrink-0 font-mono text-xs text-gray-500 dark:text-gray-400 hover:underline" title={`${pr.repository}#${pr.number}`}>{pr.number}</a>
                         <StackedIcon pr={pr} strings={strings} />
@@ -437,6 +438,32 @@ function StackToggle({ stack, strings }) {
                 <path fillRule="evenodd" d="M7.21 14.77a.75.75 0 01.02-1.06L11.168 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06-.02z" clipRule="evenodd" />
             </svg>
             {stack.collapsed && <span className="ml-0.5 font-mono text-[11px]">+{stack.descendants}</span>}
+        </button>
+    );
+}
+
+// Manuell geprüft: grau = offen, grün = auf aktuellem Commit, gelb = seitdem neue Commits.
+const CHECK_TONE = {
+    none: 'text-gray-300 hover:text-gray-500 dark:text-gray-600 dark:hover:text-gray-400',
+    done: 'text-green-600 hover:text-green-700 dark:text-green-400 dark:hover:text-green-300',
+    outdated: 'text-amber-500 hover:text-amber-600 dark:text-amber-400 dark:hover:text-amber-300',
+};
+
+function CheckToggle({ pr, strings }) {
+    const toggle = () => router.post(pr.checkUrl, {}, { preserveScroll: true, preserveState: true });
+    return (
+        <button
+            type="button"
+            onClick={toggle}
+            title={strings[`check_${pr.check}`]}
+            aria-pressed={pr.check === 'done'}
+            className={`shrink-0 inline-flex h-5 w-5 items-center justify-center rounded ${CHECK_TONE[pr.check]}`}
+        >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4" aria-hidden="true">
+                <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z" />
+                <circle cx="12" cy="12" r="3" />
+                {pr.check !== 'none' && <path d="M15.5 19.5l2 2 4.5-4.5" strokeWidth="2.5" />}
+            </svg>
         </button>
     );
 }
