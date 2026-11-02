@@ -1,8 +1,10 @@
 ---
 name: ps-review
-description: Code-Review eines GitHub-PR mit Ablage in Planstack — reviewt den PR (inklusive Prüfung der Code-Kommentare auf Richtigkeit, Mehrwert und Knappheit), bewertet Kritikalität, KI-Prüfbarkeit und PO-Sichtung, sendet PR-Daten und Review samt Findings an die Planstack-API (sichtbar unter planstack.eskju.net/pull-requests), gibt die Review im Chat aus und schließt mit Findings-/Kritisch-/Wichtig-/Hinweis-/Empfehlung-Zeilen ab. Am PR wird nur nach ausdrücklicher Rückfrage gepostet. Mit „fix“ setzt er die in Planstack je Befund getroffenen Entscheidungen um, hält sie im PR-Body fest, pusht und reviewt neu. Nutze diesen Skill bei „ps-review 1234", „review PR 1234 nach Planstack", „/ps-review", „/ps-review fix 1234".
-argument-hint: "[fix] [<pr-nummer|pr-url|branch>] [--lenient|--strict] [--relaxed|--meticulous] [--post|--comment|--no-post]"
+description: Code-Review eines GitHub-PR mit Ablage in Planstack — reviewt den PR (inklusive Prüfung der Code-Kommentare auf Richtigkeit, Mehrwert und Knappheit), bewertet Kritikalität, KI-Prüfbarkeit und PO-Sichtung, sendet PR-Daten und Review samt Findings an die Planstack-API (sichtbar unter planstack.eskju.net/pull-requests), gibt die Review im Chat aus und schließt mit Findings-/Kritisch-/Wichtig-/Hinweis-/Empfehlung-Zeilen ab. Am PR wird nur nach ausdrücklicher Rückfrage gepostet. Mit „fix“ setzt er die in Planstack je Befund getroffenen Entscheidungen um, hält sie im PR-Body fest, pusht und reviewt neu; mit „resolve“ löst er den Merge-Konflikt, fixt rote CI und offene (Review-)Kommentare, pusht und reviewt neu. Nutze diesen Skill bei „ps-review 1234", „review PR 1234 nach Planstack", „/ps-review", „/ps-review fix 1234", „/ps-review resolve 1234".
+argument-hint: "[fix|resolve] [<pr-nummer|pr-url|branch>] [--lenient|--strict] [--relaxed|--meticulous] [--post|--comment|--no-post]"
 ---
+
+**Nie** als Befund melden: reine Formatierung von Kommentaren — Zeilenumbruch mitten im Satz, Umbruchbreite, Einrückung, Leerzeilen, Satzzeichen. Das ist irrelevant, auch nicht als Hinweis.
 
 # ps-review — Review mit Ablage in Planstack
 
@@ -13,12 +15,12 @@ Ein vollständiges Code-Review; das Ergebnis landet **nicht** als Datei, sondern
 1. **Nichts am PR posten, bevor der Nutzer zugestimmt hat.** Während des Reviews sind nur lesende `gh`-Aufrufe erlaubt (`gh pr view`, `gh pr diff`, `gh pr checks`, `gh api` mit `GET`). Geschrieben wird am PR erst in Schritt 8 — nach expliziter Zustimmung, und nur das, was der Nutzer in Schritt 7 ausgewählt hat. Ohne Antwort wird nichts gepostet; Schweigen ist kein Ja.
 2. **Planstack nur über drei Aufrufe**: `PUT /api/pull-requests` und `POST /api/pull-requests/{id}/reviews` (Start) in Schritt 1, `PUT /api/pull-requests/{id}/reviews/{review}` (Abschluss) in Schritt 5. Im Fix-Modus kommen `POST /api/pull-requests/{id}/fix/claim` und `PUT /api/pull-requests/{id}/reviews/{review}/fix` dazu. Keine Board-Aufrufe (`review-claim`, `review-next`, Events) — dieser Skill kennt kein Board.
 3. **Keine lokale Report-Datei.** Die Payload-Dateien für `curl` liegen nur temporär (Scratchpad bzw. `mktemp -d`) und werden nach dem Senden gelöscht. Schlägt die API fehl, wird das gemeldet — nicht als Datei abgelegt.
-4. **Nichts am Code ändern.** Das Review ist rein lesend: keine Edits, keine Commits, kein Push, kein Checkout, der lokale Änderungen gefährdet. Ausnahmen: der Nutzer wählt in Schritt 7 „Fixe Findings im gleichen PR“ — dann gilt Schritt 9; oder der Aufruf ist `/ps-review fix` — dann gilt der Fix-Modus.
+4. **Nichts am Code ändern.** Das Review ist rein lesend: keine Edits, keine Commits, kein Push, kein Checkout, der lokale Änderungen gefährdet. Ausnahmen: der Nutzer wählt in Schritt 7 „Fixe Findings im gleichen PR“ — dann gilt Schritt 9; oder der Aufruf ist `/ps-review fix` bzw. `/ps-review resolve` — dann gilt der Fix- bzw. Konflikt-Modus.
 5. **Das Review wird immer abgeschlossen** — auch bei `APPROVE` ohne einen einzigen Befund. Ein gestartetes, nie abgeschlossenes Review zeigt Planstack zwei Stunden lang als laufend, danach als abgebrochen.
 
 ## Aufruf
 
-`/ps-review [<ZIEL>] [<Schalter>]` · `/ps-review fix <ZIEL>` (Fix-Modus, siehe unten)
+`/ps-review [<ZIEL>] [<Schalter>]` · `/ps-review fix <ZIEL>` (Fix-Modus) · `/ps-review resolve <ZIEL>` (Konflikt-Modus), siehe unten
 
 Das Ziel muss sich zu einem **GitHub-PR** auflösen, denn Planstack speichert Reviews je PR:
 
@@ -545,3 +547,66 @@ Jeder Befund aus F1 bekommt genau ein Ergebnis.
 #### F5. Neues Review
 
 Direkt danach ein vollständiges Review des neuen Head (Schritte 1–6, mit neuem Review-Start in Planstack) mit `--no-post`: Schritt 7 entfällt. Davor im Chat eine Zeile je Befund (behoben / ausgelassen mit Grund) und der Fix-Commit; die Antwort endet wie immer mit den Abschlusszeilen aus Schritt 6.
+
+## Konflikt-Modus: `/ps-review resolve <PR>`
+
+Gestartet über den Button **Merge-Konflikt lösen** auf der Planstack-Detailseite (per `claudetask:`), sichtbar solange der PR offen ist und GitHub ihn als `CONFLICTING` meldet. Der Modus bringt den PR wieder in einen mergebaren Zustand, pusht und reviewt danach neu. Er läuft unbeaufsichtigt: **keine Rückfragen**. In Planstack gibt es dafür keinen eigenen Aufruf — nur das neue Review aus R6.
+
+#### R1. Lage erfassen
+
+PR auflösen wie in Schritt 1 (noch **ohne** Review-Start), dann rein lesend:
+
+```bash
+gh pr view <pr> -R "$REPO" --json number,headRefName,headRefOid,baseRefName,mergeable,mergeStateStatus,statusCheckRollup,reviewDecision
+gh pr checks <pr> -R "$REPO"
+# offene Review-Threads (isResolved=false, nicht outdated) samt Kommentaren und Thread-IDs:
+gh api graphql -f query='query($o:String!,$r:String!,$n:Int!){repository(owner:$o,name:$r){pullRequest(number:$n){reviewThreads(first:100){nodes{id isResolved isOutdated path line comments(first:50){nodes{id databaseId author{login} body createdAt}}}}}}}' -F o=<owner> -F r=<repo> -F n=<pr>
+# allgemeine PR-Kommentare (Konversation):
+gh api "repos/$REPO/issues/<pr>/comments" --paginate
+```
+
+Ist `mergeable` inzwischen `MERGEABLE` (z. B. von Hand gelöst), R2 überspringen; CI und Kommentare trotzdem abarbeiten.
+
+#### R2. Merge-Konflikt lösen
+
+- Worktree auf dem aktuellen Head (`git worktree add <pfad> <headRefOid>`), nie im Haupt-Checkout.
+- `git fetch origin <baseRefName>` und `git merge origin/<baseRefName>` — **mergen, nicht rebasen**: kein Force-Push, Review-Kommentare behalten ihre Commits.
+- Konflikte inhaltlich lösen: beide Absichten erhalten (Zielbranch-Änderung **und** PR-Änderung), nicht pauschal `ours`/`theirs`. Generierte Dateien (Lockfiles, Builds, Baselines) mit dem Repo-Tooling neu erzeugen statt von Hand zu mergen.
+- Lässt sich ein Konflikt nicht ohne fachliche Entscheidung lösen: Merge abbrechen (`git merge --abort`), nichts pushen, kein neues Review — der Lauf endet mit einer Chat-Meldung, die die strittigen Stellen nennt.
+- Merge-Commit mit der Standard-Message (`Merge remote-tracking branch 'origin/<base>' into <head>`), Attribution wie im Repo üblich.
+
+#### R3. Rote CI fixen
+
+- Fehlgeschlagene Checks aus R1 (bzw. nach dem Merge lokal reproduzierbare Fehler) ansehen: `gh run view <run-id> --log-failed -R "$REPO"`.
+- Nur echte Fehler des PR bzw. des Merges beheben (Tests, Lint, Typen, Build). Offensichtlich flaky oder infrastrukturell (Timeout, Runner, externe Dienste): nicht am Code drehen, sondern im Chat nennen; nach dem Push läuft die CI ohnehin neu.
+- Lokal nur das Tooling, das das Repo für lokale Läufe vorsieht (Repo-Konventionen und Nutzer-Regeln beachten, z. B. keine Tests, die nur in der CI laufen sollen).
+- Eigener Commit, Message nennt die behobenen Checks.
+
+#### R4. Offene Kommentare abarbeiten
+
+Für jeden offenen, nicht veralteten Review-Thread und jeden noch unbeantworteten Konversations-Kommentar mit Handlungsbedarf (keine Bots, keine reinen Status-/Approve-Notizen):
+
+- **Berechtigt und eindeutig:** fixen (ein gemeinsamer Commit, Message nennt die Punkte), nach dem Push (R5) im Thread kurz antworten (`Behoben in <sha7>: <ein Satz>`) und den Thread auflösen (`resolveReviewThread`).
+- **Nicht berechtigt / bereits erledigt:** sachlich mit Begründung antworten und auflösen.
+- **Fachliche Entscheidung nötig oder strittig:** nur antworten (Frage bzw. Einordnung), **nicht** auflösen und nicht raten.
+- Konversations-Kommentare lassen sich nicht auflösen — dort nur antworten (`gh api repos/$REPO/issues/<pr>/comments -f body=…`).
+
+```bash
+# Antwort in einem Review-Thread (databaseId des ersten Kommentars):
+gh api "repos/$REPO/pulls/<pr>/comments/<databaseId>/replies" -f body='Behoben in abc1234: …'
+# Thread auflösen:
+gh api graphql -f query='mutation($id:ID!){resolveReviewThread(input:{threadId:$id}){thread{isResolved}}}' -F id=<thread-id>
+```
+
+Antworten in der Sprache des Kommentars, knapp, ohne Floskeln. Diese Antworten sind die einzigen Posts am PR in diesem Modus.
+
+#### R5. Pushen
+
+- Erst wenn R2–R4 lokal fertig sind: `git push origin HEAD:<headRefName>`, kein Force-Push. Ist der Remote-Branch währenddessen weitergelaufen: neu holen, mergen und erneut pushen; klappt das nicht, abbrechen und melden.
+- Die Thread-Antworten aus R4 mit `Behoben in <sha7>` erst **nach** dem Push senden, damit der Commit auf GitHub existiert.
+- PR-Body anpassen, wenn ein Fix eine Aussage darin überholt (wie in Schritt 9); sonst bleibt er unverändert.
+- Worktree danach entfernen.
+
+#### R6. Neues Review
+
+Direkt danach ein vollständiges Review des neuen Head (Schritte 1–6, mit Review-Start in Planstack) mit `--no-post`: Schritt 7 entfällt. Davor im Chat eine kurze Zusammenfassung: Konflikt gelöst (Dateien), CI-Fixe (Checks), Kommentare (behoben/beantwortet/offen gelassen je Thread) und die gepushten Commits; die Antwort endet wie immer mit den Abschlusszeilen aus Schritt 6.

@@ -120,6 +120,8 @@ return [
     'grouping_hint' => 'Group the list by what needs doing or show it flat (saved)',
     'stack_collapse' => 'Collapse stacked PRs',
     'stack_expand' => 'Expand stacked PRs',
+    'resolve_conflict' => 'Resolve merge conflict',
+    'resolve_conflict_hint' => 'Resolves the merge conflict, fixes failing CI and open (review) comments if any, pushes and reviews again (PowerShell)',
     'fix' => 'Fix findings',
     'fix_hint' => 'Decide per finding, then ps-review applies the fixes in Claude, pushes and reviews again (PowerShell)',
     'fix_step' => 'Finding :n of :total',

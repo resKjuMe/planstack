@@ -120,6 +120,8 @@ return [
     'grouping_hint' => 'Liste nach Handlungsbedarf gruppieren oder flach anzeigen (wird gespeichert)',
     'stack_collapse' => 'Gestapelte PRs einklappen',
     'stack_expand' => 'Gestapelte PRs ausklappen',
+    'resolve_conflict' => 'Merge-Konflikt lösen',
+    'resolve_conflict_hint' => 'Löst den Merge-Konflikt, fixt ggf. die rote CI und offene (Review-)Kommentare, pusht und reviewt neu (PowerShell)',
     'fix' => 'Findings fixen',
     'fix_hint' => 'Je Befund entscheiden, dann setzt ps-review die Fixe in Claude um, pusht und reviewt neu (PowerShell)',
     'fix_step' => 'Befund :n von :total',

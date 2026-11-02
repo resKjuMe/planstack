@@ -3,13 +3,14 @@ import { Head, Link, router, useForm } from '@inertiajs/react';
 import AppShell from '../AppShell.jsx';
 import PageBands from '../components/PageBands.jsx';
 import PullRequestTimeline from '../components/PullRequestTimeline.jsx';
-import { ApprovalPanel, PoBadge, StackedIcon, DecisionBadge, FindingCounts, JiraTitle, LEVEL_TONE, Markdown, RunningBadge, ScoreBar, StateBadge, fixCommandHref, formatDate, formatDuration, usePullRequestLiveReload } from '../components/PullRequestParts.jsx';
+import { ApprovalPanel, PoBadge, StackedIcon, DecisionBadge, FindingCounts, JiraTitle, LEVEL_TONE, Markdown, RunningBadge, ScoreBar, StateBadge, fixCommandHref, resolveCommandHref, formatDate, formatDuration, usePullRequestLiveReload } from '../components/PullRequestParts.jsx';
 
 // Detailseite eines Pull Requests: Metadaten, Beschreibung und alle Reviews
 // (neuestes oben) mit Zusammenfassung und Befunden. Markdown rendert der Server.
 
 export default function PullRequestShow({ pullRequest: pr, reviews, commitHistory, backUrl, strings }) {
     usePullRequestLiveReload(['pullRequest', 'reviews', 'commitHistory'], pr.id);
+    const latestFinishedId = reviews.find((r) => r.status === 'finished')?.id;
     return (
         <>
             <Head><title>{`${pr.repository}#${pr.number} · ${strings.title}`}</title></Head>
@@ -42,7 +43,7 @@ export default function PullRequestShow({ pullRequest: pr, reviews, commitHistor
                         {reviews.length === 0 ? (
                             <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-8 text-center text-gray-500 dark:text-gray-400">{strings.no_reviews}</div>
                         ) : (
-                            reviews.map((review) => <Review key={review.id} review={review} pr={pr} strings={strings} />)
+                            reviews.map((review) => <Review key={review.id} review={review} pr={pr} strings={strings} latest={review.id === latestFinishedId} />)
                         )}
                     </div>
 
@@ -106,7 +107,7 @@ function Fact({ label, value }) {
     );
 }
 
-function Review({ review, pr, strings }) {
+function Review({ review, pr, strings, latest }) {
     const [fixing, setFixing] = useState(false);
     if (review.status !== 'finished') {
         return (
@@ -125,6 +126,7 @@ function Review({ review, pr, strings }) {
     }
 
     const duration = formatDuration(review.startedAt, review.finishedAt);
+    const resolvable = latest && pr.state === 'OPEN' && pr.conflicting;
     return (
         <section id={`review-${review.id}`} className="scroll-mt-4 bg-white dark:bg-gray-800 rounded-lg shadow">
             <header className="flex flex-wrap items-center gap-3 border-b border-gray-100 dark:border-gray-700 px-5 py-3">
@@ -138,15 +140,28 @@ function Review({ review, pr, strings }) {
                 </span>
                 {review.stale && <span className="text-xs text-amber-600 dark:text-amber-400">{strings.stale}</span>}
                 <FixStatus fix={review.fix} pr={pr} strings={strings} />
-                {review.fixUrl && (
-                    <button
-                        type="button"
-                        onClick={() => setFixing(true)}
-                        title={strings.fix_hint}
-                        className="ml-auto inline-flex items-center rounded-md bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-indigo-500"
-                    >
-                        {strings.fix}
-                    </button>
+                {(review.fixUrl || resolvable) && (
+                    <div className="ml-auto flex items-center gap-2">
+                        {resolvable && (
+                            <a
+                                href={resolveCommandHref(pr)}
+                                title={strings.resolve_conflict_hint}
+                                className="inline-flex items-center rounded-md bg-red-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-red-500"
+                            >
+                                {strings.resolve_conflict}
+                            </a>
+                        )}
+                        {review.fixUrl && (
+                            <button
+                                type="button"
+                                onClick={() => setFixing(true)}
+                                title={strings.fix_hint}
+                                className="inline-flex items-center rounded-md bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-indigo-500"
+                            >
+                                {strings.fix}
+                            </button>
+                        )}
+                    </div>
                 )}
             </header>
             {fixing && <FixDialog review={review} pr={pr} strings={strings} onClose={() => setFixing(false)} />}
