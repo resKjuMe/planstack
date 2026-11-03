@@ -166,6 +166,15 @@ Im Vorschlag konkret werden: die gekürzte Fassung hinschreiben oder „streiche
 
 Diese Befunde zählen nie zu `Wichtig`/`Kritisch` und beeinflussen damit die Empfehlung nicht.
 
+**Konfidenz je Befund** (`confidence`, 0–100): wie sicher der Befund zutrifft — unabhängig von der Schwere. Dazu `confidence_reason`, ein Satz: was nachvollzogen wurde, was offen bleibt.
+
+| Wert | Bedeutung |
+|---|---|
+| 90–100 | jeder Schritt des Fehlszenarios im Code nachvollzogen |
+| 70–89 | Kern belegt, ein Schritt nur plausibel |
+| 50–69 | plausibel, aber ein Schlüsselschritt ungeprüft oder hängt an der Fachregel |
+| < 50 | zweifelhaft — vor dem Melden erneut prüfen; bleibt es so niedrig, ist es eine Anmerkung, kein Befund |
+
 **Empfehlung** (`decision`) leitet sich daraus ab:
 
 - `Kritisch ≥ 1` → **REQUEST_CHANGES**
@@ -285,7 +294,7 @@ Schließt das in Schritt 1 gestartete Review ab (`PUT …/reviews/$REVIEWID`); d
 | `commit_sha` | der geprüfte Head-SHA aus Schritt 1 |
 | `strictness`, `thoroughness` | die tatsächlich verwendeten Werte |
 | `model` | das tatsächlich genutzte Claude-Modell (Modell-ID) |
-| `findings[]` | je Befund `level`, `type`, `requires_po_decision`, `file`, `line`, `title` (eine Zeile) und `message` |
+| `findings[]` | je Befund `level`, `type`, `requires_po_decision`, `file`, `line`, `title` (eine Zeile), `message`, `confidence` (0–100) und `confidence_reason` (ein Satz) |
 
 `message` ist Markdown:
 
@@ -322,7 +331,7 @@ Die Antwort hat drei Teile, in dieser Reihenfolge:
 
 - `## TLDR`
 - `## Bewertung` — drei Zeilen: `Kritikalität: <n> — <Begründung>`, `KI-Prüfbarkeit: <n> — <Begründung>` und `PO-Sichtung: <n> — <Begründung>`
-- `## Befunde` — Übersichtstabelle (`#`, Schwere, `Datei:Zeile`, Befund, PO), darunter je Befund der Abschnitt `### <n>. <Titel> — <Schwere>` mit `**Wo:** <Datei:Zeile>` und der `message`; bei `requires_po_decision` zusätzlich `**PO-Entscheidung nötig**`
+- `## Befunde` — Übersichtstabelle (`#`, Schwere, Konfidenz, `Datei:Zeile`, Befund, PO), darunter je Befund der Abschnitt `### <n>. <Titel> — <Schwere>` mit `**Wo:** <Datei:Zeile>` und der `message`; bei `requires_po_decision` zusätzlich `**PO-Entscheidung nötig**`
 - danach die übrigen Abschnitte der `summary` (Analyse je Datei, Risiken & Nebenwirkungen, Tests, Kommentare, Nicht geprüft, CI)
 
 Gibt es keine Befunde, bleibt `## Befunde` mit dem Satz `Keine Befunde.` stehen.
@@ -492,7 +501,7 @@ PR auflösen und UPSERT wie in Schritt 1 (rein lesend, `PRID` aus der Antwort), 
 ```bash
 curl -s -w '\n%{http_code}\n' -X POST "$BASE/pull-requests/$PRID/fix/claim" "${AUTH[@]}"
 # 200: data.review_id, data.commit_sha (geprüfter Stand), data.requested_by, data.requested_at,
-#      data.findings[] mit id, level, type, requires_po_decision, file, line, title, message, decision, note
+#      data.findings[] mit id, level, type, requires_po_decision, file, line, title, message, confidence, decision, note
 #      (nur noch offene Entscheidungen — bei „Fixen“ an einem einzelnen Befund ggf. nur einer)
 # 404: kein Fix angefordert → abbrechen und das melden
 ```

@@ -37,6 +37,8 @@ return [
     'level_CRITICAL' => 'Kritisch',
     'level_IMPORTANT' => 'Wichtig',
     'level_HINT' => 'Hinweis',
+    'confidence' => 'Konfidenz',
+    'confidence_hint' => 'Wie sicher sich der Reviewer ist, dass der Befund zutrifft',
     'po_decision' => 'PO-Entscheidung nötig',
     'po_decisions' => ':count Befund(e) brauchen eine PO-Entscheidung',
     'summary_finding' => 'Allgemein',
