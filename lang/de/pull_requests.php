@@ -100,6 +100,7 @@ return [
     'no_critical_files' => 'keine kritischen Dateien',
     'stacked_on' => 'Gestapelt auf :branch',
     'section_running' => 'Review läuft',
+    'section_fixing' => 'Fix läuft',
     'section_needs_review' => 'Review nötig',
     'section_approve_pending' => 'Approve empfohlen, auf GitHub noch offen',
     'section_reviewed' => 'Reviewt, seitdem nichts gepusht',

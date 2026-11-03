@@ -42,7 +42,7 @@ class PullRequestController extends Controller
         [$state, $role, $hidden] = $this->filters($request);
 
         $pullRequests = $this->listQuery($user, $role, $state, $hidden)
-            ->with(['author', 'latestReview', 'runningReview.reviewer', 'approvals.user', 'checkedBy' => fn ($q) => $q->whereKey($user->id)])
+            ->with(['author', 'latestReview.fixRequestedBy', 'runningReview.reviewer', 'approvals.user', 'checkedBy' => fn ($q) => $q->whereKey($user->id)])
             ->withCount('reviews')
             ->latest('updated_at')
             ->limit(self::LIMIT)
@@ -76,6 +76,7 @@ class PullRequestController extends Controller
                     'startedAt' => $pr->runningReview->review_started_at?->toIso8601String(),
                     'reviewer' => $pr->runningReview->reviewer?->name,
                 ] : null,
+                'fixing' => $this->fixing($pr->latestReview),
             ])->values(),
             'grouped' => $user->pull_requests_grouped,
             'groupingUrl' => route('pull-requests.grouping'),
@@ -372,6 +373,22 @@ class PullRequestController extends Controller
         $latestId = $pullRequest->reviews()->finished()->latest('review_finished_at')->latest('id')->value('id');
 
         return $latestId === $review->id;
+    }
+
+    /**
+     * Laufender Fix-Lauf des neuesten Reviews; ohne Abschluss nach
+     * ABANDONED_AFTER_HOURS gilt er als liegengeblieben.
+     */
+    private function fixing(?PullRequestReview $review): ?array
+    {
+        if ($review?->fixStatus() !== 'running' || $review->fix_started_at->lt(now()->subHours(PullRequestReview::ABANDONED_AFTER_HOURS))) {
+            return null;
+        }
+
+        return [
+            'startedAt' => $review->fix_started_at->toIso8601String(),
+            'requestedBy' => $review->fixRequestedBy?->name,
+        ];
     }
 
     /**

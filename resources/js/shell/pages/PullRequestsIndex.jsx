@@ -5,10 +5,10 @@ import { useNow } from '../../board/useNow.js';
 import Flash from '../components/Flash.jsx';
 import StatusToast from '../components/StatusToast.jsx';
 import PageBands from '../components/PageBands.jsx';
-import { ApprovalChips, ColumnIcon, StackedIcon, DecisionIcon, FindingCounts, JiraTitle, PoBadge, RunningDot, ScoreBar, StateBadge, formatDate, formatRelative, ReviewStartLink, usePullRequestLiveReload } from '../components/PullRequestParts.jsx';
+import { ApprovalChips, ColumnIcon, StackedIcon, DecisionIcon, FindingCounts, JiraTitle, PoBadge, FixingDot, RunningDot, ScoreBar, StateBadge, formatDate, formatRelative, ReviewStartLink, usePullRequestLiveReload } from '../components/PullRequestParts.jsx';
 
 // Eigene Pull Requests aus ps-review. Filter (Status, Rolle) laufen über den
-// Server, Aufteilung und Sortierung clientseitig. Gruppen: laufende Reviews, was
+// Server, Aufteilung und Sortierung clientseitig. Gruppen: laufende Reviews und Fixe, was
 // ein Review braucht (keins, oder seit dem letzten gepusht), empfohlene, aber
 // noch nicht von mir approvte, Reviewtes, schon ausreichend Approvtes – abschaltbar,
 // am Nutzer gespeichert. Default ist der Titel; gestapelte PRs hängen dann
@@ -118,10 +118,11 @@ function useCollapsed() {
     return [collapsed, toggle];
 }
 
-// Ein laufendes Review geht vor, danach ausreichend approvt: dann braucht es
-// kein weiteres Review.
+// Ein laufendes Review oder ein laufender Fix geht vor, danach ausreichend
+// approvt: dann braucht es kein weiteres Review.
 const section = (pr) => {
     if (pr.running) return 'running';
+    if (pr.fixing) return 'fixing';
     if (pr.approvals.fulfilled) return 'approved';
     if (!pr.review || pr.review.stale) return 'needs_review';
     // Approve empfohlen, auf GitHub aber noch nichts von mir (eigene PRs ausgenommen).
@@ -146,7 +147,7 @@ export default function PullRequestsIndex({ filters, filterUrls, hiddenCount, gr
         onFinish: () => setSyncing(false),
     });
     const sections = useMemo(() => (grouped
-        ? ['running', 'needs_review', 'approve_pending', 'reviewed', 'approved'].map((key) => ({
+        ? ['running', 'fixing', 'needs_review', 'approve_pending', 'reviewed', 'approved'].map((key) => ({
             key,
             rows: arrange(pullRequests.filter((pr) => section(pr) === key), sort),
         })).filter((section) => section.rows.length > 0)
@@ -381,6 +382,7 @@ function Row({ pr, level, stack, canShare, strings }) {
                             <PoBadge count={pr.review?.poDecisions} strings={strings} />
                             {pr.state !== 'OPEN' && <StateBadge state={pr.state} strings={strings} />}
                             {pr.running && <RunningDot running={pr.running} strings={strings} />}
+                            {pr.fixing && <FixingDot fixing={pr.fixing} strings={strings} />}
                         </div>
                         {failedChecks.length > 0 && (
                             <small className="block truncate text-red-700 dark:text-red-400" title={failedChecks.join('\n')}>

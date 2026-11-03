@@ -141,6 +141,23 @@ class PullRequestPagesTest extends TestCase
                 ->where('pullRequests.0.running.reviewer', 'Ich Selbst'));
     }
 
+    public function test_a_running_fix_of_the_latest_review_is_listed(): void
+    {
+        $me = $this->member('Ich Selbst');
+        $fixing = $this->pullRequest(1);
+        $this->review($fixing, $me, ['fix_requested_by_id' => $me->id, 'fix_requested_at' => now()->subMinutes(5), 'fix_started_at' => now()->subMinutes(4)]);
+        $abandoned = $this->pullRequest(2);
+        $this->review($abandoned, $me, ['fix_requested_at' => now()->subHours(4), 'fix_started_at' => now()->subHours(3)]);
+        $finished = $this->pullRequest(3);
+        $this->review($finished, $me, ['fix_requested_at' => now()->subMinutes(5), 'fix_started_at' => now()->subMinutes(4), 'fix_finished_at' => now()]);
+
+        $this->actingAs($me)
+            ->get(route('pull-requests.index'))
+            ->assertInertia(fn (Assert $page) => $page
+                ->has('pullRequests', 3)
+                ->where('pullRequests', fn ($rows) => collect($rows)->mapWithKeys(fn ($row) => [$row['number'] => $row['fixing']['requestedBy'] ?? $row['fixing']])->all() == [1 => 'Ich Selbst', 2 => null, 3 => null]));
+    }
+
     public function test_a_first_review_in_progress_lists_the_pull_request_without_rating(): void
     {
         $me = $this->member('Ich Selbst');
