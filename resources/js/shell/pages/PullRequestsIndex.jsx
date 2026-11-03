@@ -216,9 +216,10 @@ export default function PullRequestsIndex({ filters, filterUrls, hiddenCount, gr
                                 </svg>
                                 {syncing ? strings.syncing : strings.sync}
                             </button>
-                            {/* Kein Inertia-Link: der Download braucht eine normale Navigation. */}
+                            {/* data-native: sonst macht der globale Klick-Handler eine Inertia-Visit daraus. */}
                             <a
                                 href={skillDownloadUrl}
+                                data-native
                                 title={strings.skill_download_hint}
                                 className="inline-flex items-center gap-1.5 rounded-md bg-white dark:bg-gray-800 px-3 py-1.5 text-xs font-medium text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-600 shadow-sm hover:bg-gray-50 dark:hover:bg-gray-700"
                             >
