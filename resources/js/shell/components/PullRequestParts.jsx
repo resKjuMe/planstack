@@ -227,6 +227,16 @@ export function RunningDot({ running, strings }) {
     );
 }
 
+export function FixingDot({ fixing, strings }) {
+    const text = strings.fix_status_running.replace(':time', formatDate(fixing.startedAt)) + (fixing.requestedBy ? ` · ${fixing.requestedBy}` : '');
+    return (
+        <span title={text} className="relative inline-flex h-2 w-2 shrink-0">
+            <span className="absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75 animate-ping" />
+            <span className="relative inline-flex h-2 w-2 rounded-full bg-amber-500" />
+        </span>
+    );
+}
+
 export function formatDuration(startIso, endIso) {
     if (!startIso || !endIso) return null;
     const minutes = Math.max(0, Math.round((new Date(endIso) - new Date(startIso)) / 60000));
