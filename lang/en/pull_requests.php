@@ -37,6 +37,8 @@ return [
     'level_CRITICAL' => 'Critical',
     'level_IMPORTANT' => 'Important',
     'level_HINT' => 'Hint',
+    'confidence' => 'Confidence',
+    'confidence_hint' => 'How sure the reviewer is that the finding holds',
     'po_decision' => 'PO decision required',
     'po_decisions' => ':count finding(s) need a PO decision',
     'summary_finding' => 'General',

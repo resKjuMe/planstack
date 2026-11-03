@@ -150,6 +150,8 @@ class PullRequestController extends ApiController
             'findings.*.line' => ['nullable', 'required_if:findings.*.type,INLINE', 'integer', 'min:1'],
             'findings.*.title' => ['required', 'string', 'max:300'],
             'findings.*.message' => ['required', 'string'],
+            'findings.*.confidence' => ['nullable', 'integer', 'between:0,100'],
+            'findings.*.confidence_reason' => ['nullable', 'string', 'max:500'],
         ]);
 
         $findings = collect($data['findings']);
@@ -173,10 +175,50 @@ class PullRequestController extends ApiController
                 'line' => $finding['line'] ?? null,
                 'title' => $finding['title'],
                 'message' => $finding['message'],
+                'confidence' => $finding['confidence'] ?? null,
+                'confidence_reason' => $finding['confidence_reason'] ?? null,
             ])->all());
         });
 
         return response()->json(['data' => $this->reviewPayload($review, $pullRequest)]);
+    }
+
+    /**
+     * PUT /api/pull-requests/{pullRequest}/reviews/{review}/confidence — trägt die
+     * Konfidenz je Befund nach, auch für ein bereits abgeschlossenes Review.
+     */
+    public function updateConfidence(Request $request, PullRequest $pullRequest, PullRequestReview $review): JsonResponse
+    {
+        abort_unless($pullRequest->organization_id === $this->organizationId($request), 404);
+        abort_unless($review->pull_request_id === $pullRequest->id, 404);
+        abort_unless($review->reviewer_id === $request->user()->id, 403);
+
+        $findings = $review->findingItems()->get()->keyBy('id');
+        $data = $request->validate([
+            'findings' => ['required', 'array'],
+            'findings.*.id' => ['required', 'integer', 'distinct', Rule::in($findings->keys()->all())],
+            'findings.*.confidence' => ['required', 'integer', 'between:0,100'],
+            'findings.*.confidence_reason' => ['nullable', 'string', 'max:500'],
+        ]);
+
+        DB::transaction(function () use ($findings, $data) {
+            foreach ($data['findings'] as $item) {
+                $findings[$item['id']]->update([
+                    'confidence' => $item['confidence'],
+                    'confidence_reason' => $item['confidence_reason'] ?? null,
+                ]);
+            }
+        });
+
+        return response()->json(['data' => [
+            'review_id' => $review->id,
+            'findings' => $review->findingItems()->get()->map(fn (ReviewFinding $f) => [
+                'id' => $f->id,
+                'confidence' => $f->confidence,
+                'confidence_reason' => $f->confidence_reason,
+            ])->values(),
+            'url' => route('pull-requests.show', $pullRequest),
+        ]]);
     }
 
     /**
@@ -220,6 +262,7 @@ class PullRequestController extends ApiController
                 'line' => $f->line,
                 'title' => $f->title,
                 'message' => $f->message,
+                'confidence' => $f->confidence,
                 'decision' => $f->fix_decision?->value,
                 'note' => $f->fix_note,
             ])->values(),

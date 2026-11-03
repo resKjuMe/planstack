@@ -68,7 +68,7 @@ class PullRequestApiTest extends TestCase
             'thoroughness' => 'meticulous',
             'model' => 'claude-opus-5-5',
             'findings' => [
-                ['level' => 'CRITICAL', 'type' => 'INLINE', 'file' => 'src/Foo.php', 'line' => 12, 'title' => 'Null-Prüfung fehlt', 'message' => 'Fehlszenario …'],
+                ['level' => 'CRITICAL', 'type' => 'INLINE', 'file' => 'src/Foo.php', 'line' => 12, 'title' => 'Null-Prüfung fehlt', 'message' => 'Fehlszenario …', 'confidence' => 90, 'confidence_reason' => 'Aufrufpfad nachvollzogen.'],
                 ['level' => 'IMPORTANT', 'type' => 'SUMMARY', 'requires_po_decision' => true, 'title' => 'Verhalten für Bestandsdaten', 'message' => 'Fachlich offen.'],
                 ['level' => 'HINT', 'type' => 'INLINE', 'file' => 'src/Bar.php', 'line' => 3, 'title' => 'Kommentar redundant', 'message' => 'Streichen.'],
                 ['level' => 'HINT', 'type' => 'SUMMARY', 'title' => 'Name', 'message' => 'Besser benennen.'],
@@ -224,6 +224,63 @@ class PullRequestApiTest extends TestCase
         $this->putJson("/api/pull-requests/{$id}/reviews/{$reviewId}", $this->reviewPayload(['decision' => 'APPROVE', 'findings' => []]))
             ->assertOk()
             ->assertJsonPath('data.findings', 0);
+    }
+
+    public function test_finish_review_stores_the_confidence_per_finding(): void
+    {
+        Sanctum::actingAs($this->member());
+        [$id, $reviewId] = $this->startedReview();
+
+        $this->putJson("/api/pull-requests/{$id}/reviews/{$reviewId}", $this->reviewPayload())->assertOk();
+
+        $findings = PullRequest::findOrFail($id)->reviews()->sole()->findingItems()->get();
+        $critical = $findings->firstWhere('title', 'Null-Prüfung fehlt');
+        $this->assertSame(90, $critical->confidence);
+        $this->assertSame('Aufrufpfad nachvollzogen.', $critical->confidence_reason);
+        $this->assertNull($findings->firstWhere('title', 'Name')->confidence);
+    }
+
+    public function test_confidence_can_be_added_to_a_finished_review(): void
+    {
+        Sanctum::actingAs($this->member());
+        [$id, $reviewId] = $this->startedReview();
+        $this->putJson("/api/pull-requests/{$id}/reviews/{$reviewId}", $this->reviewPayload())->assertOk();
+        $finding = PullRequest::findOrFail($id)->reviews()->sole()->findingItems()->where('title', 'Name')->sole();
+
+        $this->putJson("/api/pull-requests/{$id}/reviews/{$reviewId}/confidence", [
+            'findings' => [['id' => $finding->id, 'confidence' => 40, 'confidence_reason' => 'Geschmackssache.']],
+        ])->assertOk()->assertJsonPath('data.review_id', $reviewId);
+
+        $finding->refresh();
+        $this->assertSame(40, $finding->confidence);
+        $this->assertSame('Geschmackssache.', $finding->confidence_reason);
+    }
+
+    public function test_confidence_rejects_foreign_findings_and_out_of_range_values(): void
+    {
+        Sanctum::actingAs($this->member());
+        [$id, $reviewId] = $this->startedReview();
+        $this->putJson("/api/pull-requests/{$id}/reviews/{$reviewId}", $this->reviewPayload())->assertOk();
+        $finding = PullRequest::findOrFail($id)->reviews()->sole()->findingItems()->first();
+
+        $this->putJson("/api/pull-requests/{$id}/reviews/{$reviewId}/confidence", [
+            'findings' => [['id' => 999999, 'confidence' => 50], ['id' => $finding->id, 'confidence' => 101]],
+        ])->assertUnprocessable()->assertJsonValidationErrors(['findings.0.id', 'findings.1.confidence']);
+    }
+
+    public function test_only_the_reviewer_can_set_the_confidence(): void
+    {
+        $organization = Organization::factory()->create();
+        Sanctum::actingAs($this->member(organization: $organization));
+        [$id, $reviewId] = $this->startedReview();
+        $this->putJson("/api/pull-requests/{$id}/reviews/{$reviewId}", $this->reviewPayload())->assertOk();
+        $finding = PullRequest::findOrFail($id)->reviews()->sole()->findingItems()->first();
+
+        Sanctum::actingAs($this->member('Kollege Zwei', $organization));
+
+        $this->putJson("/api/pull-requests/{$id}/reviews/{$reviewId}/confidence", [
+            'findings' => [['id' => $finding->id, 'confidence' => 50]],
+        ])->assertForbidden();
     }
 
     public function test_a_finished_review_cannot_be_finished_again(): void

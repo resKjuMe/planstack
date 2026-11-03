@@ -217,6 +217,12 @@ function Score({ label, value, reason, tone }) {
     );
 }
 
+function confidenceTone(value) {
+    if (value >= 80) return 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300';
+    if (value >= 50) return 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300';
+    return 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300';
+}
+
 function Finding({ finding, pr, strings }) {
     const [fixing, setFixing] = useState(false);
     return (
@@ -225,6 +231,14 @@ function Finding({ finding, pr, strings }) {
                 <span className={`rounded px-1.5 py-0.5 text-xs font-medium ${LEVEL_TONE[finding.level]}`}>{strings[`level_${finding.level}`]}</span>
                 {finding.requiresPoDecision && (
                     <span className="rounded px-1.5 py-0.5 text-xs font-medium bg-indigo-100 text-indigo-800 dark:bg-indigo-900/40 dark:text-indigo-300">{strings.po_decision}</span>
+                )}
+                {finding.confidence != null && (
+                    <span
+                        title={finding.confidenceReason ? `${strings.confidence_hint}: ${finding.confidenceReason}` : strings.confidence_hint}
+                        className={`rounded px-1.5 py-0.5 text-xs font-medium ${confidenceTone(finding.confidence)}`}
+                    >
+                        {strings.confidence} {finding.confidence} %
+                    </span>
                 )}
                 <span className="font-medium text-gray-900 dark:text-gray-100">{finding.title}</span>
                 {finding.fixUrl && (

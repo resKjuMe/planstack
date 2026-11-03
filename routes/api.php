@@ -1,11 +1,11 @@
 <?php
 
+use App\Http\Controllers\Api\ChangelogController;
 use App\Http\Controllers\Api\EventController;
 use App\Http\Controllers\Api\McpController;
 use App\Http\Controllers\Api\NextActionController;
 use App\Http\Controllers\Api\NextActionsController;
 use App\Http\Controllers\Api\PhaseController;
-use App\Http\Controllers\Api\ChangelogController;
 use App\Http\Controllers\Api\ProjectConfigController;
 use App\Http\Controllers\Api\ProjectController;
 use App\Http\Controllers\Api\PullRequestController;
@@ -44,6 +44,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('pull-requests/review-states', [PullRequestController::class, 'reviewStates']);
     Route::post('pull-requests/{pullRequest}/reviews', [PullRequestController::class, 'startReview']);
     Route::put('pull-requests/{pullRequest}/reviews/{review}', [PullRequestController::class, 'finishReview']);
+    Route::put('pull-requests/{pullRequest}/reviews/{review}/confidence', [PullRequestController::class, 'updateConfidence']);
     // Fix-Lauf aus dem Dialog der Detailseite: abholen (startet ihn) und abschließen.
     Route::post('pull-requests/{pullRequest}/fix/claim', [PullRequestController::class, 'claimFix']);
     Route::put('pull-requests/{pullRequest}/reviews/{review}/fix', [PullRequestController::class, 'finishFix']);
