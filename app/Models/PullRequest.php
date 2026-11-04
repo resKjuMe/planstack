@@ -114,7 +114,7 @@ class PullRequest extends Model
     public function latestReview(): HasOne
     {
         return $this->hasOne(PullRequestReview::class)->ofMany(
-            ['review_finished_at' => 'max', 'id' => 'max'],
+            ['review_started_at' => 'max', 'id' => 'max'],
             fn ($query) => $query->whereNotNull('review_finished_at'),
         );
     }

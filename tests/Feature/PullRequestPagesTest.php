@@ -467,6 +467,25 @@ class PullRequestPagesTest extends TestCase
             ->assertInertia(fn (Assert $page) => $page->where('reviews.0.poDecisions', 1));
     }
 
+    public function test_list_shows_the_latest_started_review_when_reviews_overlap(): void
+    {
+        $me = $this->member('Ich Selbst');
+        $pullRequest = $this->pullRequest(1);
+        $this->review($pullRequest, $me, ['review_started_at' => now()->subMinutes(20), 'review_finished_at' => now(), 'findings' => 3]);
+        $this->review($pullRequest, $me, ['review_started_at' => now()->subMinutes(5), 'review_finished_at' => now()->subMinutes(2), 'findings' => 0]);
+        $newest = $pullRequest->reviews()->latest('review_started_at')->first();
+
+        $this->actingAs($me)
+            ->get(route('pull-requests.index'))
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('pullRequests.0.review.id', $newest->id)
+                ->where('pullRequests.0.review.findings', 0));
+
+        $this->actingAs($me)
+            ->get(route('pull-requests.show', $pullRequest))
+            ->assertInertia(fn (Assert $page) => $page->where('reviews.0.id', $newest->id));
+    }
+
     public function test_detail_page_of_another_organization_is_not_found(): void
     {
         $pullRequest = $this->pullRequest(7);
