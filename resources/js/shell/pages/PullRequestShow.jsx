@@ -410,7 +410,7 @@ function FixStep({ finding, data, error, label, strings, onChange, skipNeedsReas
             </div>
 
             <div className="flex flex-wrap gap-x-4 gap-y-2">
-                {['SUGGESTED', 'FIX', 'SKIP'].map((value) => (
+                {['FIX', 'SUGGESTED', 'SKIP'].map((value) => (
                     <label key={value} className="inline-flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
                         <input
                             type="radio"
