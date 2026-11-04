@@ -118,9 +118,10 @@ function useCollapsed() {
     return [collapsed, toggle];
 }
 
-// Ein laufendes Review oder ein laufender Fix geht vor, danach ausreichend
-// approvt: dann braucht es kein weiteres Review.
+// Merge-Queue geht vor, dann ein laufendes Review oder ein laufender Fix,
+// danach ausreichend approvt: dann braucht es kein weiteres Review.
 const section = (pr) => {
+    if (pr.inMergeQueue) return 'merge_queue';
     if (pr.running) return 'running';
     if (pr.fixing) return 'fixing';
     if (pr.approvals.fulfilled) return 'approved';
@@ -147,7 +148,7 @@ export default function PullRequestsIndex({ filters, filterUrls, hiddenCount, gr
         onFinish: () => setSyncing(false),
     });
     const sections = useMemo(() => (grouped
-        ? ['running', 'fixing', 'needs_review', 'approve_pending', 'reviewed', 'approved'].map((key) => ({
+        ? ['running', 'fixing', 'needs_review', 'approve_pending', 'reviewed', 'approved', 'merge_queue'].map((key) => ({
             key,
             rows: arrange(pullRequests.filter((pr) => section(pr) === key), sort),
         })).filter((section) => section.rows.length > 0)

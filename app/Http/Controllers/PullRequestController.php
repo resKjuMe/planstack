@@ -444,6 +444,7 @@ class PullRequestController extends Controller
             'ciState' => $pr->ci_state,
             'ciFailedChecks' => $pr->ci_failed_checks ?? [],
             'conflicting' => $pr->mergeable === 'CONFLICTING',
+            'inMergeQueue' => $pr->state === PullRequestState::OPEN && $pr->in_merge_queue,
             'unresolvedThreads' => (int) $pr->unresolved_threads,
             'changedFiles' => $pr->changed_files,
             'additions' => $pr->additions,
