@@ -244,6 +244,31 @@ class PullRequestPagesTest extends TestCase
                 ->where('pullRequest.approvals.reviewers.0.outdated', true));
     }
 
+    public function test_detail_offers_converting_a_changes_request_that_is_not_from_ps_review(): void
+    {
+        $me = $this->member('Ich Selbst');
+        $vera = $this->member('Vera Rolf');
+        $pullRequest = $this->pullRequest(1);
+        $this->review($pullRequest, $me, ['decision' => 'REQUEST_CHANGES', 'commit_sha' => 'aaa']);
+        $pullRequest->approvals()->create(['login' => 'ich-selbst_clockodo', 'user_id' => $me->id, 'state' => 'CHANGES_REQUESTED', 'commit_sha' => 'aaa', 'submitted_at' => now()]);
+        $pullRequest->approvals()->create(['login' => 'vera-rolf_clockodo', 'user_id' => $vera->id, 'state' => 'CHANGES_REQUESTED', 'commit_sha' => 'aaa', 'submitted_at' => now()->subHour()]);
+
+        $this->actingAs($me)
+            ->get(route('pull-requests.show', $pullRequest))
+            ->assertInertia(fn (Assert $page) => $page
+                ->has('pullRequest.foreignChangesRequested', 1)
+                ->where('pullRequest.foreignChangesRequested.0.login', 'vera-rolf_clockodo')
+                ->where('pullRequest.foreignChangesRequested.0.name', 'Vera Rolf'));
+
+        $this->review($pullRequest, $me, ['decision' => 'REQUEST_CHANGES', 'converted_from_login' => 'vera-rolf_clockodo', 'review_started_at' => now()]);
+
+        $this->actingAs($me)
+            ->get(route('pull-requests.show', $pullRequest))
+            ->assertInertia(fn (Assert $page) => $page
+                ->has('pullRequest.foreignChangesRequested', 0)
+                ->where('reviews.0.convertedFrom', 'vera-rolf_clockodo'));
+    }
+
     private function node(int $number, array $attributes = []): array
     {
         return array_merge([

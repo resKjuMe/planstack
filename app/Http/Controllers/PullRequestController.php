@@ -317,6 +317,7 @@ class PullRequestController extends Controller
                 'mergedAt' => $pullRequest->merged_at?->toIso8601String(),
                 'closedAt' => $pullRequest->closed_at?->toIso8601String(),
                 'approvals' => $this->approvals($pullRequest),
+                'foreignChangesRequested' => $pullRequest->state === PullRequestState::OPEN ? $this->foreignChangesRequested($pullRequest) : [],
                 'hidden' => $pullRequest->hiddenBy()->whereKey($user->id)->exists(),
                 'hideUrl' => route('pull-requests.hide', $pullRequest),
             ],
@@ -328,6 +329,7 @@ class PullRequestController extends Controller
                 'strictness' => $review->strictness,
                 'thoroughness' => $review->thoroughness,
                 'model' => $review->model,
+                'convertedFrom' => $review->converted_from_login,
                 'fix' => $review->fixStatus() === null ? null : [
                     'status' => $review->fixStatus(),
                     'requestedAt' => $review->fix_requested_at?->toIso8601String(),
@@ -493,6 +495,29 @@ class PullRequestController extends Controller
                     'outdated' => $a->commit_sha !== null && $pr->last_commit !== null && $a->commit_sha !== $pr->last_commit,
                 ])->values(),
         ];
+    }
+
+    /**
+     * Changes-Requested-Reviews, die nicht aus ps-review stammen und noch nicht
+     * übernommen wurden. Als ps-review gilt ein Review desselben Nutzers auf
+     * demselben Commit (von ps-review gepostet).
+     *
+     * @return array<int, array{login: string, name: string, submittedAt: ?string}>
+     */
+    private function foreignChangesRequested(PullRequest $pr): array
+    {
+        $finished = $pr->reviews->filter(fn (PullRequestReview $r) => $r->isFinished());
+
+        return $pr->approvals
+            ->where('state', PullRequestApproval::CHANGES_REQUESTED)
+            ->reject(fn (PullRequestApproval $a) => $finished->contains(fn (PullRequestReview $r) => ($a->user_id !== null && $r->reviewer_id === $a->user_id && $r->commit_sha !== null && $r->commit_sha === $a->commit_sha)
+                || ($r->converted_from_login !== null && strcasecmp($r->converted_from_login, $a->login) === 0
+                    && ($a->submitted_at === null || $r->review_started_at?->gte($a->submitted_at)))))
+            ->map(fn (PullRequestApproval $a) => [
+                'login' => $a->login,
+                'name' => $a->user?->name ?? $a->login,
+                'submittedAt' => $a->submitted_at?->toIso8601String(),
+            ])->values()->all();
     }
 
     private function reviewRow(PullRequestReview $review, PullRequest $pr): array

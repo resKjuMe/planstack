@@ -595,13 +595,14 @@ curl -s https://planstack.eskju.net/api/user \
                 <thead><tr><th>{{ __('common.field') }}</th><th>{{ __('api.type') }}</th><th>{{ __('api.rules') }}</th></tr></thead>
                 <tbody>
                     <tr><td><code>commit_sha</code>, <code>strictness</code>, <code>thoroughness</code>, <code>model</code></td><td>string</td><td><span class="opt">{{ __('api.optional') }}</span></td></tr>
+                    <tr><td><code>converted_from_login</code></td><td>string</td><td><span class="opt">{{ __('api.optional') }}</span> · GitHub-Login, dessen Changes-Requested-Review dieses Review übernimmt; danach bietet die Detailseite die Umwandlung nicht mehr an</td></tr>
                 </tbody>
             </table>
         </section>
 
         <section id="pull-requests-review-finish" class="endpoint">
             <div class="route"><span class="method m-put">PUT</span><span class="path">/api/pull-requests/<b>{id}</b>/reviews/<b>{review}</b></span></div>
-            <p class="desc">Schließt das Review mit Bewertung und Findings ab (<code>review_finished_at</code>). Nur der Reviewer selbst; ein bereits abgeschlossenes Review ergibt <span class="status-pill s4">409</span>. Die Zähler (<code>findings</code>, <code>findings_critical</code> …) berechnet der Server aus <code>findings[]</code>. <span class="status-pill s2">200</span></p>
+            <p class="desc">Schließt das Review mit Bewertung und Findings ab (<code>review_finished_at</code>). Nur der Reviewer selbst; ein bereits abgeschlossenes Review ergibt <span class="status-pill s4">409</span>. Die Zähler (<code>findings</code>, <code>findings_critical</code> …) berechnet der Server aus <code>findings[]</code>. Die Antwort listet unter <code>finding_items[]</code> je Befund <code>id</code>, <code>file</code>, <code>line</code>, <code>title</code> und den Direktlink <code>url</code> (in Reihenfolge von <code>findings[]</code>). <span class="status-pill s2">200</span></p>
             <table>
                 <thead><tr><th>{{ __('common.field') }}</th><th>{{ __('api.type') }}</th><th>{{ __('api.rules') }}</th></tr></thead>
                 <tbody>
