@@ -200,10 +200,12 @@ class PullRequestController extends Controller
             'findings.*.id' => ['required', 'integer', 'distinct', Rule::in($findings->keys()->all())],
             'findings.*.decision' => ['required', Rule::enum(FindingFixDecision::class)],
             'findings.*.note' => ['nullable', 'string', 'max:5000'],
+            'start' => ['sometimes', 'boolean'],
         ]);
+        $start = $data['start'] ?? true;
 
         // PO-Befunde lassen sich nur mit festgehaltener Entscheidung fixen (oder wie vorgeschlagen).
-        $missing = collect($data['findings'])
+        $missing = collect($start ? $data['findings'] : [])
             ->filter(fn (array $f) => $findings[$f['id']]->requires_po_decision && FindingFixDecision::from($f['decision'])->needsPoNote() && trim((string) ($f['note'] ?? '')) === '')
             ->keys()
             ->mapWithKeys(fn (int $index) => ["findings.{$index}.note" => __('pull_requests.fix_po_note_required')]);
@@ -211,16 +213,19 @@ class PullRequestController extends Controller
             throw ValidationException::withMessages($missing->all());
         }
 
-        DB::transaction(function () use ($review, $findings, $data, $user) {
+        DB::transaction(function () use ($review, $findings, $data, $user, $start) {
             foreach ($data['findings'] as $item) {
                 // „Wie vorgeschlagen“ trägt keine Anmerkung.
                 $note = $item['decision'] === FindingFixDecision::SUGGESTED->value ? '' : trim((string) ($item['note'] ?? ''));
                 $findings[$item['id']]->update([
                     'fix_decision' => $item['decision'],
                     'fix_note' => $note === '' ? null : $note,
-                    'fix_outcome' => null,
-                    'fix_outcome_note' => null,
-                ]);
+                ] + ($start ? ['fix_outcome' => null, 'fix_outcome_note' => null] : []));
+            }
+
+            // Nur speichern: Fix-Lauf bleibt unberührt.
+            if (! $start) {
+                return;
             }
 
             $review->update([

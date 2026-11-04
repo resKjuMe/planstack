@@ -542,6 +542,25 @@ class PullRequestPagesTest extends TestCase
         $this->assertNull($review->fresh()->fix_requested_at);
     }
 
+    public function test_saving_decisions_without_start_keeps_the_fix_run_untouched(): void
+    {
+        $me = $this->member('Ich Selbst');
+        [$pullRequest, $review] = $this->reviewWithPoFinding($me);
+        $review->findingItems()->update(['fix_outcome' => 'FIXED']);
+
+        $this->actingAs($me)
+            ->post(route('pull-requests.fix', [$pullRequest, $review]), ['findings' => $this->decisions($review, ''), 'start' => false])
+            ->assertSessionHasNoErrors()
+            ->assertRedirect();
+
+        $review->refresh();
+        $this->assertNull($review->fixStatus());
+        $this->assertSame('SKIP', $review->findingItems()->where('requires_po_decision', false)->sole()->fix_decision->value);
+        $po = $review->findingItems()->where('requires_po_decision', true)->sole();
+        $this->assertSame('FIX', $po->fix_decision->value);
+        $this->assertSame('FIXED', $po->fix_outcome->value);
+    }
+
     public function test_a_po_finding_fixed_as_suggested_needs_no_note(): void
     {
         $me = $this->member('Ich Selbst');
