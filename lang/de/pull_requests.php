@@ -129,6 +129,7 @@ return [
     'fix_hint' => 'Je Befund entscheiden, dann setzt ps-review die Fixe in Claude um, pusht und reviewt neu (PowerShell)',
     'fix_step' => 'Befund :n von :total',
     'fix_decision_FIX' => 'Fixen',
+    'fix_decision_SUGGESTED' => 'Fixen wie vorgeschlagen',
     'fix_decision_SKIP' => 'Nicht fixen',
     'fix_note' => 'Anmerkung',
     'fix_note_placeholder' => 'Optional: gewünschte Lösung oder Grund fürs Auslassen',

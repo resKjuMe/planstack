@@ -129,6 +129,7 @@ return [
     'fix_hint' => 'Decide per finding, then ps-review applies the fixes in Claude, pushes and reviews again (PowerShell)',
     'fix_step' => 'Finding :n of :total',
     'fix_decision_FIX' => 'Fix',
+    'fix_decision_SUGGESTED' => 'Fix as suggested',
     'fix_decision_SKIP' => 'Skip',
     'fix_note' => 'Note',
     'fix_note_placeholder' => 'Optional: preferred solution or reason to skip',
