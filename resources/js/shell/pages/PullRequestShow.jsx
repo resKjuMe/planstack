@@ -344,17 +344,20 @@ function FixDialog({ review, pr, strings, onClose }) {
     const set = (index, key, value) => form.setData('findings', form.data.findings.map((f, i) => (i === index ? { ...f, [key]: value } : f)));
     const noteError = (index) => form.errors[`findings.${index}.note`];
 
-    const submit = (start) => form.transform((data) => ({ ...data, start })).post(review.fixUrl, {
-        preserveScroll: true,
-        onSuccess: () => {
-            onClose();
-            if (start) window.location.href = fixCommandHref(pr);
-        },
-        onError: (errors) => {
-            const first = findings.findIndex((_, i) => errors[`findings.${i}.note`]);
-            if (first >= 0) setStep(first);
-        },
-    });
+    const submit = (start) => {
+        form.transform((data) => ({ ...data, start }));
+        form.post(review.fixUrl, {
+            preserveScroll: true,
+            onSuccess: () => {
+                onClose();
+                if (start) window.location.href = fixCommandHref(pr);
+            },
+            onError: (errors) => {
+                const first = findings.findIndex((_, i) => errors[`findings.${i}.note`]);
+                if (first >= 0) setStep(first);
+            },
+        });
+    };
 
     const button = 'inline-flex items-center rounded-md px-4 py-2 text-sm font-semibold';
     const secondary = `${button} border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700`;
