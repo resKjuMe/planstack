@@ -382,7 +382,7 @@ class PullRequestController extends Controller
             return false;
         }
 
-        $latestId = $pullRequest->reviews()->finished()->latest('review_finished_at')->latest('id')->value('id');
+        $latestId = $pullRequest->reviews()->finished()->latest('review_started_at')->latest('id')->value('id');
 
         return $latestId === $review->id;
     }
