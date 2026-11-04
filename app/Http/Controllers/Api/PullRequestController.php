@@ -151,6 +151,8 @@ class PullRequestController extends ApiController
             'findings.*.line' => ['nullable', 'required_if:findings.*.type,INLINE', 'integer', 'min:1'],
             'findings.*.title' => ['required', 'string', 'max:300'],
             'findings.*.message' => ['required', 'string'],
+            'findings.*.confidence' => ['nullable', 'integer', 'between:0,100'],
+            'findings.*.confidence_reason' => ['nullable', 'string', 'max:500'],
         ]);
 
         $findings = collect($data['findings']);
@@ -174,6 +176,8 @@ class PullRequestController extends ApiController
                 'line' => $finding['line'] ?? null,
                 'title' => $finding['title'],
                 'message' => $finding['message'],
+                'confidence' => $finding['confidence'] ?? null,
+                'confidence_reason' => $finding['confidence_reason'] ?? null,
             ])->all());
         });
 
@@ -222,6 +226,7 @@ class PullRequestController extends ApiController
                 'line' => $f->line,
                 'title' => $f->title,
                 'message' => $f->message,
+                'confidence' => $f->confidence,
                 'decision' => $f->fix_decision?->value,
                 'note' => $f->fix_note,
             ])->values(),

@@ -38,6 +38,7 @@ return [
     'level_IMPORTANT' => 'Important',
     'level_HINT' => 'Hint',
     'po_decision' => 'PO decision required',
+    'confidence' => 'Confidence',
     'po_decisions' => ':count finding(s) need a PO decision',
     'summary_finding' => 'General',
     'back' => 'All pull requests',

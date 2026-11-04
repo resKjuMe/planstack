@@ -22,6 +22,8 @@ class ReviewFinding extends Model
         'line',
         'title',
         'message',
+        'confidence',
+        'confidence_reason',
         'fix_decision',
         'fix_note',
         'fix_outcome',
@@ -35,6 +37,7 @@ class ReviewFinding extends Model
             'type' => ReviewFindingType::class,
             'requires_po_decision' => 'boolean',
             'line' => 'integer',
+            'confidence' => 'integer',
             'fix_decision' => FindingFixDecision::class,
             'fix_outcome' => FindingFixOutcome::class,
         ];

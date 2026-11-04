@@ -38,6 +38,7 @@ return [
     'level_IMPORTANT' => 'Wichtig',
     'level_HINT' => 'Hinweis',
     'po_decision' => 'PO-Entscheidung nötig',
+    'confidence' => 'Konfidenz',
     'po_decisions' => ':count Befund(e) brauchen eine PO-Entscheidung',
     'summary_finding' => 'Allgemein',
     'back' => 'Alle Pull Requests',
