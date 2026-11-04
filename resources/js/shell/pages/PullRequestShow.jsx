@@ -3,7 +3,7 @@ import { Head, Link, router, useForm } from '@inertiajs/react';
 import AppShell from '../AppShell.jsx';
 import PageBands from '../components/PageBands.jsx';
 import PullRequestTimeline from '../components/PullRequestTimeline.jsx';
-import { ApprovalPanel, PoBadge, StackedIcon, DecisionBadge, FindingCounts, JiraTitle, LEVEL_TONE, Markdown, RunningBadge, ScoreBar, StateBadge, fixCommandHref, resolveCommandHref, formatDate, formatDuration, usePullRequestLiveReload } from '../components/PullRequestParts.jsx';
+import { ApprovalPanel, PoBadge, StackedIcon, DecisionBadge, FindingCounts, JiraTitle, LEVEL_TONE, Markdown, RunningBadge, ScoreBar, StateBadge, fixCommandHref, resolveCommandHref, convertCommandHref, formatDate, formatDuration, usePullRequestLiveReload } from '../components/PullRequestParts.jsx';
 
 // Detailseite eines Pull Requests: Metadaten, Beschreibung und alle Reviews
 // (neuestes oben) mit Zusammenfassung und Befunden. Markdown rendert der Server.
@@ -40,6 +40,7 @@ export default function PullRequestShow({ pullRequest: pr, reviews, commitHistor
                         <PullRequestTimeline pr={pr} reviews={reviews} commits={commitHistory} strings={strings} />
                     </div>
                     <div className="lg:col-span-2 space-y-6">
+                        {pr.foreignChangesRequested?.map((cr) => <ForeignChangesRequested key={cr.login} cr={cr} pr={pr} strings={strings} />)}
                         {reviews.length === 0 ? (
                             <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-8 text-center text-gray-500 dark:text-gray-400">{strings.no_reviews}</div>
                         ) : (
@@ -107,6 +108,25 @@ function Fact({ label, value }) {
     );
 }
 
+function ForeignChangesRequested({ cr, pr, strings }) {
+    return (
+        <section className="flex flex-wrap items-center gap-3 rounded-lg border border-red-200 bg-red-50 px-5 py-3 text-sm dark:border-red-900/60 dark:bg-red-900/20">
+            <span className="text-red-600 dark:text-red-400">✗</span>
+            <span className="text-gray-900 dark:text-gray-100">
+                {strings.foreign_changes_requested.replace(':name', cr.name)}
+                {cr.submittedAt && <span className="text-gray-500 dark:text-gray-400"> · {formatDate(cr.submittedAt)}</span>}
+            </span>
+            <a
+                href={convertCommandHref(pr, cr.login)}
+                title={strings.convert_review_hint}
+                className="ml-auto inline-flex items-center rounded-md bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-indigo-500"
+            >
+                {strings.convert_review}
+            </a>
+        </section>
+    );
+}
+
 function Review({ review, pr, strings, latest }) {
     const [fixing, setFixing] = useState(false);
     if (review.status !== 'finished') {
@@ -145,6 +165,7 @@ function Review({ review, pr, strings, latest }) {
                     {duration ? ` · ${strings.duration} ${duration}` : ''}
                 </span>
                 {review.stale && <span className="text-xs text-amber-600 dark:text-amber-400">{strings.stale}</span>}
+                {review.convertedFrom && <span className="text-xs text-gray-500 dark:text-gray-400">{strings.converted_from.replace(':login', review.convertedFrom)}</span>}
                 <FixStatus fix={review.fix} pr={pr} strings={strings} />
                 {(review.fixUrl || resolvable) && (
                     <div className="ml-auto flex items-center gap-2">
@@ -220,7 +241,7 @@ function Score({ label, value, reason, tone }) {
 function Finding({ finding, pr, strings }) {
     const [fixing, setFixing] = useState(false);
     return (
-        <article className="rounded-md border border-gray-200 dark:border-gray-700 p-3">
+        <article id={`finding-${finding.id}`} className="scroll-mt-4 rounded-md border border-gray-200 dark:border-gray-700 p-3 target:ring-2 target:ring-indigo-500">
             <div className="flex flex-wrap items-center gap-2 text-sm">
                 <span className={`rounded px-1.5 py-0.5 text-xs font-medium ${LEVEL_TONE[finding.level]}`}>{strings[`level_${finding.level}`]}</span>
                 {finding.requiresPoDecision && (

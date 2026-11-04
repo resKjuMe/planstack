@@ -104,6 +104,7 @@ class PullRequestController extends ApiController
             'strictness' => ['nullable', 'string', 'max:20'],
             'thoroughness' => ['nullable', 'string', 'max:20'],
             'model' => ['nullable', 'string', 'max:100'],
+            'converted_from_login' => ['nullable', 'string', 'max:100'],
         ]);
 
         $review = $pullRequest->reviews()->create([
@@ -381,6 +382,13 @@ class PullRequestController extends ApiController
             'ai_reviewability' => $review->ai_reviewability,
             'po_review_likelihood' => $review->po_review_likelihood,
             'url' => route('pull-requests.show', $pullRequest),
+            'finding_items' => $review->findingItems()->orderBy('id')->get()->map(fn (ReviewFinding $f) => [
+                'id' => $f->id,
+                'file' => $f->file,
+                'line' => $f->line,
+                'title' => $f->title,
+                'url' => route('pull-requests.show', $pullRequest).'#finding-'.$f->id,
+            ])->all(),
         ];
     }
 }

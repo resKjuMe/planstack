@@ -161,6 +161,16 @@ class PullRequestApiTest extends TestCase
         $this->assertSame('abc1234', $review->commit_sha);
     }
 
+    public function test_start_review_records_the_converted_github_review(): void
+    {
+        Sanctum::actingAs($this->member());
+        $id = $this->putJson('/api/pull-requests', $this->pullRequestPayload())->json('data.id');
+
+        $this->postJson("/api/pull-requests/{$id}/reviews", ['converted_from_login' => 'vera-rolf_clockodo'])->assertCreated();
+
+        $this->assertSame('vera-rolf_clockodo', PullRequest::findOrFail($id)->reviews()->sole()->converted_from_login);
+    }
+
     public function test_finish_review_derives_the_counts_from_the_findings(): void
     {
         Sanctum::actingAs($this->member());
@@ -174,7 +184,8 @@ class PullRequestApiTest extends TestCase
             ->assertJsonPath('data.findings_important', 1)
             ->assertJsonPath('data.findings_hint', 2)
             ->assertJsonPath('data.po_review_likelihood', 85)
-            ->assertJsonPath('data.url', route('pull-requests.show', $id));
+            ->assertJsonPath('data.url', route('pull-requests.show', $id))
+            ->assertJsonCount(4, 'data.finding_items');
 
         $review = PullRequest::findOrFail($id)->reviews()->sole();
         $this->assertNotNull($review->review_finished_at);

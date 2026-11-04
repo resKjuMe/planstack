@@ -137,6 +137,11 @@ export function resolveCommandHref(pr) {
     return `claudetask:${encodeURIComponent(`/ps-review resolve ${pr.githubUrl}`)}`;
 }
 
+// Übernahme einer fremden Changes-Requested-Review als ps-review mit Befunden.
+export function convertCommandHref(pr, login) {
+    return `claudetask:${encodeURIComponent(`/ps-review convert ${pr.githubUrl} --from ${login}`)}`;
+}
+
 // Startknopf für ps-review: ↻ wenn seit dem letzten Review gepusht wurde, sonst ▶.
 export function ReviewStartLink({ pr, strings }) {
     const stale = pr.review?.stale;

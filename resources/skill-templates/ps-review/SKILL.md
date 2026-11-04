@@ -1,7 +1,7 @@
 ---
 name: ps-review
-description: Code-Review eines GitHub-PR mit Ablage in Planstack — reviewt den PR (inklusive Prüfung der Code-Kommentare auf Richtigkeit, Mehrwert und Knappheit), bewertet Kritikalität, KI-Prüfbarkeit und PO-Sichtung, sendet PR-Daten und Review samt Findings an die Planstack-API (sichtbar unter planstack.eskju.net/pull-requests), gibt die Review im Chat aus und schließt mit Findings-/Kritisch-/Wichtig-/Hinweis-/Empfehlung-Zeilen ab. Am PR wird nur nach ausdrücklicher Rückfrage gepostet. Mit „fix“ setzt er die in Planstack je Befund getroffenen Entscheidungen um, hält sie im PR-Body fest, pusht und reviewt neu; mit „resolve“ löst er den Merge-Konflikt, fixt rote CI und offene (Review-)Kommentare, pusht und reviewt neu. Nutze diesen Skill bei „ps-review 1234", „review PR 1234 nach Planstack", „/ps-review", „/ps-review fix 1234", „/ps-review resolve 1234".
-argument-hint: "[fix|resolve] [<pr-nummer|pr-url|branch>] [--lenient|--strict] [--relaxed|--meticulous] [--post|--comment|--no-post]"
+description: Code-Review eines GitHub-PR mit Ablage in Planstack — reviewt den PR (inklusive Prüfung der Code-Kommentare auf Richtigkeit, Mehrwert und Knappheit), bewertet Kritikalität, KI-Prüfbarkeit und PO-Sichtung, sendet PR-Daten und Review samt Findings an die Planstack-API (sichtbar unter planstack.eskju.net/pull-requests), gibt die Review im Chat aus und schließt mit Findings-/Kritisch-/Wichtig-/Hinweis-/Empfehlung-Zeilen ab. Am PR wird nur nach ausdrücklicher Rückfrage gepostet. Mit „fix“ setzt er die in Planstack je Befund getroffenen Entscheidungen um, hält sie im PR-Body fest, pusht und reviewt neu; mit „resolve“ löst er den Merge-Konflikt, fixt rote CI und offene (Review-)Kommentare, pusht und reviewt neu; mit „convert“ übernimmt er die Changes-Requested-Review eines Kollegen als ps-review mit Befunden, beantwortet deren Kommentare mit dem Planstack-Link und löst die Threads auf. Nutze diesen Skill bei „ps-review 1234", „review PR 1234 nach Planstack", „/ps-review", „/ps-review fix 1234", „/ps-review resolve 1234", „/ps-review convert 1234 --from <login>".
+argument-hint: "[fix|resolve|convert] [<pr-nummer|pr-url|branch>] [--from <login>] [--lenient|--strict] [--relaxed|--meticulous] [--post|--comment|--no-post]"
 ---
 
 **Nie** als Befund melden: reine Formatierung von Kommentaren — Zeilenumbruch mitten im Satz, Umbruchbreite, Einrückung, Leerzeilen, Satzzeichen. Das ist irrelevant, auch nicht als Hinweis.
@@ -12,15 +12,15 @@ Ein vollständiges Code-Review; das Ergebnis landet **nicht** als Datei, sondern
 
 ## Harte Regeln (nicht verhandelbar)
 
-1. **Nichts am PR posten, bevor der Nutzer zugestimmt hat.** Während des Reviews sind nur lesende `gh`-Aufrufe erlaubt (`gh pr view`, `gh pr diff`, `gh pr checks`, `gh api` mit `GET`). Geschrieben wird am PR erst in Schritt 8 — nach expliziter Zustimmung, und nur das, was der Nutzer in Schritt 7 ausgewählt hat. Ohne Antwort wird nichts gepostet; Schweigen ist kein Ja.
+1. **Nichts am PR posten, bevor der Nutzer zugestimmt hat.** Während des Reviews sind nur lesende `gh`-Aufrufe erlaubt (`gh pr view`, `gh pr diff`, `gh pr checks`, `gh api` mit `GET`). Geschrieben wird am PR erst in Schritt 8 — nach expliziter Zustimmung, und nur das, was der Nutzer in Schritt 7 ausgewählt hat. Ohne Antwort wird nichts gepostet; Schweigen ist kein Ja. Ausnahme: im Übernahme-Modus (`/ps-review convert`) ist der Klick auf den Button die Zustimmung zu den Antworten und dem Auflösen der übernommenen Threads (C4).
 2. **Planstack nur über drei Aufrufe**: `PUT /api/pull-requests` und `POST /api/pull-requests/{id}/reviews` (Start) in Schritt 1, `PUT /api/pull-requests/{id}/reviews/{review}` (Abschluss) in Schritt 5. Im Fix-Modus kommen `POST /api/pull-requests/{id}/fix/claim` und `PUT /api/pull-requests/{id}/reviews/{review}/fix` dazu. Keine Board-Aufrufe (`review-claim`, `review-next`, Events) — dieser Skill kennt kein Board.
 3. **Keine lokale Report-Datei.** Die Payload-Dateien für `curl` liegen nur temporär (Scratchpad bzw. `mktemp -d`) und werden nach dem Senden gelöscht. Schlägt die API fehl, wird das gemeldet — nicht als Datei abgelegt.
-4. **Nichts am Code ändern.** Das Review ist rein lesend: keine Edits, keine Commits, kein Push, kein Checkout, der lokale Änderungen gefährdet. Ausnahmen: der Nutzer wählt in Schritt 7 „Fixe Findings im gleichen PR“ — dann gilt Schritt 9; oder der Aufruf ist `/ps-review fix` bzw. `/ps-review resolve` — dann gilt der Fix- bzw. Konflikt-Modus.
+4. **Nichts am Code ändern.** Das Review ist rein lesend: keine Edits, keine Commits, kein Push, kein Checkout, der lokale Änderungen gefährdet. Ausnahmen: der Nutzer wählt in Schritt 7 „Fixe Findings im gleichen PR“ — dann gilt Schritt 9; oder der Aufruf ist `/ps-review fix` bzw. `/ps-review resolve` — dann gilt der Fix- bzw. Konflikt-Modus. Der Übernahme-Modus (`/ps-review convert`) ändert keinen Code.
 5. **Das Review wird immer abgeschlossen** — auch bei `APPROVE` ohne einen einzigen Befund. Ein gestartetes, nie abgeschlossenes Review zeigt Planstack zwei Stunden lang als laufend, danach als abgebrochen.
 
 ## Aufruf
 
-`/ps-review [<ZIEL>] [<Schalter>]` · `/ps-review fix <ZIEL>` (Fix-Modus) · `/ps-review resolve <ZIEL>` (Konflikt-Modus), siehe unten
+`/ps-review [<ZIEL>] [<Schalter>]` · `/ps-review fix <ZIEL>` (Fix-Modus) · `/ps-review resolve <ZIEL>` (Konflikt-Modus) · `/ps-review convert <ZIEL> --from <login>` (Übernahme-Modus), siehe unten
 
 Das Ziel muss sich zu einem **GitHub-PR** auflösen, denn Planstack speichert Reviews je PR:
 
@@ -612,3 +612,57 @@ Antworten in der Sprache des Kommentars, knapp, ohne Floskeln. Diese Antworten s
 #### R6. Neues Review
 
 Direkt danach ein vollständiges Review des neuen Head (Schritte 1–6, mit Review-Start in Planstack) mit `--no-post`: Schritt 7 entfällt. Davor im Chat eine kurze Zusammenfassung: Konflikt gelöst (Dateien), CI-Fixe (Checks), Kommentare (behoben/beantwortet/offen gelassen je Thread) und die gepushten Commits; die Antwort endet wie immer mit den Abschlusszeilen aus Schritt 6.
+
+## Übernahme-Modus: `/ps-review convert <PR> --from <login>`
+
+Gestartet über den Button **In ps-review umwandeln** auf der Planstack-Detailseite (per `claudetask:`), sichtbar solange der PR offen ist und `<login>` Änderungen angefordert hat, ohne dass die Review aus ps-review stammt oder schon übernommen wurde. Der Modus macht aus dieser GitHub-Review ein abgeschlossenes ps-review mit Befunden, damit sie über **Findings fixen** abgearbeitet werden kann, beantwortet jeden übernommenen Kommentar mit dem Link auf seinen Befund und löst den Thread auf. Er ändert keinen Code und läuft unbeaufsichtigt: **keine Rückfragen**. Fehlt `--from`, gilt der einzige Reviewer mit `CHANGES_REQUESTED`; gibt es mehrere, abbrechen und sie nennen.
+
+#### C1. Review und Kommentare holen
+
+PR auflösen wie in Schritt 1 (UPSERT des PR inklusive `github_reviews`, noch **ohne** Review-Start), dann rein lesend:
+
+```bash
+# letzte CHANGES_REQUESTED-Review von <login>: id, body, commit_id, submitted_at, html_url
+gh api --paginate "repos/$REPO/pulls/<pr>/reviews" \
+  --jq '.[] | select(.user.login=="<login>" and .state=="CHANGES_REQUESTED") | {id, body, commit_id, submitted_at, html_url}'
+# offene Threads samt Thread-ID; übernommen werden die, deren erster Kommentar von <login> stammt:
+gh api graphql -f query='query($o:String!,$r:String!,$n:Int!){repository(owner:$o,name:$r){pullRequest(number:$n){reviewThreads(first:100){nodes{id isResolved isOutdated path line originalLine comments(first:50){nodes{databaseId author{login} body url pullRequestReview{databaseId}}}}}}}}' -F o=<owner> -F r=<repo> -F n=<pr>
+```
+
+Übernommen werden alle **offenen** Threads, die `<login>` begonnen hat (auch aus früheren Reviews derselben Person), plus der Body der Review, wenn er mehr als eine Floskel enthält. Folgekommentare im Thread (Antworten, Einigungen) fließen in die Einordnung ein. Gibt es weder offene Threads noch einen Body mit Inhalt, abbrechen und das melden.
+
+#### C2. Review in Planstack starten
+
+```bash
+curl -s -w '\n%{http_code}\n' -X POST "$BASE/pull-requests/$PRID/reviews" "${AUTH[@]}" \
+  --data-binary "{\"commit_sha\":\"<commit_id der Review>\",\"strictness\":\"$STRICT\",\"thoroughness\":\"$THOROUGH\",\"model\":\"<Modell-ID>\",\"converted_from_login\":\"<login>\"}"
+```
+
+`converted_from_login` blendet den Button auf der Detailseite aus und vermerkt am Review „übernommen von <login>“.
+
+#### C3. Befunde bilden und abschließen
+
+Je Thread ein Befund, aus dem Review-Body je eigenständigem Punkt einer:
+
+- `type`: Thread mit `path` und Zeile (`line`, sonst `originalLine`) → `INLINE` mit `file`/`line`; Body-Punkte und Threads ohne Zeile → `SUMMARY`.
+- `title`: der Einwand in einer Zeile, in der Sprache aus Schritt 5.
+- `message`: zuerst der Originalkommentar als Zitat mit Autor und Link (`> **<login>:** …` + `[auf GitHub](<url>)`), danach die eigene Einordnung: am Code nachgeprüft, was zutrifft, und ein konkreter Fix-Vorschlag. Stimmt ein Einwand nicht oder ist er schon erledigt, das sachlich festhalten — der Befund bleibt trotzdem stehen, damit „Findings fixen“ ihn mit „Nicht fixen“ und Begründung schließen kann.
+- `level` nach Schritt 3, `requires_po_decision` nach Schritt 4 (fachliche Regel, Kundenverhalten).
+
+Abschluss wie in Schritt 5 (Aufruf 2) mit `decision` `REQUEST_CHANGES`, `criticality`/`ai_reviewability`/`po_review_likelihood` aus einem kurzen Blick auf den Diff. `summary`: `## TLDR` mit „Übernommen aus der Review von <login> vom <Datum>“ und Link auf die GitHub-Review, danach `## Nicht übernommen` (aufgelöste oder veraltete Threads, Floskeln), sonst nichts. Die Antwort enthält unter `data.finding_items[]` je Befund (in der gesendeten Reihenfolge) die `id` und den Direktlink `url`.
+
+#### C4. Am PR antworten und auflösen
+
+Erst nach erfolgreichem Abschluss in C3, je übernommenem Thread:
+
+```bash
+gh api "repos/$REPO/pulls/<pr>/comments/<databaseId des ersten Kommentars>/replies" \
+  -f body='In Planstack als Befund übernommen: <finding_items[i].url>'
+gh api graphql -f query='mutation($id:ID!){resolveReviewThread(input:{threadId:$id}){thread{isResolved}}}' -F id=<thread-id>
+```
+
+Wurde der Review-Body übernommen, **ein** Konversations-Kommentar mit den Links dieser Befunde (`gh api repos/$REPO/issues/<pr>/comments -f body=…`). Antworten in der Sprache des Kommentars, ohne Floskeln. Die GitHub-Review selbst bleibt unverändert (kein Dismiss). Scheitert C3, wird nichts gepostet und nichts aufgelöst.
+
+#### C5. Abschluss im Chat
+
+Kurz: Link auf die Detailseite, Zahl der übernommenen Befunde je Schwere, Threads beantwortet/aufgelöst, nicht übernommene Threads mit Grund. Kein neues Review, kein Posten darüber hinaus.
