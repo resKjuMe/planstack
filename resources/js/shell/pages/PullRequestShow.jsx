@@ -254,6 +254,7 @@ function Finding({ finding, pr, strings }) {
 
 const FIX_TONE = {
     FIX: 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900/40 dark:text-indigo-300',
+    SUGGESTED: 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900/40 dark:text-indigo-300',
     SKIP: 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300',
     FIXED: 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300',
     SKIPPED: 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300',
@@ -392,6 +393,7 @@ function FixDialog({ review, pr, strings, onClose }) {
 function FixStep({ finding, data, error, label, strings, onChange, skipNeedsReason = false }) {
     const po = finding.requiresPoDecision;
     const reason = skipNeedsReason && !po && data.decision === 'SKIP';
+    const suggested = data.decision === 'SUGGESTED';
     return (
         <div className="space-y-4">
             <div>
@@ -407,8 +409,8 @@ function FixStep({ finding, data, error, label, strings, onChange, skipNeedsReas
                 <div className="mt-2 max-h-64 overflow-y-auto rounded-md bg-gray-50 dark:bg-gray-900/40 p-3 text-sm"><Markdown html={finding.messageHtml} /></div>
             </div>
 
-            <div className="flex gap-4">
-                {['FIX', 'SKIP'].map((value) => (
+            <div className="flex flex-wrap gap-x-4 gap-y-2">
+                {['SUGGESTED', 'FIX', 'SKIP'].map((value) => (
                     <label key={value} className="inline-flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
                         <input
                             type="radio"
@@ -423,7 +425,7 @@ function FixStep({ finding, data, error, label, strings, onChange, skipNeedsReas
                 ))}
             </div>
 
-            <div>
+            {!suggested && <div>
                 <label htmlFor={`fix-note-${finding.id}`} className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                     {po ? strings.fix_po_note : reason ? strings.fix_skip_reason : strings.fix_note}
                 </label>
@@ -436,7 +438,7 @@ function FixStep({ finding, data, error, label, strings, onChange, skipNeedsReas
                     className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
                 />
                 {error && <p className="mt-1 text-sm text-red-600 dark:text-red-400">{error}</p>}
-            </div>
+            </div>}
             {skipNeedsReason && data.decision === 'SKIP' && <p className="text-sm text-gray-600 dark:text-gray-400">{strings.fix_skip_hint}</p>}
         </div>
     );
@@ -502,7 +504,7 @@ function FixOverview({ findings, data, strings, onPick }) {
                             <span className="text-gray-900 dark:text-gray-100">{f.title}</span>
                         </button>
                         <p className="mt-0.5 whitespace-pre-wrap text-xs text-gray-500 dark:text-gray-400">
-                            {f.requiresPoDecision && data[i].note ? `${strings.fix_po_note}: ` : ''}{data[i].note || strings.fix_no_note}
+                            {data[i].decision === 'SUGGESTED' ? '' : <>{f.requiresPoDecision && data[i].note ? `${strings.fix_po_note}: ` : ''}{data[i].note || strings.fix_no_note}</>}
                         </p>
                     </li>
                 ))}

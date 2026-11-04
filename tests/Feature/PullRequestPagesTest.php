@@ -517,6 +517,25 @@ class PullRequestPagesTest extends TestCase
         $this->assertNull($review->fresh()->fix_requested_at);
     }
 
+    public function test_a_po_finding_fixed_as_suggested_needs_no_note(): void
+    {
+        $me = $this->member('Ich Selbst');
+        [$pullRequest, $review] = $this->reviewWithPoFinding($me);
+        $findings = array_map(
+            fn (array $f) => $f['decision'] === 'SKIP' ? $f : ['decision' => 'SUGGESTED', 'note' => 'wird verworfen'] + $f,
+            $this->decisions($review, '')
+        );
+
+        $this->actingAs($me)
+            ->post(route('pull-requests.fix', [$pullRequest, $review]), ['findings' => $findings])
+            ->assertRedirect();
+
+        $po = $review->findingItems()->where('requires_po_decision', true)->sole();
+        $this->assertSame('SUGGESTED', $po->fix_decision->value);
+        $this->assertNull($po->fix_note);
+        $this->assertSame('requested', $review->fresh()->fixStatus());
+    }
+
     public function test_a_fix_needs_a_decision_for_every_finding(): void
     {
         $me = $this->member('Ich Selbst');
@@ -584,6 +603,21 @@ class PullRequestPagesTest extends TestCase
         $this->assertSame('FIX', $po->fresh()->fix_decision->value);
         $this->assertSame('Bestandsdaten bleiben.', $po->fresh()->fix_note);
         $this->assertSame('SKIPPED', $nit->fresh()->fix_outcome->value);
+    }
+
+    public function test_fixing_a_single_po_finding_as_suggested_needs_no_note(): void
+    {
+        $me = $this->member('Ich Selbst');
+        [$pullRequest, $review] = $this->reviewWithPoFinding($me);
+        $po = $review->findingItems()->where('requires_po_decision', true)->sole();
+
+        $this->actingAs($me)
+            ->post(route('pull-requests.finding-fix', [$pullRequest, $review, $po]), ['decision' => 'SUGGESTED', 'note' => ''])
+            ->assertRedirect();
+
+        $this->assertSame('requested', $review->fresh()->fixStatus());
+        $this->assertSame('SUGGESTED', $po->fresh()->fix_decision->value);
+        $this->assertNull($po->fresh()->fix_note);
     }
 
     public function test_skipping_a_single_finding_records_the_reason_in_the_pr_body_and_removes_it(): void

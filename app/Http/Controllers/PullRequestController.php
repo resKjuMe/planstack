@@ -202,9 +202,9 @@ class PullRequestController extends Controller
             'findings.*.note' => ['nullable', 'string', 'max:5000'],
         ]);
 
-        // PO-Befunde lassen sich nur mit festgehaltener Entscheidung fixen.
+        // PO-Befunde lassen sich nur mit festgehaltener Entscheidung fixen (oder wie vorgeschlagen).
         $missing = collect($data['findings'])
-            ->filter(fn (array $f) => $findings[$f['id']]->requires_po_decision && trim((string) ($f['note'] ?? '')) === '')
+            ->filter(fn (array $f) => $findings[$f['id']]->requires_po_decision && FindingFixDecision::from($f['decision'])->needsPoNote() && trim((string) ($f['note'] ?? '')) === '')
             ->keys()
             ->mapWithKeys(fn (int $index) => ["findings.{$index}.note" => __('pull_requests.fix_po_note_required')]);
         if ($missing->isNotEmpty()) {
@@ -213,7 +213,8 @@ class PullRequestController extends Controller
 
         DB::transaction(function () use ($review, $findings, $data, $user) {
             foreach ($data['findings'] as $item) {
-                $note = trim((string) ($item['note'] ?? ''));
+                // „Wie vorgeschlagen“ trägt keine Anmerkung.
+                $note = $item['decision'] === FindingFixDecision::SUGGESTED->value ? '' : trim((string) ($item['note'] ?? ''));
                 $findings[$item['id']]->update([
                     'fix_decision' => $item['decision'],
                     'fix_note' => $note === '' ? null : $note,
@@ -235,7 +236,7 @@ class PullRequestController extends Controller
     }
 
     /**
-     * Einzelner Befund: „Fixen“ reiht ihn in den Fix-Lauf ein, „Nicht fixen“
+     * Einzelner Befund: „Fixen“ (frei oder wie vorgeschlagen) reiht ihn in den Fix-Lauf ein, „Nicht fixen“
      * hält die Begründung im PR-Body fest und nimmt ihn aus dem Review.
      */
     public function requestFindingFix(Request $request, PullRequest $pullRequest, PullRequestReview $review, ReviewFinding $finding, PullRequestSkippedFindings $skipped): RedirectResponse
@@ -250,9 +251,13 @@ class PullRequestController extends Controller
             'note' => ['nullable', 'string', 'max:5000'],
         ]);
         $note = trim((string) ($data['note'] ?? ''));
-        $skip = $data['decision'] === FindingFixDecision::SKIP->value;
+        $decision = FindingFixDecision::from($data['decision']);
+        if ($decision === FindingFixDecision::SUGGESTED) {
+            $note = '';
+        }
+        $skip = $decision === FindingFixDecision::SKIP;
 
-        if ($note === '' && ($skip || $finding->requires_po_decision)) {
+        if ($note === '' && ($skip || ($finding->requires_po_decision && $decision->needsPoNote()))) {
             throw ValidationException::withMessages(['note' => __($finding->requires_po_decision ? 'pull_requests.fix_po_note_required' : 'pull_requests.fix_skip_reason_required')]);
         }
 
@@ -276,8 +281,8 @@ class PullRequestController extends Controller
             return back();
         }
 
-        DB::transaction(function () use ($review, $finding, $note, $user) {
-            $finding->update(['fix_decision' => FindingFixDecision::FIX, 'fix_note' => $note === '' ? null : $note, 'fix_outcome' => null, 'fix_outcome_note' => null]);
+        DB::transaction(function () use ($review, $finding, $decision, $note, $user) {
+            $finding->update(['fix_decision' => $decision, 'fix_note' => $note === '' ? null : $note, 'fix_outcome' => null, 'fix_outcome_note' => null]);
 
             // Ein schon angeforderter Lauf nimmt den Befund mit; sonst startet ein neuer.
             if ($review->fixStatus() !== 'requested') {

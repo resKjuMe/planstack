@@ -483,7 +483,7 @@ Gepostet: https://github.com/<repo>/pull/9050#pullrequestreview-… — 7 inline
 
 ## Fix-Modus: `/ps-review fix <PR>`
 
-Gestartet über den Button **Findings fixen** auf der Planstack-Detailseite (per `claudetask:`). Dort hat der Nutzer im Dialog je Befund entschieden: **Fixen** oder **Nicht fixen**, mit Anmerkung; bei Befunden mit `requires_po_decision` ist die Anmerkung die **PO-Entscheidung** (Pflicht). Der Modus setzt diese Entscheidungen um, hält sie im PR-Body fest, pusht und reviewt danach neu. Er läuft unbeaufsichtigt: **keine Rückfragen**, auch nicht nach dem Posten.
+Gestartet über den Button **Findings fixen** auf der Planstack-Detailseite (per `claudetask:`). Dort hat der Nutzer im Dialog je Befund entschieden: **Fixen wie vorgeschlagen** (ohne Anmerkung), **Fixen** oder **Nicht fixen**, mit Anmerkung; bei Befunden mit `requires_po_decision` ist die Anmerkung die **PO-Entscheidung** (Pflicht außer bei „wie vorgeschlagen“). Der Modus setzt diese Entscheidungen um, hält sie im PR-Body fest, pusht und reviewt danach neu. Er läuft unbeaufsichtigt: **keine Rückfragen**, auch nicht nach dem Posten.
 
 #### F1. Fix abholen
 
@@ -504,6 +504,7 @@ Planstack zeigt den Fix damit als laufend. Ein laufender Fix darf erneut abgehol
 - Worktree auf dem aktuellen Head des PR (`git worktree add <pfad> <headRefOid>`), nie im Haupt-Checkout.
 - Ist der Head seit `data.commit_sha` weitergelaufen, jeden Befund gegen den aktuellen Code prüfen: schon erledigt → `FIXED` mit Hinweis auf den Commit, nicht doppelt ändern.
 - `decision = FIX`: beheben (Kritisch → Wichtig → Hinweis). Die Anmerkung ist **verbindlich** und geht dem Vorschlag im Befund vor. Bei PO-Befunden genau die PO-Entscheidung umsetzen — nicht die eigene Lesart.
+- `decision = SUGGESTED`: beheben wie `FIX`, und zwar genau so, wie der **Vorschlag** im Befund (`message`) es beschreibt — keine eigene Alternative. Bei PO-Befunden ist der Vorschlag die PO-Entscheidung.
 - `decision = SKIP`: Code nicht anfassen. Ergebnis `SKIPPED`, Grund = Anmerkung (fehlt sie: „bewusst nicht umgesetzt“).
 - Lässt sich ein `FIX` nicht sinnvoll umsetzen (Anmerkung widerspricht dem Code, Fix bräche etwas anderes): `SKIPPED` mit konkretem Grund — nicht raten.
 - Repo-Konventionen wie in Schritt 9 (Hooks, Tooling, Commit-Message-Stil, Attribution). Ein Commit; die Message nennt die behobenen Befunde.
@@ -524,6 +525,7 @@ Review vom <Datum> (<Planstack-URL>), umgesetzt in <sha7>.
 | Befund | Schwere | Entscheidung | Ergebnis |
 |---|---|---|---|
 | <Titel> | Wichtig | Fixen: <Anmerkung> | Behoben |
+| <Titel> | Wichtig | Fixen wie vorgeschlagen | Behoben |
 | <Titel> | Hinweis | Nicht fixen: <Anmerkung> | Ausgelassen |
 
 ### PO-Entscheidungen
@@ -531,7 +533,7 @@ Review vom <Datum> (<Planstack-URL>), umgesetzt in <sha7>.
 - **<Titel>:** <PO-Entscheidung> (<requested_by>, <Datum>)
 ```
 
-Leere Anmerkung → nur „Fixen“ bzw. „Nicht fixen“. `### PO-Entscheidungen` entfällt ohne PO-Befunde. Gab es den Abschnitt schon aus einem früheren Fix, bleiben dessen PO-Entscheidungen stehen; neue kommen dazu. Ein vorhandenes `### Nicht umgesetzt` (Planstack trägt dort einzeln verworfene Befunde samt Begründung ein) bleibt unverändert erhalten.
+Leere Anmerkung → nur „Fixen“ bzw. „Nicht fixen“. Ein PO-Befund mit `SUGGESTED` steht unter PO-Entscheidungen als „wie vorgeschlagen: <Vorschlag in einem Satz>“. `### PO-Entscheidungen` entfällt ohne PO-Befunde. Gab es den Abschnitt schon aus einem früheren Fix, bleiben dessen PO-Entscheidungen stehen; neue kommen dazu. Ein vorhandenes `### Nicht umgesetzt` (Planstack trägt dort einzeln verworfene Befunde samt Begründung ein) bleibt unverändert erhalten.
 
 #### F4. Fix in Planstack abschließen
 
