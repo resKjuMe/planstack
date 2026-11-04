@@ -24,7 +24,7 @@ class PullRequestStateSync
 
     private const SEARCH_PAGES = 8;
 
-    private const FIELDS = 'state mergeable mergedAt closedAt title headRefOid additions deletions changedFiles commitCount: commits { totalCount } comments { totalCount } reviewThreads(first: 100) { nodes { isResolved } } '
+    private const FIELDS = 'state mergeable isInMergeQueue mergedAt closedAt title headRefOid additions deletions changedFiles commitCount: commits { totalCount } comments { totalCount } reviewThreads(first: 100) { nodes { isResolved } } '
         .'ci: commits(last: 1) { nodes { commit { statusCheckRollup { contexts(first: 100) { nodes { __typename '
         .'... on CheckRun { name status conclusion } ... on StatusContext { context state } } } } } } }';
 
@@ -263,6 +263,10 @@ class PullRequestStateSync
         if (array_key_exists('ci', $node)) {
             [$pullRequest->ci_state, $failed] = $this->ciState(data_get($node, 'ci.nodes.0.commit.statusCheckRollup.contexts.nodes'));
             $pullRequest->ci_failed_checks = $failed ?: null;
+        }
+
+        if (array_key_exists('isInMergeQueue', $node)) {
+            $pullRequest->in_merge_queue = (bool) $node['isInMergeQueue'];
         }
 
         if (is_array(data_get($node, 'reviewThreads.nodes'))) {

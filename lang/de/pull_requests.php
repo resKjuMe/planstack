@@ -105,6 +105,7 @@ return [
     'section_approve_pending' => 'Approve empfohlen, auf GitHub noch offen',
     'section_reviewed' => 'Reviewt, seitdem nichts gepusht',
     'section_approved' => 'Ausreichend approvt',
+    'section_merge_queue' => 'In Merge-Queue',
     'start_review' => 'ps-review für diesen PR in Claude starten (PowerShell)',
     'rereview' => 'Seit dem Review gepusht – klicken startet ps-review in Claude (PowerShell)',
     'just_now' => 'gerade eben',
