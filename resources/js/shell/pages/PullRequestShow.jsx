@@ -247,6 +247,11 @@ function Finding({ finding, pr, strings }) {
                 {finding.requiresPoDecision && (
                     <span className="rounded px-1.5 py-0.5 text-xs font-medium bg-indigo-100 text-indigo-800 dark:bg-indigo-900/40 dark:text-indigo-300">{strings.po_decision}</span>
                 )}
+                {finding.confidence !== null && (
+                    <span title={finding.confidenceReason || undefined} className="rounded px-1.5 py-0.5 text-xs font-medium bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300">
+                        {strings.confidence} {finding.confidence} %
+                    </span>
+                )}
                 <span className="font-medium text-gray-900 dark:text-gray-100">{finding.title}</span>
                 {finding.fixUrl && (
                     <button
@@ -268,6 +273,9 @@ function Finding({ finding, pr, strings }) {
                 ) : strings.summary_finding}
             </div>
             <div className="mt-2 text-sm"><Markdown html={finding.messageHtml} /></div>
+            {finding.confidenceReason && (
+                <p className="mt-1 text-xs text-gray-600 dark:text-gray-300">{strings.confidence}: {finding.confidenceReason}</p>
+            )}
             <FixDecision finding={finding} strings={strings} />
         </article>
     );

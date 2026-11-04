@@ -359,6 +359,8 @@ class PullRequestController extends Controller
                             : null,
                         'title' => $f->title,
                         'messageHtml' => $this->md($f->message),
+                        'confidence' => $f->confidence,
+                        'confidenceReason' => $f->confidence_reason,
                         'fixDecision' => $f->fix_decision?->value,
                         'fixNote' => $f->fix_note,
                         'fixOutcome' => $f->fix_outcome?->value,

@@ -616,6 +616,8 @@ curl -s https://planstack.eskju.net/api/user \
                     <tr><td><code>findings[].level</code></td><td>string</td><td><span class="req">{{ __('api.required') }}</span> · CRITICAL · IMPORTANT · HINT</td></tr>
                     <tr><td><code>findings[].type</code></td><td>string</td><td><span class="req">{{ __('api.required') }}</span> · INLINE (mit <code>file</code> + <code>line</code>) · SUMMARY</td></tr>
                     <tr><td><code>findings[].requires_po_decision</code></td><td>boolean</td><td><span class="opt">{{ __('api.optional') }}</span></td></tr>
+                    <tr><td><code>findings[].confidence</code></td><td>integer</td><td><span class="opt">{{ __('api.optional') }}</span> · 0–100 · wie sicher der Befund zutrifft</td></tr>
+                    <tr><td><code>findings[].confidence_reason</code></td><td>string</td><td><span class="opt">{{ __('api.optional') }}</span> · max 500</td></tr>
                     <tr><td><code>findings[].title</code>, <code>findings[].message</code></td><td>string</td><td><span class="req">{{ __('api.required') }}</span> · message als Markdown</td></tr>
                 </tbody>
             </table>
