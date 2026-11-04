@@ -412,7 +412,9 @@ class PullRequestApiTest extends TestCase
         ];
         $this->putJson("/api/pull-requests/{$id}/reviews/{$review->id}/fix", $payload)
             ->assertOk()
-            ->assertJsonPath('data.fix_commit_sha', 'fff1234');
+            ->assertJsonPath('data.fix_commit_sha', 'fff1234')
+            ->assertJsonPath('data.converted_from_login', null)
+            ->assertJsonPath('data.open_findings', 3);
 
         $review->refresh();
         $this->assertNotNull($review->fix_finished_at);
@@ -421,6 +423,25 @@ class PullRequestApiTest extends TestCase
 
         $this->putJson("/api/pull-requests/{$id}/reviews/{$review->id}/fix", $payload)->assertConflict();
         $this->postJson("/api/pull-requests/{$id}/fix/claim")->assertNotFound();
+    }
+
+    public function test_fixing_a_converted_review_reports_the_login_and_open_findings(): void
+    {
+        $user = $this->member();
+        Sanctum::actingAs($user);
+        [$id, $review] = $this->requestedFix($user);
+        $review->update(['converted_from_login' => 'vera-rolf_clockodo']);
+
+        $this->postJson("/api/pull-requests/{$id}/fix/claim")
+            ->assertOk()
+            ->assertJsonPath('data.converted_from_login', 'vera-rolf_clockodo');
+
+        $this->putJson("/api/pull-requests/{$id}/reviews/{$review->id}/fix", [
+            'findings' => $review->findingItems()->pluck('id')->map(fn (int $findingId) => ['id' => $findingId, 'outcome' => 'FIXED'])->all(),
+        ])
+            ->assertOk()
+            ->assertJsonPath('data.converted_from_login', 'vera-rolf_clockodo')
+            ->assertJsonPath('data.open_findings', 0);
     }
 
     public function test_finish_fix_rejects_findings_of_another_review(): void

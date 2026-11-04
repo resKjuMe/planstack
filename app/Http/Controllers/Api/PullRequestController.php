@@ -212,6 +212,7 @@ class PullRequestController extends ApiController
             'commit_sha' => $review->commit_sha,
             'requested_by' => $review->fixRequestedBy?->name,
             'requested_at' => $review->fix_requested_at?->toIso8601String(),
+            'converted_from_login' => $review->converted_from_login,
             'findings' => $review->findingItems->map(fn (ReviewFinding $f) => [
                 'id' => $f->id,
                 'level' => $f->level->value,
@@ -268,6 +269,8 @@ class PullRequestController extends ApiController
             'review_id' => $review->id,
             'fix_finished_at' => $review->fix_finished_at?->toIso8601String(),
             'fix_commit_sha' => $review->fix_commit_sha,
+            'converted_from_login' => $review->converted_from_login,
+            'open_findings' => $review->findingItems()->whereNull('fix_outcome')->count(),
             'url' => route('pull-requests.show', $pullRequest),
         ]]);
     }

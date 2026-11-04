@@ -12,7 +12,7 @@ Ein vollständiges Code-Review; das Ergebnis landet **nicht** als Datei, sondern
 
 ## Harte Regeln (nicht verhandelbar)
 
-1. **Nichts am PR posten, bevor der Nutzer zugestimmt hat.** Während des Reviews sind nur lesende `gh`-Aufrufe erlaubt (`gh pr view`, `gh pr diff`, `gh pr checks`, `gh api` mit `GET`). Geschrieben wird am PR erst in Schritt 8 — nach expliziter Zustimmung, und nur das, was der Nutzer in Schritt 7 ausgewählt hat. Ohne Antwort wird nichts gepostet; Schweigen ist kein Ja. Ausnahme: im Übernahme-Modus (`/ps-review convert`) ist der Klick auf den Button die Zustimmung zu den Antworten und dem Auflösen der übernommenen Threads (C4).
+1. **Nichts am PR posten, bevor der Nutzer zugestimmt hat.** Während des Reviews sind nur lesende `gh`-Aufrufe erlaubt (`gh pr view`, `gh pr diff`, `gh pr checks`, `gh api` mit `GET`). Geschrieben wird am PR erst in Schritt 8 — nach expliziter Zustimmung, und nur das, was der Nutzer in Schritt 7 ausgewählt hat. Ohne Antwort wird nichts gepostet; Schweigen ist kein Ja. Ausnahme: im Übernahme-Modus (`/ps-review convert`) ist der Klick auf den Button die Zustimmung zu den Antworten und dem Auflösen der übernommenen Threads (C4), im Fix-Modus einer übernommenen Review die Zustimmung zum Dismissen der ursprünglichen Review (F4).
 2. **Planstack nur über drei Aufrufe**: `PUT /api/pull-requests` und `POST /api/pull-requests/{id}/reviews` (Start) in Schritt 1, `PUT /api/pull-requests/{id}/reviews/{review}` (Abschluss) in Schritt 5. Im Fix-Modus kommen `POST /api/pull-requests/{id}/fix/claim` und `PUT /api/pull-requests/{id}/reviews/{review}/fix` dazu. Keine Board-Aufrufe (`review-claim`, `review-next`, Events) — dieser Skill kennt kein Board.
 3. **Keine lokale Report-Datei.** Die Payload-Dateien für `curl` liegen nur temporär (Scratchpad bzw. `mktemp -d`) und werden nach dem Senden gelöscht. Schlägt die API fehl, wird das gemeldet — nicht als Datei abgelegt.
 4. **Nichts am Code ändern.** Das Review ist rein lesend: keine Edits, keine Commits, kein Push, kein Checkout, der lokale Änderungen gefährdet. Ausnahmen: der Nutzer wählt in Schritt 7 „Fixe Findings im gleichen PR“ — dann gilt Schritt 9; oder der Aufruf ist `/ps-review fix` bzw. `/ps-review resolve` — dann gilt der Fix- bzw. Konflikt-Modus. Der Übernahme-Modus (`/ps-review convert`) ändert keinen Code.
@@ -546,6 +546,18 @@ curl -s -w '\n%{http_code}\n' -X PUT "$BASE/pull-requests/$PRID/reviews/<data.re
 
 Jeder Befund aus F1 bekommt genau ein Ergebnis.
 
+**Übernommene Review dismissen:** Liefert die Antwort `converted_from_login` und `open_findings` = 0 (alle Befunde des übernommenen Reviews haben ein Ergebnis), die noch aktive `CHANGES_REQUESTED`-Review dieses Logins am PR als veraltet dismissen:
+
+```bash
+# letzte Review des Logins über alle Seiten: "<id> <state>"
+read RID RSTATE < <(gh api --paginate "repos/$REPO/pulls/<pr>/reviews" \
+  --jq '.[] | select(.user.login=="<converted_from_login>") | "\(.id) \(.state)"' | tail -1)
+[ "$RSTATE" = CHANGES_REQUESTED ] && gh api -X PUT "repos/$REPO/pulls/<pr>/reviews/$RID/dismissals" \
+  -f event=DISMISS -f message='Outdated: in Planstack übernommen und in <sha7> gefixt — <data.url>#review-<data.review_id>'
+```
+
+Ist die letzte Review des Logins keine `CHANGES_REQUESTED` mehr (z. B. inzwischen approved), entfällt das. Bei `open_findings` > 0 (Einzel-Fix) erst nach dem letzten Fix-Lauf dismissen. Scheitert das Dismissen (fehlende Rechte), im Chat melden, nicht abbrechen.
+
 #### F5. Neues Review
 
 Direkt danach ein vollständiges Review des neuen Head (Schritte 1–6, mit neuem Review-Start in Planstack) mit `--no-post`: Schritt 7 entfällt. Davor im Chat eine Zeile je Befund (behoben / ausgelassen mit Grund) und der Fix-Commit; die Antwort endet wie immer mit den Abschlusszeilen aus Schritt 6.
@@ -661,7 +673,7 @@ gh api "repos/$REPO/pulls/<pr>/comments/<databaseId des ersten Kommentars>/repli
 gh api graphql -f query='mutation($id:ID!){resolveReviewThread(input:{threadId:$id}){thread{isResolved}}}' -F id=<thread-id>
 ```
 
-Wurde der Review-Body übernommen, **ein** Konversations-Kommentar mit den Links dieser Befunde (`gh api repos/$REPO/issues/<pr>/comments -f body=…`). Antworten in der Sprache des Kommentars, ohne Floskeln. Die GitHub-Review selbst bleibt unverändert (kein Dismiss). Scheitert C3, wird nichts gepostet und nichts aufgelöst.
+Wurde der Review-Body übernommen, **ein** Konversations-Kommentar mit den Links dieser Befunde (`gh api repos/$REPO/issues/<pr>/comments -f body=…`). Antworten in der Sprache des Kommentars, ohne Floskeln. Die GitHub-Review selbst bleibt bis zum Fix stehen; dismisst wird sie erst im Fix-Modus (F4), sobald alle Befunde ein Ergebnis haben. Scheitert C3, wird nichts gepostet und nichts aufgelöst.
 
 #### C5. Abschluss im Chat
 

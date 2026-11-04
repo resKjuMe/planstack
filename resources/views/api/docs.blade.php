@@ -623,12 +623,12 @@ curl -s https://planstack.eskju.net/api/user \
 
         <section id="pull-requests-fix-claim" class="endpoint">
             <div class="route"><span class="method m-post">POST</span><span class="path">/api/pull-requests/<b>{id}</b>/fix/claim</span></div>
-            <p class="desc">Holt den offenen Fix-Lauf des PR ab, angefordert über „Findings fixen“ auf der Detailseite, und vermerkt den Start. Die Antwort enthält <code>review_id</code>, den geprüften <code>commit_sha</code>, <code>requested_by</code> und je Befund <code>decision</code> (FIX · SUGGESTED · SKIP) und <code>note</code>. SUGGESTED heißt: Fix genau wie im Vorschlag des Befunds, ohne <code>note</code>. Bei Befunden mit <code>requires_po_decision</code> ist <code>note</code> sonst die PO-Entscheidung. Enthalten sind nur Befunde mit offener Entscheidung (ohne Ergebnis eines früheren Laufs) — nach „Fixen“ an einem einzelnen Befund also ggf. nur dieser. Ein laufender Fix-Lauf kann erneut abgeholt werden. <span class="status-pill s2">200</span> · <span class="status-pill s4">404</span> ohne angeforderten Fix</p>
+            <p class="desc">Holt den offenen Fix-Lauf des PR ab, angefordert über „Findings fixen“ auf der Detailseite, und vermerkt den Start. Die Antwort enthält <code>review_id</code>, den geprüften <code>commit_sha</code>, <code>requested_by</code>, <code>converted_from_login</code> (bei übernommenen Reviews) und je Befund <code>decision</code> (FIX · SUGGESTED · SKIP) und <code>note</code>. SUGGESTED heißt: Fix genau wie im Vorschlag des Befunds, ohne <code>note</code>. Bei Befunden mit <code>requires_po_decision</code> ist <code>note</code> sonst die PO-Entscheidung. Enthalten sind nur Befunde mit offener Entscheidung (ohne Ergebnis eines früheren Laufs) — nach „Fixen“ an einem einzelnen Befund also ggf. nur dieser. Ein laufender Fix-Lauf kann erneut abgeholt werden. <span class="status-pill s2">200</span> · <span class="status-pill s4">404</span> ohne angeforderten Fix</p>
         </section>
 
         <section id="pull-requests-fix-finish" class="endpoint">
             <div class="route"><span class="method m-put">PUT</span><span class="path">/api/pull-requests/<b>{id}</b>/reviews/<b>{review}</b>/fix</span></div>
-            <p class="desc">Schließt den Fix-Lauf mit dem gepushten Commit und dem Ergebnis je Befund ab. Ohne laufenden Fix: <span class="status-pill s4">409</span>. <span class="status-pill s2">200</span></p>
+            <p class="desc">Schließt den Fix-Lauf mit dem gepushten Commit und dem Ergebnis je Befund ab. Ohne laufenden Fix: <span class="status-pill s4">409</span>. Die Antwort enthält <code>converted_from_login</code> und <code>open_findings</code> (Befunde ohne Ergebnis). <span class="status-pill s2">200</span></p>
             <table>
                 <thead><tr><th>{{ __('common.field') }}</th><th>{{ __('api.type') }}</th><th>{{ __('api.rules') }}</th></tr></thead>
                 <tbody>
