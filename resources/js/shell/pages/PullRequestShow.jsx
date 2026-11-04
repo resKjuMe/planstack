@@ -332,7 +332,7 @@ function FixStatus({ fix, pr, strings }) {
 }
 
 // Ein Schritt je Befund (Entscheidung + Anmerkung), danach die Übersicht.
-// Nach dem Speichern startet claudetask: den Fix-Lauf von ps-review.
+// „Fix starten“ startet nach dem Speichern per claudetask: den Fix-Lauf von ps-review.
 function FixDialog({ review, pr, strings, onClose }) {
     const findings = review.findings;
     const [step, setStep] = useState(0);
@@ -344,11 +344,11 @@ function FixDialog({ review, pr, strings, onClose }) {
     const set = (index, key, value) => form.setData('findings', form.data.findings.map((f, i) => (i === index ? { ...f, [key]: value } : f)));
     const noteError = (index) => form.errors[`findings.${index}.note`];
 
-    const submit = () => form.post(review.fixUrl, {
+    const submit = (start) => form.transform((data) => ({ ...data, start })).post(review.fixUrl, {
         preserveScroll: true,
         onSuccess: () => {
             onClose();
-            window.location.href = fixCommandHref(pr);
+            if (start) window.location.href = fixCommandHref(pr);
         },
         onError: (errors) => {
             const first = findings.findIndex((_, i) => errors[`findings.${i}.note`]);
@@ -400,7 +400,10 @@ function FixDialog({ review, pr, strings, onClose }) {
                     <div className="flex gap-3">
                         {step > 0 && <button type="button" onClick={() => setStep(step - 1)} className={secondary}>{strings.fix_back}</button>}
                         {overview ? (
-                            <button type="button" onClick={submit} disabled={form.processing} className={primary}>{strings.fix_submit}</button>
+                            <>
+                                <button type="button" onClick={() => submit(false)} disabled={form.processing} className={secondary}>{strings.fix_save}</button>
+                                <button type="button" onClick={() => submit(true)} disabled={form.processing} className={primary}>{strings.fix_submit}</button>
+                            </>
                         ) : (
                             <button type="button" onClick={() => setStep(step + 1)} className={primary}>{strings.fix_next}</button>
                         )}

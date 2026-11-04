@@ -142,6 +142,7 @@ return [
     'fix_po_note_required' => 'Für diesen Befund ist eine PO-Entscheidung nötig.',
     'fix_overview' => 'Übersicht',
     'fix_overview_hint' => 'ps-review setzt die Fixe auf dem PR-Branch um, hält die Entscheidungen (inkl. PO) im PR-Body fest, pusht und startet danach ein neues Review.',
+    'fix_save' => 'Lösungen speichern',
     'fix_submit' => 'Fix starten',
     'fix_back' => 'Zurück',
     'fix_next' => 'Weiter',
