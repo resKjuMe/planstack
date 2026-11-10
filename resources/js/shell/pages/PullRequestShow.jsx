@@ -293,17 +293,17 @@ const optionKey = (option) => option.letter ?? 'ONE';
 const suggestionNote = (option) => `Vorschlag${option.letter ? ` ${option.letter}` : ''}: ${option.text}`;
 const withLetter = (text, letter) => text.replace(':letter', letter ?? '').replace(/\s{2,}/g, ' ');
 
-// Linke Spalte einer Optionsbox: Buchstabe + Prozent, beim Einzelvorschlag nur Prozent.
+// Linke Spalte einer Optionsbox: Buchstabe und/oder Prozent; ohne beides keine Spalte.
+const hasBadge = (option) => Boolean(option.letter) || option.percent !== null;
+const hasPercent = (options) => options.some((o) => o.percent !== null);
+
 function OptionBadge({ option }) {
+    if (!hasBadge(option)) return null;
     return (
         <span className="flex flex-col items-center gap-0.5 pt-0.5">
-            {option.letter ? (
-                <>
-                    <span className="text-[26px] font-semibold leading-[30px] text-gray-500 dark:text-gray-400">{option.letter}</span>
-                    <span className="whitespace-nowrap text-[13px] font-medium leading-[18px] text-gray-500 dark:text-gray-400">{option.percent} %</span>
-                </>
-            ) : (
-                <span className="whitespace-nowrap text-lg font-semibold leading-7 text-gray-500 dark:text-gray-400">{option.percent} %</span>
+            {option.letter && <span className="text-[26px] font-semibold leading-[30px] text-gray-500 dark:text-gray-400">{option.letter}</span>}
+            {option.percent !== null && (
+                <span className={`whitespace-nowrap text-gray-500 dark:text-gray-400 ${option.letter ? 'text-[13px] font-medium leading-[18px]' : 'text-lg font-semibold leading-7'}`}>{option.percent} %</span>
             )}
         </span>
     );
@@ -316,7 +316,7 @@ function Suggestions({ finding, adopted, strings, onAdopt }) {
         <div className="mt-3 space-y-2">
             <div className="flex items-baseline justify-between gap-3">
                 <span className="text-sm font-semibold text-gray-900 dark:text-gray-100">{strings.suggestions}</span>
-                <span className="text-xs text-gray-500 dark:text-gray-400">{strings.suggestions_percent_hint}</span>
+                {hasPercent(finding.suggestions) && <span className="text-xs text-gray-500 dark:text-gray-400">{strings.suggestions_percent_hint}</span>}
             </div>
             {finding.suggestions.map((option) => {
                 const note = suggestionNote(option);
@@ -324,7 +324,7 @@ function Suggestions({ finding, adopted, strings, onAdopt }) {
                 return (
                     <div
                         key={optionKey(option)}
-                        className={`grid grid-cols-[3.5rem_1fr_auto] items-start gap-4 rounded-[10px] border-2 py-3 pl-3 pr-2 ${active ? 'border-indigo-600 bg-indigo-50 dark:border-indigo-400 dark:bg-indigo-950/40' : 'border-transparent bg-gray-100 dark:bg-gray-900/60'}`}
+                        className={`grid ${hasBadge(option) ? 'grid-cols-[3.5rem_1fr_auto] pl-3' : 'grid-cols-[1fr_auto] pl-4'} items-start gap-4 rounded-[10px] border-2 py-3 pr-2 ${active ? 'border-indigo-600 bg-indigo-50 dark:border-indigo-400 dark:bg-indigo-950/40' : 'border-transparent bg-gray-100 dark:bg-gray-900/60'}`}
                     >
                         <OptionBadge option={option} />
                         <div className="flex min-w-0 flex-col gap-1 text-sm [&_code]:border [&_code]:border-gray-200 [&_code]:bg-white dark:[&_code]:border-gray-700 dark:[&_code]:bg-gray-800">
@@ -609,10 +609,10 @@ function FixStep({ finding, data, error, label, strings, onData, skipNeedsReason
             <div className="min-w-0 space-y-5">
             <fieldset className="min-w-0">
                 <legend className="float-left font-semibold text-gray-900 dark:text-gray-100">{strings.fix_how}</legend>
-                {options.length > 0 && <span className="float-right pt-0.5 text-[13px] leading-5 text-gray-500 dark:text-gray-400">{strings.suggestions_percent_hint}</span>}
+                {hasPercent(options) && <span className="float-right pt-0.5 text-[13px] leading-5 text-gray-500 dark:text-gray-400">{strings.suggestions_percent_hint}</span>}
                 <div className="clear-both space-y-2.5 pt-2.5">
                     {options.map((option) => (
-                        <label key={optionKey(option)} className={`${OPTION_BOX} grid grid-cols-[56px_1fr_24px] items-start gap-4 py-3 pl-3 pr-3.5`}>
+                        <label key={optionKey(option)} className={`${OPTION_BOX} grid ${hasBadge(option) ? 'grid-cols-[56px_1fr_24px] pl-3' : 'grid-cols-[1fr_24px] pl-4'} items-start gap-4 py-3 pr-3.5`}>
                             <input type="radio" name={name} checked={choice === optionKey(option)} onChange={() => pick(optionKey(option))} className="sr-only" />
                             <OptionBadge option={option} />
                             <span className="flex min-w-0 flex-col gap-1 [&_code]:border [&_code]:border-gray-200 [&_code]:bg-white dark:[&_code]:border-gray-700 dark:[&_code]:bg-gray-800">

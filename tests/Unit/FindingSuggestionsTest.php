@@ -63,9 +63,21 @@ class FindingSuggestionsTest extends TestCase
         ], FindingSuggestions::parse("**Was:** a\n**Vorschlag (80 %):** Fix so\n```php\n\$x = 1;\n```\n**Hinweis:** b"));
     }
 
+    public function test_the_percent_is_optional(): void
+    {
+        $this->assertSame(
+            [['letter' => null, 'percent' => null, 'text' => 'ohne Prozent']],
+            FindingSuggestions::parse("**Was:** a\n**Vorschlag:** ohne Prozent")['options'],
+        );
+        $this->assertSame(
+            [['letter' => 'A', 'percent' => null, 'text' => 'eins'], ['letter' => 'B', 'percent' => 40, 'text' => 'zwei']],
+            FindingSuggestions::parse("**Vorschlag:**\n- **A:** eins\n- **B (40 %):** zwei")['options'],
+        );
+    }
+
     public function test_ignores_messages_without_options(): void
     {
-        $this->assertNull(FindingSuggestions::parse('**Vorschlag:** ohne Prozent'));
+        $this->assertNull(FindingSuggestions::parse("**Was:** a\n**Vorschlag:**"));
         $this->assertNull(FindingSuggestions::parse('- **B (50 %):** ohne A'));
     }
 }
