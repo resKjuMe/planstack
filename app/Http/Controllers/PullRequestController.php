@@ -11,6 +11,7 @@ use App\Models\ReviewFinding;
 use App\Models\User;
 use App\Support\FindingSuggestions;
 use App\Support\PsReviewSkill;
+use App\Support\TicketMatch;
 use App\Support\PullRequestApprovals;
 use App\Support\PullRequestCommits;
 use App\Support\PullRequestSkippedFindings;
@@ -629,6 +630,7 @@ class PullRequestController extends Controller
                 [$headline, $body] = $this->tldrHeadline($body);
                 $tldr = $body === '' ? null : $this->md($body);
             } elseif ($body !== '') {
+                $body = preg_match('/^Ticket-Abgleich/iu', trim($m[1])) ? TicketMatch::asBullets($body) : $body;
                 $sections[] = ['title' => trim($m[1]), 'html' => $this->md($body)];
             }
         }
