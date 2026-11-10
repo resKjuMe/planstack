@@ -6,6 +6,48 @@
 return [
     'releases' => [
         [
+            'version' => '2.9.0',
+            'date' => '2026-11-11',
+            'tldr' => [
+                'de' => ['PR-Detailseite neu: Status auf einen Blick, Befunde als Tabs', 'Befunde fixen mit Vorschlägen A, B, C', 'ps-review mit Version, Update-Hinweis und neuen Modi'],
+                'en' => ['New PR detail page: status at a glance, findings in tabs', 'Fix findings with suggestions A, B, C', 'ps-review with version, update notice and new modes'],
+            ],
+            'changes' => [
+                'de' => [
+                    'Neu: Die Detailseite eines Pull Requests zeigt oben Freigabe, CI-Status und offene Befunde auf einen Blick. Darunter stehen die Karte „Aktuelle Review“ mit Urteil, Kernaussage und Kennzahlen sowie der Ticket-Abgleich mit „Weniger“ und „Mehr als verlangt“. Befunde, Analyse, Beschreibung und frühere Reviews liegen in eigenen Tabs; frühere Reviews gelten als überholt.',
+                    'Neu: Befunde sind aufklappbare Zeilen mit Filtern (Wichtig, Hinweis, PO-Entscheidung) und dem Zähler „x von y erledigt“. Aufgeklappt stehen „Was“, „Warum falsch“ und „Fehlszenario“ links, die Vorschläge rechts.',
+                    'Neu: Befunde fixen – einzeln über „Fixen“ oder alle über „Alle Befunde fixen“. Je Befund wählst du einen Vorschlag (A, B, C mit Konfidenz), „Anders fixen“ oder „Nicht fixen“; ps-review setzt das in Claude um, pusht und reviewt neu. „So fixen“ merkt einen Vorschlag vorab als Lösung vor, „Lösungen speichern“ sichert die Auswahl ohne Fix-Lauf.',
+                    'Neu: „Nicht fixen“ hält die Begründung im PR unter „Review-Entscheidungen“ fest und nimmt den Befund aus dem Review.',
+                    'Neu: Jeder Befund zeigt, wie sicher er zutrifft (Konfidenz).',
+                    'Neu: „Merge-Konflikt lösen“ bzw. „CI fixen“ bringt einen PR mit Konflikt, roter CI oder offenen Kommentaren wieder in einen mergebaren Zustand – „CI fixen“ jetzt auch in der Liste und ohne vorheriges Review.',
+                    'Neu: Eine fremde „Changes requested“-Review lässt sich in eine ps-review mit Befunden umwandeln; nach dem Fix wird die ursprüngliche Review abgeschlossen.',
+                    'Neu: Verlaufsgrafik „Offen und gefixt pro Review“ mit Commits und Merges, wahlweise 7 Tage, 30 Tage oder seit Erstellung.',
+                    'Neu: In der Liste unter „Pull Requests“ eigene Abschnitte für „Fix läuft“ und „In Merge-Queue“, fehlgeschlagene Steps und Merge-Konflikte direkt am PR, ungelöste Kommentare, Review-Stufe als Symbol und Jira-Tickets im Titel als farbige Pill.',
+                    'Neu: PRs lassen sich als geprüft abhaken (Auge) oder in den eigenen Listen ausblenden; gestapelte PRs sind ein- und ausklappbar.',
+                    'Neu: Der ps-review-Skill hat eine Versionsnummer. Stammt das neueste Review von einer älteren Version, erscheint ein Hinweis mit „Auf Update prüfen“ – Claude vergleicht dann deinen Skill und aktualisiert ihn bei Bedarf.',
+                    'Neu: „/ps-review create <Jira-Ticket|Aufgabe>“ setzt ein Ticket als neuen PR um, füllt die Kundensicht, reviewt ihn und bringt die CI auf grün. Reviews gleichen außerdem das verknüpfte Ticket ab und bewerten jeden Vorschlag mit einer Konfidenz.',
+                    'Verbessert: Das Review bewertet zusätzlich, wie wahrscheinlich eine PO-Sichtung nötig ist.',
+                    'Behoben: Ein liegengebliebenes Review gilt nach einem neueren Abschluss nicht mehr als laufend, und als neuestes Review zählt das zuletzt gestartete.',
+                ],
+                'en' => [
+                    'New: A pull request\'s detail page shows approval, CI state and open findings at a glance at the top. Below are the "Current review" card with verdict, key statement and scores, and the ticket check with "less" and "more than required". Findings, analysis, description and earlier reviews live in their own tabs; earlier reviews count as superseded.',
+                    'New: Findings are collapsible rows with filters (important, hint, PO decision) and an "x of y done" counter. Expanded, "What", "Why wrong" and "Failure scenario" are on the left, the suggestions on the right.',
+                    'New: Fix findings – one at a time via "Fix" or all via "Fix all findings". For each finding you pick a suggestion (A, B, C with confidence), "Fix differently" or "Don\'t fix"; ps-review implements it in Claude, pushes and reviews again. "Fix this way" pre-selects a suggestion as the solution, "Save solutions" stores the choice without a fix run.',
+                    'New: "Don\'t fix" records the reason in the PR under "Review decisions" and removes the finding from the review.',
+                    'New: Every finding shows how likely it applies (confidence).',
+                    'New: "Resolve merge conflict" or "Fix CI" brings a PR with a conflict, red CI or open comments back into a mergeable state – "Fix CI" now also in the list and without a previous review.',
+                    'New: Another reviewer\'s "changes requested" review can be converted into a ps-review with findings; after the fix the original review is dismissed.',
+                    'New: "Open and fixed per review" chart with commits and merges, for 7 days, 30 days or since creation.',
+                    'New: The list under "Pull requests" has its own sections for "Fix running" and "In merge queue", shows failed steps and merge conflicts on the PR, unresolved comments, the review level as an icon and Jira tickets in the title as a colored pill.',
+                    'New: PRs can be ticked off as checked (eye) or hidden from your own lists; stacked PRs can be collapsed and expanded.',
+                    'New: The ps-review skill has a version number. If the latest review was made with an older version, a notice with "Check for update" appears – Claude then compares your skill and updates it if needed.',
+                    'New: "/ps-review create <Jira ticket|task>" implements a ticket as a new PR, fills in the customer view, reviews it and gets CI green. Reviews also check the linked ticket and rate every suggestion with a confidence.',
+                    'Improved: The review additionally rates how likely a PO review is needed.',
+                    'Fixed: A stale review no longer counts as running after a newer one finished, and the latest review is the most recently started one.',
+                ],
+            ],
+        ],
+        [
             'version' => '2.8.3',
             'date' => '2026-10-28',
             'tldr' => [
