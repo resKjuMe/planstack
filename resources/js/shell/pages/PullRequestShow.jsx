@@ -288,7 +288,26 @@ function Finding({ finding, pr, strings }) {
     );
 }
 
-const suggestionNote = (option) => `Vorschlag ${option.letter}: ${option.text}`;
+// Einzelvorschlag ohne Buchstaben hat den Schlüssel ONE.
+const optionKey = (option) => option.letter ?? 'ONE';
+const suggestionNote = (option) => `Vorschlag${option.letter ? ` ${option.letter}` : ''}: ${option.text}`;
+const withLetter = (text, letter) => text.replace(':letter', letter ?? '').replace(/\s{2,}/g, ' ');
+
+// Linke Spalte einer Optionsbox: Buchstabe + Prozent, beim Einzelvorschlag nur Prozent.
+function OptionBadge({ option }) {
+    return (
+        <span className="flex flex-col items-center gap-0.5 pt-0.5">
+            {option.letter ? (
+                <>
+                    <span className="text-[26px] font-semibold leading-[30px] text-gray-500 dark:text-gray-400">{option.letter}</span>
+                    <span className="whitespace-nowrap text-[13px] font-medium leading-[18px] text-gray-500 dark:text-gray-400">{option.percent} %</span>
+                </>
+            ) : (
+                <span className="whitespace-nowrap text-lg font-semibold leading-7 text-gray-500 dark:text-gray-400">{option.percent} %</span>
+            )}
+        </span>
+    );
+}
 
 // Vorschläge im A/B/C-Format als Optionen; das Icon übernimmt einen als Lösung.
 function Suggestions({ finding, adopted, strings, onAdopt }) {
@@ -304,13 +323,10 @@ function Suggestions({ finding, adopted, strings, onAdopt }) {
                 const active = adopted?.trim() === note.trim();
                 return (
                     <div
-                        key={option.letter}
+                        key={optionKey(option)}
                         className={`grid grid-cols-[3.5rem_1fr_auto] items-start gap-4 rounded-[10px] border-2 py-3 pl-3 pr-2 ${active ? 'border-indigo-600 bg-indigo-50 dark:border-indigo-400 dark:bg-indigo-950/40' : 'border-transparent bg-gray-100 dark:bg-gray-900/60'}`}
                     >
-                        <div className="flex flex-col items-center gap-0.5 pt-0.5">
-                            <span className="text-[26px] font-semibold leading-[30px] text-gray-500 dark:text-gray-400">{option.letter}</span>
-                            <span className="whitespace-nowrap text-xs font-medium text-gray-600 dark:text-gray-400">{option.percent} %</span>
-                        </div>
+                        <OptionBadge option={option} />
                         <div className="flex min-w-0 flex-col gap-1 text-sm [&_code]:border [&_code]:border-gray-200 [&_code]:bg-white dark:[&_code]:border-gray-700 dark:[&_code]:bg-gray-800">
                             {option.titleHtml && <span className="font-semibold text-gray-900 dark:text-gray-100" dangerouslySetInnerHTML={{ __html: option.titleHtml }} />}
                             <Markdown html={option.html} />
@@ -320,8 +336,8 @@ function Suggestions({ finding, adopted, strings, onAdopt }) {
                                 type="button"
                                 onClick={() => !active && onAdopt(note)}
                                 aria-pressed={active}
-                                aria-label={(active ? strings.suggestion_adopted : strings.suggestion_adopt).replace(':letter', option.letter)}
-                                title={(active ? strings.suggestion_adopted : strings.suggestion_adopt).replace(':letter', option.letter)}
+                                aria-label={withLetter(active ? strings.suggestion_adopted : strings.suggestion_adopt, option.letter)}
+                                title={withLetter(active ? strings.suggestion_adopted : strings.suggestion_adopt, option.letter)}
                                 className={`inline-flex h-9 w-9 items-center justify-center rounded-md ${active ? 'text-indigo-600 dark:text-indigo-400' : 'text-gray-500 hover:bg-white hover:text-indigo-600 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-indigo-400'}`}
                             >
                                 {active ? (
@@ -493,14 +509,14 @@ function readChoice(finding, data) {
     if (data.decision === 'FIX') {
         for (const option of finding.suggestions ?? []) {
             const prefix = suggestionNote(option);
-            if (data.note.startsWith(prefix)) return { choice: option.letter, extra: data.note.slice(prefix.length).trim() };
+            if (data.note.startsWith(prefix)) return { choice: optionKey(option), extra: data.note.slice(prefix.length).trim() };
         }
     }
     return { choice: data.decision, extra: data.decision === 'SUGGESTED' ? '' : data.note };
 }
 
 function writeChoice(finding, choice, extra) {
-    const option = finding.suggestions?.find((o) => o.letter === choice);
+    const option = finding.suggestions?.find((o) => optionKey(o) === choice);
     if (option) return { decision: 'FIX', note: extra.trim() ? `${suggestionNote(option)}\n\n${extra}` : suggestionNote(option) };
     return { decision: choice, note: choice === 'SUGGESTED' ? '' : extra };
 }
@@ -508,7 +524,7 @@ function writeChoice(finding, choice, extra) {
 // Ohne gespeicherte Entscheidung ist Vorschlag A vorausgewählt.
 function initialChoice(finding) {
     if (finding.fixDecision) return { decision: finding.fixDecision, note: finding.fixNote ?? '' };
-    return finding.suggestions?.length ? writeChoice(finding, finding.suggestions[0].letter, '') : { decision: 'FIX', note: '' };
+    return finding.suggestions?.length ? writeChoice(finding, optionKey(finding.suggestions[0]), '') : { decision: 'FIX', note: '' };
 }
 
 // Pflichttext fehlt: PO-Entscheidung (außer „wie vorgeschlagen“) bzw. Begründung beim Verwerfen.
@@ -596,12 +612,9 @@ function FixStep({ finding, data, error, label, strings, onData, skipNeedsReason
                 {options.length > 0 && <span className="float-right pt-0.5 text-[13px] leading-5 text-gray-500 dark:text-gray-400">{strings.suggestions_percent_hint}</span>}
                 <div className="clear-both space-y-2.5 pt-2.5">
                     {options.map((option) => (
-                        <label key={option.letter} className={`${OPTION_BOX} grid grid-cols-[56px_1fr_24px] items-start gap-4 py-3 pl-3 pr-3.5`}>
-                            <input type="radio" name={name} checked={choice === option.letter} onChange={() => pick(option.letter)} className="sr-only" />
-                            <span className="flex flex-col items-center gap-0.5 pt-0.5">
-                                <span className="text-[26px] font-semibold leading-[30px] text-gray-500 dark:text-gray-400">{option.letter}</span>
-                                <span className="whitespace-nowrap text-[13px] font-medium leading-[18px] text-gray-500 dark:text-gray-400">{option.percent} %</span>
-                            </span>
+                        <label key={optionKey(option)} className={`${OPTION_BOX} grid grid-cols-[56px_1fr_24px] items-start gap-4 py-3 pl-3 pr-3.5`}>
+                            <input type="radio" name={name} checked={choice === optionKey(option)} onChange={() => pick(optionKey(option))} className="sr-only" />
+                            <OptionBadge option={option} />
                             <span className="flex min-w-0 flex-col gap-1 [&_code]:border [&_code]:border-gray-200 [&_code]:bg-white dark:[&_code]:border-gray-700 dark:[&_code]:bg-gray-800">
                                 {option.titleHtml && <span className="font-semibold text-gray-900 dark:text-gray-100" dangerouslySetInnerHTML={{ __html: option.titleHtml }} />}
                                 <Markdown html={option.html} />
@@ -690,7 +703,7 @@ function FindingFixDialog({ finding, pr, strings, onClose }) {
                         disabled={form.processing || blocked}
                         className={`${button} text-white disabled:cursor-not-allowed disabled:opacity-45 ${skip ? 'bg-gray-700 hover:bg-gray-600 dark:bg-gray-600 dark:hover:bg-gray-500' : 'bg-indigo-600 hover:bg-indigo-500'}`}
                     >
-                        {skip ? strings.fix_skip_submit : finding.suggestions?.some((o) => o.letter === choice) ? strings.fix_submit_option.replace(':letter', choice) : strings.fix_submit}
+                        {skip ? strings.fix_skip_submit : finding.suggestions?.find((o) => optionKey(o) === choice)?.letter ? strings.fix_submit_option.replace(':letter', choice) : strings.fix_submit}
                     </button>
                 </footer>
             </div>

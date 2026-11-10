@@ -572,7 +572,7 @@ class PullRequestController extends Controller
     /**
      * Vorschläge im A/B/C-Format kommen getrennt vom übrigen Text.
      *
-     * @return array{messageHtml: string, messageSections: list<array{label: string, html: string}>, messageAfterHtml: ?string, suggestions: list<array{letter: string, percent: int, text: string, titleHtml: ?string, html: string}>}
+     * @return array{messageHtml: string, messageSections: list<array{label: string, html: string}>, messageAfterHtml: ?string, suggestions: list<array{letter: ?string, percent: int, text: string, titleHtml: ?string, html: string}>}
      */
     private function message(string $message): array
     {
