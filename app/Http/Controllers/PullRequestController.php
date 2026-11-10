@@ -572,17 +572,22 @@ class PullRequestController extends Controller
     /**
      * Vorschläge im A/B/C-Format kommen getrennt vom übrigen Text.
      *
-     * @return array{messageHtml: string, messageAfterHtml: ?string, suggestions: list<array{letter: string, percent: int, text: string, html: string}>}
+     * @return array{messageHtml: string, messageSections: list<array{label: string, html: string}>, messageAfterHtml: ?string, suggestions: list<array{letter: string, percent: int, text: string, html: string}>}
      */
     private function message(string $message): array
     {
         $parsed = FindingSuggestions::parse($message);
+        $sections = fn (string $text) => array_map(
+            fn (array $s) => ['label' => $s['label'], 'html' => $this->md($s['text'])],
+            FindingSuggestions::sections($text) ?? [],
+        );
         if ($parsed === null) {
-            return ['messageHtml' => $this->md($message), 'messageAfterHtml' => null, 'suggestions' => []];
+            return ['messageHtml' => $this->md($message), 'messageSections' => $sections($message), 'messageAfterHtml' => null, 'suggestions' => []];
         }
 
         return [
             'messageHtml' => $this->md($parsed['before']),
+            'messageSections' => $sections($parsed['before']),
             'messageAfterHtml' => $parsed['after'] === '' ? null : $this->md($parsed['after']),
             'suggestions' => array_map(fn (array $o) => [...$o, 'html' => $this->md($o['text'])], $parsed['options']),
         ];

@@ -400,14 +400,19 @@ function FixDialog({ review, pr, strings, onClose }) {
     const findings = review.findings;
     const [step, setStep] = useState(0);
     const form = useForm({
-        findings: findings.map((f) => ({ id: f.id, decision: f.fixDecision ?? 'FIX', note: f.fixNote ?? '' })),
+        findings: findings.map((f) => ({ id: f.id, ...initialChoice(f) })),
     });
     const overview = step === findings.length;
 
-    const set = (index, key, value) => form.setData('findings', form.data.findings.map((f, i) => (i === index ? { ...f, [key]: value } : f)));
     const noteError = (index) => form.errors[`findings.${index}.note`];
 
     const submit = (start) => {
+        const missing = start ? findings.findIndex((f, i) => missingNote(f, form.data.findings[i], false)) : -1;
+        if (missing >= 0) {
+            form.setError(`findings.${missing}.note`, strings.fix_po_note_required);
+            setStep(missing);
+            return;
+        }
         form.transform((data) => ({ ...data, start }));
         form.post(review.fixUrl, {
             preserveScroll: true,
@@ -429,7 +434,7 @@ function FixDialog({ review, pr, strings, onClose }) {
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
             <div className="fixed inset-0 bg-gray-500/75 dark:bg-gray-900/75" onClick={onClose}></div>
-            <div role="dialog" aria-modal="true" aria-labelledby="fix-dialog-title" className="relative flex max-h-[90vh] w-full max-w-2xl flex-col rounded-lg bg-white dark:bg-gray-800 shadow-xl">
+            <div role="dialog" aria-modal="true" aria-labelledby="fix-dialog-title" className="relative flex max-h-[90vh] w-full max-w-[820px] flex-col rounded-lg bg-white dark:bg-gray-800 shadow-xl">
                 <header className="border-b border-gray-100 dark:border-gray-700 px-6 py-4">
                     <h2 id="fix-dialog-title" className="text-lg font-medium text-gray-900 dark:text-gray-100">{strings.fix}</h2>
                     <ol className="mt-3 flex gap-1" aria-hidden="true">
@@ -446,7 +451,7 @@ function FixDialog({ review, pr, strings, onClose }) {
                     </ol>
                 </header>
 
-                <div className="overflow-y-auto px-6 py-4">
+                <div className="overflow-y-auto p-6">
                     {overview ? (
                         <FixOverview findings={findings} data={form.data.findings} strings={strings} onPick={setStep} />
                     ) : (
@@ -456,8 +461,7 @@ function FixDialog({ review, pr, strings, onClose }) {
                             error={noteError(step)}
                             label={strings.fix_step.replace(':n', step + 1).replace(':total', findings.length)}
                             strings={strings}
-                            onChange={(key, value) => set(step, key, value)}
-                            onAdopt={(note) => form.setData('findings', form.data.findings.map((f, i) => (i === step ? { ...f, decision: 'FIX', note } : f)))}
+                            onData={(data) => form.setData('findings', form.data.findings.map((f, i) => (i === step ? { ...f, ...data } : f)))}
                         />
                     )}
                 </div>
@@ -481,57 +485,155 @@ function FixDialog({ review, pr, strings, onClose }) {
     );
 }
 
-function FixStep({ finding, data, error, label, strings, onChange, onAdopt, skipNeedsReason = false }) {
-    const po = finding.requiresPoDecision;
-    const reason = skipNeedsReason && !po && data.decision === 'SKIP';
-    const suggested = data.decision === 'SUGGESTED';
+// Gewählte Option aus Entscheidung + Anmerkung: Buchstabe eines Vorschlags, sonst die Entscheidung.
+function readChoice(finding, data) {
+    if (data.decision === 'FIX') {
+        for (const option of finding.suggestions ?? []) {
+            const prefix = suggestionNote(option);
+            if (data.note.startsWith(prefix)) return { choice: option.letter, extra: data.note.slice(prefix.length).trim() };
+        }
+    }
+    return { choice: data.decision, extra: data.decision === 'SUGGESTED' ? '' : data.note };
+}
+
+function writeChoice(finding, choice, extra) {
+    const option = finding.suggestions?.find((o) => o.letter === choice);
+    if (option) return { decision: 'FIX', note: extra.trim() ? `${suggestionNote(option)}\n\n${extra}` : suggestionNote(option) };
+    return { decision: choice, note: choice === 'SUGGESTED' ? '' : extra };
+}
+
+// Ohne gespeicherte Entscheidung ist Vorschlag A vorausgewählt.
+function initialChoice(finding) {
+    if (finding.fixDecision) return { decision: finding.fixDecision, note: finding.fixNote ?? '' };
+    return finding.suggestions?.length ? writeChoice(finding, finding.suggestions[0].letter, '') : { decision: 'FIX', note: '' };
+}
+
+// Pflichttext fehlt: PO-Entscheidung (außer „wie vorgeschlagen“) bzw. Begründung beim Verwerfen.
+function missingNote(finding, data, skipNeedsReason) {
+    const { choice, extra } = readChoice(finding, data);
+    if (extra.trim()) return false;
+    if (finding.requiresPoDecision) return choice !== 'SUGGESTED';
+    return skipNeedsReason && choice === 'SKIP';
+}
+
+function Check() {
     return (
-        <div className="space-y-4">
-            <div>
+        <svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="invisible text-indigo-600 group-has-[:checked]:visible dark:text-indigo-400">
+            <path d="M5 12.5l4.5 4.5L19 7.5" />
+        </svg>
+    );
+}
+
+const OPTION_BOX = 'group relative cursor-pointer rounded-[10px] border-2 border-transparent bg-gray-100 dark:bg-gray-900/60 has-[:checked]:border-indigo-600 has-[:checked]:bg-indigo-50 dark:has-[:checked]:border-indigo-400 dark:has-[:checked]:bg-indigo-950/40 has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-indigo-600';
+
+function FixStep({ finding, data, error, label, strings, onData, skipNeedsReason = false }) {
+    const po = finding.requiresPoDecision;
+    const options = finding.suggestions ?? [];
+    const { choice, extra } = readChoice(finding, data);
+    const skip = choice === 'SKIP';
+    const suggested = choice === 'SUGGESTED';
+    const required = po ? !suggested : skipNeedsReason && skip;
+    const name = `fix-choice-${finding.id}`;
+    const pick = (value) => onData(writeChoice(finding, value, extra));
+    const small = [...(options.length ? [] : ['SUGGESTED']), 'FIX', 'SKIP'];
+    const [copied, setCopied] = useState(false);
+    const path = finding.file ? `${finding.file}${finding.line ? `:${finding.line}` : ''}` : null;
+    const copy = () => navigator.clipboard?.writeText(path).then(() => {
+        setCopied(true);
+        setTimeout(() => setCopied(false), 1500);
+    });
+
+    return (
+        <div className="space-y-5 text-[15px] leading-6 text-gray-800 dark:text-gray-200">
+            <div className="space-y-2">
                 {label && <div className="text-xs text-gray-500 dark:text-gray-400">{label}</div>}
-                <div className="mt-1 flex flex-wrap items-center gap-2 text-sm">
-                    <span className={`rounded px-1.5 py-0.5 text-xs font-medium ${LEVEL_TONE[finding.level]}`}>{strings[`level_${finding.level}`]}</span>
-                    {po && <span className="rounded px-1.5 py-0.5 text-xs font-medium bg-indigo-100 text-indigo-800 dark:bg-indigo-900/40 dark:text-indigo-300">{strings.po_decision}</span>}
-                    <span className="font-medium text-gray-900 dark:text-gray-100">{finding.title}</span>
+                <div className="flex flex-wrap gap-2">
+                    <span className={`rounded px-2 py-0.5 text-sm font-medium ${LEVEL_TONE[finding.level]}`}>{strings[`level_${finding.level}`]}</span>
+                    {po && <span className="rounded px-2 py-0.5 text-sm font-medium bg-indigo-100 text-indigo-800 dark:bg-indigo-900/40 dark:text-indigo-300">{strings.po_decision}</span>}
                 </div>
-                {finding.file && (
-                    <div className="mt-1 text-xs font-mono text-gray-500 dark:text-gray-400">{finding.file}{finding.line ? `:${finding.line}` : ''}</div>
+                <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100">{finding.title}</h3>
+                {path && (
+                    <div className="flex items-center gap-1.5">
+                        <span className="font-mono text-[13px] leading-5 text-gray-500 dark:text-gray-400 [overflow-wrap:anywhere]">{path}</span>
+                        <button
+                            type="button"
+                            onClick={copy}
+                            aria-label={copied ? strings.fix_path_copied : strings.fix_copy_path}
+                            title={copied ? strings.fix_path_copied : strings.fix_copy_path}
+                            className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-gray-500 hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-gray-200"
+                        >
+                            {copied ? (
+                                <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5" /></svg>
+                            ) : (
+                                <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="11" height="11" rx="2" /><path d="M5 15V6a2 2 0 0 1 2-2h9" /></svg>
+                            )}
+                        </button>
+                    </div>
                 )}
-                <div className="mt-2 max-h-64 overflow-y-auto rounded-md bg-gray-50 dark:bg-gray-900/40 p-3 text-sm"><Markdown html={finding.messageHtml} /></div>
-                <Suggestions finding={finding} adopted={data.decision === 'FIX' ? data.note : null} strings={strings} onAdopt={onAdopt} />
             </div>
 
-            <div className="flex flex-wrap gap-x-4 gap-y-2">
-                {['FIX', 'SUGGESTED', 'SKIP'].map((value) => (
-                    <label key={value} className="inline-flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
-                        <input
-                            type="radio"
-                            name={`fix-decision-${finding.id}`}
-                            value={value}
-                            checked={data.decision === value}
-                            onChange={() => onChange('decision', value)}
-                            className="text-indigo-600 focus:ring-indigo-500"
-                        />
-                        {strings[`fix_decision_${value}`]}
-                    </label>
-                ))}
-            </div>
+            {finding.messageSections?.length ? (
+                <dl className="grid grid-cols-1 gap-x-4 gap-y-1 sm:grid-cols-[116px_1fr] sm:gap-y-3">
+                    {finding.messageSections.map((section, i) => (
+                        <React.Fragment key={i}>
+                            <dt className="font-semibold text-gray-900 dark:text-gray-100">{section.label}</dt>
+                            <dd className="mb-2 min-w-0 sm:mb-0"><Markdown html={section.html} /></dd>
+                        </React.Fragment>
+                    ))}
+                </dl>
+            ) : (
+                <Markdown html={finding.messageHtml} />
+            )}
+            {finding.messageAfterHtml && <Markdown html={finding.messageAfterHtml} />}
 
-            {!suggested && <div>
-                <label htmlFor={`fix-note-${finding.id}`} className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    {po ? strings.fix_po_note : reason ? strings.fix_skip_reason : strings.fix_note}
-                </label>
-                <textarea
-                    id={`fix-note-${finding.id}`}
-                    rows={4}
-                    value={data.note}
-                    onChange={(e) => onChange('note', e.target.value)}
-                    placeholder={po ? strings.fix_po_note_placeholder : reason ? strings.fix_skip_reason_placeholder : strings.fix_note_placeholder}
-                    className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                />
-                {error && <p className="mt-1 text-sm text-red-600 dark:text-red-400">{error}</p>}
-            </div>}
-            {skipNeedsReason && data.decision === 'SKIP' && <p className="text-sm text-gray-600 dark:text-gray-400">{strings.fix_skip_hint}</p>}
+            <fieldset className="min-w-0">
+                <legend className="float-left font-semibold text-gray-900 dark:text-gray-100">{strings.fix_how}</legend>
+                {options.length > 0 && <span className="float-right pt-0.5 text-[13px] leading-5 text-gray-500 dark:text-gray-400">{strings.suggestions_percent_hint}</span>}
+                <div className="clear-both space-y-2.5 pt-2.5">
+                    {options.map((option) => (
+                        <label key={option.letter} className={`${OPTION_BOX} grid grid-cols-[56px_1fr_24px] items-start gap-4 py-3 pl-3 pr-3.5`}>
+                            <input type="radio" name={name} checked={choice === option.letter} onChange={() => pick(option.letter)} className="sr-only" />
+                            <span className="flex flex-col items-center gap-0.5 pt-0.5">
+                                <span className="text-[26px] font-semibold leading-[30px] text-gray-500 dark:text-gray-400">{option.letter}</span>
+                                <span className="whitespace-nowrap text-[13px] font-medium leading-[18px] text-gray-500 dark:text-gray-400">{option.percent} %</span>
+                            </span>
+                            <span className="min-w-0"><Markdown html={option.html} /></span>
+                            <Check />
+                        </label>
+                    ))}
+                    <div className={`grid gap-2.5 ${small.length === 3 ? 'sm:grid-cols-3' : 'sm:grid-cols-2'}`}>
+                        {small.map((value) => (
+                            <label key={value} className={`${OPTION_BOX} grid min-h-12 grid-cols-[1fr_24px] items-center gap-3 py-2.5 pl-4 pr-3.5`}>
+                                <input type="radio" name={name} checked={choice === value} onChange={() => pick(value)} className="sr-only" />
+                                <span className="font-semibold text-gray-900 dark:text-gray-100">{value === 'FIX' && options.length ? strings.fix_choice_other : strings[`fix_decision_${value}`]}</span>
+                                <Check />
+                            </label>
+                        ))}
+                    </div>
+                </div>
+            </fieldset>
+
+            {!suggested && (
+                <div className="space-y-1.5">
+                    <div className="flex items-baseline justify-between gap-3">
+                        <label htmlFor={`fix-note-${finding.id}`} className="font-semibold text-gray-900 dark:text-gray-100">
+                            {po && !skip ? strings.fix_po_note : skip ? strings.fix_skip_reason : strings.fix_note}
+                        </label>
+                        <span className="text-[13px] leading-5 text-gray-500 dark:text-gray-400">{required ? strings.fix_required : strings.fix_optional}</span>
+                    </div>
+                    <textarea
+                        id={`fix-note-${finding.id}`}
+                        rows={4}
+                        value={extra}
+                        required={required}
+                        onChange={(e) => onData(writeChoice(finding, choice, e.target.value))}
+                        placeholder={po && !skip ? strings.fix_po_note_placeholder : skip ? strings.fix_skip_reason_placeholder : strings.fix_note_placeholder}
+                        className="block w-full rounded-lg border-gray-400 px-3.5 py-2.5 text-[15px] leading-6 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100 focus:border-indigo-500 focus:ring-indigo-500"
+                    />
+                    {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
+                    {skipNeedsReason && skip && <p className="text-sm text-gray-600 dark:text-gray-400">{strings.fix_skip_hint}</p>}
+                </div>
+            )}
         </div>
     );
 }
@@ -539,8 +641,10 @@ function FixStep({ finding, data, error, label, strings, onChange, onAdopt, skip
 // Einzelner Befund: „Fixen“ startet den Fix-Lauf per claudetask:, „Nicht fixen“
 // schreibt die Begründung in den PR-Body und entfernt den Befund.
 function FindingFixDialog({ finding, pr, strings, onClose }) {
-    const form = useForm({ decision: 'FIX', note: finding.fixNote ?? '' });
+    const form = useForm(initialChoice(finding));
     const skip = form.data.decision === 'SKIP';
+    const { choice } = readChoice(finding, form.data);
+    const blocked = missingNote(finding, form.data, true);
 
     const submit = () => form.post(finding.fixUrl, {
         preserveScroll: true,
@@ -550,34 +654,33 @@ function FindingFixDialog({ finding, pr, strings, onClose }) {
         },
     });
 
-    const button = 'inline-flex items-center rounded-md px-4 py-2 text-sm font-semibold';
+    const button = 'inline-flex min-h-11 items-center rounded-lg px-5 text-[15px] font-semibold';
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
             <div className="fixed inset-0 bg-gray-500/75 dark:bg-gray-900/75" onClick={onClose}></div>
-            <div role="dialog" aria-modal="true" aria-labelledby={`finding-fix-title-${finding.id}`} className="relative flex max-h-[90vh] w-full max-w-2xl flex-col rounded-lg bg-white dark:bg-gray-800 shadow-xl">
-                <header className="border-b border-gray-100 dark:border-gray-700 px-6 py-4">
-                    <h2 id={`finding-fix-title-${finding.id}`} className="text-lg font-medium text-gray-900 dark:text-gray-100">{strings.fix_finding_title}</h2>
+            <div role="dialog" aria-modal="true" aria-labelledby={`finding-fix-title-${finding.id}`} className="relative flex max-h-[90vh] w-full max-w-[820px] flex-col rounded-lg bg-white dark:bg-gray-800 shadow-xl">
+                <header className="border-b border-gray-200 dark:border-gray-700 px-6 py-5">
+                    <h2 id={`finding-fix-title-${finding.id}`} className="text-xl font-medium text-gray-900 dark:text-gray-100">{strings.fix_finding_title}</h2>
                 </header>
-                <div className="overflow-y-auto px-6 py-4">
+                <div className="overflow-y-auto p-6">
                     <FixStep
                         finding={finding}
                         data={form.data}
                         error={form.errors.note}
                         strings={strings}
                         skipNeedsReason
-                        onChange={(key, value) => form.setData(key, value)}
-                        onAdopt={(note) => form.setData({ ...form.data, decision: 'FIX', note })}
+                        onData={(data) => form.setData({ ...form.data, ...data })}
                     />
                 </div>
-                <footer className="flex justify-between gap-3 border-t border-gray-100 dark:border-gray-700 px-6 py-4">
+                <footer className="flex flex-wrap justify-between gap-3 border-t border-gray-200 dark:border-gray-700 px-6 py-5">
                     <button type="button" onClick={onClose} className={`${button} border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700`}>{strings.fix_cancel}</button>
                     <button
                         type="button"
                         onClick={submit}
-                        disabled={form.processing}
-                        className={`${button} text-white disabled:opacity-50 ${skip ? 'bg-gray-700 hover:bg-gray-600 dark:bg-gray-600 dark:hover:bg-gray-500' : 'bg-indigo-600 hover:bg-indigo-500'}`}
+                        disabled={form.processing || blocked}
+                        className={`${button} text-white disabled:cursor-not-allowed disabled:opacity-45 ${skip ? 'bg-gray-700 hover:bg-gray-600 dark:bg-gray-600 dark:hover:bg-gray-500' : 'bg-indigo-600 hover:bg-indigo-500'}`}
                     >
-                        {skip ? strings.fix_skip_submit : strings.fix_submit}
+                        {skip ? strings.fix_skip_submit : finding.suggestions?.some((o) => o.letter === choice) ? strings.fix_submit_option.replace(':letter', choice) : strings.fix_submit}
                     </button>
                 </footer>
             </div>
