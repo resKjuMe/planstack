@@ -77,6 +77,29 @@ class FindingSuggestions
         ];
     }
 
+    /**
+     * Gliedert Text aus `**Was:** …`-Absätzen in Label und Inhalt; null, wenn er nicht so beginnt.
+     *
+     * @return list<array{label: string, text: string}>|null
+     */
+    public static function sections(string $text): ?array
+    {
+        $sections = [];
+        foreach (preg_split('/\R/u', trim($text)) as $line) {
+            if (preg_match('/^\*\*([^*\n]{1,40}?)\s*:\s*\*\*\s*(.*)$/u', $line, $m)) {
+                $sections[] = ['label' => $m[1], 'lines' => [$m[2]]];
+
+                continue;
+            }
+            if ($sections === []) {
+                return null;
+            }
+            $sections[array_key_last($sections)]['lines'][] = $line;
+        }
+
+        return $sections === [] ? null : array_map(fn (array $s) => ['label' => $s['label'], 'text' => trim(implode("\n", $s['lines']))], $sections);
+    }
+
     /** @param list<string> $lines */
     private static function dedent(array $lines): string
     {

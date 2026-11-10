@@ -30,6 +30,20 @@ class FindingSuggestionsTest extends TestCase
         $this->assertSame('', $parsed['after']);
     }
 
+    public function test_splits_labelled_paragraphs_into_sections(): void
+    {
+        $this->assertSame([
+            ['label' => 'Was', 'text' => "a\nb"],
+            ['label' => 'Warum falsch', 'text' => 'c'],
+        ], FindingSuggestions::sections("**Was:** a\nb\n**Warum falsch:** c"));
+    }
+
+    public function test_has_no_sections_for_free_text(): void
+    {
+        $this->assertNull(FindingSuggestions::sections("Freitext\n**Was:** a"));
+        $this->assertNull(FindingSuggestions::sections('**fett**'));
+    }
+
     public function test_ignores_messages_without_options(): void
     {
         $this->assertNull(FindingSuggestions::parse('**Vorschlag (80 %):** einfach'));
