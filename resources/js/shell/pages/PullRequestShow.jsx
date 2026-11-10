@@ -240,6 +240,7 @@ function Score({ label, value, reason, tone }) {
 
 function Finding({ finding, pr, strings }) {
     const [fixing, setFixing] = useState(false);
+    const adopt = (note) => router.post(finding.fixUrl, { decision: 'FIX', note, start: false }, { preserveScroll: true });
     return (
         <article id={`finding-${finding.id}`} className="scroll-mt-4 rounded-md border border-gray-200 dark:border-gray-700 p-3 target:ring-2 target:ring-indigo-500">
             <div className="flex flex-wrap items-center gap-2 text-sm">
@@ -273,11 +274,65 @@ function Finding({ finding, pr, strings }) {
                 ) : strings.summary_finding}
             </div>
             <div className="mt-2 text-sm"><Markdown html={finding.messageHtml} /></div>
+            <Suggestions
+                finding={finding}
+                adopted={finding.fixDecision === 'FIX' ? finding.fixNote : null}
+                strings={strings}
+                onAdopt={finding.fixUrl ? adopt : null}
+            />
             {finding.confidenceReason && (
                 <p className="mt-1 text-xs text-gray-600 dark:text-gray-300">{strings.confidence}: {finding.confidenceReason}</p>
             )}
             <FixDecision finding={finding} strings={strings} />
         </article>
+    );
+}
+
+const suggestionNote = (option) => `Vorschlag ${option.letter}: ${option.text}`;
+
+// Vorschläge im A/B/C-Format als Optionen; das Icon übernimmt einen als Lösung.
+function Suggestions({ finding, adopted, strings, onAdopt }) {
+    if (!finding.suggestions?.length) return null;
+    return (
+        <div className="mt-3 space-y-2">
+            <div className="flex items-baseline justify-between gap-3">
+                <span className="text-sm font-semibold text-gray-900 dark:text-gray-100">{strings.suggestions}</span>
+                <span className="text-xs text-gray-500 dark:text-gray-400">{strings.suggestions_percent_hint}</span>
+            </div>
+            {finding.suggestions.map((option) => {
+                const note = suggestionNote(option);
+                const active = adopted?.trim() === note.trim();
+                return (
+                    <div
+                        key={option.letter}
+                        className={`grid grid-cols-[3.5rem_1fr_auto] items-start gap-4 rounded-[10px] border-2 py-3 pl-3 pr-2 ${active ? 'border-indigo-600 bg-indigo-50 dark:border-indigo-400 dark:bg-indigo-950/40' : 'border-transparent bg-gray-100 dark:bg-gray-900/60'}`}
+                    >
+                        <div className="flex flex-col items-center gap-0.5 pt-0.5">
+                            <span className="text-[26px] font-semibold leading-[30px] text-gray-500 dark:text-gray-400">{option.letter}</span>
+                            <span className="whitespace-nowrap text-xs font-medium text-gray-600 dark:text-gray-400">{option.percent} %</span>
+                        </div>
+                        <div className="min-w-0 text-sm"><Markdown html={option.html} /></div>
+                        {onAdopt ? (
+                            <button
+                                type="button"
+                                onClick={() => !active && onAdopt(note)}
+                                aria-pressed={active}
+                                aria-label={(active ? strings.suggestion_adopted : strings.suggestion_adopt).replace(':letter', option.letter)}
+                                title={(active ? strings.suggestion_adopted : strings.suggestion_adopt).replace(':letter', option.letter)}
+                                className={`inline-flex h-9 w-9 items-center justify-center rounded-md ${active ? 'text-indigo-600 dark:text-indigo-400' : 'text-gray-500 hover:bg-white hover:text-indigo-600 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-indigo-400'}`}
+                            >
+                                {active ? (
+                                    <svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5" /></svg>
+                                ) : (
+                                    <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="9" /><path d="M8.5 12.5l2.5 2.5 4.5-5" /></svg>
+                                )}
+                            </button>
+                        ) : <span />}
+                    </div>
+                );
+            })}
+            {finding.messageAfterHtml && <div className="text-sm"><Markdown html={finding.messageAfterHtml} /></div>}
+        </div>
     );
 }
 
@@ -402,6 +457,7 @@ function FixDialog({ review, pr, strings, onClose }) {
                             label={strings.fix_step.replace(':n', step + 1).replace(':total', findings.length)}
                             strings={strings}
                             onChange={(key, value) => set(step, key, value)}
+                            onAdopt={(note) => form.setData('findings', form.data.findings.map((f, i) => (i === step ? { ...f, decision: 'FIX', note } : f)))}
                         />
                     )}
                 </div>
@@ -425,7 +481,7 @@ function FixDialog({ review, pr, strings, onClose }) {
     );
 }
 
-function FixStep({ finding, data, error, label, strings, onChange, skipNeedsReason = false }) {
+function FixStep({ finding, data, error, label, strings, onChange, onAdopt, skipNeedsReason = false }) {
     const po = finding.requiresPoDecision;
     const reason = skipNeedsReason && !po && data.decision === 'SKIP';
     const suggested = data.decision === 'SUGGESTED';
@@ -442,6 +498,7 @@ function FixStep({ finding, data, error, label, strings, onChange, skipNeedsReas
                     <div className="mt-1 text-xs font-mono text-gray-500 dark:text-gray-400">{finding.file}{finding.line ? `:${finding.line}` : ''}</div>
                 )}
                 <div className="mt-2 max-h-64 overflow-y-auto rounded-md bg-gray-50 dark:bg-gray-900/40 p-3 text-sm"><Markdown html={finding.messageHtml} /></div>
+                <Suggestions finding={finding} adopted={data.decision === 'FIX' ? data.note : null} strings={strings} onAdopt={onAdopt} />
             </div>
 
             <div className="flex flex-wrap gap-x-4 gap-y-2">
@@ -509,6 +566,7 @@ function FindingFixDialog({ finding, pr, strings, onClose }) {
                         strings={strings}
                         skipNeedsReason
                         onChange={(key, value) => form.setData(key, value)}
+                        onAdopt={(note) => form.setData({ ...form.data, decision: 'FIX', note })}
                     />
                 </div>
                 <footer className="flex justify-between gap-3 border-t border-gray-100 dark:border-gray-700 px-6 py-4">

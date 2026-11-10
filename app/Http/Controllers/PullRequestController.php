@@ -9,6 +9,7 @@ use App\Models\PullRequestApproval;
 use App\Models\PullRequestReview;
 use App\Models\ReviewFinding;
 use App\Models\User;
+use App\Support\FindingSuggestions;
 use App\Support\PullRequestApprovals;
 use App\Support\PullRequestCommits;
 use App\Support\PullRequestSkippedFindings;
@@ -254,7 +255,9 @@ class PullRequestController extends Controller
         $data = $request->validate([
             'decision' => ['required', Rule::enum(FindingFixDecision::class)],
             'note' => ['nullable', 'string', 'max:5000'],
+            'start' => ['sometimes', 'boolean'],
         ]);
+        $start = $data['start'] ?? true;
         $note = trim((string) ($data['note'] ?? ''));
         $decision = FindingFixDecision::from($data['decision']);
         if ($decision === FindingFixDecision::SUGGESTED) {
@@ -264,6 +267,14 @@ class PullRequestController extends Controller
 
         if ($note === '' && ($skip || ($finding->requires_po_decision && $decision->needsPoNote()))) {
             throw ValidationException::withMessages(['note' => __($finding->requires_po_decision ? 'pull_requests.fix_po_note_required' : 'pull_requests.fix_skip_reason_required')]);
+        }
+
+        // Nur als Lösung speichern: kein Fix-Lauf, „Nicht fixen“ geht nur mit Lauf-Dialog.
+        if (! $start) {
+            abort_if($skip, 422);
+            $finding->update(['fix_decision' => $decision, 'fix_note' => $note === '' ? null : $note]);
+
+            return back();
         }
 
         if ($skip) {
@@ -358,7 +369,7 @@ class PullRequestController extends Controller
                             ? "https://github.com/{$pullRequest->repository}/blob/".($review->commit_sha ?: $pullRequest->branch)."/{$f->file}".($f->line ? "#L{$f->line}" : '')
                             : null,
                         'title' => $f->title,
-                        'messageHtml' => $this->md($f->message),
+                        ...$this->message($f->message),
                         'confidence' => $f->confidence,
                         'confidenceReason' => $f->confidence_reason,
                         'fixDecision' => $f->fix_decision?->value,
@@ -555,6 +566,25 @@ class PullRequestController extends Controller
             'stale' => $review->commit_sha !== null && $pr->last_commit !== null
                 && ! Str::startsWith($pr->last_commit, $review->commit_sha)
                 && ! Str::startsWith($review->commit_sha, $pr->last_commit),
+        ];
+    }
+
+    /**
+     * Vorschläge im A/B/C-Format kommen getrennt vom übrigen Text.
+     *
+     * @return array{messageHtml: string, messageAfterHtml: ?string, suggestions: list<array{letter: string, percent: int, text: string, html: string}>}
+     */
+    private function message(string $message): array
+    {
+        $parsed = FindingSuggestions::parse($message);
+        if ($parsed === null) {
+            return ['messageHtml' => $this->md($message), 'messageAfterHtml' => null, 'suggestions' => []];
+        }
+
+        return [
+            'messageHtml' => $this->md($parsed['before']),
+            'messageAfterHtml' => $parsed['after'] === '' ? null : $this->md($parsed['after']),
+            'suggestions' => array_map(fn (array $o) => [...$o, 'html' => $this->md($o['text'])], $parsed['options']),
         ];
     }
 
