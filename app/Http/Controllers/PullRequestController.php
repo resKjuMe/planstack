@@ -572,7 +572,7 @@ class PullRequestController extends Controller
     /**
      * Vorschläge im A/B/C-Format kommen getrennt vom übrigen Text.
      *
-     * @return array{messageHtml: string, messageSections: list<array{label: string, html: string}>, messageAfterHtml: ?string, suggestions: list<array{letter: string, percent: int, text: string, html: string}>}
+     * @return array{messageHtml: string, messageSections: list<array{label: string, html: string}>, messageAfterHtml: ?string, suggestions: list<array{letter: string, percent: int, text: string, titleHtml: ?string, html: string}>}
      */
     private function message(string $message): array
     {
@@ -589,7 +589,15 @@ class PullRequestController extends Controller
             'messageHtml' => $this->md($parsed['before']),
             'messageSections' => $sections($parsed['before']),
             'messageAfterHtml' => $parsed['after'] === '' ? null : $this->md($parsed['after']),
-            'suggestions' => array_map(fn (array $o) => [...$o, 'html' => $this->md($o['text'])], $parsed['options']),
+            'suggestions' => array_map(function (array $o) {
+                $headline = FindingSuggestions::headline($o['text']);
+
+                return [
+                    ...$o,
+                    'titleHtml' => $headline['title'] === null ? null : Str::inlineMarkdown($headline['title'], ['html_input' => 'strip', 'allow_unsafe_links' => false]),
+                    'html' => $this->md($headline['text']),
+                ];
+            }, $parsed['options']),
         ];
     }
 

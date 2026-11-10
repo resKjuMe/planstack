@@ -44,6 +44,16 @@ class FindingSuggestionsTest extends TestCase
         $this->assertNull(FindingSuggestions::sections('**fett**'));
     }
 
+    public function test_splits_an_option_into_title_and_text(): void
+    {
+        $this->assertSame(
+            ['title' => 'PO entscheiden lassen', 'text' => 'Bei `UPDATE x; y` — Rollout.'],
+            FindingSuggestions::headline('PO entscheiden lassen; bei `UPDATE x; y` — Rollout.'),
+        );
+        $this->assertSame(['title' => null, 'text' => '`a; b` nur Code'], FindingSuggestions::headline('`a; b` nur Code'));
+        $this->assertSame(['title' => null, 'text' => 'Ohne Trenner'], FindingSuggestions::headline('Ohne Trenner'));
+    }
+
     public function test_ignores_messages_without_options(): void
     {
         $this->assertNull(FindingSuggestions::parse('**Vorschlag (80 %):** einfach'));

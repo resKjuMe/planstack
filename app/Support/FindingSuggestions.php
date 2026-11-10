@@ -78,6 +78,31 @@ class FindingSuggestions
     }
 
     /**
+     * Teilt eine Option am ersten „; “ oder „ — “ außerhalb von Code in Titel und Rest.
+     *
+     * @return array{title: ?string, text: string}
+     */
+    public static function headline(string $text): array
+    {
+        $first = strtok($text, "\n");
+        if (preg_match_all('/; | [—–] /u', $first, $matches, PREG_OFFSET_CAPTURE)) {
+            foreach ($matches[0] as [$separator, $offset]) {
+                $title = substr($first, 0, $offset);
+                if (mb_strlen($title) > 80) {
+                    break;
+                }
+                if (substr_count($title, '`') % 2 === 0) {
+                    $rest = trim(substr($text, $offset + strlen($separator)));
+
+                    return $rest === '' ? ['title' => null, 'text' => $text] : ['title' => $title, 'text' => mb_strtoupper(mb_substr($rest, 0, 1)).mb_substr($rest, 1)];
+                }
+            }
+        }
+
+        return ['title' => null, 'text' => $text];
+    }
+
+    /**
      * Gliedert Text aus `**Was:** …`-Absätzen in Label und Inhalt; null, wenn er nicht so beginnt.
      *
      * @return list<array{label: string, text: string}>|null
