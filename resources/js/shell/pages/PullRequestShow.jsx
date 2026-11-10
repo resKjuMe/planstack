@@ -3,7 +3,7 @@ import { Head, Link, router, useForm } from '@inertiajs/react';
 import AppShell from '../AppShell.jsx';
 import PageBands from '../components/PageBands.jsx';
 import PullRequestTimeline from '../components/PullRequestTimeline.jsx';
-import { ApprovalPanel, StackedIcon, DecisionBadge, JiraTitle, LEVEL_TONE, Markdown, RunningBadge, ScoreBar, StateBadge, fixCommandHref, resolveCommandHref, convertCommandHref, skillUpdateCommandHref, formatDate, formatDuration, usePullRequestLiveReload } from '../components/PullRequestParts.jsx';
+import { ApprovalPanel, StackedIcon, DecisionBadge, JiraTitle, LEVEL_TONE, Markdown, RunningBadge, ScoreBar, StateBadge, fixCommandHref, resolveCommandHref, convertCommandHref, skillUpdateCommandHref, JIRA_URL, formatDate, formatDuration, usePullRequestLiveReload } from '../components/PullRequestParts.jsx';
 
 // Detailseite eines Pull Requests: Kopf mit Status, aktuelles Review und Tabs
 // (Befunde, Analyse, Beschreibung, frühere Reviews). Markdown rendert der Server.
@@ -348,13 +348,54 @@ function CurrentReview({ review, pr, strings }) {
                     <ScoreMeter label={strings.col_po_review_likelihood} value={review.poReviewLikelihood} tone="po" />
                 </div>
             </section>
-            {ticket && (
-                <section className={`${CARD} space-y-2 px-6 pb-5 pt-4 text-[15px] leading-6`}>
-                    <h2 className="text-base font-bold text-gray-900 dark:text-gray-100">{ticket.title}</h2>
-                    <div className="max-w-[820px]"><Markdown html={ticket.html} /></div>
-                </section>
-            )}
+            {ticket && <TicketMatchCard section={ticket} strings={strings} />}
         </>
+    );
+}
+
+// Ticket-Abgleich: „Weniger“ und „Mehr als verlangt“ nebeneinander, Punkte mit Kennung fett darüber.
+function TicketMatchCard({ section, strings }) {
+    const t = section.ticket;
+    return (
+        <section className={`${CARD} space-y-3 px-6 pb-3.5 pt-4 text-[15px] leading-6`}>
+            <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+                <h2 className="text-base font-bold text-gray-900 dark:text-gray-100">{t ? strings.ticket_match : section.title}</h2>
+                {t?.key && (
+                    <a href={JIRA_URL + t.key} target="_blank" rel="noreferrer" className="font-mono text-[13px] text-indigo-700 hover:underline dark:text-indigo-300">{t.key} ↗</a>
+                )}
+            </div>
+            {t ? (
+                <div className="flex flex-wrap items-start gap-x-12 gap-y-5">
+                    <TicketMatchGroup title={strings.ticket_less} items={t.less} className="flex-[3_1_28rem]" strings={strings} />
+                    <TicketMatchGroup title={strings.ticket_more} items={t.more} className="flex-[2_1_21rem]" strings={strings} />
+                </div>
+            ) : (
+                <div className="max-w-[820px] pb-1.5"><Markdown html={section.html} /></div>
+            )}
+        </section>
+    );
+}
+
+function TicketMatchGroup({ title, items, className, strings }) {
+    return (
+        <div className={`min-w-0 ${className}`}>
+            <div className="flex items-center gap-2 border-b-2 border-gray-200 pb-1.5 dark:border-gray-700">
+                <h3 className="font-bold text-gray-900 dark:text-gray-100">{title}</h3>
+                <span className="rounded-full bg-gray-200 px-2 text-[13px] font-semibold leading-5 text-gray-800 dark:bg-gray-700 dark:text-gray-200">{items.length}</span>
+            </div>
+            {items.length === 0 ? (
+                <p className="py-2.5 text-gray-500 dark:text-gray-400">{strings.ticket_nothing}</p>
+            ) : (
+                <ul className="divide-y divide-gray-200 dark:divide-gray-700">
+                    {items.map((item, i) => (
+                        <li key={i} className="flex flex-col gap-0.5 py-2.5">
+                            {item.leadHtml && <span className="font-semibold text-gray-900 dark:text-gray-100" dangerouslySetInnerHTML={{ __html: item.leadHtml }} />}
+                            <span dangerouslySetInnerHTML={{ __html: item.html }} />
+                        </li>
+                    ))}
+                </ul>
+            )}
+        </div>
     );
 }
 

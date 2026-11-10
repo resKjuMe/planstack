@@ -630,8 +630,12 @@ class PullRequestController extends Controller
                 [$headline, $body] = $this->tldrHeadline($body);
                 $tldr = $body === '' ? null : $this->md($body);
             } elseif ($body !== '') {
-                $body = preg_match('/^Ticket-Abgleich/iu', trim($m[1])) ? TicketMatch::asBullets($body) : $body;
-                $sections[] = ['title' => trim($m[1]), 'html' => $this->md($body)];
+                $ticket = preg_match('/^Ticket-Abgleich/iu', trim($m[1]));
+                $sections[] = [
+                    'title' => trim($m[1]),
+                    'html' => $this->md($ticket ? TicketMatch::asBullets($body) : $body),
+                    'ticket' => $ticket ? $this->ticketMatch(trim($m[1]), $body) : null,
+                ];
             }
         }
 
@@ -654,6 +658,30 @@ class PullRequestController extends Controller
         }
 
         return [Str::inlineMarkdown($m[2], ['html_input' => 'strip', 'allow_unsafe_links' => false]), trim($m[1])];
+    }
+
+    /**
+     * Ticket-Abgleich gegliedert für die zweispaltige Karte; null, wenn der Abschnitt frei formuliert ist.
+     *
+     * @return array{key: ?string, less: list<array{leadHtml: ?string, html: string}>, more: list<array{leadHtml: ?string, html: string}>}|null
+     */
+    private function ticketMatch(string $title, string $body): ?array
+    {
+        $groups = TicketMatch::parse($body);
+        if ($groups === null) {
+            return null;
+        }
+        $inline = fn (string $text) => Str::inlineMarkdown($text, ['html_input' => 'strip', 'allow_unsafe_links' => false]);
+        $items = fn (array $list) => array_map(fn (array $item) => [
+            'leadHtml' => $item['lead'] === null ? null : $inline($item['lead']),
+            'html' => $inline($item['text']),
+        ], $list);
+
+        return [
+            'key' => preg_match('/\b[A-Z][A-Z0-9]+-\d+\b/', $title, $m) ? $m[0] : null,
+            'less' => $items($groups['less']),
+            'more' => $items($groups['more']),
+        ];
     }
 
     private function md(string $content): string

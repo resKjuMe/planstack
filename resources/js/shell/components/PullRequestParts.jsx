@@ -175,7 +175,7 @@ export function ReviewStartLink({ pr, strings }) {
 // Jira-Keys im Titel als Pill mit Link auf das Ticket, der Rest verlinkt wie
 // gehabt (verschachtelte Links sind nicht erlaubt, daher je Textstück ein Link).
 // Die Statusfarbe (data-jira-tone) setzt das Userscript planstack-jira-status.
-const JIRA_URL = 'https://clickbits.atlassian.net/browse/';
+export const JIRA_URL = 'https://clickbits.atlassian.net/browse/';
 const JIRA_KEY = /\b((?:MN|AR|CON|EI)-\d+)\b/;
 
 export function JiraTitle({ title, renderText }) {
