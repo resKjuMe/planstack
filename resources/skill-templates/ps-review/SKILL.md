@@ -1,8 +1,8 @@
 ---
 name: ps-review
-description: Code-Review eines GitHub-PR mit Ablage in Planstack — reviewt den PR (inklusive Prüfung der Code-Kommentare auf Richtigkeit, Mehrwert und Knappheit), bewertet Kritikalität, KI-Prüfbarkeit und PO-Sichtung, sendet PR-Daten und Review samt Findings an die Planstack-API (sichtbar unter planstack.eskju.net/pull-requests), gibt die Review im Chat aus und schließt mit Findings-/Kritisch-/Wichtig-/Hinweis-/Empfehlung-Zeilen ab. Am PR wird nur nach ausdrücklicher Rückfrage gepostet. Mit „fix“ setzt er die in Planstack je Befund getroffenen Entscheidungen um, hält sie im PR-Body fest, pusht und reviewt neu; mit „resolve“ löst er den Merge-Konflikt, fixt rote CI und offene (Review-)Kommentare, pusht und reviewt neu; mit „convert“ übernimmt er die Changes-Requested-Review eines Kollegen als ps-review mit Befunden, beantwortet deren Kommentare mit dem Planstack-Link und löst die Threads auf. Nutze diesen Skill bei „ps-review 1234", „review PR 1234 nach Planstack", „/ps-review", „/ps-review fix 1234", „/ps-review resolve 1234", „/ps-review convert 1234 --from <login>".
-version: 1.1.0
-argument-hint: "[fix|resolve|convert] [<pr-nummer|pr-url|branch>] [--from <login>] [--lenient|--strict] [--relaxed|--meticulous] [--post|--comment|--no-post]"
+description: Code-Review eines GitHub-PR mit Ablage in Planstack — reviewt den PR (inklusive Prüfung der Code-Kommentare auf Richtigkeit, Mehrwert und Knappheit), bewertet Kritikalität, KI-Prüfbarkeit und PO-Sichtung, sendet PR-Daten und Review samt Findings an die Planstack-API (sichtbar unter planstack.eskju.net/pull-requests), gibt die Review im Chat aus und schließt mit Findings-/Kritisch-/Wichtig-/Hinweis-/Empfehlung-Zeilen ab. Am PR wird nur nach ausdrücklicher Rückfrage gepostet. Mit „fix“ setzt er die in Planstack je Befund getroffenen Entscheidungen um, hält sie im PR-Body fest, pusht und reviewt neu; mit „resolve“ löst er den Merge-Konflikt, fixt rote CI und offene (Review-)Kommentare, pusht und reviewt neu; mit „convert“ übernimmt er die Changes-Requested-Review eines Kollegen als ps-review mit Befunden, beantwortet deren Kommentare mit dem Planstack-Link und löst die Threads auf; mit „create“ setzt er ein Jira-Ticket oder eine beschriebene Aufgabe als neuen PR um, füllt die Kundensicht, reviewt ihn und bringt die CI auf grün. Nutze diesen Skill bei „ps-review 1234", „review PR 1234 nach Planstack", „/ps-review", „/ps-review fix 1234", „/ps-review resolve 1234", „/ps-review convert 1234 --from <login>", „/ps-review create MN-1234".
+version: 1.2.0
+argument-hint: "[fix|resolve|convert|create] [<pr-nummer|pr-url|branch|jira-key|beschreibung>] [--from <login>] [--lenient|--strict] [--relaxed|--meticulous] [--post|--comment|--no-post]"
 ---
 
 **Nie** als Befund melden: reine Formatierung von Kommentaren — Zeilenumbruch mitten im Satz, Umbruchbreite, Einrückung, Leerzeilen, Satzzeichen. Das ist irrelevant, auch nicht als Hinweis.
@@ -16,12 +16,12 @@ Ein vollständiges Code-Review; das Ergebnis landet **nicht** als Datei, sondern
 1. **Nichts am PR posten, bevor der Nutzer zugestimmt hat.** Während des Reviews sind nur lesende `gh`-Aufrufe erlaubt (`gh pr view`, `gh pr diff`, `gh pr checks`, `gh api` mit `GET`). Geschrieben wird am PR erst in Schritt 8 — nach expliziter Zustimmung, und nur das, was der Nutzer in Schritt 7 ausgewählt hat. Ohne Antwort wird nichts gepostet; Schweigen ist kein Ja. Ausnahme: im Übernahme-Modus (`/ps-review convert`) ist der Klick auf den Button die Zustimmung zu den Antworten und dem Auflösen der übernommenen Threads (C4), im Fix-Modus einer übernommenen Review die Zustimmung zum Dismissen der ursprünglichen Review (F4).
 2. **Planstack nur über drei Aufrufe**: `PUT /api/pull-requests` und `POST /api/pull-requests/{id}/reviews` (Start) in Schritt 1, `PUT /api/pull-requests/{id}/reviews/{review}` (Abschluss) in Schritt 5. Im Fix-Modus kommen `POST /api/pull-requests/{id}/fix/claim` und `PUT /api/pull-requests/{id}/reviews/{review}/fix` dazu. Keine Board-Aufrufe (`review-claim`, `review-next`, Events) — dieser Skill kennt kein Board.
 3. **Keine lokale Report-Datei.** Die Payload-Dateien für `curl` liegen nur temporär (Scratchpad bzw. `mktemp -d`) und werden nach dem Senden gelöscht. Schlägt die API fehl, wird das gemeldet — nicht als Datei abgelegt.
-4. **Nichts am Code ändern.** Das Review ist rein lesend: keine Edits, keine Commits, kein Push, kein Checkout, der lokale Änderungen gefährdet. Ausnahmen: der Nutzer wählt in Schritt 7 „Fixe Findings im gleichen PR“ — dann gilt Schritt 9; oder der Aufruf ist `/ps-review fix` bzw. `/ps-review resolve` — dann gilt der Fix- bzw. Konflikt-Modus. Der Übernahme-Modus (`/ps-review convert`) ändert keinen Code.
+4. **Nichts am Code ändern.** Das Review ist rein lesend: keine Edits, keine Commits, kein Push, kein Checkout, der lokale Änderungen gefährdet. Ausnahmen: der Nutzer wählt in Schritt 7 „Fixe Findings im gleichen PR“ — dann gilt Schritt 9; oder der Aufruf ist `/ps-review fix`, `/ps-review resolve` bzw. `/ps-review create` — dann gilt der Fix-, Konflikt- bzw. Erstell-Modus. Der Übernahme-Modus (`/ps-review convert`) ändert keinen Code.
 5. **Das Review wird immer abgeschlossen** — auch bei `APPROVE` ohne einen einzigen Befund. Ein gestartetes, nie abgeschlossenes Review zeigt Planstack zwei Stunden lang als laufend, danach als abgebrochen.
 
 ## Aufruf
 
-`/ps-review [<ZIEL>] [<Schalter>]` · `/ps-review fix <ZIEL>` (Fix-Modus) · `/ps-review resolve <ZIEL>` (Konflikt-Modus) · `/ps-review convert <ZIEL> --from <login>` (Übernahme-Modus), siehe unten
+`/ps-review [<ZIEL>] [<Schalter>]` · `/ps-review fix <ZIEL>` (Fix-Modus) · `/ps-review resolve <ZIEL>` (Konflikt-Modus) · `/ps-review convert <ZIEL> --from <login>` (Übernahme-Modus) · `/ps-review create <JIRA-KEY|Beschreibung>` (Erstell-Modus), siehe unten
 
 Das Ziel muss sich zu einem **GitHub-PR** auflösen, denn Planstack speichert Reviews je PR:
 
@@ -710,3 +710,43 @@ Wurde der Review-Body übernommen, **ein** Konversations-Kommentar mit den Links
 #### C5. Abschluss im Chat
 
 Kurz: Link auf die Detailseite, Zahl der übernommenen Befunde je Schwere, Threads beantwortet/aufgelöst, nicht übernommene Threads mit Grund. Kein neues Review, kein Posten darüber hinaus.
+
+## Erstell-Modus: `/ps-review create <JIRA-KEY|Beschreibung>`
+
+Setzt ein Jira-Ticket oder eine frei beschriebene Aufgabe als neuen PR um, ergänzt die Kundensicht, reviewt ihn in Planstack und bringt die CI auf grün. Läuft im aktuellen Git-Repo (Arbeitsverzeichnis); ohne Repo abbrechen. Rückfragen nur, wenn die Aufgabe ohne fachliche Entscheidung nicht umsetzbar ist — dann vor dem ersten Commit fragen statt raten.
+
+#### E1. Aufgabe erfassen
+
+- Argument passt auf `[A-Z]+-\d+`: Ticket lesen wie unter „Verknüpftes Ticket“ in Schritt 1 (Beschreibung, Kommentare, Anhänge) und die Anforderungen als Checkliste festhalten. Sonst ist der übrige Text die Aufgabe.
+- Repo-Konventionen lesen (`AGENTS.md`, `CLAUDE.md`, PR-Vorlage unter `.github/`) und die betroffenen Stellen im Code suchen.
+
+#### E2. Branch und Worktree
+
+- `git fetch origin`, Worktree auf `origin/<default-branch>` (`git worktree add -b <branch> <pfad> origin/<default>`), nie im Haupt-Checkout.
+- Branch: `feature/<KEY>-<kurz-slug>` bzw. `feature/<kurz-slug>`, sofern das Repo keinen anderen Stil vorgibt.
+
+#### E3. Umsetzen
+
+- Jeden Ticket-Punkt umsetzen, nichts darüber hinaus (sonst gehört es in den PR-Body als bewusste Abweichung). Tests nach Repo-Konventionen ergänzen.
+- Lokal nur das Tooling, das das Repo für lokale Läufe vorsieht (Repo-Konventionen und Nutzer-Regeln beachten).
+- Ein Commit (oder wenige thematische), Message im Stil des Repos, Attribution wie im Repo üblich.
+
+#### E4. Push und PR
+
+- `git push -u origin <branch>`, PR gegen den Default-Branch: Titel `<KEY>: <Ticket-Titel>` bzw. eine Kurzbeschreibung der Aufgabe. Body nach der PR-Vorlage des Repos, sonst Problem · Lösung · Tests; mit Link auf das Ticket. Body mit Umlauten als UTF-8-Datei senden (`gh api … --input <json>`).
+
+#### E5. Kundensicht
+
+Ist der Skill `kundensicht` verfügbar, ihn für den neuen PR ausführen (`/kundensicht <PR-Nummer>`). Sonst überspringen und im Abschluss erwähnen.
+
+#### E6. Review
+
+Vollständiges Review des PR (Schritte 1–6, mit PR-UPSERT und Review-Start in Planstack) mit `--no-post`: Schritt 7 entfällt. Das Review bewertet den eigenen PR so streng wie einen fremden.
+
+#### E7. CI auf grün
+
+- `gh pr checks <pr> -R "$REPO" --watch` abwarten. Rote Checks wie in R3 beheben, pushen (wie R5) und erneut warten; höchstens drei Runden. Flaky/infrastrukturelle Fehler nicht am Code drehen, sondern nennen.
+- Wurde nach E6 gepusht: neues Review wie R6, damit Planstack den aktuellen Head zeigt.
+- Worktree danach entfernen.
+
+Abschluss im Chat: PR-Link, Planstack-Link, CI-Stand, Ticket-Punkte (umgesetzt/offen), ob die Kundensicht ausgefüllt wurde; die Antwort endet wie immer mit den Abschlusszeilen aus Schritt 6.
