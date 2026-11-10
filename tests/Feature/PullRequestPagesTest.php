@@ -683,6 +683,30 @@ class PullRequestPagesTest extends TestCase
         $this->assertNull($po->fresh()->fix_note);
     }
 
+    public function test_adopting_a_suggestion_saves_it_as_solution_without_starting_a_fix(): void
+    {
+        $me = $this->member('Ich Selbst');
+        [$pullRequest, $review] = $this->reviewWithPoFinding($me);
+        $po = $review->findingItems()->where('requires_po_decision', true)->sole();
+        $po->update(['message' => "Offen.\n\n**Vorschlag:**\n- **A (60 %):** Vorbelegen\n- **B (50 %):** Rückfall behalten"]);
+
+        $this->actingAs($me)
+            ->get(route('pull-requests.show', $pullRequest))
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('reviews.0.findings.0.suggestions.1.letter', 'B')
+                ->where('reviews.0.findings.0.suggestions.1.percent', 50)
+                ->where('reviews.0.findings.0.suggestions.1.text', 'Rückfall behalten'));
+
+        $this->actingAs($me)
+            ->post(route('pull-requests.finding-fix', [$pullRequest, $review, $po]), ['decision' => 'FIX', 'note' => 'Vorschlag B: Rückfall behalten', 'start' => false])
+            ->assertRedirect()
+            ->assertSessionHasNoErrors();
+
+        $this->assertNull($review->fresh()->fixStatus());
+        $this->assertSame('FIX', $po->fresh()->fix_decision->value);
+        $this->assertSame('Vorschlag B: Rückfall behalten', $po->fresh()->fix_note);
+    }
+
     public function test_skipping_a_single_finding_records_the_reason_in_the_pr_body_and_removes_it(): void
     {
         config(['planstack.github_token' => 'test-token', 'planstack.github_api' => 'https://api.github.com']);
