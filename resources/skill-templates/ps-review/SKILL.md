@@ -1,7 +1,7 @@
 ---
 name: ps-review
 description: Code-Review eines GitHub-PR mit Ablage in Planstack — reviewt den PR (inklusive Prüfung der Code-Kommentare auf Richtigkeit, Mehrwert und Knappheit), bewertet Kritikalität, KI-Prüfbarkeit und PO-Sichtung, sendet PR-Daten und Review samt Findings an die Planstack-API (sichtbar unter planstack.eskju.net/pull-requests), gibt die Review im Chat aus und schließt mit Findings-/Kritisch-/Wichtig-/Hinweis-/Empfehlung-Zeilen ab. Am PR wird nur nach ausdrücklicher Rückfrage gepostet. Mit „fix“ setzt er die in Planstack je Befund getroffenen Entscheidungen um, hält sie im PR-Body fest, pusht und reviewt neu; mit „resolve“ löst er den Merge-Konflikt, fixt rote CI und offene (Review-)Kommentare, pusht und reviewt neu; mit „convert“ übernimmt er die Changes-Requested-Review eines Kollegen als ps-review mit Befunden, beantwortet deren Kommentare mit dem Planstack-Link und löst die Threads auf. Nutze diesen Skill bei „ps-review 1234", „review PR 1234 nach Planstack", „/ps-review", „/ps-review fix 1234", „/ps-review resolve 1234", „/ps-review convert 1234 --from <login>".
-version: 1.0.0
+version: 1.1.0
 argument-hint: "[fix|resolve|convert] [<pr-nummer|pr-url|branch>] [--from <login>] [--lenient|--strict] [--relaxed|--meticulous] [--post|--comment|--no-post]"
 ---
 
@@ -298,7 +298,7 @@ Schließt das in Schritt 1 gestartete Review ab (`PUT …/reviews/$REVIEWID`); d
 | `criticality`, `criticality_reason` | aus Schritt 4 |
 | `ai_reviewability`, `ai_reviewability_reason` | aus Schritt 4 |
 | `po_review_likelihood`, `po_review_likelihood_reason` | aus Schritt 4 |
-| `summary` | Markdown in dieser Reihenfolge: `## TLDR` · `## Ticket-Abgleich (<KEY>)` mit den Unterpunkten `**Weniger als verlangt:**` und `**Mehr als verlangt:**` (Pflicht, sobald ein Ticket verknüpft ist; ist nichts abweichend, steht dort „nichts“) · `## Analyse je Datei` · `## Risiken & Nebenwirkungen` · `## Tests` · `## Kommentare` · `## Nicht geprüft` · `## CI` (Stand aus `gh pr checks`). Leere Abschnitte entfallen. **Keine** Befunde — die stehen in `findings`. |
+| `summary` | Markdown in dieser Reihenfolge: `## TLDR` · `## Ticket-Abgleich (<KEY>)` mit den Unterpunkten `**Weniger als verlangt:**` und `**Mehr als verlangt:**`, darunter **immer** je Punkt eine Aufzählungszeile (`- …`), auch bei nur einem Punkt (Pflicht, sobald ein Ticket verknüpft ist; ist nichts abweichend, steht direkt hinter dem Unterpunkt „nichts“) · `## Analyse je Datei` · `## Risiken & Nebenwirkungen` · `## Tests` · `## Kommentare` · `## Nicht geprüft` · `## CI` (Stand aus `gh pr checks`). Leere Abschnitte entfallen. **Keine** Befunde — die stehen in `findings`. |
 | `commit_sha` | der geprüfte Head-SHA aus Schritt 1 |
 | `strictness`, `thoroughness` | die tatsächlich verwendeten Werte |
 | `model` | das tatsächlich genutzte Claude-Modell (Modell-ID) |

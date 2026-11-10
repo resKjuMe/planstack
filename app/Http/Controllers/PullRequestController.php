@@ -15,6 +15,7 @@ use App\Support\PullRequestApprovals;
 use App\Support\PullRequestCommits;
 use App\Support\PullRequestSkippedFindings;
 use App\Support\PullRequestStateSync;
+use App\Support\TicketMatch;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -629,6 +630,7 @@ class PullRequestController extends Controller
                 [$headline, $body] = $this->tldrHeadline($body);
                 $tldr = $body === '' ? null : $this->md($body);
             } elseif ($body !== '') {
+                $body = preg_match('/^Ticket-Abgleich/iu', trim($m[1])) ? TicketMatch::asBullets($body) : $body;
                 $sections[] = ['title' => trim($m[1]), 'html' => $this->md($body)];
             }
         }
