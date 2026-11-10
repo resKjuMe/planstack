@@ -174,6 +174,7 @@ return [
     'earlier_hint' => 'Überholt, nur zur Nachverfolgung. Befunde daraus zählen nicht mehr und lassen sich nicht fixen.',
     'no_earlier_reviews' => 'Keine früheren Reviews.',
     'show_all_earlier' => 'Alle :n früheren Reviews anzeigen',
+    'earlier_count_one' => ':n Befund · überholt',
     'earlier_count' => ':n Befunde · überholt',
     'meta_file' => ':n Datei',
     'meta_files' => ':n Dateien',
