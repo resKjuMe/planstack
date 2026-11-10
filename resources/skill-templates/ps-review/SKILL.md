@@ -103,6 +103,13 @@ Den Diff **vollständig** lesen, nicht nur die Dateiliste. Die Zahl der geänder
 
 Bei `meticulous` zusätzlich den Kontext um jede Änderung herum lesen (die ganze Datei, nicht nur die Hunks) und die aufrufenden Stellen der geänderten Symbole suchen — ein Diff allein zeigt keine Regression, die erst beim Aufrufer entsteht.
 
+**Verknüpftes Ticket:** Steht ein Jira-Key (`[A-Z]+-\d+`) in Titel, Branch oder Body, das Ticket lesen (REST `https://clickbits.atlassian.net/rest/api/3/issue/<KEY>?fields=summary,description,comment,attachment`, Auth `$JIRA_EMAIL` (Default `git config user.email`) + `$JIRA_API_TOKEN`; Ausgabe mit `PYTHONIOENCODING=utf-8`). Jeden Ticket-Punkt gegen den Diff abgleichen und notieren:
+
+- **Weniger als verlangt:** Ticket-Punkte, die fehlen, nur teilweise oder bewusst abweichend umgesetzt sind (auch wenn der PR-Body das begründet). Bei „global prüfen“ selbst nach übersehenen Stellen suchen.
+- **Mehr als verlangt:** Verhaltensänderungen, neue Regeln, Bugfixes und Refactorings, die das Ticket nicht verlangt.
+
+Was davon eine Verhaltensänderung für Kunden ist, wird zusätzlich ein Befund (meist mit `requires_po_decision`). Nicht lesbare Anhänge (Screenshots) unter `## Nicht geprüft` nennen. Ohne Ticket oder ohne Jira-Zugang entfällt der Abgleich; dann unter `## Nicht geprüft` vermerken.
+
 ### 2. Review durchführen
 
 Den vorhandenen Review-Skill (`/code-review`) auf das Ziel laufen lassen — **ohne** `--comment` und **ohne** `--fix`: `--comment` würde ungefragt am PR posten, `--fix` den Code ändern. Das Posten entscheidet allein Schritt 7. Effort-Stufe aus `review_thoroughness`: `relaxed` → `low`, `default` → `medium`, `meticulous` → `high`.
@@ -290,7 +297,7 @@ Schließt das in Schritt 1 gestartete Review ab (`PUT …/reviews/$REVIEWID`); d
 | `criticality`, `criticality_reason` | aus Schritt 4 |
 | `ai_reviewability`, `ai_reviewability_reason` | aus Schritt 4 |
 | `po_review_likelihood`, `po_review_likelihood_reason` | aus Schritt 4 |
-| `summary` | Markdown in dieser Reihenfolge: `## TLDR` · `## Analyse je Datei` · `## Risiken & Nebenwirkungen` · `## Tests` · `## Kommentare` · `## Nicht geprüft` · `## CI` (Stand aus `gh pr checks`). Leere Abschnitte entfallen. **Keine** Befunde — die stehen in `findings`. |
+| `summary` | Markdown in dieser Reihenfolge: `## TLDR` · `## Ticket-Abgleich (<KEY>)` mit den Unterpunkten `**Weniger als verlangt:**` und `**Mehr als verlangt:**` (Pflicht, sobald ein Ticket verknüpft ist; ist nichts abweichend, steht dort „nichts“) · `## Analyse je Datei` · `## Risiken & Nebenwirkungen` · `## Tests` · `## Kommentare` · `## Nicht geprüft` · `## CI` (Stand aus `gh pr checks`). Leere Abschnitte entfallen. **Keine** Befunde — die stehen in `findings`. |
 | `commit_sha` | der geprüfte Head-SHA aus Schritt 1 |
 | `strictness`, `thoroughness` | die tatsächlich verwendeten Werte |
 | `model` | das tatsächlich genutzte Claude-Modell (Modell-ID) |
@@ -302,8 +309,20 @@ Schließt das in Schritt 1 gestartete Review ab (`PUT …/reviews/$REVIEWID`); d
 **Was:** <was der Code tut>
 **Warum falsch:** <Begründung>
 **Fehlszenario:** <konkrete Eingabe/Zustand → falsches Ergebnis>
-**Vorschlag:** <konkreter Fix, ggf. mit Codeblock>
+**Vorschlag (<n> %):** <konkreter Fix, ggf. mit Codeblock>
 ```
+
+**Prozent am Vorschlag** (0–100): wie sinnvoll und sicher der vorgeschlagene Fix ist — getrennt von `confidence` (die bewertet, ob der Befund zutrifft). Hoch: Fix ist lokal, ohne Nebenwirkung, durch Tests absicherbar und deckt sich mit dem Ticket. Runter: berührt Aufrufer/Bestandsdaten, ändert Kundenverhalten, hängt an einer Fachregel oder **widerspricht bzw. überschreitet die Ticket-Anforderungen** (dann im Vorschlag kurz sagen, welcher Ticket-Punkt betroffen ist). Ist ein Ticket verknüpft, jeden Vorschlag gegen dessen Anforderungen prüfen.
+
+Sobald es mehr als einen Vorschlag gibt (Alternativen oder mehrere Teil-Fixes), **immer** als A, B, C … nummerieren, jeden einzeln bewerten, den empfohlenen als A:
+
+```markdown
+**Vorschlag:**
+- **A (80 %):** <Fix> — <Halbsatz warum>
+- **B (40 %):** <Alternative> — <Halbsatz warum schwächer>
+```
+
+Die Prozentzahl gilt überall, wo ein Vorschlag erscheint (Planstack, Chat, Inline-Kommentar, `convert`-Befunde).
 
 Die Zähler (`findings`, `findings_critical`, …) berechnet der Server aus `findings[]` — nicht mitschicken.
 
@@ -332,7 +351,7 @@ Die Antwort hat drei Teile, in dieser Reihenfolge:
 - `## TLDR`
 - `## Bewertung` — drei Zeilen: `Kritikalität: <n> — <Begründung>`, `KI-Prüfbarkeit: <n> — <Begründung>` und `PO-Sichtung: <n> — <Begründung>`
 - `## Befunde` — Übersichtstabelle (`#`, Schwere, Konfidenz, `Datei:Zeile`, Befund, PO), darunter je Befund der Abschnitt `### <n>. <Titel> — <Schwere>` mit `**Wo:** <Datei:Zeile>` und der `message`; bei `requires_po_decision` zusätzlich `**PO-Entscheidung nötig**`
-- danach die übrigen Abschnitte der `summary` (Analyse je Datei, Risiken & Nebenwirkungen, Tests, Kommentare, Nicht geprüft, CI)
+- danach die übrigen Abschnitte der `summary` (Ticket-Abgleich, Analyse je Datei, Risiken & Nebenwirkungen, Tests, Kommentare, Nicht geprüft, CI)
 
 Gibt es keine Befunde, bleibt `## Befunde` mit dem Satz `Keine Befunde.` stehen.
 
@@ -389,7 +408,7 @@ Sagt der Nutzer schon im Aufruf, was passieren soll, gilt das und die Frage entf
 
 | | Inhalt |
 |---|---|
-| **Inline-Kommentar** (je `INLINE`-Befund) | Schwere, was falsch ist, Fehlszenario, Vorschlag — kurz, nur dieser eine Befund; bei `requires_po_decision` die Zeile `**PO-Entscheidung nötig**` |
+| **Inline-Kommentar** (je `INLINE`-Befund) | Schwere, was falsch ist, Fehlszenario, Vorschlag samt Prozent (je Option) — kurz, nur dieser eine Befund; bei `requires_po_decision` die Zeile `**PO-Entscheidung nötig**` |
 | **Review-Body** | TLDR · Zahlen (Findings/Kritisch/Wichtig/Hinweis) · Einordnung · Risiken · Tests · Kommentare · Nicht geprüft — **keine Befunddetails** · dazu nur die `SUMMARY`-Befunde |
 | **Nirgends** | die Bewertungszahlen und die Analyse je Datei — die stehen nur in Planstack |
 
@@ -513,7 +532,8 @@ Planstack zeigt den Fix damit als laufend. Ein laufender Fix darf erneut abgehol
 - Worktree auf dem aktuellen Head des PR (`git worktree add <pfad> <headRefOid>`), nie im Haupt-Checkout.
 - Ist der Head seit `data.commit_sha` weitergelaufen, jeden Befund gegen den aktuellen Code prüfen: schon erledigt → `FIXED` mit Hinweis auf den Commit, nicht doppelt ändern.
 - `decision = FIX`: beheben (Kritisch → Wichtig → Hinweis). Die Anmerkung ist **verbindlich** und geht dem Vorschlag im Befund vor. Bei PO-Befunden genau die PO-Entscheidung umsetzen — nicht die eigene Lesart.
-- `decision = SUGGESTED`: beheben wie `FIX`, und zwar genau so, wie der **Vorschlag** im Befund (`message`) es beschreibt — keine eigene Alternative. Bei PO-Befunden ist der Vorschlag die PO-Entscheidung.
+- Beginnt die Anmerkung mit `Vorschlag <X>:` bzw. `Vorschlag:` (im Dialog gewählte Option), genau diese Option aus dem Befund umsetzen; Text darunter ergänzt sie (bei PO-Befunden ist er die PO-Entscheidung).
+- `decision = SUGGESTED`: beheben wie `FIX`, und zwar genau so, wie der **Vorschlag** im Befund (`message`) es beschreibt — keine eigene Alternative; bei mehreren Optionen die empfohlene (A). Bei PO-Befunden ist der Vorschlag die PO-Entscheidung.
 - `decision = SKIP`: Code nicht anfassen. Ergebnis `SKIPPED`, Grund = Anmerkung (fehlt sie: „bewusst nicht umgesetzt“).
 - Lässt sich ein `FIX` nicht sinnvoll umsetzen (Anmerkung widerspricht dem Code, Fix bräche etwas anderes): `SKIPPED` mit konkretem Grund — nicht raten.
 - Repo-Konventionen wie in Schritt 9 (Hooks, Tooling, Commit-Message-Stil, Attribution). Ein Commit; die Message nennt die behobenen Befunde.
@@ -667,7 +687,7 @@ Je Thread ein Befund, aus dem Review-Body je eigenständigem Punkt einer:
 
 - `type`: Thread mit `path` und Zeile (`line`, sonst `originalLine`) → `INLINE` mit `file`/`line`; Body-Punkte und Threads ohne Zeile → `SUMMARY`.
 - `title`: der Einwand in einer Zeile, in der Sprache aus Schritt 5.
-- `message`: zuerst der Originalkommentar als Zitat mit Autor und Link (`> **<login>:** …` + `[auf GitHub](<url>)`), danach die eigene Einordnung: am Code nachgeprüft, was zutrifft, und ein konkreter Fix-Vorschlag. Stimmt ein Einwand nicht oder ist er schon erledigt, das sachlich festhalten — der Befund bleibt trotzdem stehen, damit „Findings fixen“ ihn mit „Nicht fixen“ und Begründung schließen kann.
+- `message`: zuerst der Originalkommentar als Zitat mit Autor und Link (`> **<login>:** …` + `[auf GitHub](<url>)`), danach die eigene Einordnung: am Code nachgeprüft, was zutrifft, und ein konkreter Fix-Vorschlag mit Prozent (je Option, siehe Schritt 5). Stimmt ein Einwand nicht oder ist er schon erledigt, das sachlich festhalten — der Befund bleibt trotzdem stehen, damit „Findings fixen“ ihn mit „Nicht fixen“ und Begründung schließen kann.
 - `level` nach Schritt 3, `requires_po_decision` nach Schritt 4 (fachliche Regel, Kundenverhalten), `confidence` und `confidence_reason`.
 - `confidence`: wie sicher der Einwand nach eigener Prüfung zutrifft (Skala aus Schritt 3), `confidence_reason` ein Satz dazu.
 
