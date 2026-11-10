@@ -329,7 +329,7 @@ const FILTERS = [
 function FindingsTab({ review, pr, strings }) {
     const findings = review.findings;
     const [filter, setFilter] = useState('all');
-    const [open, setOpen] = useState(() => new Set(findings.length ? [findings[0].id] : []));
+    const [open, setOpen] = useState(() => new Set());
     const [fixing, setFixing] = useState(false);
     const visible = findings.filter(FILTERS.find((f) => f.key === filter).test);
     const allOpen = visible.length > 0 && visible.every((f) => open.has(f.id));
