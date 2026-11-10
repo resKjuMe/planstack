@@ -6,6 +6,7 @@ use App\Models\Organization;
 use App\Models\PullRequest;
 use App\Models\PullRequestReview;
 use App\Models\User;
+use App\Support\PsReviewSkill;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
 use Inertia\Testing\AssertableInertia as Assert;
@@ -681,6 +682,26 @@ class PullRequestPagesTest extends TestCase
         $this->assertSame('requested', $review->fresh()->fixStatus());
         $this->assertSame('SUGGESTED', $po->fresh()->fix_decision->value);
         $this->assertNull($po->fresh()->fix_note);
+    }
+
+    public function test_a_review_with_an_older_skill_version_is_marked_outdated(): void
+    {
+        $me = $this->member('Ich Selbst');
+        [$pullRequest, $review] = $this->reviewWithPoFinding($me);
+
+        $this->actingAs($me)
+            ->get(route('pull-requests.show', $pullRequest))
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('psReviewSkill.version', PsReviewSkill::version())
+                ->where('psReviewSkill.downloadUrl', route('skill.ps-review.download'))
+                ->where('reviews.0.skillVersion', null)
+                ->where('reviews.0.skillOutdated', true));
+
+        $review->update(['skill_version' => PsReviewSkill::version()]);
+
+        $this->actingAs($me)
+            ->get(route('pull-requests.show', $pullRequest))
+            ->assertInertia(fn (Assert $page) => $page->where('reviews.0.skillOutdated', false));
     }
 
     public function test_adopting_a_suggestion_saves_it_as_solution_without_starting_a_fix(): void

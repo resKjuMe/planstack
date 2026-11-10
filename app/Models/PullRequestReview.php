@@ -40,6 +40,7 @@ class PullRequestReview extends Model
         'thoroughness',
         'model',
         'converted_from_login',
+        'skill_version',
         'fix_requested_by_id',
         'fix_requested_at',
         'fix_started_at',

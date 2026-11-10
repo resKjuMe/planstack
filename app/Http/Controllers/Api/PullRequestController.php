@@ -104,6 +104,7 @@ class PullRequestController extends ApiController
             'strictness' => ['nullable', 'string', 'max:20'],
             'thoroughness' => ['nullable', 'string', 'max:20'],
             'model' => ['nullable', 'string', 'max:100'],
+            'skill_version' => ['nullable', 'string', 'max:20'],
             'converted_from_login' => ['nullable', 'string', 'max:100'],
         ]);
 
@@ -143,6 +144,7 @@ class PullRequestController extends ApiController
             'strictness' => ['nullable', 'string', 'max:20'],
             'thoroughness' => ['nullable', 'string', 'max:20'],
             'model' => ['nullable', 'string', 'max:100'],
+            'skill_version' => ['nullable', 'string', 'max:20'],
             'findings' => ['present', 'array'],
             'findings.*.level' => ['required', Rule::enum(ReviewFindingLevel::class)],
             'findings.*.type' => ['required', Rule::enum(ReviewFindingType::class)],

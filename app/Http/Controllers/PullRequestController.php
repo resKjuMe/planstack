@@ -10,6 +10,7 @@ use App\Models\PullRequestReview;
 use App\Models\ReviewFinding;
 use App\Models\User;
 use App\Support\FindingSuggestions;
+use App\Support\PsReviewSkill;
 use App\Support\PullRequestApprovals;
 use App\Support\PullRequestCommits;
 use App\Support\PullRequestSkippedFindings;
@@ -345,6 +346,8 @@ class PullRequestController extends Controller
                 'strictness' => $review->strictness,
                 'thoroughness' => $review->thoroughness,
                 'model' => $review->model,
+                'skillVersion' => $review->skill_version,
+                'skillOutdated' => PsReviewSkill::isOutdated($review->skill_version),
                 'convertedFrom' => $review->converted_from_login,
                 'fix' => $review->fixStatus() === null ? null : [
                     'status' => $review->fixStatus(),
@@ -381,6 +384,7 @@ class PullRequestController extends Controller
             // Der GitHub-Abruf soll den ersten Seitenaufbau nicht bremsen.
             'commitHistory' => Inertia::defer(fn () => app(PullRequestCommits::class)->for($pullRequest)),
             'backUrl' => route('pull-requests.index'),
+            'psReviewSkill' => ['version' => PsReviewSkill::version(), 'downloadUrl' => route('skill.ps-review.download')],
             'strings' => __('pull_requests'),
         ]);
     }
