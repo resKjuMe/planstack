@@ -609,11 +609,12 @@ class PullRequestController extends Controller
     /**
      * Zusammenfassung an den `## `-Überschriften zerlegt: TLDR separat, übrige Abschnitte einzeln.
      *
-     * @return array{tldrHtml: ?string, summarySections: list<array{title: string, html: string}>}
+     * @return array{tldrHeadlineHtml: ?string, tldrHtml: ?string, summarySections: list<array{title: string, html: string}>}
      */
     private function summarySections(string $summary): array
     {
         $tldr = null;
+        $headline = null;
         $sections = [];
         foreach (preg_split('/^(?=##\s)/mu', trim($summary)) as $part) {
             if (! preg_match('/^##\s+(.+)\R?/u', $part, $m)) {
@@ -625,13 +626,32 @@ class PullRequestController extends Controller
             }
             $body = trim(substr($part, strlen($m[0])));
             if (strcasecmp(trim($m[1]), 'TLDR') === 0) {
+                [$headline, $body] = $this->tldrHeadline($body);
                 $tldr = $body === '' ? null : $this->md($body);
             } elseif ($body !== '') {
                 $sections[] = ['title' => trim($m[1]), 'html' => $this->md($body)];
             }
         }
 
-        return ['tldrHtml' => $tldr, 'summarySections' => $sections];
+        return ['tldrHeadlineHtml' => $headline, 'tldrHtml' => $tldr, 'summarySections' => $sections];
+    }
+
+    /**
+     * Letzter kurzer Satz des TLDR als Kernaussage (z. B. „Drei Hinweise, keine Blocker.“), Rest bleibt TLDR.
+     *
+     * @return array{0: ?string, 1: string}
+     */
+    private function tldrHeadline(string $tldr): array
+    {
+        // Nicht aus Listen, Tabellen oder Code reißen.
+        if (preg_match('/(?:^|\n)\s*(?:[-*+]\s|\||>|\d+\.\s|```)[^\n]*$/u', $tldr)) {
+            return [null, $tldr];
+        }
+        if (! preg_match('/^(.*[.!?:)])\s+(?:\*\*)?([^\n.!?*]{3,90}[.!?])(?:\*\*)?\s*$/su', $tldr, $m) || substr_count($m[2], '`') % 2 !== 0) {
+            return [null, $tldr];
+        }
+
+        return [Str::inlineMarkdown($m[2], ['html_input' => 'strip', 'allow_unsafe_links' => false]), trim($m[1])];
     }
 
     private function md(string $content): string

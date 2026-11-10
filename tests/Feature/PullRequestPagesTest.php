@@ -700,6 +700,27 @@ class PullRequestPagesTest extends TestCase
                 ->count('reviews.0.summarySections', 2));
     }
 
+    public function test_the_last_short_tldr_sentence_becomes_the_headline(): void
+    {
+        $me = $this->member('Ich Selbst');
+        [$pullRequest, $review] = $this->reviewWithPoFinding($me);
+        $review->update(['summary' => "## TLDR\n\nDiff identisch zu `f32c81d`. Drei Hinweise, keine Blocker."]);
+
+        $this->actingAs($me)
+            ->get(route('pull-requests.show', $pullRequest))
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('reviews.0.tldrHeadlineHtml', 'Drei Hinweise, keine Blocker.')
+                ->where('reviews.0.tldrHtml', "<p>Diff identisch zu <code>f32c81d</code>.</p>\n"));
+
+        $review->update(['summary' => "## TLDR\n\nNur ein Satz."]);
+
+        $this->actingAs($me)
+            ->get(route('pull-requests.show', $pullRequest))
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('reviews.0.tldrHeadlineHtml', null)
+                ->where('reviews.0.tldrHtml', "<p>Nur ein Satz.</p>\n"));
+    }
+
     public function test_a_review_with_an_older_skill_version_is_marked_outdated(): void
     {
         $me = $this->member('Ich Selbst');

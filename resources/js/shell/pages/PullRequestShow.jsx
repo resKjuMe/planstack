@@ -294,26 +294,67 @@ function InlineScores({ review, strings }) {
 // Der Ticket-Abgleich steht in der Review-Karte statt unter „Analyse“.
 const isTicketMatch = (section) => /^Ticket-Abgleich/i.test(section.title);
 
+// Kennzahl als Zeile mit Zahl rechts und vollem Balken (Farblogik wie ScoreBar).
+function ScoreMeter({ label, value, tone }) {
+    const bad = tone === 'risk' ? value : 100 - value;
+    const color = tone === 'po'
+        ? (value >= 67 ? 'bg-indigo-600' : value >= 34 ? 'bg-indigo-400' : 'bg-indigo-200')
+        : bad >= 67 ? 'bg-red-500' : bad >= 34 ? 'bg-amber-500' : 'bg-green-500';
+    return (
+        <div className="space-y-1">
+            <div className="flex items-baseline justify-between gap-3">
+                <span className="text-[13.5px] font-semibold leading-5 text-gray-900 dark:text-gray-100">{label}</span>
+                <span className="text-[15px] font-bold leading-5 text-gray-900 dark:text-gray-100">{value ?? '–'}</span>
+            </div>
+            {value !== null && value !== undefined && (
+                <div role="img" aria-label={`${label} ${value}`} className="flex h-1.5 rounded bg-gray-200 dark:bg-gray-700">
+                    <div className={`rounded ${color}`} style={{ width: `${value}%` }} />
+                </div>
+            )}
+        </div>
+    );
+}
+
 function CurrentReview({ review, pr, strings }) {
     const ticket = review.summarySections.find(isTicketMatch);
+    const approve = review.decision === 'APPROVE';
     return (
-        <section id={`review-${review.id}`} className={`scroll-mt-4 ${CARD} space-y-3 px-5 py-4`}>
+        <section id={`review-${review.id}`} className={`scroll-mt-4 ${CARD} space-y-3.5 px-6 pb-5 pt-4`}>
             <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
                 <h2 className="text-base font-bold text-gray-900 dark:text-gray-100">{strings.current_review}</h2>
-                <Verdict review={review} strings={strings} />
                 <ReviewMeta review={review} strings={strings} />
                 {review.stale && <span className="text-xs text-amber-600 dark:text-amber-400">{strings.stale}</span>}
                 {review.convertedFrom && <span className="text-xs text-gray-500 dark:text-gray-400">{strings.converted_from.replace(':login', review.convertedFrom)}</span>}
                 <FixStatus fix={review.fix} pr={pr} strings={strings} />
             </div>
-            {review.tldrHtml && <div className="max-w-5xl text-[15px] leading-6"><Markdown html={review.tldrHtml} /></div>}
-            {ticket && (
-                <div className="max-w-5xl text-sm">
-                    <h3 className="font-bold text-gray-900 dark:text-gray-100">{ticket.title}</h3>
-                    <Markdown html={ticket.html} />
+
+            <div className="flex flex-wrap items-start justify-between gap-x-12 gap-y-6">
+                <div className="min-w-0 max-w-[820px] flex-[999_1_30rem] space-y-4">
+                    <div className="space-y-1.5">
+                        <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+                            <span className={`rounded-md px-2.5 text-sm font-semibold leading-6 ${approve
+                                ? 'bg-green-100 text-green-900 dark:bg-green-900/40 dark:text-green-300'
+                                : 'bg-red-100 text-red-900 dark:bg-red-900/40 dark:text-red-300'}`}
+                            >
+                                {strings[`decision_${review.decision}`] ?? review.decision}
+                            </span>
+                            {review.tldrHeadlineHtml && <span className="text-lg font-semibold leading-7 text-gray-900 dark:text-gray-100" dangerouslySetInnerHTML={{ __html: review.tldrHeadlineHtml }} />}
+                        </div>
+                        {review.tldrHtml && <div className="text-[15px] leading-6"><Markdown html={review.tldrHtml} /></div>}
+                    </div>
+                    {ticket && (
+                        <div className="space-y-2 border-t border-gray-200 pt-3.5 text-[15px] leading-6 dark:border-gray-700">
+                            <h3 className="font-bold text-gray-900 dark:text-gray-100">{ticket.title}</h3>
+                            <Markdown html={ticket.html} />
+                        </div>
+                    )}
                 </div>
-            )}
-            <InlineScores review={review} strings={strings} />
+                <div className="min-w-0 max-w-[300px] flex-[1_1_14rem] space-y-3.5 rounded-[10px] border border-gray-200 bg-gray-50 px-4 pb-4 pt-3.5 dark:border-gray-700 dark:bg-gray-900/40">
+                    <ScoreMeter label={strings.col_criticality} value={review.criticality} tone="risk" />
+                    <ScoreMeter label={strings.col_ai_reviewability} value={review.aiReviewability} tone="ai" />
+                    <ScoreMeter label={strings.col_po_review_likelihood} value={review.poReviewLikelihood} tone="po" />
+                </div>
+            </div>
         </section>
     );
 }
