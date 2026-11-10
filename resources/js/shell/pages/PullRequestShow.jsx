@@ -311,7 +311,10 @@ function Suggestions({ finding, adopted, strings, onAdopt }) {
                             <span className="text-[26px] font-semibold leading-[30px] text-gray-500 dark:text-gray-400">{option.letter}</span>
                             <span className="whitespace-nowrap text-xs font-medium text-gray-600 dark:text-gray-400">{option.percent} %</span>
                         </div>
-                        <div className="min-w-0 text-sm"><Markdown html={option.html} /></div>
+                        <div className="flex min-w-0 flex-col gap-1 text-sm [&_code]:border [&_code]:border-gray-200 [&_code]:bg-white dark:[&_code]:border-gray-700 dark:[&_code]:bg-gray-800">
+                            {option.titleHtml && <span className="font-semibold text-gray-900 dark:text-gray-100" dangerouslySetInnerHTML={{ __html: option.titleHtml }} />}
+                            <Markdown html={option.html} />
+                        </div>
                         {onAdopt ? (
                             <button
                                 type="button"
@@ -434,7 +437,7 @@ function FixDialog({ review, pr, strings, onClose }) {
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
             <div className="fixed inset-0 bg-gray-500/75 dark:bg-gray-900/75" onClick={onClose}></div>
-            <div role="dialog" aria-modal="true" aria-labelledby="fix-dialog-title" className="relative flex max-h-[90vh] w-full max-w-[820px] flex-col rounded-lg bg-white dark:bg-gray-800 shadow-xl">
+            <div role="dialog" aria-modal="true" aria-labelledby="fix-dialog-title" className="relative flex max-h-[90vh] w-full max-w-[1280px] flex-col rounded-lg bg-white dark:bg-gray-800 shadow-xl">
                 <header className="border-b border-gray-100 dark:border-gray-700 px-6 py-4">
                     <h2 id="fix-dialog-title" className="text-lg font-medium text-gray-900 dark:text-gray-100">{strings.fix}</h2>
                     <ol className="mt-3 flex gap-1" aria-hidden="true">
@@ -572,20 +575,22 @@ function FixStep({ finding, data, error, label, strings, onData, skipNeedsReason
                 )}
             </div>
 
-            {finding.messageSections?.length ? (
-                <dl className="grid grid-cols-1 gap-x-4 gap-y-1 sm:grid-cols-[116px_1fr] sm:gap-y-3">
-                    {finding.messageSections.map((section, i) => (
-                        <React.Fragment key={i}>
-                            <dt className="font-semibold text-gray-900 dark:text-gray-100">{section.label}</dt>
-                            <dd className="mb-2 min-w-0 sm:mb-0"><Markdown html={section.html} /></dd>
-                        </React.Fragment>
-                    ))}
-                </dl>
-            ) : (
-                <Markdown html={finding.messageHtml} />
-            )}
-            {finding.messageAfterHtml && <Markdown html={finding.messageAfterHtml} />}
+            <div className="grid items-start gap-x-10 gap-y-6 lg:grid-cols-2">
+            <div className="min-w-0 space-y-5">
+                {finding.messageSections?.length ? (
+                    finding.messageSections.map((section, i) => (
+                        <section key={i}>
+                            <h4 className="mb-1 font-bold text-gray-900 dark:text-gray-100">{section.label}</h4>
+                            <Markdown html={section.html} />
+                        </section>
+                    ))
+                ) : (
+                    <Markdown html={finding.messageHtml} />
+                )}
+                {finding.messageAfterHtml && <Markdown html={finding.messageAfterHtml} />}
+            </div>
 
+            <div className="min-w-0 space-y-5">
             <fieldset className="min-w-0">
                 <legend className="float-left font-semibold text-gray-900 dark:text-gray-100">{strings.fix_how}</legend>
                 {options.length > 0 && <span className="float-right pt-0.5 text-[13px] leading-5 text-gray-500 dark:text-gray-400">{strings.suggestions_percent_hint}</span>}
@@ -597,7 +602,10 @@ function FixStep({ finding, data, error, label, strings, onData, skipNeedsReason
                                 <span className="text-[26px] font-semibold leading-[30px] text-gray-500 dark:text-gray-400">{option.letter}</span>
                                 <span className="whitespace-nowrap text-[13px] font-medium leading-[18px] text-gray-500 dark:text-gray-400">{option.percent} %</span>
                             </span>
-                            <span className="min-w-0"><Markdown html={option.html} /></span>
+                            <span className="flex min-w-0 flex-col gap-1 [&_code]:border [&_code]:border-gray-200 [&_code]:bg-white dark:[&_code]:border-gray-700 dark:[&_code]:bg-gray-800">
+                                {option.titleHtml && <span className="font-semibold text-gray-900 dark:text-gray-100" dangerouslySetInnerHTML={{ __html: option.titleHtml }} />}
+                                <Markdown html={option.html} />
+                            </span>
                             <Check />
                         </label>
                     ))}
@@ -634,6 +642,8 @@ function FixStep({ finding, data, error, label, strings, onData, skipNeedsReason
                     {skipNeedsReason && skip && <p className="text-sm text-gray-600 dark:text-gray-400">{strings.fix_skip_hint}</p>}
                 </div>
             )}
+            </div>
+            </div>
         </div>
     );
 }
@@ -658,7 +668,7 @@ function FindingFixDialog({ finding, pr, strings, onClose }) {
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
             <div className="fixed inset-0 bg-gray-500/75 dark:bg-gray-900/75" onClick={onClose}></div>
-            <div role="dialog" aria-modal="true" aria-labelledby={`finding-fix-title-${finding.id}`} className="relative flex max-h-[90vh] w-full max-w-[820px] flex-col rounded-lg bg-white dark:bg-gray-800 shadow-xl">
+            <div role="dialog" aria-modal="true" aria-labelledby={`finding-fix-title-${finding.id}`} className="relative flex max-h-[90vh] w-full max-w-[1280px] flex-col rounded-lg bg-white dark:bg-gray-800 shadow-xl">
                 <header className="border-b border-gray-200 dark:border-gray-700 px-6 py-5">
                     <h2 id={`finding-fix-title-${finding.id}`} className="text-xl font-medium text-gray-900 dark:text-gray-100">{strings.fix_finding_title}</h2>
                 </header>
