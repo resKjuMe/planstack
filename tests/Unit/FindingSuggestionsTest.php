@@ -54,9 +54,30 @@ class FindingSuggestionsTest extends TestCase
         $this->assertSame(['title' => null, 'text' => 'Ohne Trenner'], FindingSuggestions::headline('Ohne Trenner'));
     }
 
+    public function test_a_single_suggestion_with_percent_becomes_one_option(): void
+    {
+        $this->assertSame([
+            'before' => '**Was:** a',
+            'options' => [['letter' => null, 'percent' => 80, 'text' => "Fix so\n```php\n\$x = 1;\n```"]],
+            'after' => '**Hinweis:** b',
+        ], FindingSuggestions::parse("**Was:** a\n**Vorschlag (80 %):** Fix so\n```php\n\$x = 1;\n```\n**Hinweis:** b"));
+    }
+
+    public function test_the_percent_is_optional(): void
+    {
+        $this->assertSame(
+            [['letter' => null, 'percent' => null, 'text' => 'ohne Prozent']],
+            FindingSuggestions::parse("**Was:** a\n**Vorschlag:** ohne Prozent")['options'],
+        );
+        $this->assertSame(
+            [['letter' => 'A', 'percent' => null, 'text' => 'eins'], ['letter' => 'B', 'percent' => 40, 'text' => 'zwei']],
+            FindingSuggestions::parse("**Vorschlag:**\n- **A:** eins\n- **B (40 %):** zwei")['options'],
+        );
+    }
+
     public function test_ignores_messages_without_options(): void
     {
-        $this->assertNull(FindingSuggestions::parse('**Vorschlag (80 %):** einfach'));
+        $this->assertNull(FindingSuggestions::parse("**Was:** a\n**Vorschlag:**"));
         $this->assertNull(FindingSuggestions::parse('- **B (50 %):** ohne A'));
     }
 }

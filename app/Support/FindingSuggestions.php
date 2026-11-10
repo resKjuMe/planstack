@@ -8,12 +8,12 @@ namespace App\Support;
  */
 class FindingSuggestions
 {
-    private const OPTION = '/^(\s*)[-*]\s+\*\*([A-Z])\s*\((\d{1,3})\s*%\)\s*:?\s*\*\*\s*:?\s*(.*)$/u';
+    private const OPTION = '/^(\s*)[-*]\s+\*\*([A-Z])(?:\s*\((\d{1,3})\s*%\))?\s*:?\s*\*\*\s*:?\s*(.*)$/u';
 
     private const HEADING = '/^\s*\*\*Vorschl(?:ag|äge)\s*:?\s*\*\*\s*:?\s*$/u';
 
     /**
-     * @return array{before: string, options: list<array{letter: string, percent: int, text: string}>, after: string}|null
+     * @return array{before: string, options: list<array{letter: ?string, percent: ?int, text: string}>, after: string}|null
      */
     public static function parse(string $message): ?array
     {
@@ -26,7 +26,7 @@ class FindingSuggestions
             }
         }
         if ($start === null) {
-            return null;
+            return self::single($lines);
         }
 
         $options = [];
@@ -34,7 +34,7 @@ class FindingSuggestions
         for ($i = $start; $i < count($lines); $i++) {
             $line = $lines[$i];
             if (preg_match(self::OPTION, $line, $m)) {
-                $options[] = ['letter' => $m[2], 'percent' => min(100, (int) $m[3]), 'lines' => [$m[4]]];
+                $options[] = ['letter' => $m[2], 'percent' => self::percent($m[3]), 'lines' => [$m[4]]];
 
                 continue;
             }
@@ -75,6 +75,42 @@ class FindingSuggestions
             ], $options),
             'after' => trim(implode("\n", array_slice($lines, $end))),
         ];
+    }
+
+    /**
+     * Einzelner Vorschlag `**Vorschlag (80 %):** Fix` (Prozent optional) bis zum nächsten `**Label:**`-Absatz.
+     *
+     * @param  list<string>  $lines
+     * @return array{before: string, options: list<array{letter: null, percent: ?int, text: string}>, after: string}|null
+     */
+    private static function single(array $lines): ?array
+    {
+        foreach ($lines as $start => $line) {
+            if (! preg_match('/^\s*\*\*Vorschlag(?:\s*\((\d{1,3})\s*%\))?\s*:?\s*\*\*\s*:?\s*(.*)$/u', $line, $m)) {
+                continue;
+            }
+            $end = count($lines);
+            for ($i = $start + 1; $i < count($lines); $i++) {
+                if (preg_match('/^\*\*[^*\n]{1,40}?\s*:\s*\*\*/u', $lines[$i])) {
+                    $end = $i;
+                    break;
+                }
+            }
+            $text = trim(implode("\n", [$m[2], ...array_slice($lines, $start + 1, $end - $start - 1)]));
+
+            return $text === '' ? null : [
+                'before' => trim(implode("\n", array_slice($lines, 0, $start))),
+                'options' => [['letter' => null, 'percent' => self::percent($m[1]), 'text' => $text]],
+                'after' => trim(implode("\n", array_slice($lines, $end))),
+            ];
+        }
+
+        return null;
+    }
+
+    private static function percent(string $value): ?int
+    {
+        return $value === '' ? null : min(100, (int) $value);
     }
 
     /**
