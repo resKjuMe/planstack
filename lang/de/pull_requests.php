@@ -162,7 +162,7 @@ return [
     'tab_analysis' => 'Analyse',
     'tab_earlier' => 'Frühere Reviews',
     'tabs_label' => 'Bereich',
-    'current_review' => 'Aktuelles Review',
+    'current_review' => 'Aktuelle Review',
     'verdict' => 'Urteil',
     'filter_all' => 'Alle',
     'filter_po' => 'PO-Entscheidung',
