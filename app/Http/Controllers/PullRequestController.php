@@ -663,7 +663,7 @@ class PullRequestController extends Controller
     /**
      * Ticket-Abgleich gegliedert für die zweispaltige Karte; null, wenn der Abschnitt frei formuliert ist.
      *
-     * @return array{key: ?string, less: list<array{leadHtml: ?string, html: string}>, more: list<array{leadHtml: ?string, html: string}>}|null
+     * @return array{key: ?string, less: list<array{leadHtml: ?string, html: string}>, more: list<array{leadHtml: ?string, html: string}>, noteHtml: ?string}|null
      */
     private function ticketMatch(string $title, string $body): ?array
     {
@@ -681,6 +681,7 @@ class PullRequestController extends Controller
             'key' => preg_match('/\b[A-Z][A-Z0-9]+-\d+\b/', $title, $m) ? $m[0] : null,
             'less' => $items($groups['less']),
             'more' => $items($groups['more']),
+            'noteHtml' => $groups['note'] === null ? null : $this->md($groups['note']),
         ];
     }
 

@@ -36,15 +36,22 @@ class TicketMatch
 
     /**
      * Gruppen „Weniger/Mehr als verlangt“ mit ihren Punkten; null, wenn der Abschnitt anders aufgebaut ist.
-     * Ein Punkt „Kennung: Rest“ liefert die Kennung (mit Doppelpunkt) separat.
+     * Ein Punkt „Kennung: Rest“ liefert die Kennung (mit Doppelpunkt) separat. Freier Text nach den
+     * Gruppen landet als Anmerkung in `note`.
      *
-     * @return array{less: list<array{lead: ?string, text: string}>, more: list<array{lead: ?string, text: string}>}|null
+     * @return array{less: list<array{lead: ?string, text: string}>, more: list<array{lead: ?string, text: string}>, note: ?string}|null
      */
     public static function parse(string $markdown): ?array
     {
         $groups = ['less' => [], 'more' => []];
         $current = null;
+        $note = [];
         foreach (preg_split('/\R/u', self::asBullets($markdown)) as $line) {
+            if ($note !== []) {
+                $note[] = $line;
+
+                continue;
+            }
             if (trim($line) === '') {
                 continue;
             }
@@ -61,11 +68,17 @@ class TicketMatch
             } elseif (preg_match('/^\s{2,}\S/u', $line) && $groups[$current] !== []) {
                 $groups[$current][array_key_last($groups[$current])] .= ' '.trim($line);
             } else {
-                return null;
+                $note[] = $line;
             }
         }
+        if ($current === null) {
+            return null;
+        }
 
-        return $current === null ? null : array_map(fn (array $items) => array_map(self::lead(...), $items), $groups);
+        return [
+            ...array_map(fn (array $items) => array_map(self::lead(...), $items), $groups),
+            'note' => $note === [] ? null : trim(implode("\n", $note)),
+        ];
     }
 
     /** @return array{lead: ?string, text: string} */

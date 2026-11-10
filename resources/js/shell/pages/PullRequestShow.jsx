@@ -373,6 +373,7 @@ function TicketMatchCard({ section, strings }) {
             ) : (
                 <div className="max-w-[820px]"><Markdown html={section.html} /></div>
             )}
+            {t?.noteHtml && <div className="max-w-[820px] text-sm text-gray-700 dark:text-gray-300"><Markdown html={t.noteHtml} /></div>}
         </section>
     );
 }

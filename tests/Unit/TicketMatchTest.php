@@ -30,13 +30,22 @@ class TicketMatchTest extends TestCase
                 ['lead' => null, 'text' => '`Badge` umgebaut (`a: b`).'],
                 ['lead' => null, 'text' => 'Baustein ausgeblendet.'],
             ],
+            'note' => null,
         ], TicketMatch::parse("**Weniger als verlangt:**\n\n- „±0 Weiß“: neutrale Zone ist hellgrün.\n\n**Mehr als verlangt:** `Badge` umgebaut (`a: b`).; Baustein ausgeblendet."));
     }
 
     public function test_nothing_is_an_empty_group_and_free_text_is_not_parsed(): void
     {
-        $this->assertSame(['less' => [], 'more' => [['lead' => null, 'text' => 'A']]], TicketMatch::parse("**Weniger als verlangt:** nichts.\n\n**Mehr als verlangt:**\n\n- A"));
+        $this->assertSame(['less' => [], 'more' => [['lead' => null, 'text' => 'A']], 'note' => null], TicketMatch::parse("**Weniger als verlangt:** nichts.\n\n**Mehr als verlangt:**\n\n- A"));
         $this->assertNull(TicketMatch::parse('Ticket nicht lesbar.'));
+    }
+
+    public function test_free_text_after_the_groups_becomes_a_note(): void
+    {
+        $parsed = TicketMatch::parse("**Weniger als verlangt:**\n\n- A fehlt.\n\n**Mehr als verlangt:**\n\n- B.\n\nDer PR folgt dem Prototyp; das Ticket ist nicht nachgezogen.");
+
+        $this->assertSame([['lead' => null, 'text' => 'B.']], $parsed['more']);
+        $this->assertSame('Der PR folgt dem Prototyp; das Ticket ist nicht nachgezogen.', $parsed['note']);
     }
 
     public function test_a_single_point_becomes_a_bullet_too(): void
