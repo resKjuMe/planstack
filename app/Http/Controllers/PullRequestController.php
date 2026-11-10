@@ -342,6 +342,7 @@ class PullRequestController extends Controller
                 ...$this->reviewRow($review, $pullRequest),
                 'reviewer' => $review->reviewer?->name,
                 'summaryHtml' => $this->md((string) $review->summary),
+                ...$this->summarySections((string) $review->summary),
                 'commitSha' => $review->commit_sha,
                 'strictness' => $review->strictness,
                 'thoroughness' => $review->thoroughness,
@@ -603,6 +604,34 @@ class PullRequestController extends Controller
                 ];
             }, $parsed['options']),
         ];
+    }
+
+    /**
+     * Zusammenfassung an den `## `-Überschriften zerlegt: TLDR separat, übrige Abschnitte einzeln.
+     *
+     * @return array{tldrHtml: ?string, summarySections: list<array{title: string, html: string}>}
+     */
+    private function summarySections(string $summary): array
+    {
+        $tldr = null;
+        $sections = [];
+        foreach (preg_split('/^(?=##\s)/mu', trim($summary)) as $part) {
+            if (! preg_match('/^##\s+(.+)\R?/u', $part, $m)) {
+                if (trim($part) !== '') {
+                    $sections[] = ['title' => '', 'html' => $this->md($part)];
+                }
+
+                continue;
+            }
+            $body = trim(substr($part, strlen($m[0])));
+            if (strcasecmp(trim($m[1]), 'TLDR') === 0) {
+                $tldr = $body === '' ? null : $this->md($body);
+            } elseif ($body !== '') {
+                $sections[] = ['title' => trim($m[1]), 'html' => $this->md($body)];
+            }
+        }
+
+        return ['tldrHtml' => $tldr, 'summarySections' => $sections];
     }
 
     private function md(string $content): string

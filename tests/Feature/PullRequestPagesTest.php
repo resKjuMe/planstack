@@ -684,6 +684,22 @@ class PullRequestPagesTest extends TestCase
         $this->assertNull($po->fresh()->fix_note);
     }
 
+    public function test_the_summary_is_split_into_tldr_and_sections(): void
+    {
+        $me = $this->member('Ich Selbst');
+        [$pullRequest, $review] = $this->reviewWithPoFinding($me);
+        $review->update(['summary' => "## TLDR\n\nKurz.\n\n## Ticket-Abgleich (MN-1)\n\nnichts\n\n## Leer\n\n## CI\n\ngrün"]);
+
+        $this->actingAs($me)
+            ->get(route('pull-requests.show', $pullRequest))
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('reviews.0.tldrHtml', "<p>Kurz.</p>\n")
+                ->where('reviews.0.summarySections.0.title', 'Ticket-Abgleich (MN-1)')
+                ->where('reviews.0.summarySections.0.html', "<p>nichts</p>\n")
+                ->where('reviews.0.summarySections.1.title', 'CI')
+                ->count('reviews.0.summarySections', 2));
+    }
+
     public function test_a_review_with_an_older_skill_version_is_marked_outdated(): void
     {
         $me = $this->member('Ich Selbst');
