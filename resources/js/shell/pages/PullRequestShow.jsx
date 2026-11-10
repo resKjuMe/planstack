@@ -303,7 +303,7 @@ function OptionBadge({ option }) {
         <span className="flex flex-col items-center gap-0.5 pt-0.5">
             {option.letter && <span className="text-[26px] font-semibold leading-[30px] text-gray-500 dark:text-gray-400">{option.letter}</span>}
             {option.percent !== null && (
-                <span className={`whitespace-nowrap text-gray-500 dark:text-gray-400 ${option.letter ? 'text-[13px] font-medium leading-[18px]' : 'text-lg font-semibold leading-7'}`}>{option.percent} %</span>
+                <span className="whitespace-nowrap text-[13px] font-medium leading-[18px] text-gray-500 dark:text-gray-400">{option.percent} %</span>
             )}
         </span>
     );
@@ -563,7 +563,8 @@ function FixStep({ finding, data, error, label, strings, onData, skipNeedsReason
     });
 
     return (
-        <div className="space-y-5 text-[15px] leading-6 text-gray-800 dark:text-gray-200">
+        <div className="grid items-start gap-x-10 gap-y-6 text-[15px] leading-6 text-gray-800 dark:text-gray-200 lg:grid-cols-2">
+            <div className="min-w-0 space-y-5">
             <div className="space-y-2">
                 {label && <div className="text-xs text-gray-500 dark:text-gray-400">{label}</div>}
                 <div className="flex flex-wrap gap-2">
@@ -591,8 +592,6 @@ function FixStep({ finding, data, error, label, strings, onData, skipNeedsReason
                 )}
             </div>
 
-            <div className="grid items-start gap-x-10 gap-y-6 lg:grid-cols-2">
-            <div className="min-w-0 space-y-5">
                 {finding.messageSections?.length ? (
                     finding.messageSections.map((section, i) => (
                         <section key={i}>
@@ -655,7 +654,6 @@ function FixStep({ finding, data, error, label, strings, onData, skipNeedsReason
                     {skipNeedsReason && skip && <p className="text-sm text-gray-600 dark:text-gray-400">{strings.fix_skip_hint}</p>}
                 </div>
             )}
-            </div>
             </div>
         </div>
     );
