@@ -319,17 +319,16 @@ function CurrentReview({ review, pr, strings }) {
     const ticket = review.summarySections.find(isTicketMatch);
     const approve = review.decision === 'APPROVE';
     return (
-        <section id={`review-${review.id}`} className={`scroll-mt-4 ${CARD} space-y-3.5 px-6 pb-5 pt-4`}>
-            <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
-                <h2 className="text-base font-bold text-gray-900 dark:text-gray-100">{strings.current_review}</h2>
-                <ReviewMeta review={review} strings={strings} />
-                {review.stale && <span className="text-xs text-amber-600 dark:text-amber-400">{strings.stale}</span>}
-                {review.convertedFrom && <span className="text-xs text-gray-500 dark:text-gray-400">{strings.converted_from.replace(':login', review.convertedFrom)}</span>}
-                <FixStatus fix={review.fix} pr={pr} strings={strings} />
-            </div>
-
-            <div className="flex flex-wrap items-start justify-between gap-x-12 gap-y-6">
-                <div className="min-w-0 max-w-[820px] flex-[999_1_30rem] space-y-4">
+        <>
+            <section id={`review-${review.id}`} className={`scroll-mt-4 ${CARD} flex flex-wrap items-start justify-between gap-x-12 gap-y-5 px-6 pb-5 pt-4`}>
+                <div className="min-w-0 max-w-[820px] flex-[999_1_30rem] space-y-3.5">
+                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
+                        <h2 className="text-base font-bold text-gray-900 dark:text-gray-100">{strings.current_review}</h2>
+                        <ReviewMeta review={review} strings={strings} />
+                        {review.stale && <span className="text-xs text-amber-600 dark:text-amber-400">{strings.stale}</span>}
+                        {review.convertedFrom && <span className="text-xs text-gray-500 dark:text-gray-400">{strings.converted_from.replace(':login', review.convertedFrom)}</span>}
+                        <FixStatus fix={review.fix} pr={pr} strings={strings} />
+                    </div>
                     <div className="space-y-1.5">
                         <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
                             <span className={`rounded-md px-2.5 text-sm font-semibold leading-6 ${approve
@@ -342,20 +341,20 @@ function CurrentReview({ review, pr, strings }) {
                         </div>
                         {review.tldrHtml && <div className="text-[15px] leading-6"><Markdown html={review.tldrHtml} /></div>}
                     </div>
-                    {ticket && (
-                        <div className="space-y-2 border-t border-gray-200 pt-3.5 text-[15px] leading-6 dark:border-gray-700">
-                            <h3 className="font-bold text-gray-900 dark:text-gray-100">{ticket.title}</h3>
-                            <Markdown html={ticket.html} />
-                        </div>
-                    )}
                 </div>
                 <div className="min-w-0 max-w-[300px] flex-[1_1_14rem] space-y-3.5 rounded-[10px] border border-gray-200 bg-gray-50 px-4 pb-4 pt-3.5 dark:border-gray-700 dark:bg-gray-900/40">
                     <ScoreMeter label={strings.col_criticality} value={review.criticality} tone="risk" />
                     <ScoreMeter label={strings.col_ai_reviewability} value={review.aiReviewability} tone="ai" />
                     <ScoreMeter label={strings.col_po_review_likelihood} value={review.poReviewLikelihood} tone="po" />
                 </div>
-            </div>
-        </section>
+            </section>
+            {ticket && (
+                <section className={`${CARD} space-y-2 px-6 pb-5 pt-4 text-[15px] leading-6`}>
+                    <h2 className="text-base font-bold text-gray-900 dark:text-gray-100">{ticket.title}</h2>
+                    <div className="max-w-[820px]"><Markdown html={ticket.html} /></div>
+                </section>
+            )}
+        </>
     );
 }
 
