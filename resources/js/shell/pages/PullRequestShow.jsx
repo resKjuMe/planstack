@@ -3,7 +3,7 @@ import { Head, Link, router, useForm } from '@inertiajs/react';
 import AppShell from '../AppShell.jsx';
 import PageBands from '../components/PageBands.jsx';
 import PullRequestTimeline from '../components/PullRequestTimeline.jsx';
-import { ApprovalPanel, StackedIcon, DecisionBadge, JiraTitle, LEVEL_TONE, Markdown, RunningBadge, ScoreBar, StateBadge, fixCommandHref, resolveCommandHref, convertCommandHref, formatDate, formatDuration, usePullRequestLiveReload } from '../components/PullRequestParts.jsx';
+import { ApprovalPanel, StackedIcon, DecisionBadge, JiraTitle, LEVEL_TONE, Markdown, RunningBadge, ScoreBar, StateBadge, fixCommandHref, resolveCommandHref, convertCommandHref, skillUpdateCommandHref, formatDate, formatDuration, usePullRequestLiveReload } from '../components/PullRequestParts.jsx';
 
 // Detailseite eines Pull Requests: Kopf mit Status, aktuelles Review und Tabs
 // (Befunde, Analyse, Beschreibung, frühere Reviews). Markdown rendert der Server.
@@ -220,7 +220,7 @@ function SkillOutdatedNotice({ review, skill, strings }) {
     return (
         <div role="status" className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-amber-300 bg-amber-50 px-5 py-3 text-sm text-amber-900 dark:border-amber-700 dark:bg-amber-900/30 dark:text-amber-200">
             <p>{text}</p>
-            <a href={skill.downloadUrl} data-native className="inline-flex shrink-0 items-center rounded-md bg-amber-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-amber-500">
+            <a href={skillUpdateCommandHref()} title={strings.skill_update_hint} className="inline-flex shrink-0 items-center rounded-md bg-amber-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-amber-500">
                 {strings.skill_update}
             </a>
         </div>

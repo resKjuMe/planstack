@@ -588,6 +588,11 @@ curl -s https://planstack.eskju.net/api/user \
             </table>
         </section>
 
+        <section id="ps-review-skill" class="endpoint">
+            <div class="route"><span class="method m-get">GET</span><span class="path">/api/skill/ps-review</span></div>
+            <p class="desc">Aktuelle Dateien des ps-review-Skills: <code>version</code> (aus dem Frontmatter), <code>skill_md</code> und <code>settings_json</code> als Text. Damit aktualisiert sich ein installierter Skill mit seinem Token, ohne ZIP-Download; <code>config.json</code> bleibt lokal. <span class="status-pill s2">200</span></p>
+        </section>
+
         <section id="pull-requests-review-start" class="endpoint">
             <div class="route"><span class="method m-post">POST</span><span class="path">/api/pull-requests/<b>{id}</b>/reviews</span></div>
             <p class="desc">Vermerkt den Start eines Reviews (<code>review_started_at</code>). Die Antwort enthält die <code>id</code> für den Abschluss. Ein Review, das nach 2 Stunden nicht abgeschlossen ist, gilt als abgebrochen. <span class="status-pill s2">201</span></p>

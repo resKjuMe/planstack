@@ -1,13 +1,14 @@
 <?php
 
+use App\Http\Controllers\Api\ChangelogController;
 use App\Http\Controllers\Api\EventController;
 use App\Http\Controllers\Api\McpController;
 use App\Http\Controllers\Api\NextActionController;
 use App\Http\Controllers\Api\NextActionsController;
 use App\Http\Controllers\Api\PhaseController;
-use App\Http\Controllers\Api\ChangelogController;
 use App\Http\Controllers\Api\ProjectConfigController;
 use App\Http\Controllers\Api\ProjectController;
+use App\Http\Controllers\Api\PsReviewSkillController;
 use App\Http\Controllers\Api\PullRequestController;
 use App\Http\Controllers\Api\SkillController;
 use App\Http\Controllers\Api\StatusActivityController;
@@ -36,6 +37,8 @@ Route::middleware('auth:sanctum')->group(function () {
     // Aktueller Skill-Text (SKILL.md) + Revision — damit ein installierter Skill
     // seinen eigenen, ggf. veralteten Snapshot überschreiben kann.
     Route::get('skill', SkillController::class);
+    // Aktuelle Dateien des ps-review-Skills — Selbst-Update per Token („Skill aktualisieren“).
+    Route::get('skill/ps-review', PsReviewSkillController::class);
 
     // PR-Reviews (Skill ps-review): PR per Repo + Nummer anlegen/aktualisieren,
     // je Review den Start vermerken und es mit Findings abschließen.

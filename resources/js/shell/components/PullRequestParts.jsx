@@ -142,6 +142,17 @@ export function convertCommandHref(pr, login) {
     return `claudetask:${encodeURIComponent(`/ps-review convert ${pr.githubUrl} --from ${login}`)}`;
 }
 
+// Skill-Update: Claude holt die aktuellen Dateien über die API (Token aus der lokalen config.json).
+// Ohne doppelte Anführungszeichen, weil der Handler den Prompt als PowerShell-Argument übergibt.
+export function skillUpdateCommandHref() {
+    const dir = '~/.claude/skills/ps-review';
+    const prompt = `Aktualisiere den ps-review-Skill in ${dir}: Lies base_url und token aus ${dir}/config.json (fehlt sie: ~/.claude/skills/planstack/config.json). `
+        + 'Rufe GET <base_url>/skill/ps-review mit Header Authorization: Bearer <token> auf. '
+        + `Schreibe das Feld skill_md nach ${dir}/SKILL.md und settings_json nach ${dir}/settings.json (UTF-8 ohne BOM, Inhalt unverändert); config.json bleibt. `
+        + 'Melde danach die neue version. Den Token nie ausgeben.';
+    return `claudetask:${encodeURIComponent(prompt)}`;
+}
+
 // Startknopf für ps-review: ↻ wenn seit dem letzten Review gepusht wurde, sonst ▶.
 export function ReviewStartLink({ pr, strings }) {
     const stale = pr.review?.stale;

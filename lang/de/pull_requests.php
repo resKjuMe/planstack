@@ -202,6 +202,7 @@ return [
     'fix_instruction_placeholder' => 'Wie soll gefixt werden? Wird für den Fix-Lauf verbindlich.',
     'skill_outdated' => 'Das neueste Review stammt von ps-review :used, aktuell ist :current. Bitte den Skill aktualisieren.',
     'skill_outdated_unknown' => 'Das neueste Review stammt von einer ps-review-Version ohne Versionsangabe, aktuell ist :current. Bitte den Skill aktualisieren.',
+    'skill_update_hint' => 'Startet Claude in PowerShell und aktualisiert den ps-review-Skill über die API (Einrichtung: /claudetask/setup)',
     'skill_update' => 'Skill aktualisieren',
     'fix_how' => 'Wie weiter?',
     'fix_choice_other' => 'Anders fixen',
