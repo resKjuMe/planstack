@@ -291,7 +291,11 @@ function InlineScores({ review, strings }) {
     );
 }
 
+// Der Ticket-Abgleich steht in der Review-Karte statt unter „Analyse“.
+const isTicketMatch = (section) => /^Ticket-Abgleich/i.test(section.title);
+
 function CurrentReview({ review, pr, strings }) {
+    const ticket = review.summarySections.find(isTicketMatch);
     return (
         <section id={`review-${review.id}`} className={`scroll-mt-4 ${CARD} space-y-3 px-5 py-4`}>
             <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
@@ -303,6 +307,12 @@ function CurrentReview({ review, pr, strings }) {
                 <FixStatus fix={review.fix} pr={pr} strings={strings} />
             </div>
             {review.tldrHtml && <div className="max-w-5xl text-[15px] leading-6"><Markdown html={review.tldrHtml} /></div>}
+            {ticket && (
+                <div className="max-w-5xl text-sm">
+                    <h3 className="font-bold text-gray-900 dark:text-gray-100">{ticket.title}</h3>
+                    <Markdown html={ticket.html} />
+                </div>
+            )}
             <InlineScores review={review} strings={strings} />
         </section>
     );
@@ -475,8 +485,8 @@ function FindingText({ finding }) {
     );
 }
 
-function SummarySections({ review }) {
-    return review.summarySections.map((section, i) => (
+function SummarySections({ review, skip = () => false }) {
+    return review.summarySections.filter((section) => !skip(section)).map((section, i) => (
         <details key={i} className={`group ${CARD}`}>
             <summary className="flex cursor-pointer list-none items-start gap-3 rounded-lg px-4 py-3.5 font-semibold text-gray-900 marker:hidden dark:text-gray-100 [&::-webkit-details-marker]:hidden">
                 <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="mt-1 flex-none text-gray-500 transition-transform group-open:rotate-90 dark:text-gray-400"><path d="M9 6l6 6-6 6" /></svg>
@@ -508,7 +518,7 @@ function AnalysisTab({ review, strings }) {
                     ))}
                 </div>
             </section>
-            <SummarySections review={review} />
+            <SummarySections review={review} skip={isTicketMatch} />
             {(review.model || review.strictness || review.thoroughness) && (
                 <p className="px-1 text-xs text-gray-500 dark:text-gray-400">
                     {[
@@ -588,7 +598,7 @@ function EarlierReview({ review, pr, strings }) {
                 <span className="text-sm text-gray-500 dark:text-gray-400">
                     {[review.commitSha?.slice(0, 7), review.reviewer, formatDuration(review.startedAt, review.finishedAt) && `${strings.duration} ${formatDuration(review.startedAt, review.finishedAt)}`].filter(Boolean).join(' · ')}
                 </span>
-                <span className="ml-auto text-sm font-medium text-gray-800 dark:text-gray-200">{strings.earlier_count.replace(':n', review.findings.length)}</span>
+                <span className="ml-auto text-sm font-medium text-gray-800 dark:text-gray-200">{(review.findings.length === 1 ? strings.earlier_count_one : strings.earlier_count).replace(':n', review.findings.length)}</span>
             </button>
             {open && (
                 <div className="space-y-3 pb-5 pl-4 pr-5 sm:pl-11">

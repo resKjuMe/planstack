@@ -174,6 +174,7 @@ return [
     'earlier_hint' => 'Superseded, for reference only. Their findings no longer count and cannot be fixed.',
     'no_earlier_reviews' => 'No earlier reviews.',
     'show_all_earlier' => 'Show all :n earlier reviews',
+    'earlier_count_one' => ':n finding · superseded',
     'earlier_count' => ':n findings · superseded',
     'meta_file' => ':n file',
     'meta_files' => ':n files',
