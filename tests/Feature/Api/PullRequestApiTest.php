@@ -194,6 +194,16 @@ class PullRequestApiTest extends TestCase
         $this->assertSame('Neuer Dialog im Kunden-UI.', $review->po_review_likelihood_reason);
     }
 
+    public function test_finish_review_records_the_skill_version(): void
+    {
+        Sanctum::actingAs($this->member());
+        [$id, $reviewId] = $this->startedReview();
+
+        $this->putJson("/api/pull-requests/{$id}/reviews/{$reviewId}", [...$this->reviewPayload(), 'skill_version' => '1.0.0'])->assertOk();
+
+        $this->assertSame('1.0.0', PullRequest::findOrFail($id)->reviews()->sole()->skill_version);
+    }
+
     public function test_finish_review_accepts_a_review_without_po_review_likelihood(): void
     {
         Sanctum::actingAs($this->member());

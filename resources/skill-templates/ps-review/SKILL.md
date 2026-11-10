@@ -1,6 +1,7 @@
 ---
 name: ps-review
 description: Code-Review eines GitHub-PR mit Ablage in Planstack — reviewt den PR (inklusive Prüfung der Code-Kommentare auf Richtigkeit, Mehrwert und Knappheit), bewertet Kritikalität, KI-Prüfbarkeit und PO-Sichtung, sendet PR-Daten und Review samt Findings an die Planstack-API (sichtbar unter planstack.eskju.net/pull-requests), gibt die Review im Chat aus und schließt mit Findings-/Kritisch-/Wichtig-/Hinweis-/Empfehlung-Zeilen ab. Am PR wird nur nach ausdrücklicher Rückfrage gepostet. Mit „fix“ setzt er die in Planstack je Befund getroffenen Entscheidungen um, hält sie im PR-Body fest, pusht und reviewt neu; mit „resolve“ löst er den Merge-Konflikt, fixt rote CI und offene (Review-)Kommentare, pusht und reviewt neu; mit „convert“ übernimmt er die Changes-Requested-Review eines Kollegen als ps-review mit Befunden, beantwortet deren Kommentare mit dem Planstack-Link und löst die Threads auf. Nutze diesen Skill bei „ps-review 1234", „review PR 1234 nach Planstack", „/ps-review", „/ps-review fix 1234", „/ps-review resolve 1234", „/ps-review convert 1234 --from <login>".
+version: 1.0.0
 argument-hint: "[fix|resolve|convert] [<pr-nummer|pr-url|branch>] [--from <login>] [--lenient|--strict] [--relaxed|--meticulous] [--post|--comment|--no-post]"
 ---
 
@@ -93,7 +94,7 @@ T=$(mktemp -d)   # Payload-Dateien hier ablegen, am Ende von Schritt 5 löschen
 curl -s -w '\n%{http_code}\n' -X PUT "$BASE/pull-requests" "${AUTH[@]}" --data-binary @"$T/pr.json"
 # 200/201; data.id = PRID
 curl -s -w '\n%{http_code}\n' -X POST "$BASE/pull-requests/$PRID/reviews" "${AUTH[@]}" \
-  --data-binary "{\"commit_sha\":\"<head.sha>\",\"strictness\":\"$STRICT\",\"thoroughness\":\"$THOROUGH\",\"model\":\"<Modell-ID>\"}"
+  --data-binary "{\"commit_sha\":\"<head.sha>\",\"strictness\":\"$STRICT\",\"thoroughness\":\"$THOROUGH\",\"model\":\"<Modell-ID>\",\"skill_version\":\"<version aus dem Frontmatter>\"}"
 # 201; data.id = REVIEWID — für den Abschluss in Schritt 5 merken
 ```
 
@@ -301,6 +302,7 @@ Schließt das in Schritt 1 gestartete Review ab (`PUT …/reviews/$REVIEWID`); d
 | `commit_sha` | der geprüfte Head-SHA aus Schritt 1 |
 | `strictness`, `thoroughness` | die tatsächlich verwendeten Werte |
 | `model` | das tatsächlich genutzte Claude-Modell (Modell-ID) |
+| `skill_version` | `version` aus dem Frontmatter dieser SKILL.md — Planstack zeigt bei älterer Version einen Update-Hinweis |
 | `findings[]` | je Befund `level`, `type`, `requires_po_decision`, `file`, `line`, `title` (eine Zeile), `message`, `confidence` (0–100) und `confidence_reason` (ein Satz) |
 
 `message` ist Markdown:
@@ -676,7 +678,7 @@ gh api graphql -f query='query($o:String!,$r:String!,$n:Int!){repository(owner:$
 
 ```bash
 curl -s -w '\n%{http_code}\n' -X POST "$BASE/pull-requests/$PRID/reviews" "${AUTH[@]}" \
-  --data-binary "{\"commit_sha\":\"<commit_id der Review>\",\"strictness\":\"$STRICT\",\"thoroughness\":\"$THOROUGH\",\"model\":\"<Modell-ID>\",\"converted_from_login\":\"<login>\"}"
+  --data-binary "{\"commit_sha\":\"<commit_id der Review>\",\"strictness\":\"$STRICT\",\"thoroughness\":\"$THOROUGH\",\"model\":\"<Modell-ID>\",\"skill_version\":\"<version aus dem Frontmatter>\",\"converted_from_login\":\"<login>\"}"
 ```
 
 `converted_from_login` blendet den Button auf der Detailseite aus und vermerkt am Review „übernommen von <login>“.

@@ -595,6 +595,7 @@ curl -s https://planstack.eskju.net/api/user \
                 <thead><tr><th>{{ __('common.field') }}</th><th>{{ __('api.type') }}</th><th>{{ __('api.rules') }}</th></tr></thead>
                 <tbody>
                     <tr><td><code>commit_sha</code>, <code>strictness</code>, <code>thoroughness</code>, <code>model</code></td><td>string</td><td><span class="opt">{{ __('api.optional') }}</span></td></tr>
+                    <tr><td><code>skill_version</code></td><td>string</td><td><span class="opt">{{ __('api.optional') }}</span> · Version des ps-review-Skills (<code>version</code> im Frontmatter der SKILL.md); fehlt sie oder ist sie älter als die ausgelieferte, zeigt die Detailseite einen Update-Hinweis</td></tr>
                     <tr><td><code>converted_from_login</code></td><td>string</td><td><span class="opt">{{ __('api.optional') }}</span> · GitHub-Login, dessen Changes-Requested-Review dieses Review übernimmt; danach bietet die Detailseite die Umwandlung nicht mehr an</td></tr>
                 </tbody>
             </table>
@@ -612,6 +613,7 @@ curl -s https://planstack.eskju.net/api/user \
                     <tr><td><code>criticality_reason</code>, <code>ai_reviewability_reason</code>, <code>po_review_likelihood_reason</code></td><td>string</td><td><span class="opt">{{ __('api.optional') }}</span> · max 500</td></tr>
                     <tr><td><code>summary</code></td><td>markdown</td><td><span class="opt">{{ __('api.optional') }}</span></td></tr>
                     <tr><td><code>commit_sha</code>, <code>strictness</code>, <code>thoroughness</code>, <code>model</code></td><td>string</td><td><span class="opt">{{ __('api.optional') }}</span></td></tr>
+                    <tr><td><code>skill_version</code></td><td>string</td><td><span class="opt">{{ __('api.optional') }}</span> · Version des ps-review-Skills (<code>version</code> im Frontmatter der SKILL.md); fehlt sie oder ist sie älter als die ausgelieferte, zeigt die Detailseite einen Update-Hinweis</td></tr>
                     <tr><td><code>findings</code></td><td>array</td><td><span class="req">{{ __('api.required') }}</span> · darf leer sein</td></tr>
                     <tr><td><code>findings[].level</code></td><td>string</td><td><span class="req">{{ __('api.required') }}</span> · CRITICAL · IMPORTANT · HINT</td></tr>
                     <tr><td><code>findings[].type</code></td><td>string</td><td><span class="req">{{ __('api.required') }}</span> · INLINE (mit <code>file</code> + <code>line</code>) · SUMMARY</td></tr>

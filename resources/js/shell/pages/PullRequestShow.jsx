@@ -8,9 +8,10 @@ import { ApprovalPanel, PoBadge, StackedIcon, DecisionBadge, FindingCounts, Jira
 // Detailseite eines Pull Requests: Metadaten, Beschreibung und alle Reviews
 // (neuestes oben) mit Zusammenfassung und Befunden. Markdown rendert der Server.
 
-export default function PullRequestShow({ pullRequest: pr, reviews, commitHistory, backUrl, strings }) {
+export default function PullRequestShow({ pullRequest: pr, reviews, commitHistory, backUrl, psReviewSkill, strings }) {
     usePullRequestLiveReload(['pullRequest', 'reviews', 'commitHistory'], pr.id);
-    const latestFinishedId = reviews.find((r) => r.status === 'finished')?.id;
+    const latestFinished = reviews.find((r) => r.status === 'finished');
+    const latestFinishedId = latestFinished?.id;
     return (
         <>
             <Head><title>{`${pr.repository}#${pr.number} · ${strings.title}`}</title></Head>
@@ -40,6 +41,7 @@ export default function PullRequestShow({ pullRequest: pr, reviews, commitHistor
                         <PullRequestTimeline pr={pr} reviews={reviews} commits={commitHistory} strings={strings} />
                     </div>
                     <div className="lg:col-span-2 space-y-6">
+                        {latestFinished?.skillOutdated && <SkillOutdatedNotice review={latestFinished} skill={psReviewSkill} strings={strings} />}
                         {pr.foreignChangesRequested?.map((cr) => <ForeignChangesRequested key={cr.login} cr={cr} pr={pr} strings={strings} />)}
                         {reviews.length === 0 ? (
                             <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-8 text-center text-gray-500 dark:text-gray-400">{strings.no_reviews}</div>
@@ -124,6 +126,21 @@ function ForeignChangesRequested({ cr, pr, strings }) {
                 {strings.convert_review}
             </a>
         </section>
+    );
+}
+
+// Neuestes Review mit älterem ps-review-Skill: Update-Aufforderung.
+function SkillOutdatedNotice({ review, skill, strings }) {
+    const text = (review.skillVersion ? strings.skill_outdated : strings.skill_outdated_unknown)
+        .replace(':used', review.skillVersion ?? '')
+        .replace(':current', skill.version);
+    return (
+        <div role="status" className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-amber-300 bg-amber-50 px-5 py-3 text-sm text-amber-900 dark:border-amber-700 dark:bg-amber-900/30 dark:text-amber-200">
+            <p>{text}</p>
+            <a href={skill.downloadUrl} className="inline-flex shrink-0 items-center rounded-md bg-amber-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-amber-500">
+                {strings.skill_update}
+            </a>
+        </div>
     );
 }
 
