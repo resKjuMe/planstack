@@ -5,7 +5,7 @@ import { useNow } from '../../board/useNow.js';
 import Flash from '../components/Flash.jsx';
 import StatusToast from '../components/StatusToast.jsx';
 import PageBands from '../components/PageBands.jsx';
-import { ApprovalChips, ColumnIcon, StackedIcon, DecisionIcon, FindingCounts, JiraTitle, PoBadge, FixingDot, RunningDot, ScoreBar, StateBadge, formatDate, formatRelative, ReviewStartLink, usePullRequestLiveReload } from '../components/PullRequestParts.jsx';
+import { ApprovalChips, ColumnIcon, StackedIcon, DecisionIcon, FindingCounts, JiraTitle, PoBadge, FixingDot, RunningDot, ScoreBar, StateBadge, formatDate, formatRelative, ReviewStartLink, resolveCommandHref, usePullRequestLiveReload } from '../components/PullRequestParts.jsx';
 
 // Eigene Pull Requests aus ps-review. Filter (Status, Rolle) laufen über den
 // Server, Aufteilung und Sortierung clientseitig. Gruppen: laufende Reviews und Fixe, was
@@ -384,6 +384,16 @@ function Row({ pr, level, stack, canShare, strings }) {
                             {pr.state !== 'OPEN' && <StateBadge state={pr.state} strings={strings} />}
                             {pr.running && <RunningDot running={pr.running} strings={strings} />}
                             {pr.fixing && <FixingDot fixing={pr.fixing} strings={strings} />}
+                            {/* Rote CI lässt sich auch ohne Review fixen (ps-review resolve). */}
+                            {open && pr.ciState === 'failed' && (
+                                <a
+                                    href={resolveCommandHref(pr)}
+                                    title={strings.resolve_conflict_hint}
+                                    className="shrink-0 rounded bg-red-600 px-1.5 py-0.5 text-[11px] font-semibold text-white hover:bg-red-500"
+                                >
+                                    {strings.resolve_ci}
+                                </a>
+                            )}
                         </div>
                         {failedChecks.length > 0 && (
                             <small className="block truncate text-red-700 dark:text-red-400" title={failedChecks.join('\n')}>
