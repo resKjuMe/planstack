@@ -99,6 +99,24 @@ class PullRequestPagesTest extends TestCase
                 ->where('pullRequests.0.review', null));
     }
 
+    public function test_foreign_role_lists_reviewed_pull_requests_of_others(): void
+    {
+        $me = $this->member('Ich Selbst');
+        $other = $this->member('Jemand Anderes');
+
+        $this->review($this->pullRequest(1, ['author_id' => $me->id]), $me);
+        $this->review($this->pullRequest(2, ['author_id' => $other->id]), $me);
+        $this->review($this->pullRequest(3, ['author_id' => null]), $me);
+        $this->pullRequest(4, ['author_id' => $other->id]);
+
+        $this->actingAs($me)
+            ->get(route('pull-requests.index', ['role' => 'foreign']))
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('filters.role', 'foreign')
+                ->has('pullRequests', 2)
+                ->where('pullRequests', fn ($rows) => collect($rows)->pluck('number')->sort()->values()->all() === [2, 3]));
+    }
+
     public function test_marks_the_review_stale_after_a_new_push(): void
     {
         $me = $this->member('Ich Selbst');

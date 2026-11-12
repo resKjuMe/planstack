@@ -6,6 +6,22 @@
 return [
     'releases' => [
         [
+            'version' => '2.9.1',
+            'date' => '2026-11-12',
+            'tldr' => [
+                'de' => ['Pull Requests: neuer Filter „Fremde“'],
+                'en' => ['Pull requests: new filter "Others"'],
+            ],
+            'changes' => [
+                'de' => [
+                    'Neu: Unter „Pull Requests“ zeigt der Filter „Fremde“ ganz links alle von dir reviewten PRs ohne deine eigenen. Die übrigen Filter heißen jetzt kurz „Reviewed“ und „Meine“.',
+                ],
+                'en' => [
+                    'New: Under "Pull requests" the filter "Others" on the far left shows all PRs you reviewed except your own. The other filters are now simply called "Reviewed" and "Mine".',
+                ],
+            ],
+        ],
+        [
             'version' => '2.9.0',
             'date' => '2026-11-11',
             'tldr' => [
