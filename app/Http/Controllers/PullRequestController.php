@@ -35,7 +35,7 @@ class PullRequestController extends Controller
 {
     private const STATES = ['open', 'merged', 'closed', 'all'];
 
-    private const ROLES = ['reviewed', 'authored', 'shared'];
+    private const ROLES = ['foreign', 'reviewed', 'authored', 'shared'];
 
     private const LIMIT = 500;
 
@@ -441,7 +441,8 @@ class PullRequestController extends Controller
         return PullRequest::query()
             ->where('organization_id', $user->organization_id)
             ->when($hidden, fn (Builder $q) => $q->whereHas('hiddenBy', $hiddenByMe), fn (Builder $q) => $q->whereDoesntHave('hiddenBy', $hiddenByMe))
-            ->when($role === 'reviewed', fn (Builder $q) => $q->whereHas('reviews', fn (Builder $r) => $r->where('reviewer_id', $user->id)))
+            ->when(in_array($role, ['reviewed', 'foreign'], true), fn (Builder $q) => $q->whereHas('reviews', fn (Builder $r) => $r->where('reviewer_id', $user->id)))
+            ->when($role === 'foreign', fn (Builder $q) => $q->where(fn (Builder $a) => $a->whereNull('author_id')->orWhere('author_id', '!=', $user->id)))
             ->when($role === 'authored', fn (Builder $q) => $q->where('author_id', $user->id))
             ->when($role === 'shared', fn (Builder $q) => $q->whereNotNull('shared_at'))
             ->when($state !== 'all', fn (Builder $q) => $q->where('state', strtoupper($state)));
