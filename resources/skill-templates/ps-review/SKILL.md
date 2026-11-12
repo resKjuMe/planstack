@@ -1,7 +1,7 @@
 ---
 name: ps-review
 description: Code-Review eines GitHub-PR mit Ablage in Planstack — reviewt den PR (inklusive Prüfung der Code-Kommentare auf Richtigkeit, Mehrwert und Knappheit), bewertet Kritikalität, KI-Prüfbarkeit und PO-Sichtung, sendet PR-Daten und Review samt Findings an die Planstack-API (sichtbar unter planstack.eskju.net/pull-requests), gibt die Review im Chat aus und schließt mit Findings-/Kritisch-/Wichtig-/Hinweis-/Empfehlung-Zeilen ab. Am PR wird nur nach ausdrücklicher Rückfrage gepostet. Mit „fix“ setzt er die in Planstack je Befund getroffenen Entscheidungen um, hält sie im PR-Body fest, pusht und reviewt neu; mit „resolve“ löst er den Merge-Konflikt, fixt rote CI und offene (Review-)Kommentare, pusht und reviewt neu; mit „convert“ übernimmt er die Changes-Requested-Review eines Kollegen als ps-review mit Befunden, beantwortet deren Kommentare mit dem Planstack-Link und löst die Threads auf; mit „create“ setzt er ein Jira-Ticket oder eine beschriebene Aufgabe als neuen PR um, füllt die Kundensicht, reviewt ihn und bringt die CI auf grün. Nutze diesen Skill bei „ps-review 1234", „review PR 1234 nach Planstack", „/ps-review", „/ps-review fix 1234", „/ps-review resolve 1234", „/ps-review convert 1234 --from <login>", „/ps-review create MN-1234".
-version: 1.2.0
+version: 1.2.1
 argument-hint: "[fix|resolve|convert|create] [<pr-nummer|pr-url|branch|jira-key|beschreibung>] [--from <login>] [--lenient|--strict] [--relaxed|--meticulous] [--post|--comment|--no-post]"
 ---
 
@@ -108,6 +108,8 @@ Bei `meticulous` zusätzlich den Kontext um jede Änderung herum lesen (die ganz
 
 - **Weniger als verlangt:** Ticket-Punkte, die fehlen, nur teilweise oder bewusst abweichend umgesetzt sind (auch wenn der PR-Body das begründet). Bei „global prüfen“ selbst nach übersehenen Stellen suchen.
 - **Mehr als verlangt:** Verhaltensänderungen, neue Regeln, Bugfixes und Refactorings, die das Ticket nicht verlangt.
+
+Jede Aufzählungszeile zählt in Planstack als Punkt. Gibt es zu einem Unterpunkt keine Punkte, steht direkt hinter der Überschrift exakt `nichts` (ohne Aufzählungszeichen, ohne Erklärung, z. B. `**Mehr als verlangt:** nichts`).
 
 Was davon eine Verhaltensänderung für Kunden ist, wird zusätzlich ein Befund (meist mit `requires_po_decision`). Nicht lesbare Anhänge (Screenshots) unter `## Nicht geprüft` nennen. Ohne Ticket oder ohne Jira-Zugang entfällt der Abgleich; dann unter `## Nicht geprüft` vermerken.
 
@@ -298,7 +300,7 @@ Schließt das in Schritt 1 gestartete Review ab (`PUT …/reviews/$REVIEWID`); d
 | `criticality`, `criticality_reason` | aus Schritt 4 |
 | `ai_reviewability`, `ai_reviewability_reason` | aus Schritt 4 |
 | `po_review_likelihood`, `po_review_likelihood_reason` | aus Schritt 4 |
-| `summary` | Markdown in dieser Reihenfolge: `## TLDR` · `## Ticket-Abgleich (<KEY>)` mit den Unterpunkten `**Weniger als verlangt:**` und `**Mehr als verlangt:**`, darunter **immer** je Punkt eine Aufzählungszeile (`- …`), auch bei nur einem Punkt (Pflicht, sobald ein Ticket verknüpft ist; ist nichts abweichend, steht direkt hinter dem Unterpunkt „nichts“) · `## Analyse je Datei` · `## Risiken & Nebenwirkungen` · `## Tests` · `## Kommentare` · `## Nicht geprüft` · `## CI` (Stand aus `gh pr checks`). Leere Abschnitte entfallen. **Keine** Befunde — die stehen in `findings`. |
+| `summary` | Markdown in dieser Reihenfolge: `## TLDR` · `## Ticket-Abgleich (<KEY>)` mit den Unterpunkten `**Weniger als verlangt:**` und `**Mehr als verlangt:**`, darunter **immer** je Punkt eine Aufzählungszeile (`- …`), auch bei nur einem Punkt (Pflicht, sobald ein Ticket verknüpft ist; ein Unterpunkt ohne Punkte bleibt stehen und hat hinter der Überschrift exakt `nichts` — ohne Aufzählungszeichen, ohne Erklärung, damit die Zähler stimmen) · `## Analyse je Datei` · `## Risiken & Nebenwirkungen` · `## Tests` · `## Kommentare` · `## Nicht geprüft` · `## CI` (Stand aus `gh pr checks`). Leere Abschnitte entfallen. **Keine** Befunde — die stehen in `findings`. |
 | `commit_sha` | der geprüfte Head-SHA aus Schritt 1 |
 | `strictness`, `thoroughness` | die tatsächlich verwendeten Werte |
 | `model` | das tatsächlich genutzte Claude-Modell (Modell-ID) |
@@ -410,8 +412,8 @@ Sagt der Nutzer schon im Aufruf, was passieren soll, gilt das und die Frage entf
 
 | | Inhalt |
 |---|---|
-| **Inline-Kommentar** (je `INLINE`-Befund) | Schwere, was falsch ist, Fehlszenario, Vorschlag samt Prozent (je Option) — kurz, nur dieser eine Befund; bei `requires_po_decision` die Zeile `**PO-Entscheidung nötig**` |
-| **Review-Body** | TLDR · Zahlen (Findings/Kritisch/Wichtig/Hinweis) · Einordnung · Risiken · Tests · Kommentare · Nicht geprüft — **keine Befunddetails** · dazu nur die `SUMMARY`-Befunde |
+| **Inline-Kommentar** (je `INLINE`-Befund) | Schwere, was falsch ist, Fehlszenario, Vorschlag samt Prozent (je Option), **immer** die Zeile `**Konfidenz:** <n> — <confidence_reason>` — kurz, nur dieser eine Befund; bei `requires_po_decision` die Zeile `**PO-Entscheidung nötig**` |
+| **Review-Body** | TLDR · Zahlen (Findings/Kritisch/Wichtig/Hinweis) · Einordnung · **Ticket-Abgleich (immer, sobald ein Ticket verknüpft ist)** · Risiken · Tests · Kommentare · Nicht geprüft — **keine Befunddetails** · dazu nur die `SUMMARY`-Befunde (auch dort mit Konfidenz) |
 | **Nirgends** | die Bewertungszahlen und die Analyse je Datei — die stehen nur in Planstack |
 
 **Der Body wiederholt keinen Befund, der inline steht.** Jeder Befund hat genau einen Ort. Steht er inline, taucht er im Body nicht mehr auf — weder als Absatz, noch als Liste, noch als Tabelle, noch als Einzeiler.
@@ -438,7 +440,14 @@ Details stehen an den Codezeilen.
 <Einordnung: Muster, Zusammenhang, was das für den Merge heißt. Wenige Sätze.>
 
 ## Befunde außerhalb des Diffs
-<nur SUMMARY-Befunde, je mit Datei:Zeile — entfällt, wenn es keine gibt>
+<nur SUMMARY-Befunde, je mit Datei:Zeile und Konfidenz — entfällt, wenn es keine gibt>
+
+## Ticket-Abgleich (<KEY>)
+**Weniger als verlangt:**
+- <je Punkt eine Zeile; ohne Punkte stattdessen `**Weniger als verlangt:** nichts`>
+
+**Mehr als verlangt:**
+- <je Punkt eine Zeile; ohne Punkte stattdessen `**Mehr als verlangt:** nichts`>
 
 ## Risiken & Nebenwirkungen
 ## Tests
@@ -460,7 +469,11 @@ Format eines Inline-Kommentars:
 ```suggestion
 <der korrigierte Code, wenn es ein Einzeiler-Fix ist>
 ```
+
+**Konfidenz:** <n> — <confidence_reason>
 ````
+
+Konfidenz (Inline und `SUMMARY`-Befunde) und Ticket-Abgleich (Body) werden **immer** mitgepostet, auch bei „Nur Zusammenfassung“ (dort der Ticket-Abgleich).
 
 Den `suggestion`-Block nur setzen, wenn der Fix wirklich genau diese Zeilen ersetzt — ein unpassender Vorschlag, den jemand blind übernimmt, ist schlimmer als gar keiner. Sonst den Fix in Prosa.
 
