@@ -6,6 +6,22 @@
 return [
     'releases' => [
         [
+            'version' => '2.9.2',
+            'date' => '2026-11-12',
+            'tldr' => [
+                'de' => ['ps-review 1.2.1: Konfidenz und Ticket-Abgleich auch am PR'],
+                'en' => ['ps-review 1.2.1: confidence and ticket check also on the PR'],
+            ],
+            'changes' => [
+                'de' => [
+                    'Geändert: ps-review postet am PR zu jedem Befund die Konfidenz und im Review-Text immer den Ticket-Abgleich. Ohne Abweichung steht bei „Weniger“ bzw. „Mehr als verlangt“ jetzt einheitlich „nichts“.',
+                ],
+                'en' => [
+                    'Changed: ps-review now posts the confidence of each finding on the PR and always includes the ticket check in the review text. Without deviations, "Less" and "More than requested" now consistently show "nothing".',
+                ],
+            ],
+        ],
+        [
             'version' => '2.9.1',
             'date' => '2026-11-12',
             'tldr' => [
