@@ -16,7 +16,8 @@ Statuszeile: `⚙ Sync (<Phase> <%>) <PROJECT> — <Schritt>` mit den Phasen `La
 Jira Cloud REST v3 mit Basic-Auth. Zugangsdaten **nur lokal**: `jira_base_url` (z. B. `https://firma.atlassian.net`) und `jira_email` aus `${CLAUDE_SKILL_DIR}/settings.json`, das Token aus der Umgebungsvariable `JIRA_API_TOKEN`. Fehlt `jira_base_url`/`jira_email`, einmal nachfragen und in `settings.json` speichern; fehlt das Token, abbrechen und darauf hinweisen. Nie an Planstack senden.
 
 ```bash
-JB=$(jq -r .jira_base_url "$SD/settings.json"); JE=$(jq -r .jira_email "$SD/settings.json")
+sj(){ python3 -c "import json;print(json.load(open('${CLAUDE_SKILL_DIR:-.}/settings.json')).get('$1',''))"; }
+JB=$(sj jira_base_url); JE=$(sj jira_email)
 jc(){ curl -s -u "$JE:$JIRA_API_TOKEN" -H 'Content-Type: application/json' -H 'Accept: application/json' "$@"; }
 ```
 
