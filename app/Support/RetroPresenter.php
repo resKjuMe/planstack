@@ -269,7 +269,9 @@ class RetroPresenter
     }
 
     /**
-     * Kritische Befunde aus Reviews an eigenen PRs im Zeitraum.
+     * Kritische Befunde aus FREMDEN Reviews an eigenen PRs im Zeitraum: der
+     * Reviewer ist nicht der PR-Autor, bzw. bei einer übernommenen Kollegen-Review
+     * stammt der Kommentar nicht vom Autor. Selbst-Reviews zählen nicht.
      *
      * @param  array<int, int>  $userIds
      * @return Collection<int, array<string, mixed>>
@@ -282,7 +284,14 @@ class RetroPresenter
                 ->whereBetween('review_finished_at', [$from, $until])
                 ->whereHas('pullRequest', fn (Builder $pr) => $pr
                     ->where('organization_id', $user->organization_id)
-                    ->whereIn('author_id', $userIds)))
+                    ->whereIn('author_id', $userIds)
+                    ->where(fn (Builder $foreign) => $foreign
+                        ->where(fn (Builder $converted) => $converted
+                            ->whereNotNull('pull_request_reviews.converted_from_login')
+                            ->whereColumn('pull_requests.author_login', '!=', 'pull_request_reviews.converted_from_login'))
+                        ->orWhere(fn (Builder $own) => $own
+                            ->whereNull('pull_request_reviews.converted_from_login')
+                            ->whereColumn('pull_requests.author_id', '!=', 'pull_request_reviews.reviewer_id')))))
             ->with('review.pullRequest:id,pull_request_id,repository,title')
             ->get()
             ->map(fn (ReviewFinding $finding) => [
