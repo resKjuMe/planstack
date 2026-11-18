@@ -89,6 +89,59 @@ class JiraActivity
     }
 
     /**
+     * Titel zu Jira-Keys (je Key eine Stunde gecacht). Unbekannte Keys fehlen im
+     * Ergebnis; scheitert die Sammelabfrage an einem ungültigen Key, wird einzeln
+     * nachgefragt.
+     *
+     * @param  array<int, string>  $keys
+     * @return array<string, string> Key => Titel
+     */
+    public function summaries(array $keys): array
+    {
+        $cacheKey = fn (string $key) => 'jira-summary:'.md5($this->baseUrl().'|'.$key);
+        $result = [];
+        $missing = [];
+        foreach (array_unique(array_map('strtoupper', $keys)) as $key) {
+            $cached = Cache::get($cacheKey($key));
+            if ($cached === null) {
+                $missing[] = $key;
+            } elseif ($cached !== '') {
+                $result[$key] = $cached;
+            }
+        }
+
+        foreach (array_chunk($missing, 100) as $chunk) {
+            $response = $this->client()->post('/rest/api/3/search/jql', [
+                'jql' => 'key in ('.implode(',', $chunk).')',
+                'fields' => ['summary'],
+                'maxResults' => 100,
+            ]);
+            $found = [];
+            if ($response->successful()) {
+                foreach ($response->json('issues', []) as $issue) {
+                    $found[strtoupper($issue['key'])] = (string) data_get($issue, 'fields.summary', '');
+                }
+            } else {
+                foreach ($chunk as $key) {
+                    $single = $this->client()->get("/rest/api/3/issue/{$key}", ['fields' => 'summary']);
+                    if ($single->successful()) {
+                        $found[$key] = (string) $single->json('fields.summary', '');
+                    }
+                }
+            }
+
+            foreach ($chunk as $key) {
+                Cache::put($cacheKey($key), $found[$key] ?? '', now()->addHour());
+                if (isset($found[$key])) {
+                    $result[$key] = $found[$key];
+                }
+            }
+        }
+
+        return $result;
+    }
+
+    /**
      * Tickets per JQL, inklusive Änderungsverlauf.
      *
      * @return Collection<int, array<string, mixed>>

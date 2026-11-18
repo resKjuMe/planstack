@@ -53,8 +53,11 @@ class DailyPresenter
         $from = $day->startOfDay()->utc();
         $until = $day->endOfDay()->utc();
 
-        $pullRequests = $this->pullRequests($user, $userIds, $from, $until);
-        $reviews = $this->reviews($user, $userIds, $from, $until);
+        [$pullRequests, $reviews] = $this->withTickets(
+            $user,
+            $this->pullRequests($user, $userIds, $from, $until),
+            $this->reviews($user, $userIds, $from, $until),
+        );
         $jira = $this->withPullRequests($user, $this->jira($user, $teamIds, $userIds, $day));
         $issueChanges = $jira['issueChanges'];
 
@@ -149,6 +152,26 @@ class DailyPresenter
             'today' => $this->today($open),
             'dayIssues' => $dayIssues,
             'accounts' => $accounts,
+        ];
+    }
+
+    /**
+     * PR- und Review-Zeilen zeigen das Ticket statt des PR-Titels: je Zeile die
+     * Tickets (Key + Jira-Titel) und der PR mit Ersteller (Jira-Avatar).
+     *
+     * @param  array<int, array<string, mixed>>  $pullRequests
+     * @param  array<int, array<string, mixed>>  $reviews
+     * @return array{0: array<int, array<string, mixed>>, 1: array<int, array<string, mixed>>}
+     */
+    private function withTickets(User $user, array $pullRequests, array $reviews): array
+    {
+        $ids = array_unique([...array_column($pullRequests, 'id'), ...array_column($reviews, 'prId')]);
+        $resolved = TicketPullRequests::ticketsFor($user, PullRequest::query()->whereIn('id', $ids)->with('author:id,name,email')->get());
+        $attach = fn (array $row, int $id) => [...$row, 'tickets' => $resolved[$id]['tickets'] ?? [], 'pr' => $resolved[$id]['pr'] ?? null];
+
+        return [
+            array_map(fn (array $row) => $attach($row, $row['id']), $pullRequests),
+            array_map(fn (array $row) => $attach($row, $row['prId']), $reviews),
         ];
     }
 
@@ -609,6 +632,8 @@ class DailyPresenter
                 'title' => $pr['title'],
                 'url' => $pr['url'],
                 'event' => $pr['event'],
+                'tickets' => $pr['tickets'],
+                'pr' => $pr['pr'],
                 'customerView' => $pr['customerView'],
                 'poDecisions' => $poDecisions->get($pr['id'], collect())
                     ->map(fn (ReviewFinding $finding) => $finding->title)
@@ -630,7 +655,7 @@ class DailyPresenter
     {
         return collect($pullRequests)
             ->filter(fn (array $pr) => ($pr['uiFiles'] ?? 0) > 0 || ($pr['textFiles'] ?? 0) > 0)
-            ->map(fn (array $pr) => Arr::only($pr, ['number', 'title', 'url', 'event', 'state', 'uiFiles', 'textFiles']))
+            ->map(fn (array $pr) => Arr::only($pr, ['number', 'title', 'url', 'event', 'state', 'uiFiles', 'textFiles', 'tickets', 'pr']))
             ->values()
             ->all();
     }

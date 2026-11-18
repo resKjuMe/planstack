@@ -7,16 +7,22 @@ use App\Models\User;
 use App\Support\Jira\JiraActivity;
 use App\Support\Jira\JiraRequestFailed;
 use Illuminate\Http\Client\ConnectionException;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
 
 /**
- * PRs zu Jira-Tickets: ein PR gehört zu einem Ticket, wenn Titel oder Branch den
- * Jira-Key enthalten. Liefert je Key die PRs mit Ersteller (Name + Jira-Avatar).
+ * Verbindung zwischen PRs und Jira-Tickets über den Jira-Key in Titel oder Branch:
+ * - {@see forKeys()}: je Ticket die PRs samt Ersteller (Name + Jira-Avatar);
+ * - {@see ticketsFor()}: je PR die Tickets mit Jira-Titel, damit Listen das
+ *   Ticket statt des PR-Titels zeigen.
  */
 class TicketPullRequests
 {
     /** Nur PRs aus diesem Zeitraum werden durchsucht. */
     private const LOOKBACK_DAYS = 180;
+
+    /** Jira-Key, z. B. MN-1234 (auch klein geschrieben im Branch). */
+    private const KEY = '/(?<![A-Za-z0-9])([A-Za-z][A-Za-z0-9]+-\d+)(?![0-9])/';
 
     /**
      * @param  array<int, string>  $keys
@@ -47,38 +53,82 @@ class TicketPullRequests
                 }
             });
 
-        if ($byKey === []) {
-            return [];
-        }
-
-        $jira = $viewer->hasJiraCredentials() ? JiraActivity::for($viewer) : null;
-        $avatars = [];
-        $avatarOf = function (?User $author) use ($jira, &$avatars): ?string {
-            if ($author === null || $jira === null) {
-                return null;
-            }
-            if (! array_key_exists($author->id, $avatars)) {
-                try {
-                    $avatars[$author->id] = $jira->avatar($author);
-                } catch (JiraRequestFailed|ConnectionException) {
-                    $avatars[$author->id] = null;
-                }
-            }
-
-            return $avatars[$author->id];
-        };
+        $jira = self::jira($viewer);
 
         return collect($byKey)
-            ->map(fn (array $prs) => collect($prs)->map(fn (PullRequest $pr) => [
-                'number' => $pr->pull_request_id,
-                'url' => route('pull-requests.show', $pr),
-                'state' => $pr->state->value,
-                'author' => $pr->author?->name ?? $pr->author_login,
-                'initials' => Str::of($pr->author?->name ?? (string) $pr->author_login)
-                    ->explode(' ')->filter()->take(2)
-                    ->map(fn (string $part) => Str::upper(Str::substr($part, 0, 1)))->implode(''),
-                'avatar' => $avatarOf($pr->author),
-            ])->values()->all())
+            ->map(fn (array $prs) => collect($prs)->map(fn (PullRequest $pr) => self::entry($pr, $jira))->values()->all())
             ->all();
+    }
+
+    /**
+     * Je PR-ID die Tickets (Key, Jira-Titel, Link) und der PR-Eintrag mit Ersteller.
+     * Keys, die Jira nicht kennt, fallen weg; ohne Jira-Zugang bleibt `tickets` leer.
+     *
+     * @param  Collection<int, PullRequest>  $pullRequests  mit geladenem `author`
+     * @return array<int, array{tickets: array<int, array<string, string>>, pr: array<string, mixed>}>
+     */
+    public static function ticketsFor(User $viewer, Collection $pullRequests): array
+    {
+        $jira = self::jira($viewer);
+        $keysById = $pullRequests->mapWithKeys(function (PullRequest $pr) {
+            preg_match_all(self::KEY, $pr->title.' '.$pr->branch, $matches);
+
+            return [$pr->id => array_values(array_unique(array_map('strtoupper', $matches[1])))];
+        });
+
+        $summaries = [];
+        if ($jira !== null) {
+            try {
+                $summaries = $jira->summaries($keysById->flatten()->all());
+            } catch (JiraRequestFailed|ConnectionException) {
+                $summaries = [];
+            }
+        }
+
+        return $pullRequests->mapWithKeys(fn (PullRequest $pr) => [$pr->id => [
+            'tickets' => collect($keysById[$pr->id])
+                ->filter(fn (string $key) => isset($summaries[$key]))
+                ->map(fn (string $key) => [
+                    'key' => $key,
+                    'summary' => $summaries[$key],
+                    'url' => $jira->baseUrl().'/browse/'.$key,
+                ])
+                ->values()
+                ->all(),
+            'pr' => self::entry($pr, $jira),
+        ]])->all();
+    }
+
+    /**
+     * PR-Eintrag mit Ersteller: Name, Initialen, Jira-Avatar (sofern auffindbar).
+     *
+     * @return array<string, mixed>
+     */
+    public static function entry(PullRequest $pr, ?JiraActivity $jira): array
+    {
+        $name = $pr->author?->name ?? (string) $pr->author_login;
+        $avatar = null;
+        if ($jira !== null && $pr->author !== null) {
+            try {
+                $avatar = $jira->avatar($pr->author);
+            } catch (JiraRequestFailed|ConnectionException) {
+                $avatar = null;
+            }
+        }
+
+        return [
+            'number' => $pr->pull_request_id,
+            'url' => route('pull-requests.show', $pr),
+            'state' => $pr->state->value,
+            'author' => $name,
+            'initials' => Str::of($name)->explode(' ')->filter()->take(2)
+                ->map(fn (string $part) => Str::upper(Str::substr($part, 0, 1)))->implode(''),
+            'avatar' => $avatar,
+        ];
+    }
+
+    private static function jira(User $viewer): ?JiraActivity
+    {
+        return $viewer->hasJiraCredentials() ? JiraActivity::for($viewer) : null;
     }
 }

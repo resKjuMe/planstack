@@ -98,6 +98,9 @@ return [
     'learned_findings' => 'Critical findings from others\' reviews',
     'days' => ':days days',
 
-    'notes_label' => 'Own points',
-    'notes_placeholder' => 'One line per point …',
+    'rating_reset_to' => 'Reset to suggestion (:percent %)',
+    'topics_title' => 'Topics',
+    'topics_sub' => 'Terrible and bad first · evidence on click',
+    'evidence' => ':count item|:count items',
+    'more_hidden' => ':count more not loaded',
 ];

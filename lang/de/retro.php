@@ -98,6 +98,9 @@ return [
     'learned_findings' => 'Kritische Befunde aus Fremd-Reviews',
     'days' => ':days Tage',
 
-    'notes_label' => 'Eigene Punkte',
-    'notes_placeholder' => 'Eine Zeile pro Punkt …',
+    'rating_reset_to' => 'Auf Vorschlag (:percent %) zurücksetzen',
+    'topics_title' => 'Gesprächsthemen',
+    'topics_sub' => 'Grausam und Schlecht zuerst · Belege per Klick',
+    'evidence' => ':count Beleg|:count Belege',
+    'more_hidden' => ':count weitere nicht geladen',
 ];

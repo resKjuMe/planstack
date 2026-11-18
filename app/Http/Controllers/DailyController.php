@@ -38,6 +38,7 @@ class DailyController extends Controller
                 'short' => $localized->isoFormat($english ? 'ddd, MM/DD' : 'dd, DD.MM.'),
             ],
             'scope' => $scope,
+            'me' => $user->name,
             'data' => $presenter->payload($user, $day, $scope),
             'urls' => [
                 'profile' => route('profile.edit'),
