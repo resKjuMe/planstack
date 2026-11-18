@@ -140,6 +140,15 @@ class Project extends Model
     }
 
     /**
+     * Nutzer, mit dessen Jira-Zugang Status und Assignee abgeglichen werden
+     * (null = automatischer Jira-Abgleich aus).
+     */
+    public function jiraSyncUser(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'jira_sync_user_id');
+    }
+
+    /**
      * Teams assigned to this project (n:m). Access is granted through teams.
      */
     public function teams(): BelongsToMany

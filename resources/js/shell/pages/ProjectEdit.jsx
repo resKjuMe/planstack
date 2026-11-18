@@ -83,6 +83,14 @@ function EditBody({ project, updateUrl, destroyUrl, strings }) {
                 <input id="jira_epic_key" type="text" value={form.data.jira_epic_key ?? ''} onChange={(e) => form.setData('jira_epic_key', e.target.value)} maxLength={32} placeholder="MN-1234" className={field + ' font-mono'} />
                 <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">{strings.jiraEpicHint}</p>
                 {err('jira_epic_key')}
+                <label htmlFor="jira_auto_sync" className="mt-3 flex items-start gap-3">
+                    <input id="jira_auto_sync" type="checkbox" checked={!!form.data.jira_auto_sync} onChange={(e) => form.setData('jira_auto_sync', e.target.checked)} className="mt-0.5 rounded border-gray-300 dark:border-gray-600 text-indigo-600 shadow-sm focus:ring-indigo-500" />
+                    <span className="text-sm text-gray-700 dark:text-gray-300">
+                        {strings.jiraAutoSync}
+                        <span className="block text-xs text-gray-400 dark:text-gray-500">{strings.jiraAutoSyncHint}</span>
+                    </span>
+                </label>
+                {err('jira_auto_sync')}
             </div>
 
             <div className="border-t border-gray-100 dark:border-gray-700 pt-5 space-y-4">

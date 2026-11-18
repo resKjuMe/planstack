@@ -35,4 +35,12 @@ return [
     'update_your_account_s_profile' => 'Update your account\'s profile information and email address.',
     'use_a_long_random_password_to_keep_your' => 'Use a long, random password to keep your account secure.',
     'your_email_address_is_unverified' => 'Your email address is unverified.',
+    'jira_access' => 'Jira access',
+    'jira_access_hint' => 'Personal Jira API token for the automatic status and assignee sync (Edit project → “Sync with Jira”). The token is stored encrypted; changes in Jira appear under your name.',
+    'jira_base_url' => 'Jira URL',
+    'jira_email' => 'Jira email',
+    'jira_api_token' => 'API token',
+    'jira_api_token_keep' => '•••••••• (leave empty to keep)',
+    'jira_api_token_hint' => 'Create at id.atlassian.com → Security → API tokens. The credentials are verified against Jira on save.',
+    'jira_remove' => 'Remove Jira access',
 ];
