@@ -78,7 +78,7 @@ function PrLine({ row, status, tone }) {
     );
 }
 
-const PR_STATE = { open: 'opened', merged: 'merged', closed: 'closed' };
+const PR_STATE = { OPEN: 'opened', MERGED: 'merged', CLOSED: 'closed' };
 // Feste Spalten, damit die Stand-up-Zeilen untereinander fluchten:
 // Avatar · vorher · → · nachher · Key · Titel · PRs.
 const STANDUP_GRID = 'grid grid-cols-[1.25rem_7.5rem_0.75rem_9rem_5.5rem_minmax(0,1fr)_2.5rem] items-center gap-x-2';
