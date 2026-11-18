@@ -21,6 +21,7 @@ class ProjectResource extends JsonResource
             'alias' => $this->alias,
             'name' => $this->name,
             'description' => $this->description,
+            'jira_epic_key' => $this->jira_epic_key,
             'owner' => $this->whenLoaded('owner', fn () => [
                 'id' => $this->owner?->id,
                 'name' => $this->owner?->name,

@@ -78,6 +78,13 @@ function EditBody({ project, updateUrl, destroyUrl, strings }) {
                 {err('github_repo')}
             </div>
 
+            <div>
+                <label htmlFor="jira_epic_key" className={label}>{strings.jiraEpic}</label>
+                <input id="jira_epic_key" type="text" value={form.data.jira_epic_key ?? ''} onChange={(e) => form.setData('jira_epic_key', e.target.value)} maxLength={32} placeholder="MN-1234" className={field + ' font-mono'} />
+                <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">{strings.jiraEpicHint}</p>
+                {err('jira_epic_key')}
+            </div>
+
             <div className="border-t border-gray-100 dark:border-gray-700 pt-5 space-y-4">
                 <label htmlFor="completed" className="flex items-start gap-3">
                     <input id="completed" type="checkbox" checked={form.data.completed} onChange={(e) => form.setData('completed', e.target.checked)} className="mt-0.5 rounded border-gray-300 dark:border-gray-600 text-indigo-600 shadow-sm focus:ring-indigo-500" />

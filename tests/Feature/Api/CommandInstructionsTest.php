@@ -121,6 +121,19 @@ class CommandInstructionsTest extends TestCase
         $this->assertStringContainsString('resolveReviewThread', $instructions);
     }
 
+    public function test_sync_session_gets_the_sync_instructions_on_jira_sync(): void
+    {
+        [, $project] = $this->ownedProject();
+
+        $instructions = $this->getJson(
+            "/api/projects/{$project->alias}/jira-sync",
+            $this->sessionHeader('sync '.$project->alias),
+        )->assertOk()->json(Attach::FIELD);
+
+        $this->assertNotEmpty($instructions);
+        $this->assertStringContainsString('## Sync (`/planstack sync', $instructions);
+    }
+
     /**
      * Der entscheidende Nicht-Regressions-Test: L2LR und LOG rufen dieselben
      * Endpunkte auf, senden aber keinen Session-Header. Wuerde die Anleitung
@@ -190,6 +203,7 @@ class CommandInstructionsTest extends TestCase
         $this->assertStringNotContainsString('## Review (`/planstack review', $skill);
         $this->assertStringNotContainsString('## Fix (`/planstack fix', $skill);
         $this->assertStringNotContainsString('## Auto-Modus (`/planstack auto', $skill);
+        $this->assertStringNotContainsString('## Sync (`/planstack sync', $skill);
 
         // Stattdessen der Verweis auf den Laufzeit-Weg und den Rueckfallweg.
         $this->assertStringContainsString(Attach::FIELD, $skill);

@@ -70,6 +70,7 @@ class TaskShowPresenter
                 'criticality' => $task->criticality
                     ? ['label' => $task->criticality->label(), 'badgeClasses' => $task->criticality->badgeClasses()]
                     : null,
+                'jiraKey' => $task->jira_key,
                 'claimed' => $claimed,
                 'concernOpen' => $concernOpen,
                 'hasReview' => $hasReview,
@@ -475,6 +476,7 @@ class TaskShowPresenter
             'blocks' => __('common.blocks'),
             'cannotReleaseWithConcern' => __('tasks.cannot_be_released_while_a_concern_is'),
             'criticality' => __('tasks.criticality'),
+            'jiraKey' => __('tasks.jira_key'),
             // Session-Zeile der Übersichtskarte. Die beiden Zustands-Texte kommen
             // aus board.* — dieselbe Aussage wie im Tooltip der Board-Karte.
             'session' => __('tasks.session'),

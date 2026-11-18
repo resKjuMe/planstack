@@ -45,7 +45,7 @@ class SkillTemplate
      * Anleitung, die er tatsaechlich ausfuehrt — und eine veraltete lokale Kopie
      * dieser Abschnitte kann es nicht mehr geben.
      */
-    public const COMMANDS = ['review', 'fix', 'auto'];
+    public const COMMANDS = ['review', 'fix', 'auto', 'sync'];
 
     private static function partial(string $path): string
     {

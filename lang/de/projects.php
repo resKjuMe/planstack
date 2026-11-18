@@ -36,6 +36,8 @@ return [
     'for_technical_planning_slicing_tasks' => 'für die technische Planung — Tasks schneiden, Phasen und Abhängigkeiten festlegen und den Aufwand (Story Points) schätzen. Technisch dieselben Rechte wie ein Mitarbeiter, keine Zugriffs-/Rollenverwaltung.',
     'format' => 'Format',
     'github_repository' => 'GitHub-Repository',
+    'jira_epic' => 'Jira-Epic',
+    'jira_epic_hint' => 'z. B. MN-1234 – „/planstack sync“ legt die Phasen als Aufgaben und die Tasks als Unteraufgaben dieses Epics an.',
     'hides_the_project_from_the_project_list' => 'Blendet das Projekt aus der Projektliste aus – es bleibt nur über die Filter-Pill „Archiviert" sichtbar.',
     'in_progress' => 'In Arbeit',
     'key_unique' => 'Kürzel (unique)',

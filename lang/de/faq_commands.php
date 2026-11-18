@@ -74,6 +74,11 @@ return [
     'cmd_fix_6' => 'Rote Checks lokal reproduzieren, korrigieren, pushen — bis die CI grün ist.',
     'cmd_fix_7' => 'Politur fertig: CI grün, Kommentare beantwortet und aufgelöst. Damit wird der Task wieder reviewbar.',
 
+    'cmd_sync_purpose' => 'Spiegelt das Board in das Jira-Epic des Projekts: jede Phase wird eine Aufgabe, jeder Task eine Unteraufgabe — alles im Sprint des Epics, mit Beschreibungen in PO-Sprache. Jira-Zugang nur lokal (settings.json + JIRA_API_TOKEN).',
+    'cmd_sync_1' => 'Epic-Key des Projekts, Phasen und Tasks samt vorhandener Jira-Keys in einem Aufruf.',
+    'cmd_sync_2' => 'Projekt, Sprint und Vorgangstypen des Epics ermitteln; vor dem Schreiben den Plan zeigen und bestätigen lassen.',
+    'cmd_sync_3' => 'Fehlende Aufgaben/Unteraufgaben anlegen; vorhandene nur prüfen (mit --refresh Texte aktualisieren).',
+    'cmd_sync_4' => 'Neuen Jira-Key sofort nach jedem angelegten Ticket an Phase bzw. Task zurückschreiben.',
     'cmd_plan_purpose' => 'Legt Projekte, Phasen und Tasks an. Die Anleitung dazu ist eigenständig versioniert und wird bei jedem Aufruf frisch geladen — vor der Planung, nicht danach.',
     'cmd_plan_1' => 'Pflicht zu Beginn: `plan_instructions` lesen. Sie beschreiben Ablauf, Endpunkte und den Feld-für-Feld-Leitfaden für Tasks. Existiert noch kein Projekt, genügt ein beliebiges zugängliches, nur um die Anleitung zu ziehen.',
     'cmd_plan_2' => 'Neues Projekt anlegen (optional).',

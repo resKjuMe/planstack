@@ -37,12 +37,14 @@ class Phase extends Model
         'project_id',
         'name',
         'position',
+        'jira_key',
     ];
 
     protected function casts(): array
     {
         return [
             'position' => 'integer',
+            'jira_key' => \App\Casts\JiraKey::class,
         ];
     }
 
