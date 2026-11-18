@@ -55,12 +55,14 @@ function Refs({ refs, more, strings }) {
     return (
         <ul className="mt-1.5 space-y-1">
             {refs.map((ref) => (
-                <li key={ref.id} className="flex min-w-0 gap-2 text-xs">
-                    <a href={ref.url} target={ref.url?.startsWith('http') ? '_blank' : undefined} rel="noreferrer" className="shrink-0 font-mono font-semibold text-indigo-700 hover:underline dark:text-indigo-400">
-                        {ref.label}
-                    </a>
-                    <span className="truncate text-gray-600 dark:text-gray-400" title={ref.title}>{ref.title}</span>
-                    <PrAuthors prs={ref.prs} compact className="ms-auto shrink-0" />
+                <li key={ref.id} className="min-w-0 text-xs">
+                    <div className="flex min-w-0 gap-2">
+                        <a href={ref.url} target={ref.url?.startsWith('http') ? '_blank' : undefined} rel="noreferrer" className="shrink-0 font-mono font-semibold text-indigo-700 hover:underline dark:text-indigo-400">
+                            {ref.label}
+                        </a>
+                        <span className="truncate text-gray-600 dark:text-gray-400" title={ref.title}>{ref.title}</span>
+                    </div>
+                    <PrAuthors prs={ref.prs} compact className="mt-0.5 ps-1" />
                 </li>
             ))}
             {more > 0 && <li className="text-xs text-gray-400 dark:text-gray-500">{interpolate(strings.more, { count: more })}</li>}
