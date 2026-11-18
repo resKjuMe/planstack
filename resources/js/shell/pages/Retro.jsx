@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Head } from '@inertiajs/react';
 import AppShell from '../AppShell.jsx';
 import PageBands from '../components/PageBands.jsx';
+import PrAuthors from '../components/PrAuthors.jsx';
 import { interpolate, transChoice } from '../../summary/i18n.js';
 
 // Retro-Ansicht: Vorschläge aus Jira (letzter abgeschlossener Sprint) und GitHub
@@ -59,6 +60,7 @@ function Refs({ refs, more, strings }) {
                         {ref.label}
                     </a>
                     <span className="truncate text-gray-600 dark:text-gray-400" title={ref.title}>{ref.title}</span>
+                    <PrAuthors prs={ref.prs} compact className="ms-auto shrink-0" />
                 </li>
             ))}
             {more > 0 && <li className="text-xs text-gray-400 dark:text-gray-500">{interpolate(strings.more, { count: more })}</li>}

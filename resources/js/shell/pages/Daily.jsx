@@ -2,6 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { Head } from '@inertiajs/react';
 import AppShell from '../AppShell.jsx';
 import PageBands from '../components/PageBands.jsx';
+import PrAuthors from '../components/PrAuthors.jsx';
 import { interpolate, transChoice } from '../../summary/i18n.js';
 import { relativeTime } from '../../stats/format.js';
 
@@ -113,6 +114,7 @@ function IssueChanges({ rows, strings, locale, scope }) {
                 </span>
             </IssueHead>
             <Summary text={row.summary} />
+            <PrAuthors prs={row.prs} className="mt-1.5" />
             <Meta>
                 {[
                     interpolate(strings.at, { time: time(row.at, locale) }),
@@ -221,6 +223,7 @@ function Blockers({ rows, strings, scope }) {
                 )}
             </IssueHead>
             <Summary text={row.summary} />
+            <PrAuthors prs={row.prs} className="mt-1.5" />
             {scope === 'team' && row.assigneeName && <Meta>{row.assigneeName}</Meta>}
         </div>
     ));
@@ -235,6 +238,7 @@ function Waiting({ rows, strings, locale, scope }) {
                 <span className={pill('purple')}>{row.status}</span>
             </IssueHead>
             <Summary text={row.summary} />
+            <PrAuthors prs={row.prs} className="mt-1.5" />
             <Meta>
                 {scope === 'team' && row.assigneeName ? `${row.assigneeName} · ` : ''}
                 {row.since && <span className="text-amber-700 dark:text-amber-400">{relativeTime(row.since, locale)}</span>}
@@ -294,6 +298,7 @@ function Today({ rows, strings, locale, scope }) {
                 {row.sp ? <span className="ms-auto text-xs font-semibold text-gray-600 dark:text-gray-300">{row.sp} SP</span> : null}
             </IssueHead>
             <Summary text={row.summary} />
+            <PrAuthors prs={row.prs} className="mt-1.5" />
             {(row.isStale || scope === 'team') && (
                 <Meta>
                     {scope === 'team' && row.assigneeName}
