@@ -6,6 +6,26 @@
 return [
     'releases' => [
         [
+            'version' => '2.11.1',
+            'date' => '2026-11-18',
+            'tldr' => [
+                'de' => ['Daily/Retro: Story Points aus Jira, Reviews je PR gezählt'],
+                'en' => ['Daily/Retro: story points from Jira, reviews counted per PR'],
+            ],
+            'changes' => [
+                'de' => [
+                    'Behoben: Story Points werden auch erkannt, wenn das Jira-Feld anders heißt (z. B. „Schätzung“).',
+                    'Geändert: „Reviews abgegeben“ zählt reviewte PRs statt einzelner Review-Läufe; im Daily steht je PR nur das letzte Review.',
+                    'Geändert: „Für den PO“ zeigt bei der Sichtbarkeit nur noch den Kurztext.',
+                ],
+                'en' => [
+                    'Fixed: Story points are also recognised when the Jira field has a different name (e.g. "Estimate").',
+                    'Changed: "Reviews given" counts reviewed PRs instead of single review runs; Daily lists only the latest review per PR.',
+                    'Changed: "For the PO" shows only the short visibility text.',
+                ],
+            ],
+        ],
+        [
             'version' => '2.11.0',
             'date' => '2026-11-18',
             'tldr' => [
