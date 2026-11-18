@@ -163,8 +163,8 @@ function ConflictIcon({ title }) {
 function PrDetails({ prs }) {
     const t = useContext(PrStrings);
     const now = useNow();
-    const head = 'w-px whitespace-nowrap px-2 py-1 text-center font-medium';
-    const cell = 'w-px whitespace-nowrap px-2 py-1';
+    const head = 'w-px whitespace-nowrap px-1.5 py-1 text-center font-medium';
+    const cell = 'w-px whitespace-nowrap px-1.5 py-1';
 
     return (
         <div className="col-span-full mb-2 ml-[0.6rem] overflow-x-auto border-l border-gray-200 pl-[1.15rem] dark:border-gray-700">
@@ -203,14 +203,13 @@ function PrDetails({ prs }) {
                                                 {t.status_ci_failed}
                                             </span>
                                         )}
-                                        <span className="text-gray-600 dark:text-gray-400">{pr.author}</span>
                                     </div>
                                 </td>
                                 {d ? (
                                     <>
                                         <td className={`${cell} text-right font-mono text-[11px] leading-tight`} title={`${d.changedFiles} ${t.files}`}>
-                                            <span className="text-green-600 dark:text-green-400">+{d.additions}</span>{' '}
-                                            <span className="text-red-600 dark:text-red-400">−{d.deletions}</span>
+                                            <div className="text-green-600 dark:text-green-400">+{d.additions}</div>
+                                            <div className="text-red-600 dark:text-red-400">−{d.deletions}</div>
                                         </td>
                                         <td className={cell}><ApprovalChips approvals={d.approvals} unresolvedThreads={open ? d.unresolvedThreads : 0} strings={t} /></td>
                                         {review ? (
