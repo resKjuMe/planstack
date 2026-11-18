@@ -147,4 +147,6 @@ return [
 
     'section_prs' => 'PRs & reviews',
     'review_short' => 'Review',
+
+    'pr_count' => ':count PR|:count PRs',
 ];
