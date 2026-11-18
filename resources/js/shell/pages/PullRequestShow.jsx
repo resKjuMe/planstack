@@ -933,7 +933,10 @@ function readChoice(finding, data) {
     if (data.decision === 'FIX') {
         for (const option of finding.suggestions ?? []) {
             const prefix = suggestionNote(option);
-            if (data.note.startsWith(prefix)) return { choice: optionKey(option), extra: data.note.slice(prefix.length).trim() };
+            if (!data.note.startsWith(prefix)) continue;
+            // Nur den Trenner abschneiden, sonst verschwindet beim Tippen jedes Leerzeichen am Ende.
+            const rest = data.note.slice(prefix.length);
+            return { choice: optionKey(option), extra: rest.startsWith('\n\n') ? rest.slice(2) : rest };
         }
     }
     return { choice: data.decision, extra: data.decision === 'SUGGESTED' ? '' : data.note };
@@ -941,7 +944,7 @@ function readChoice(finding, data) {
 
 function writeChoice(finding, choice, extra) {
     const option = finding.suggestions?.find((o) => optionKey(o) === choice);
-    if (option) return { decision: 'FIX', note: extra.trim() ? `${suggestionNote(option)}\n\n${extra}` : suggestionNote(option) };
+    if (option) return { decision: 'FIX', note: extra ? `${suggestionNote(option)}\n\n${extra}` : suggestionNote(option) };
     return { decision: choice, note: choice === 'SUGGESTED' ? '' : extra };
 }
 

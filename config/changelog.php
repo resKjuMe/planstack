@@ -6,6 +6,22 @@
 return [
     'releases' => [
         [
+            'version' => '2.9.3',
+            'date' => '2026-11-18',
+            'tldr' => [
+                'de' => ['Befunde fixen: Leerzeichen in der Notiz gehen nicht mehr verloren'],
+                'en' => ['Fixing findings: spaces in the note are no longer lost'],
+            ],
+            'changes' => [
+                'de' => [
+                    'Behoben: Bei „Befunde fixen“ verschwanden in der Notiz zu einem Vorschlag (z. B. „PO-Entscheidung“) Leerzeichen und Zeilenumbrüche am Ende sofort beim Tippen.',
+                ],
+                'en' => [
+                    'Fixed: When fixing findings, trailing spaces and line breaks in the note for a suggestion (e.g. "PO decision") disappeared immediately while typing.',
+                ],
+            ],
+        ],
+        [
             'version' => '2.9.2',
             'date' => '2026-11-12',
             'tldr' => [
