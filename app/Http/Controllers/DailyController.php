@@ -48,6 +48,7 @@ class DailyController extends Controller
                 'team' => $link($day, 'team'),
             ],
             'strings' => __('daily'),
+            'prStrings' => __('pull_requests'),
         ]);
     }
 

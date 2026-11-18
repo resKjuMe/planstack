@@ -6,6 +6,7 @@ use App\Models\PullRequest;
 use App\Models\User;
 use App\Support\Jira\JiraActivity;
 use App\Support\Jira\JiraRequestFailed;
+use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
@@ -37,26 +38,29 @@ class TicketPullRequests
 
         $pattern = '/(?<![A-Z0-9])('.implode('|', array_map(fn (string $key) => preg_quote($key, '/'), $keys)).')(?![0-9])/i';
 
-        $byKey = [];
+        // Erst nur Titel/Branch durchsuchen, dann die Treffer vollständig laden.
+        $idsByKey = [];
         PullRequest::query()
             ->where('organization_id', $viewer->organization_id)
             ->where(fn ($q) => $q->where('opened_at', '>=', now()->subDays(self::LOOKBACK_DAYS))->orWhereNull('opened_at'))
-            ->with('author:id,name,email')
             ->orderByDesc('opened_at')
-            ->get(['id', 'repository', 'pull_request_id', 'title', 'branch', 'state', 'author_id', 'author_login', 'opened_at'])
-            ->each(function (PullRequest $pr) use ($pattern, &$byKey) {
+            ->get(['id', 'title', 'branch'])
+            ->each(function (PullRequest $pr) use ($pattern, &$idsByKey) {
                 if (preg_match_all($pattern, $pr->title.' '.$pr->branch, $matches) === 0) {
                     return;
                 }
                 foreach (array_unique(array_map('strtoupper', $matches[1])) as $key) {
-                    $byKey[$key][] = $pr;
+                    $idsByKey[$key][] = $pr->id;
                 }
             });
 
+        $pullRequests = PullRequest::query()->whereIn('id', collect($idsByKey)->flatten()->unique()->all())->get();
+        self::prepare($pullRequests);
         $jira = self::jira($viewer);
+        $entries = $pullRequests->mapWithKeys(fn (PullRequest $pr) => [$pr->id => self::entry($pr, $jira)]);
 
-        return collect($byKey)
-            ->map(fn (array $prs) => collect($prs)->map(fn (PullRequest $pr) => self::entry($pr, $jira))->values()->all())
+        return collect($idsByKey)
+            ->map(fn (array $ids) => collect($ids)->map(fn (int $id) => $entries[$id])->values()->all())
             ->all();
     }
 
@@ -69,6 +73,9 @@ class TicketPullRequests
      */
     public static function ticketsFor(User $viewer, Collection $pullRequests): array
     {
+        if ($pullRequests instanceof EloquentCollection) {
+            self::prepare($pullRequests);
+        }
         $jira = self::jira($viewer);
         $keysById = $pullRequests->mapWithKeys(function (PullRequest $pr) {
             preg_match_all(self::KEY, $pr->title.' '.$pr->branch, $matches);
@@ -100,7 +107,8 @@ class TicketPullRequests
     }
 
     /**
-     * PR-Eintrag mit Ersteller: Name, Initialen, Jira-Avatar (sofern auffindbar).
+     * PR-Eintrag mit Ersteller (Name, Initialen, Jira-Avatar) und, sofern die
+     * Relationen geladen sind, den Spalten der PR-Liste unter `details`.
      *
      * @return array<string, mixed>
      */
@@ -124,7 +132,17 @@ class TicketPullRequests
             'initials' => Str::of($name)->explode(' ')->filter()->take(2)
                 ->map(fn (string $part) => Str::upper(Str::substr($part, 0, 1)))->implode(''),
             'avatar' => $avatar,
+            'details' => $pr->relationLoaded('latestReview') && $pr->relationLoaded('approvals') ? PullRequestRows::full($pr) : null,
         ];
+    }
+
+    /**
+     * @param  EloquentCollection<int, PullRequest>  $pullRequests
+     */
+    private static function prepare(EloquentCollection $pullRequests): void
+    {
+        $pullRequests->loadMissing(PullRequestRows::RELATIONS);
+        PullRequestRows::withPoCounts($pullRequests);
     }
 
     private static function jira(User $viewer): ?JiraActivity

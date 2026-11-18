@@ -6,6 +6,24 @@
 return [
     'releases' => [
         [
+            'version' => '2.12.0',
+            'date' => '2026-11-18',
+            'tldr' => [
+                'de' => ['Daily: aufgeklappte PRs mit allen Spalten der PR-Liste'],
+                'en' => ['Daily: expanded PRs with all columns of the PR list'],
+            ],
+            'changes' => [
+                'de' => [
+                    'Neu: Aufgeklappte PRs im Daily zeigen Zustand (offen/gemergt/geschlossen), Umfang, Freigaben, Empfehlung, Befunde, Kritikalität, KI-Prüfbarkeit, PO-Sichtung, Handlungsbedarf und wann reviewt wurde.',
+                    'Neu: Ungelöste Kommentare, rote CI und Merge-Konflikte sind direkt am PR markiert.',
+                ],
+                'en' => [
+                    'New: Expanded PRs in Daily show state (open/merged/closed), size, approvals, recommendation, findings, criticality, AI reviewability, PO attention, need for action and when they were reviewed.',
+                    'New: Unresolved comments, failed CI and merge conflicts are marked directly on the PR.',
+                ],
+            ],
+        ],
+        [
             'version' => '2.11.3',
             'date' => '2026-11-18',
             'tldr' => [
