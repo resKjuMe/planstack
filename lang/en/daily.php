@@ -22,7 +22,7 @@ return [
     'you' => 'you',
 
     'kpi_done' => 'Done',
-    'kpi_done_unit' => 'tasks',
+    'kpi_done_unit' => 'tickets',
     'kpi_done_sub' => ':sp SP · :review sent to review',
     'kpi_prs' => 'Pull requests',
     'kpi_prs_unit' => 'merged',
@@ -38,7 +38,7 @@ return [
     'activity_title' => 'What happened',
     'activity_sub' => 'Everything that moved on :day, grouped by source.',
     'activity_empty' => 'Nothing happened on this day.',
-    'group_tasks' => 'Planstack tasks',
+    'group_tasks' => 'Jira tickets',
     'group_prs' => 'Pull requests',
     'group_reviews' => 'Reviews given',
     'changes' => ':count change|:count changes',
@@ -69,15 +69,15 @@ return [
     'more' => 'more',
 
     'blockers_title' => 'Blockers & help wanted',
-    'blockers_sub' => 'Concerns and deliveries without a reviewer to clarify in the stand-up.',
+    'blockers_sub' => 'Flagged or blocked tickets to clarify in the stand-up.',
     'blockers_empty' => 'No blockers.',
-    'blocker_noReviewer' => 'waiting for a reviewer',
+    'flagged' => 'flagged',
     'since_days' => 'for :days days',
 
-    'waiting_title' => 'Waiting for me',
-    'waiting_title_team' => 'Waiting for the team',
-    'waiting_sub' => 'Assigned reviews of other people\'s work.',
-    'waiting_empty' => 'No review waiting.',
+    'waiting_title' => 'Review & test with me',
+    'waiting_title_team' => 'Review & test in the team',
+    'waiting_sub' => 'Assigned tickets in review or test.',
+    'waiting_empty' => 'No ticket in review or test.',
 
     'po_title' => 'For the PO',
     'po_sub' => 'From the PRs\' "customer view" and open PO decisions.',
@@ -91,8 +91,8 @@ return [
     'ux_empty' => 'No frontend changes on this day.',
 
     'today_title' => 'Today',
-    'today_sub' => 'Running tasks and things left lying around.',
-    'today_empty' => 'No running task.',
+    'today_sub' => 'Tickets in progress and things left lying around.',
+    'today_empty' => 'No ticket in progress.',
     'stale' => 'unchanged for :time',
 
     'standup_title' => 'Stand-up text',
@@ -113,8 +113,9 @@ return [
     'team_opened' => ':count PR opened|:count PRs opened',
     'team_reviews' => ':count review|:count reviews',
     'team_done' => ':count done',
-    'team_tasks' => ':count task worked on|:count tasks worked on',
+    'team_issues' => ':count ticket moved|:count tickets moved',
 
-    'empty_title' => 'No projects yet',
-    'empty_text' => 'As soon as you work on a project, your stand-up appears here.',
+    'jira_missing' => 'Daily needs your Jira access for the Jira tickets.',
+    'jira_error' => 'Jira is currently unreachable (:error).',
+    'jira_profile' => 'Set up in your profile',
 ];

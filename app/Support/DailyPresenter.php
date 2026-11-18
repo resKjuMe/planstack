@@ -2,31 +2,30 @@
 
 namespace App\Support;
 
-use App\Models\OrgStatus;
 use App\Models\PullRequest;
 use App\Models\PullRequestApproval;
 use App\Models\PullRequestReview;
 use App\Models\ReviewFinding;
-use App\Models\Task;
-use App\Models\TaskEventLog;
 use App\Models\User;
+use App\Support\Jira\JiraActivity;
+use App\Support\Jira\JiraRequestFailed;
 use Carbon\CarbonImmutable;
-use iamfarhad\LaravelAuditLog\Models\EloquentAuditLog;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 
 /**
  * Stand-up-Ansicht (/daily): was ist an EINEM Arbeitstag passiert — Statuswechsel
- * der Tasks (Audit-Log), PRs (geöffnet/gemergt/geschlossen), Reviews (ps-review
- * und GitHub-Approvals) — plus der aktuelle Stand für das Gespräch (Blocker, was
- * auf mich wartet, woran ich heute arbeite).
+ * der Jira-Tickets, PRs (geöffnet/gemergt/geschlossen) und Reviews (ps-review und
+ * GitHub-Approvals) — plus der aktuelle Stand für das Gespräch (Blocker, Tickets
+ * im Review/Test, woran ich heute arbeite).
  *
- * `me` zeigt nur Einträge mit meiner Beteiligung (Ersteller, Beanspruchender,
- * Reviewer, Auslöser, PR-Autor), `team` dasselbe für alle Mitglieder meiner Teams.
- * Sichtbar sind nur Projekte, die auch das Dashboard zeigt.
+ * Tickets kommen live aus Jira, mit dem Jira-Zugang des Betrachters (Profil).
+ * `me` zeigt nur Einträge mit meiner Beteiligung (Zuständiger, Melder, Auslöser
+ * eines Statuswechsels, PR-Autor, Reviewer), `team` dasselbe für alle Mitglieder
+ * meiner Teams.
  */
 class DailyPresenter
 {
@@ -34,8 +33,347 @@ class DailyPresenter
 
     private const LIST_LIMIT = 30;
 
-    /** Ab so vielen Tagen ohne Änderung gilt ein laufender Task als liegengeblieben. */
+    /** Ab so vielen Tagen ohne Änderung gilt ein Ticket in Arbeit als liegengeblieben. */
     private const STALE_DAYS = 2;
+
+    /** Statusnamen, die als blockiert gelten (zusätzlich zum Jira-Flag). */
+    public const BLOCKED_STATUS = '/block|imped|on hold|hold|warte|wait/i';
+
+    /** Statusnamen für Review/Test. */
+    public const REVIEW_STATUS = '/review|test|qa|abnahme|prüf|pruef|verif|approval/i';
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function payload(User $user, CarbonImmutable $day, string $scope): array
+    {
+        $teamIds = self::teamUserIds($user);
+        $userIds = $scope === 'team' ? $teamIds : [$user->id];
+
+        $from = $day->startOfDay()->utc();
+        $until = $day->endOfDay()->utc();
+
+        $pullRequests = $this->pullRequests($user, $userIds, $from, $until);
+        $reviews = $this->reviews($user, $userIds, $from, $until);
+        $jira = $this->jira($user, $teamIds, $userIds, $day);
+        $issueChanges = $jira['issueChanges'];
+
+        $done = collect($issueChanges)->where('isDone', true);
+
+        return [
+            'jira' => Arr::only($jira, ['connected', 'error']),
+            'kpis' => [
+                'doneTasks' => $done->count(),
+                'doneSp' => (float) $done->sum('sp'),
+                'toReview' => collect($issueChanges)->where('toReview', true)->count(),
+                'prsMerged' => collect($pullRequests)->where('event', 'merged')->count(),
+                'prsOpen' => collect($pullRequests)->where('state', 'OPEN')->count(),
+                'additions' => (int) collect($pullRequests)->sum('additions'),
+                'deletions' => (int) collect($pullRequests)->sum('deletions'),
+                'reviewsGiven' => count($reviews),
+                'reviewsReceived' => $this->reviewsReceived($user, $userIds, $from, $until),
+                'waiting' => count($jira['waiting']),
+                'blockers' => count($jira['blockers']),
+                'oldestBlockerDays' => collect($jira['blockers'])->max('days'),
+            ],
+            'issueChanges' => $issueChanges,
+            'pullRequests' => $pullRequests,
+            'reviews' => $reviews,
+            'heatmap' => $this->heatmap($issueChanges, $pullRequests, $reviews),
+            'blockers' => $jira['blockers'],
+            'waiting' => $jira['waiting'],
+            'forPo' => $this->forPo($pullRequests),
+            'forUx' => $this->forUx($pullRequests),
+            'today' => $jira['today'],
+            'team' => $this->team($user, $teamIds, $jira['dayIssues'], $jira['accounts'], $from, $until),
+        ];
+    }
+
+    /**
+     * Alles aus Jira: Statuswechsel des Tages (eine Abfrage für das ganze Team,
+     * danach auf den Umfang gefiltert) und die offenen Tickets des Umfangs.
+     *
+     * @param  array<int, int>  $teamIds
+     * @param  array<int, int>  $userIds
+     * @return array<string, mixed>
+     */
+    private function jira(User $user, array $teamIds, array $userIds, CarbonImmutable $day): array
+    {
+        $empty = [
+            'connected' => $user->hasJiraCredentials(),
+            'error' => null,
+            'issueChanges' => [],
+            'blockers' => [],
+            'waiting' => [],
+            'today' => [],
+            'dayIssues' => collect(),
+            'accounts' => [],
+        ];
+        if (! $user->hasJiraCredentials()) {
+            return $empty;
+        }
+
+        try {
+            $jira = JiraActivity::for($user);
+            $accounts = $jira->accountIds(User::query()->whereIn('id', $teamIds)->get());
+            $scopeAccounts = array_values(Arr::only($accounts, $userIds));
+            if ($scopeAccounts === []) {
+                return $empty;
+            }
+
+            $start = $day->startOfDay()->format('Y-m-d H:i');
+            $end = $day->addDay()->startOfDay()->format('Y-m-d H:i');
+            $list = fn (array $ids) => implode(', ', array_map(fn ($id) => '"'.$id.'"', $ids));
+            $changedBy = collect($accounts)->map(fn ($id) => "status CHANGED BY \"{$id}\" DURING (\"{$start}\", \"{$end}\")")->implode(' OR ');
+
+            $dayIssues = $jira->search(
+                "updated >= \"{$start}\" AND (assignee in ({$list(array_values($accounts))}) OR reporter in ({$list(array_values($accounts))}) OR {$changedBy}) ORDER BY updated DESC"
+            );
+            $open = $jira->search(
+                "assignee in ({$list($scopeAccounts)}) AND statusCategory != Done ORDER BY updated ASC",
+                changelog: false,
+            );
+        } catch (JiraRequestFailed|ConnectionException $e) {
+            return [...$empty, 'error' => $e->getMessage()];
+        }
+
+        $from = $day->startOfDay();
+        $until = $day->endOfDay();
+
+        return [
+            'connected' => true,
+            'error' => null,
+            'issueChanges' => $this->issueChanges($dayIssues, $scopeAccounts, $from, $until),
+            'blockers' => $this->blockers($open),
+            'waiting' => $this->waiting($open),
+            'today' => $this->today($open),
+            'dayIssues' => $dayIssues,
+            'accounts' => $accounts,
+        ];
+    }
+
+    /**
+     * Statuswechsel des Tages je Ticket (erster alter → letzter neuer Status).
+     *
+     * @param  Collection<int, array<string, mixed>>  $issues
+     * @param  array<int, string>  $accounts
+     * @return array<int, array<string, mixed>>
+     */
+    private function issueChanges(Collection $issues, array $accounts, CarbonImmutable $from, CarbonImmutable $until): array
+    {
+        return $issues
+            ->map(function (array $issue) use ($accounts, $from, $until) {
+                $changes = collect($issue['transitions'])->filter(fn (array $t) => $t['at']->between($from, $until))->values();
+                if ($changes->isEmpty()) {
+                    return null;
+                }
+
+                $involved = in_array($issue['assignee'], $accounts, true)
+                    || in_array($issue['reporter'], $accounts, true)
+                    || $changes->contains(fn (array $t) => in_array($t['author'], $accounts, true));
+                if (! $involved) {
+                    return null;
+                }
+
+                $last = $changes->last();
+                $toCategory = $last['to'] === $issue['status'] ? $issue['category'] : 'indeterminate';
+
+                return [
+                    ...$this->issueRef($issue),
+                    'from' => $changes->first()['from'],
+                    'to' => $last['to'],
+                    'toCategory' => $toCategory,
+                    'isDone' => $toCategory === 'done',
+                    'toReview' => preg_match(self::REVIEW_STATUS, (string) $last['to']) === 1,
+                    'changes' => $changes->count(),
+                    'at' => $last['at']->toIso8601String(),
+                    'hours' => $changes->map(fn (array $t) => $this->hour($t['at']))->all(),
+                ];
+            })
+            ->filter()
+            ->sortByDesc('at')
+            ->take(self::LIST_LIMIT)
+            ->values()
+            ->all();
+    }
+
+    /**
+     * Offene Tickets mit Flag oder in einem Blockiert-Status.
+     *
+     * @param  Collection<int, array<string, mixed>>  $open
+     * @return array<int, array<string, mixed>>
+     */
+    private function blockers(Collection $open): array
+    {
+        return $open
+            ->filter(fn (array $issue) => $this->isBlocked($issue))
+            ->map(fn (array $issue) => [
+                ...$this->issueRef($issue),
+                'flagged' => $issue['flagged'],
+                'days' => $issue['updated'] !== null ? round(abs($issue['updated']->diffInHours(now())) / 24, 1) : null,
+            ])
+            ->take(self::LIST_LIMIT)
+            ->values()
+            ->all();
+    }
+
+    /**
+     * Offene Tickets im Review oder Test.
+     *
+     * @param  Collection<int, array<string, mixed>>  $open
+     * @return array<int, array<string, mixed>>
+     */
+    private function waiting(Collection $open): array
+    {
+        return $open
+            ->reject(fn (array $issue) => $this->isBlocked($issue))
+            ->filter(fn (array $issue) => preg_match(self::REVIEW_STATUS, (string) $issue['status']) === 1)
+            ->map(fn (array $issue) => [
+                ...$this->issueRef($issue),
+                'since' => $issue['updated']?->toIso8601String(),
+            ])
+            ->take(self::LIST_LIMIT)
+            ->values()
+            ->all();
+    }
+
+    /**
+     * Tickets in Arbeit; ohne Änderung seit STALE_DAYS gelten sie als liegengeblieben.
+     *
+     * @param  Collection<int, array<string, mixed>>  $open
+     * @return array<int, array<string, mixed>>
+     */
+    private function today(Collection $open): array
+    {
+        $staleBefore = now()->subDays(self::STALE_DAYS);
+
+        return $open
+            ->reject(fn (array $issue) => $this->isBlocked($issue))
+            ->reject(fn (array $issue) => preg_match(self::REVIEW_STATUS, (string) $issue['status']) === 1)
+            ->where('category', 'indeterminate')
+            ->sortByDesc(fn (array $issue) => $issue['updated']?->getTimestamp() ?? 0)
+            ->map(fn (array $issue) => [
+                ...$this->issueRef($issue),
+                'isStale' => $issue['updated'] !== null && $issue['updated']->lt($staleBefore),
+                'updatedAt' => $issue['updated']?->toIso8601String(),
+            ])
+            ->take(self::LIST_LIMIT)
+            ->values()
+            ->all();
+    }
+
+    /**
+     * Was hat jedes Teammitglied (außer mir) am Tag bewegt.
+     *
+     * @param  array<int, int>  $teamIds
+     * @param  Collection<int, array<string, mixed>>  $dayIssues
+     * @param  array<int, string>  $accounts
+     * @return array<int, array<string, mixed>>
+     */
+    private function team(User $user, array $teamIds, Collection $dayIssues, array $accounts, CarbonImmutable $from, CarbonImmutable $until): array
+    {
+        $others = array_values(array_diff($teamIds, [$user->id]));
+        if ($others === []) {
+            return [];
+        }
+
+        $local = fn (CarbonImmutable $at) => $at->between($from, $until);
+        $transitions = $dayIssues->flatMap(fn (array $issue) => collect($issue['transitions'])
+            ->filter(fn (array $t) => $local($t['at']))
+            ->map(fn (array $t) => [...$t, 'key' => $issue['key'], 'done' => $t['to'] === $issue['status'] && $issue['category'] === 'done']));
+
+        $merged = PullRequest::query()->where('organization_id', $user->organization_id)
+            ->whereIn('author_id', $others)->whereBetween('merged_at', [$from, $until])->get(['id', 'author_id']);
+        $opened = PullRequest::query()->where('organization_id', $user->organization_id)
+            ->whereIn('author_id', $others)->whereBetween('opened_at', [$from, $until])->get(['id', 'author_id']);
+        $reviews = PullRequestReview::query()->whereIn('reviewer_id', $others)
+            ->whereBetween('review_finished_at', [$from, $until])->get(['id', 'reviewer_id']);
+        $approvals = PullRequestApproval::query()->whereIn('user_id', $others)
+            ->whereBetween('submitted_at', [$from, $until])->get(['id', 'user_id']);
+
+        return User::query()->whereIn('id', $others)->orderBy('name')->get(['id', 'name'])
+            ->map(function (User $member) use ($accounts, $transitions, $merged, $opened, $reviews, $approvals) {
+                $account = $accounts[$member->id] ?? null;
+                $own = $account !== null ? $transitions->where('author', $account) : collect();
+                $row = [
+                    'id' => $member->id,
+                    'name' => $member->name,
+                    'initials' => Str::of($member->name)->explode(' ')->filter()->take(2)
+                        ->map(fn (string $part) => Str::upper(Str::substr($part, 0, 1)))->implode(''),
+                    'statusChanges' => $own->count(),
+                    'done' => $own->where('done', true)->pluck('key')->unique()->count(),
+                    'issues' => $own->pluck('key')->unique()->count(),
+                    'merged' => $merged->where('author_id', $member->id)->count(),
+                    'opened' => $opened->where('author_id', $member->id)->count(),
+                    'reviews' => $reviews->where('reviewer_id', $member->id)->count()
+                        + $approvals->where('user_id', $member->id)->count(),
+                ];
+                $row['active'] = $row['statusChanges'] + $row['merged'] + $row['opened'] + $row['reviews'] > 0;
+
+                return $row;
+            })
+            ->sortByDesc('active')
+            ->values()
+            ->all();
+    }
+
+    /**
+     * Stunden-Heatmap (Ortszeit) je Quelle.
+     *
+     * @return array{hours: array<int, int>, rows: array<int, array{key: string, cells: array<int, int>}>}
+     */
+    private function heatmap(array $issueChanges, array $pullRequests, array $reviews): array
+    {
+        $rows = [
+            'statusChanges' => collect($issueChanges)->flatMap(fn (array $change) => $change['hours']),
+            'pullRequests' => collect($pullRequests)->pluck('hour')->filter(fn ($hour) => $hour !== null),
+            'reviews' => collect($reviews)->pluck('hour'),
+        ];
+
+        $all = collect($rows)->flatten();
+        $first = min(8, (int) ($all->min() ?? 8));
+        $last = max(18, (int) ($all->max() ?? 18));
+        $hours = range($first, $last);
+
+        return [
+            'hours' => $hours,
+            'rows' => collect($rows)->map(fn (Collection $values, string $key) => [
+                'key' => $key,
+                'cells' => array_map(fn (int $hour) => $values->filter(fn ($value) => (int) $value === $hour)->count(), $hours),
+            ])->values()->all(),
+        ];
+    }
+
+    /**
+     * @param  array<string, mixed>  $issue
+     */
+    public static function isBlocked(array $issue): bool
+    {
+        return $issue['flagged'] || preg_match(self::BLOCKED_STATUS, (string) $issue['status']) === 1;
+    }
+
+    /**
+     * @param  array<string, mixed>  $issue
+     * @return array<string, mixed>
+     */
+    public static function issueRef(array $issue): array
+    {
+        return [
+            'key' => $issue['key'],
+            'summary' => $issue['summary'],
+            'url' => $issue['url'],
+            'type' => $issue['type'],
+            'status' => $issue['status'],
+            'category' => $issue['category'],
+            'assigneeName' => $issue['assigneeName'],
+            'sp' => $issue['sp'],
+        ];
+    }
+
+    private function hour(mixed $at): int
+    {
+        return (int) CarbonImmutable::parse($at)->setTimezone(self::TIMEZONE)->format('G');
+    }
 
     /**
      * Letzter Arbeitstag vor `$today` (Mo → Fr, Wochenende → Fr).
@@ -61,67 +399,11 @@ class DailyPresenter
     }
 
     /**
-     * @return array<string, mixed>
-     */
-    public function payload(User $user, CarbonImmutable $day, string $scope): array
-    {
-        $projectIds = VisibleProjects::idsFor($user);
-        $teamIds = $this->teamUserIds($user);
-        $userIds = $scope === 'team' ? $teamIds : [$user->id];
-
-        $from = $day->startOfDay()->utc();
-        $until = $day->endOfDay()->utc();
-
-        if ($projectIds === []) {
-            return ['hasProjects' => false];
-        }
-
-        $statuses = OrgStatus::query()->where('organization_id', $user->organization_id)->get()->keyBy('id');
-        $taskChanges = $this->taskChanges($projectIds, $userIds, $statuses, $from, $until);
-        $pullRequests = $this->pullRequests($user, $userIds, $from, $until);
-        $reviews = $this->reviews($user, $userIds, $from, $until);
-        $received = $this->reviewsReceived($user, $userIds, $from, $until);
-        $blockers = $this->blockers($projectIds, $userIds);
-        $waiting = $this->waitingForMe($projectIds, $userIds);
-        $today = $this->today($projectIds, $userIds);
-
-        $done = collect($taskChanges)->where('isDone', true);
-
-        return [
-            'hasProjects' => true,
-            'kpis' => [
-                'doneTasks' => $done->count(),
-                'doneSp' => (int) $done->sum('sp'),
-                'toReview' => collect($taskChanges)->where('toKind', 'review')->count(),
-                'prsMerged' => collect($pullRequests)->where('event', 'merged')->count(),
-                'prsOpen' => collect($pullRequests)->where('state', 'OPEN')->count(),
-                'additions' => (int) collect($pullRequests)->sum('additions'),
-                'deletions' => (int) collect($pullRequests)->sum('deletions'),
-                'reviewsGiven' => count($reviews),
-                'reviewsReceived' => $received,
-                'waiting' => count($waiting),
-                'blockers' => count($blockers),
-                'oldestBlockerDays' => collect($blockers)->max('days'),
-            ],
-            'taskChanges' => $taskChanges,
-            'pullRequests' => $pullRequests,
-            'reviews' => $reviews,
-            'heatmap' => $this->heatmap($taskChanges, $pullRequests, $reviews),
-            'blockers' => $blockers,
-            'waiting' => $waiting,
-            'forPo' => $this->forPo($pullRequests),
-            'forUx' => $this->forUx($pullRequests),
-            'today' => $today,
-            'team' => $this->team($user, $teamIds, $projectIds, $statuses, $from, $until),
-        ];
-    }
-
-    /**
      * Mitglieder aller Teams, in denen ich bin (inkl. mir). Ohne Team: nur ich.
      *
      * @return array<int, int>
      */
-    private function teamUserIds(User $user): array
+    public static function teamUserIds(User $user): array
     {
         return $user->teams()->with('members:id')->get()
             ->flatMap(fn ($team) => $team->members->pluck('id'))
@@ -129,89 +411,6 @@ class DailyPresenter
             ->unique()
             ->values()
             ->all();
-    }
-
-    /**
-     * Statuswechsel des Tages, je Task zusammengefasst (erster alter → letzter
-     * neuer Status). Beteiligt ist, wer den Wechsel ausgelöst hat oder den Task
-     * erstellt, beansprucht oder reviewt.
-     *
-     * @param  array<int, int>  $projectIds
-     * @param  array<int, int>  $userIds
-     * @param  Collection<int, OrgStatus>  $statuses
-     * @return array<int, array<string, mixed>>
-     */
-    private function taskChanges(array $projectIds, array $userIds, Collection $statuses, CarbonImmutable $from, CarbonImmutable $until): array
-    {
-        $logs = $this->statusLogs($projectIds, $from, $until);
-        if ($logs->isEmpty()) {
-            return [];
-        }
-
-        $tasks = Task::query()
-            ->whereIn('id', $logs->pluck('entity_id')->unique())
-            ->with(['project:id,alias,name', 'concern:id,task_id,summary'])
-            ->get()
-            ->keyBy('id');
-
-        return $logs->groupBy('entity_id')
-            ->map(function (Collection $changes, $taskId) use ($tasks, $userIds, $statuses) {
-                $task = $tasks->get($taskId);
-                if ($task === null) {
-                    return null;
-                }
-
-                $involved = $changes->contains(fn ($log) => in_array((int) $log->causer_id, $userIds, true))
-                    || $this->involves($task, $userIds);
-                if (! $involved) {
-                    return null;
-                }
-
-                $first = $changes->first();
-                $last = $changes->last();
-                $fromStatus = $statuses->get($first->old_values['status_id'] ?? null);
-                $toStatus = $statuses->get($last->new_values['status_id'] ?? null);
-
-                return [
-                    ...$this->taskRef($task),
-                    'from' => $fromStatus !== null ? $this->statusLabel($fromStatus) : null,
-                    'to' => $toStatus !== null ? $this->statusLabel($toStatus) : null,
-                    'toBadge' => StatusPalette::badge($toStatus?->color_token),
-                    'toKind' => $toStatus?->kind,
-                    'isDone' => (bool) $toStatus?->counts_as_done,
-                    'changes' => $changes->count(),
-                    'at' => CarbonImmutable::parse($last->created_at)->toIso8601String(),
-                    'hours' => $changes->map(fn ($log) => $this->hour($log->created_at))->all(),
-                ];
-            })
-            ->filter()
-            ->sortByDesc('at')
-            ->take(self::LIST_LIMIT)
-            ->values()
-            ->all();
-    }
-
-    /**
-     * Audit-Zeilen mit einem Statuswechsel, chronologisch.
-     *
-     * @param  array<int, int>  $projectIds
-     * @return Collection<int, EloquentAuditLog>
-     */
-    private function statusLogs(array $projectIds, CarbonImmutable $from, CarbonImmutable $until): Collection
-    {
-        if (! Schema::hasTable(EloquentAuditLog::forEntity(Task::class)->getTable())) {
-            return collect();
-        }
-
-        return EloquentAuditLog::forEntity(Task::class)
-            ->whereIn('entity_id', Task::query()->whereIn('project_id', $projectIds)->select('id'))
-            ->whereIn('action', ['created', 'updated'])
-            ->whereBetween('created_at', [$from, $until])
-            ->orderBy('created_at')
-            ->orderBy('id')
-            ->get()
-            ->filter(fn ($log) => array_key_exists('status_id', $log->new_values ?? []))
-            ->values();
     }
 
     /**
@@ -360,107 +559,6 @@ class DailyPresenter
     }
 
     /**
-     * Aktuelle Blocker: eigene Tasks in einer Ausnahme (Concern/blockiert) und
-     * eigene Lieferungen im Review, für die sich noch kein Reviewer gefunden hat.
-     *
-     * @param  array<int, int>  $projectIds
-     * @param  array<int, int>  $userIds
-     * @return array<int, array<string, mixed>>
-     */
-    private function blockers(array $projectIds, array $userIds): array
-    {
-        return Task::query()
-            ->whereIn('project_id', $projectIds)
-            ->where(fn (Builder $q) => $q
-                ->where(fn (Builder $exception) => $exception
-                    ->whereIn('claimed_by_id', $userIds)
-                    ->whereHas('orgStatus', fn (Builder $s) => $s->where('kind', 'exception')))
-                ->orWhere(fn (Builder $review) => $review
-                    ->where(fn (Builder $own) => $own->whereIn('claimed_by_id', $userIds)->orWhereIn('created_by_id', $userIds))
-                    ->whereNull('reviewed_by')
-                    ->whereHas('orgStatus', fn (Builder $s) => $s->where('kind', 'review'))))
-            ->with(['project:id,alias,name', 'orgStatus', 'concern', 'claimer:id,name'])
-            ->get()
-            ->map(function (Task $task) {
-                $isException = $task->orgStatus?->kind === 'exception';
-                $since = $isException ? ($task->concern?->created_at ?? $task->updated_at) : $task->updated_at;
-
-                return [
-                    ...$this->taskRef($task),
-                    'kind' => $isException ? 'exception' : 'noReviewer',
-                    'statusLabel' => $task->orgStatus !== null ? $this->statusLabel($task->orgStatus) : null,
-                    'statusBadge' => StatusPalette::badge($task->orgStatus?->color_token),
-                    'concern' => $task->concern?->summary,
-                    'claimerName' => $task->claimer?->name,
-                    'since' => $since?->toIso8601String(),
-                    'days' => $since !== null ? round(abs($since->diffInHours(now())) / 24, 1) : null,
-                ];
-            })
-            ->sortBy([['kind', 'asc'], ['since', 'asc']])
-            ->take(self::LIST_LIMIT)
-            ->values()
-            ->all();
-    }
-
-    /**
-     * Reviews fremder Arbeit, die mir (bzw. dem Team) zugewiesen sind.
-     *
-     * @param  array<int, int>  $projectIds
-     * @param  array<int, int>  $userIds
-     * @return array<int, array<string, mixed>>
-     */
-    private function waitingForMe(array $projectIds, array $userIds): array
-    {
-        return Task::query()
-            ->whereIn('project_id', $projectIds)
-            ->whereIn('reviewed_by', $userIds)
-            ->whereHas('orgStatus', fn (Builder $s) => $s->where('kind', 'review'))
-            ->with(['project:id,alias,name', 'claimer:id,name', 'creator:id,name', 'reviewer:id,name'])
-            ->orderBy('updated_at')
-            ->limit(self::LIST_LIMIT)
-            ->get()
-            ->map(fn (Task $task) => [
-                ...$this->taskRef($task),
-                'authorName' => $task->claimer?->name ?? $task->creator?->name,
-                'reviewerName' => $task->reviewer?->name,
-                'since' => $task->updated_at?->toIso8601String(),
-            ])
-            ->all();
-    }
-
-    /**
-     * Laufende eigene Arbeitsschritte; ohne Änderung seit STALE_DAYS gelten sie
-     * als liegengeblieben.
-     *
-     * @param  array<int, int>  $projectIds
-     * @param  array<int, int>  $userIds
-     * @return array<int, array<string, mixed>>
-     */
-    private function today(array $projectIds, array $userIds): array
-    {
-        $staleBefore = now()->subDays(self::STALE_DAYS);
-
-        return Task::query()
-            ->whereIn('project_id', $projectIds)
-            ->whereIn('claimed_by_id', $userIds)
-            ->whereHas('orgStatus', fn (Builder $s) => $s->where('kind', 'active'))
-            ->with(['project:id,alias,name', 'orgStatus', 'claimer:id,name'])
-            ->orderByDesc('updated_at')
-            ->limit(self::LIST_LIMIT)
-            ->get()
-            ->map(fn (Task $task) => [
-                ...$this->taskRef($task),
-                'statusLabel' => $task->orgStatus !== null ? $this->statusLabel($task->orgStatus) : null,
-                'statusBadge' => StatusPalette::badge($task->orgStatus?->color_token),
-                'claimerName' => $task->claimer?->name,
-                'progress' => $task->progress_detail,
-                'isStale' => $task->updated_at !== null && $task->updated_at->lt($staleBefore),
-                'updatedAt' => $task->updated_at?->toIso8601String(),
-            ])
-            ->all();
-    }
-
-    /**
      * Für den PO: die Kundensicht der PRs des Tages und offene PO-Entscheidungen
      * aus den Review-Befunden.
      *
@@ -515,99 +613,6 @@ class DailyPresenter
     }
 
     /**
-     * Was hat jedes Teammitglied (außer mir) am Tag bewegt.
-     *
-     * @param  array<int, int>  $teamIds
-     * @param  array<int, int>  $projectIds
-     * @param  Collection<int, OrgStatus>  $statuses
-     * @return array<int, array<string, mixed>>
-     */
-    private function team(User $user, array $teamIds, array $projectIds, Collection $statuses, CarbonImmutable $from, CarbonImmutable $until): array
-    {
-        $others = array_values(array_diff($teamIds, [$user->id]));
-        if ($others === []) {
-            return [];
-        }
-
-        $logs = $this->statusLogs($projectIds, $from, $until);
-        $doneIds = $statuses->where('counts_as_done', true)->keys()->all();
-        $merged = PullRequest::query()
-            ->where('organization_id', $user->organization_id)
-            ->whereIn('author_id', $others)
-            ->whereBetween('merged_at', [$from, $until])
-            ->get(['id', 'author_id', 'pull_request_id']);
-        $opened = PullRequest::query()
-            ->where('organization_id', $user->organization_id)
-            ->whereIn('author_id', $others)
-            ->whereBetween('opened_at', [$from, $until])
-            ->get(['id', 'author_id']);
-        $reviews = PullRequestReview::query()
-            ->whereIn('reviewer_id', $others)
-            ->whereBetween('review_finished_at', [$from, $until])
-            ->get(['id', 'reviewer_id']);
-        $approvals = PullRequestApproval::query()
-            ->whereIn('user_id', $others)
-            ->whereBetween('submitted_at', [$from, $until])
-            ->get(['id', 'user_id']);
-        $events = TaskEventLog::query()
-            ->whereIn('actor_id', $others)
-            ->whereBetween('created_at', [$from, $until])
-            ->whereHas('task', fn (Builder $q) => $q->whereIn('project_id', $projectIds))
-            ->get(['id', 'actor_id', 'task_id']);
-
-        return User::query()->whereIn('id', $others)->orderBy('name')->get(['id', 'name'])
-            ->map(function (User $member) use ($logs, $doneIds, $merged, $opened, $reviews, $approvals, $events) {
-                $own = $logs->filter(fn ($log) => (int) $log->causer_id === $member->id);
-                $row = [
-                    'id' => $member->id,
-                    'name' => $member->name,
-                    'initials' => Str::of($member->name)->explode(' ')->filter()->take(2)
-                        ->map(fn (string $part) => Str::upper(Str::substr($part, 0, 1)))->implode(''),
-                    'statusChanges' => $own->count(),
-                    'done' => $own->filter(fn ($log) => in_array((int) ($log->new_values['status_id'] ?? 0), $doneIds, true))->count(),
-                    'merged' => $merged->where('author_id', $member->id)->count(),
-                    'opened' => $opened->where('author_id', $member->id)->count(),
-                    'reviews' => $reviews->where('reviewer_id', $member->id)->count()
-                        + $approvals->where('user_id', $member->id)->count(),
-                    'tasks' => $events->where('actor_id', $member->id)->pluck('task_id')->unique()->count(),
-                ];
-                $row['active'] = $row['statusChanges'] + $row['merged'] + $row['opened'] + $row['reviews'] + $row['tasks'] > 0;
-
-                return $row;
-            })
-            ->sortByDesc('active')
-            ->values()
-            ->all();
-    }
-
-    /**
-     * Stunden-Heatmap (Ortszeit) je Quelle.
-     *
-     * @return array{hours: array<int, int>, rows: array<int, array{key: string, cells: array<int, int>}>}
-     */
-    private function heatmap(array $taskChanges, array $pullRequests, array $reviews): array
-    {
-        $rows = [
-            'statusChanges' => collect($taskChanges)->flatMap(fn (array $change) => $change['hours']),
-            'pullRequests' => collect($pullRequests)->pluck('hour')->filter(fn ($hour) => $hour !== null),
-            'reviews' => collect($reviews)->pluck('hour'),
-        ];
-
-        $all = collect($rows)->flatten();
-        $first = min(8, (int) ($all->min() ?? 8));
-        $last = max(18, (int) ($all->max() ?? 18));
-        $hours = range($first, $last);
-
-        return [
-            'hours' => $hours,
-            'rows' => collect($rows)->map(fn (Collection $values, string $key) => [
-                'key' => $key,
-                'cells' => array_map(fn (int $hour) => $values->filter(fn ($value) => (int) $value === $hour)->count(), $hours),
-            ])->values()->all(),
-        ];
-    }
-
-    /**
      * „📣 Kundensicht“ aus dem PR-Body: angekreuzte Sichtbarkeit und der Satz
      * unter „Was ändert sich?“. null ohne Block.
      *
@@ -652,45 +657,5 @@ class DailyPresenter
         }
 
         return ['visibility' => $visibility ?: null, 'change' => $change];
-    }
-
-    /**
-     * @param  array<int, int>  $userIds
-     */
-    private function involves(Task $task, array $userIds): bool
-    {
-        return collect([$task->claimed_by_id, $task->created_by_id, $task->reviewed_by])
-            ->filter()
-            ->contains(fn ($id) => in_array((int) $id, $userIds, true));
-    }
-
-    /**
-     * @return array<string, mixed>
-     */
-    private function taskRef(Task $task): array
-    {
-        return [
-            'id' => $task->id,
-            'name' => $task->name,
-            'summary' => $task->summary,
-            'sp' => $task->effort_story_points,
-            'jiraKey' => $task->jira_key,
-            'projectAlias' => $task->project?->alias,
-            'projectName' => $task->project?->name,
-            'url' => $task->project !== null ? route('projects.tasks.show', [$task->project, $task->id]) : null,
-            'boardUrl' => $task->project !== null ? route('projects.show', $task->project) : null,
-        ];
-    }
-
-    private function hour(mixed $at): int
-    {
-        return (int) CarbonImmutable::parse($at)->setTimezone(self::TIMEZONE)->format('G');
-    }
-
-    private function statusLabel(OrgStatus $status): string
-    {
-        return Str::startsWith(app()->getLocale(), 'en') && $status->label_en
-            ? $status->label_en
-            : $status->label;
     }
 }

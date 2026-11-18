@@ -74,30 +74,15 @@ function GroupHead({ dot, label, count, tone }) {
     );
 }
 
-function TaskHead({ task, jiraBaseUrl, children }) {
+const CATEGORY_TONE = { new: 'gray', indeterminate: 'blue', done: 'green' };
+
+function IssueHead({ issue, children }) {
     return (
         <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-            {task.projectAlias && (
-                <a
-                    href={task.boardUrl}
-                    title={task.projectName}
-                    className="inline-flex items-center rounded bg-gray-800 px-1.5 py-0.5 font-mono text-[11px] font-semibold text-white dark:bg-gray-700"
-                >
-                    {task.projectAlias}
-                </a>
-            )}
-            <a href={task.url} className="font-mono text-sm font-semibold text-indigo-700 hover:underline dark:text-indigo-400">
-                {task.name}
+            <a href={issue.url} target="_blank" rel="noreferrer" className="font-mono text-sm font-semibold text-indigo-700 hover:underline dark:text-indigo-400">
+                {issue.key}
             </a>
-            {task.jiraKey && (
-                jiraBaseUrl ? (
-                    <a href={`${jiraBaseUrl}/browse/${task.jiraKey}`} target="_blank" rel="noreferrer" className="font-mono text-xs text-gray-500 hover:underline dark:text-gray-400">
-                        {task.jiraKey}
-                    </a>
-                ) : (
-                    <span className="font-mono text-xs text-gray-500 dark:text-gray-400">{task.jiraKey}</span>
-                )
-            )}
+            {issue.type && <span className="text-xs text-gray-400 dark:text-gray-500">{issue.type}</span>}
             {children}
         </div>
     );
@@ -115,23 +100,26 @@ function Empty({ children }) {
     return <p className="rounded-lg bg-gray-50 px-3 py-4 text-center text-sm text-gray-500 dark:bg-gray-900/40 dark:text-gray-400">{children}</p>;
 }
 
-function TaskChanges({ rows, strings, locale, jiraBaseUrl }) {
+function IssueChanges({ rows, strings, locale, scope }) {
     return rows.map((row) => (
-        <div key={row.id} className={ROW}>
-            <TaskHead task={row} jiraBaseUrl={jiraBaseUrl}>
+        <div key={row.key} className={ROW}>
+            <IssueHead issue={row}>
                 <span className="ms-auto inline-flex items-center gap-1.5">
                     {row.from && <span className={pill('gray')}>{row.from}</span>}
                     <svg className="h-3.5 w-3.5 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
                         <path d="M5 12h14M13 6l6 6-6 6" />
                     </svg>
-                    {row.to && <span className={`${PILL} ${row.toBadge}`}>{row.to}</span>}
+                    {row.to && <span className={pill(CATEGORY_TONE[row.toCategory])}>{row.to}</span>}
                 </span>
-            </TaskHead>
+            </IssueHead>
             <Summary text={row.summary} />
             <Meta>
-                {interpolate(strings.at, { time: time(row.at, locale) })}
-                {row.changes > 1 && ` · ${transChoice(strings.changes, row.changes)}`}
-                {row.sp ? ` · ${row.sp} SP` : ''}
+                {[
+                    interpolate(strings.at, { time: time(row.at, locale) }),
+                    row.changes > 1 && transChoice(strings.changes, row.changes),
+                    row.sp && `${row.sp} SP`,
+                    scope === 'team' && row.assigneeName,
+                ].filter(Boolean).join(' · ')}
             </Meta>
         </div>
     ));
@@ -218,41 +206,38 @@ function Heatmap({ heatmap, strings }) {
     );
 }
 
-function Blockers({ rows, strings, jiraBaseUrl }) {
+function Blockers({ rows, strings, scope }) {
     if (rows.length === 0) return <Empty>{strings.blockers_empty}</Empty>;
 
     return rows.map((row) => (
-        <div
-            key={row.id}
-            className={`${ROW} ${row.kind === 'exception' ? 'bg-red-50 ring-red-200 dark:bg-red-900/20 dark:ring-red-900/60' : ''}`}
-        >
-            <TaskHead task={row} jiraBaseUrl={jiraBaseUrl}>
-                <span className={row.kind === 'exception' ? `${PILL} ${row.statusBadge}` : pill('purple')}>
-                    {row.kind === 'exception' ? row.statusLabel : strings.blocker_noReviewer}
-                </span>
+        <div key={row.key} className={`${ROW} bg-red-50 ring-red-200 dark:bg-red-900/20 dark:ring-red-900/60`}>
+            <IssueHead issue={row}>
+                <span className={pill('red')}>{row.status}</span>
+                {row.flagged && <span className={pill('amber')}>{strings.flagged}</span>}
                 {row.days !== null && (
                     <span className="ms-auto text-xs text-gray-500 dark:text-gray-400">
                         {interpolate(strings.since_days, { days: Math.max(1, Math.round(row.days)) })}
                     </span>
                 )}
-            </TaskHead>
-            <Summary text={row.concern ?? row.summary} />
+            </IssueHead>
+            <Summary text={row.summary} />
+            {scope === 'team' && row.assigneeName && <Meta>{row.assigneeName}</Meta>}
         </div>
     ));
 }
 
-function Waiting({ rows, strings, locale, jiraBaseUrl }) {
+function Waiting({ rows, strings, locale, scope }) {
     if (rows.length === 0) return <Empty>{strings.waiting_empty}</Empty>;
 
     return rows.map((row) => (
-        <div key={row.id} className={ROW}>
-            <TaskHead task={row} jiraBaseUrl={jiraBaseUrl} />
+        <div key={row.key} className={ROW}>
+            <IssueHead issue={row}>
+                <span className={pill('purple')}>{row.status}</span>
+            </IssueHead>
             <Summary text={row.summary} />
             <Meta>
-                {[row.authorName && interpolate(strings.by, { name: row.authorName })]
-                    .filter(Boolean)
-                    .join(' · ')}
-                {row.since && <span className="text-amber-700 dark:text-amber-400"> · {relativeTime(row.since, locale)}</span>}
+                {scope === 'team' && row.assigneeName ? `${row.assigneeName} · ` : ''}
+                {row.since && <span className="text-amber-700 dark:text-amber-400">{relativeTime(row.since, locale)}</span>}
             </Meta>
         </div>
     ));
@@ -299,25 +284,22 @@ function ForUx({ rows, strings }) {
     ));
 }
 
-function Today({ rows, strings, locale, scope, jiraBaseUrl }) {
+function Today({ rows, strings, locale, scope }) {
     if (rows.length === 0) return <Empty>{strings.today_empty}</Empty>;
 
     return rows.map((row) => (
-        <div key={row.id} className={`${ROW} ${row.isStale ? 'bg-gray-50 dark:bg-gray-900/40' : ''}`}>
-            <TaskHead task={row} jiraBaseUrl={jiraBaseUrl}>
-                {row.statusLabel && <span className={`${PILL} ${row.statusBadge}`}>{row.statusLabel}</span>}
+        <div key={row.key} className={`${ROW} ${row.isStale ? 'bg-gray-50 dark:bg-gray-900/40' : ''}`}>
+            <IssueHead issue={row}>
+                <span className={pill(CATEGORY_TONE[row.category])}>{row.status}</span>
                 {row.sp ? <span className="ms-auto text-xs font-semibold text-gray-600 dark:text-gray-300">{row.sp} SP</span> : null}
-            </TaskHead>
+            </IssueHead>
             <Summary text={row.summary} />
-            {(row.isStale || row.progress || scope === 'team') && (
+            {(row.isStale || scope === 'team') && (
                 <Meta>
-                    {[
-                        scope === 'team' && row.claimerName,
-                        row.progress,
-                    ].filter(Boolean).join(' · ')}
+                    {scope === 'team' && row.assigneeName}
                     {row.isStale && (
                         <span className="text-amber-700 dark:text-amber-400">
-                            {row.progress || scope === 'team' ? ' · ' : ''}
+                            {scope === 'team' && row.assigneeName ? ' · ' : ''}
                             {interpolate(strings.stale, { time: relativeTime(row.updatedAt, locale)?.replace(/^vor |^in |ago$/g, '').trim() })}
                         </span>
                     )}
@@ -346,7 +328,7 @@ function Team({ rows, strings }) {
                                       member.opened > 0 && transChoice(strings.team_opened, member.opened),
                                       member.done > 0 && interpolate(strings.team_done, { count: member.done }),
                                       member.reviews > 0 && transChoice(strings.team_reviews, member.reviews),
-                                      member.tasks > 0 && transChoice(strings.team_tasks, member.tasks),
+                                      member.issues > 0 && transChoice(strings.team_issues, member.issues),
                                   ].filter(Boolean).join(' · ') || transChoice(strings.changes, member.statusChanges)
                                 : strings.team_quiet}
                         </p>
@@ -359,16 +341,16 @@ function Team({ rows, strings }) {
 
 // Gestern / Heute / Blocker als Fließtext zum Vorlesen oder für Slack.
 function standupText(data, strings) {
-    const task = (row) => `${row.projectAlias} ${row.name}`;
+    const task = (row) => `${row.key} ${row.summary}`;
     const yesterday = [
-        ...data.taskChanges.slice(0, 8).map((row) => interpolate(strings.standup_status, { task: task(row), status: row.to ?? '' })),
+        ...data.issueChanges.slice(0, 8).map((row) => interpolate(strings.standup_status, { task: task(row), status: row.to ?? '' })),
         ...data.pullRequests
             .filter((pr) => pr.event !== 'ciFailed')
             .map((pr) => interpolate(strings.standup_pr, { number: pr.number, event: strings[`pr_${pr.event}`], title: pr.title })),
         ...(data.reviews.length ? [transChoice(strings.standup_reviews, data.reviews.length)] : []),
     ];
     const today = data.today.slice(0, 6).map(task);
-    const blockers = data.blockers.map((row) => `${task(row)}: ${row.concern ?? strings.blocker_noReviewer}`);
+    const blockers = data.blockers.map((row) => `${task(row)} (${row.status})`);
     const section = (title, items) => `${title}\n${items.length ? items.map((item) => `- ${item}`).join('\n') : `- ${strings.standup_none}`}`;
 
     return [
@@ -390,11 +372,11 @@ function useCopy() {
     return [copied, copy];
 }
 
-export default function Daily({ day, scope, data, urls, strings, jiraBaseUrl }) {
+export default function Daily({ day, scope, data, urls, strings }) {
     const locale = (typeof document !== 'undefined' && document.documentElement.getAttribute('lang')) || 'de';
     const [audience, setAudience] = useState('all');
     const [copied, copy] = useCopy();
-    const text = useMemo(() => (data.hasProjects ? standupText(data, strings) : ''), [data, strings]);
+    const text = useMemo(() => standupText(data, strings), [data, strings]);
     const show = (key) => audience === 'all' || audience === key;
 
     const segment = (active) =>
@@ -439,7 +421,7 @@ export default function Daily({ day, scope, data, urls, strings, jiraBaseUrl }) 
                                 <a href={urls.me} aria-current={scope === 'me' ? 'true' : undefined} className={segment(scope === 'me')}>{strings.scope_me}</a>
                                 <a href={urls.team} aria-current={scope === 'team' ? 'true' : undefined} className={segment(scope === 'team')}>{strings.scope_team}</a>
                             </div>
-                            {data.hasProjects && (
+                            {(
                                 <button
                                     type="button"
                                     onClick={() => copy(text)}
@@ -459,13 +441,14 @@ export default function Daily({ day, scope, data, urls, strings, jiraBaseUrl }) 
 
             <div className="py-8">
                 <div className="mx-auto max-w-7xl space-y-6 px-4 sm:px-6 lg:px-8">
-                    {!data.hasProjects ? (
-                        <div className={`${CARD} px-6 py-10 text-center`}>
-                            <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{strings.empty_title}</h2>
-                            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{strings.empty_text}</p>
-                        </div>
-                    ) : (
+                    {(
                         <>
+                            {(!data.jira.connected || data.jira.error) && (
+                                <div className="rounded-lg bg-amber-50 px-4 py-3 text-sm text-amber-900 ring-1 ring-amber-200 dark:bg-amber-900/20 dark:text-amber-200 dark:ring-amber-900/60">
+                                    {data.jira.error ? interpolate(strings.jira_error, { error: data.jira.error }) : strings.jira_missing}{' '}
+                                    <a href={urls.profile} className="font-semibold underline">{strings.jira_profile}</a>
+                                </div>
+                            )}
                             <div className="flex flex-wrap items-center gap-2">
                                 <span className="me-1 text-xs text-gray-500 dark:text-gray-400">{strings.audience}</span>
                                 {AUDIENCES.map((key) => (
@@ -515,13 +498,13 @@ export default function Daily({ day, scope, data, urls, strings, jiraBaseUrl }) 
                                 <div className="space-y-6 lg:col-span-2">
                                     <section className={`${CARD} space-y-5 p-5`}>
                                         <PanelHead title={strings.activity_title} sub={interpolate(strings.activity_sub, { day: day.label })} />
-                                        {data.taskChanges.length + data.pullRequests.length + data.reviews.length === 0 && (
+                                        {data.issueChanges.length + data.pullRequests.length + data.reviews.length === 0 && (
                                             <Empty>{strings.activity_empty}</Empty>
                                         )}
-                                        {data.taskChanges.length > 0 && (
+                                        {data.issueChanges.length > 0 && (
                                             <div className="space-y-2">
-                                                <GroupHead dot="bg-indigo-500" label={strings.group_tasks} count={data.taskChanges.length} tone="indigo" />
-                                                <TaskChanges rows={data.taskChanges} strings={strings} locale={locale} jiraBaseUrl={jiraBaseUrl} />
+                                                <GroupHead dot="bg-indigo-500" label={strings.group_tasks} count={data.issueChanges.length} tone="indigo" />
+                                                <IssueChanges rows={data.issueChanges} strings={strings} locale={locale} scope={scope} />
                                             </div>
                                         )}
                                         {data.pullRequests.length > 0 && (
@@ -549,7 +532,7 @@ export default function Daily({ day, scope, data, urls, strings, jiraBaseUrl }) 
                                         <>
                                             <section className={`${CARD} space-y-3 p-5 ${data.blockers.length ? 'ring-red-200 dark:ring-red-900/60' : ''}`}>
                                                 <PanelHead title={strings.blockers_title} sub={strings.blockers_sub} count={data.blockers.length} tone="red" />
-                                                <Blockers rows={data.blockers} strings={strings} jiraBaseUrl={jiraBaseUrl} />
+                                                <Blockers rows={data.blockers} strings={strings} scope={scope} />
                                             </section>
                                             <section className={`${CARD} space-y-3 p-5`}>
                                                 <PanelHead
@@ -558,7 +541,7 @@ export default function Daily({ day, scope, data, urls, strings, jiraBaseUrl }) 
                                                     count={data.waiting.length}
                                                     tone="amber"
                                                 />
-                                                <Waiting rows={data.waiting} strings={strings} locale={locale} jiraBaseUrl={jiraBaseUrl} />
+                                                <Waiting rows={data.waiting} strings={strings} locale={locale} scope={scope} />
                                             </section>
                                         </>
                                     )}
@@ -577,7 +560,7 @@ export default function Daily({ day, scope, data, urls, strings, jiraBaseUrl }) 
                                     {show('team') && (
                                         <section className={`${CARD} space-y-3 p-5`}>
                                             <PanelHead title={strings.today_title} sub={strings.today_sub} count={data.today.length} tone="blue" />
-                                            <Today rows={data.today} strings={strings} locale={locale} scope={scope} jiraBaseUrl={jiraBaseUrl} />
+                                            <Today rows={data.today} strings={strings} locale={locale} scope={scope} />
                                         </section>
                                     )}
                                 </aside>
