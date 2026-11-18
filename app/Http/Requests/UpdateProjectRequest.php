@@ -26,6 +26,7 @@ class UpdateProjectRequest extends FormRequest
             'description' => ['nullable', 'string'],
             'github_repo' => ['nullable', 'string', 'max:255', 'regex:#^[\w.-]+/[\w.-]+$#'],
             'jira_epic_key' => \App\Casts\JiraKey::rules(),
+            'jira_auto_sync' => ['boolean'],
             'archived' => ['boolean'],
             'completed' => ['boolean'],
             // skill_description wird jetzt auf der „Claude"-Unterseite gepflegt.

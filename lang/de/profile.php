@@ -35,4 +35,12 @@ return [
     'update_your_account_s_profile' => 'Aktualisiere die Profildaten und die E-Mail-Adresse deines Kontos.',
     'use_a_long_random_password_to_keep_your' => 'Verwende ein langes, zufälliges Passwort, um dein Konto zu schützen.',
     'your_email_address_is_unverified' => 'Deine E-Mail-Adresse ist nicht bestätigt.',
+    'jira_access' => 'Jira-Zugang',
+    'jira_access_hint' => 'Persönlicher Jira-API-Token für den automatischen Abgleich von Status und Assignee (Projekt bearbeiten → „Mit Jira abgleichen“). Der Token wird verschlüsselt gespeichert; Änderungen in Jira erscheinen unter deinem Namen.',
+    'jira_base_url' => 'Jira-URL',
+    'jira_email' => 'Jira-E-Mail',
+    'jira_api_token' => 'API-Token',
+    'jira_api_token_keep' => '•••••••• (leer lassen = behalten)',
+    'jira_api_token_hint' => 'Erstellen unter id.atlassian.com → Sicherheit → API-Token. Beim Speichern wird der Zugang gegen Jira geprüft.',
+    'jira_remove' => 'Jira-Zugang entfernen',
 ];

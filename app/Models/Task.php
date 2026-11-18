@@ -56,6 +56,7 @@ class Task extends Model
      * @var array<int, string>
      */
     protected $auditExclude = [
+        'jira_sync_base',
         'progress_detail',
         'progress_percent',
         'progress_at',
@@ -134,6 +135,7 @@ class Task extends Model
         return [
             'criticality' => \App\Enums\Criticality::class,
             'jira_key' => \App\Casts\JiraKey::class,
+            'jira_sync_base' => 'array',
             'effort_man_days' => 'decimal:1',
             'effort_story_points' => 'integer',
             'effort_tokens' => 'integer',

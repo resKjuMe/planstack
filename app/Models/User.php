@@ -18,7 +18,7 @@ use Illuminate\Support\Str;
 use Laravel\Sanctum\HasApiTokens;
 
 #[Fillable(['name', 'email', 'password', 'locale', 'notification_display', 'pull_requests_grouped'])]
-#[Hidden(['password', 'remember_token'])]
+#[Hidden(['password', 'remember_token', 'jira_api_token'])]
 class User extends Authenticatable
 {
     use Auditable, OrganizationAuditMetadata {
@@ -39,7 +39,16 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'pull_requests_grouped' => 'boolean',
+            'jira_api_token' => 'encrypted',
         ];
+    }
+
+    /** Der Jira-Token gehört nicht ins Audit-Log. */
+    protected $auditExclude = ['jira_api_token'];
+
+    public function hasJiraCredentials(): bool
+    {
+        return filled($this->jira_base_url) && filled($this->jira_email) && filled($this->jira_api_token);
     }
 
     /**

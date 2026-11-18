@@ -85,7 +85,7 @@ Fachlich, **kurz und präzise, aber vollständig**: jedes Detail aus Planstack m
 
 ### 6. Status und Assignee
 
-Bei **jedem** Lauf (neu angelegte und vorhandene Tickets) Status und Bearbeiter aus Planstack übernehmen. Planstack ist führend; Jira-Änderungen daran werden überschrieben.
+Ist am Projekt der automatische Jira-Abgleich eingeschaltet (Projekt bearbeiten → „Status und Assignee mit Jira abgleichen"), erledigt das der Server jede Minute in beide Richtungen (letzte Änderung gewinnt) — dann diesen Schritt **überspringen** und nur im Ergebnis vermerken. Sonst bei **jedem** Lauf (neu angelegte und vorhandene Tickets) Status und Bearbeiter aus Planstack übernehmen. Planstack ist führend; Jira-Änderungen daran werden überschrieben.
 
 - **Status Unteraufgabe** nach Planstack-`status`: `MERGED`/`COMPLETED` → Erledigt-Status (Kategorie `done`, nicht „Abgelehnt"), `IN_REVIEW`/`REVIEWBAR`/`APPROVED` → „In Review", `CLAIMED`/`ANALYZING`/`IN_PROGRESS`/`BEREINIGEN` → „In Progress", sonst → Anfangsstatus. Unbekannte Org-Status nach ihrer Rolle einordnen. Übergänge über `GET/POST $JB/rest/api/3/issue/<KEY>/transitions`; fehlt ein direkter Übergang, über „In Progress" gehen.
 - **Status Aufgabe** aus ihren Unteraufgaben: alle erledigt → erledigt, mindestens eine begonnen/erledigt → „In Progress", sonst Anfangsstatus.

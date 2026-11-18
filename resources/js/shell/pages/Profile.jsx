@@ -23,6 +23,7 @@ export default function Profile({ user, urls, flash, strings }) {
                     <div className={card}><div className="max-w-xl"><ProfileInfoForm user={user} urls={urls} flash={flash} strings={strings} /></div></div>
                     <div className={card}><div className="max-w-xl"><PasswordForm urls={urls} strings={strings} /></div></div>
                     <div className={card}><div className="max-w-xl"><ApiTokens urls={urls} flash={flash} strings={strings} /></div></div>
+                    <div className={card}><div className="max-w-xl"><JiraAccess user={user} urls={urls} flash={flash} strings={strings} /></div></div>
                     <div className={card}><div className="max-w-xl"><DeleteAccount urls={urls} strings={strings} /></div></div>
                 </div>
             </div>
@@ -99,6 +100,53 @@ function ProfileInfoForm({ user, urls, flash, strings }) {
                 <div className="flex items-center gap-4">
                     <button type="submit" disabled={form.processing} className={primaryBtn}>{strings.save}</button>
                     <Saved show={form.recentlySuccessful} label={strings.saved} />
+                </div>
+            </form>
+        </section>
+    );
+}
+
+function JiraAccess({ user, urls, flash, strings }) {
+    const form = useForm('jira', { jira_base_url: user.jiraBaseUrl ?? '', jira_email: user.jiraEmail ?? '', jira_api_token: '' });
+
+    const submit = (e) => {
+        e.preventDefault();
+        form.put(urls.jiraUpdate, { preserveScroll: true, onSuccess: () => form.setData('jira_api_token', '') });
+    };
+    const remove = () => router.delete(urls.jiraDestroy, { preserveScroll: true });
+
+    return (
+        <section id="jira">
+            <header>
+                <h2 className="text-lg font-medium text-gray-900 dark:text-gray-100">{strings.jira}</h2>
+                <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">{strings.jiraHint}</p>
+            </header>
+
+            <form onSubmit={submit} className="mt-6 space-y-6">
+                <div>
+                    <label htmlFor="jira_base_url" className={label}>{strings.jiraBaseUrl}</label>
+                    <input id="jira_base_url" type="url" value={form.data.jira_base_url} onChange={(e) => form.setData('jira_base_url', e.target.value)} placeholder="https://firma.atlassian.net" className={input + ' font-mono'} />
+                    {err(form, 'jira_base_url')}
+                </div>
+                <div>
+                    <label htmlFor="jira_email" className={label}>{strings.jiraEmail}</label>
+                    <input id="jira_email" type="email" value={form.data.jira_email} onChange={(e) => form.setData('jira_email', e.target.value)} className={input} />
+                    {err(form, 'jira_email')}
+                </div>
+                <div>
+                    <label htmlFor="jira_api_token" className={label}>{strings.jiraToken}</label>
+                    <input id="jira_api_token" type="password" value={form.data.jira_api_token} onChange={(e) => form.setData('jira_api_token', e.target.value)} placeholder={user.jiraHasToken ? strings.jiraTokenKeep : ''} autoComplete="off" className={input + ' font-mono'} />
+                    <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{strings.jiraTokenHint}</p>
+                    {err(form, 'jira_api_token')}
+                </div>
+
+                <div className="flex items-center gap-4">
+                    <button type="submit" disabled={form.processing} className={primaryBtn}>{strings.save}</button>
+                    {user.jiraHasToken && (
+                        <button type="button" onClick={remove} className="text-sm text-red-600 dark:text-red-400 hover:underline">{strings.jiraRemove}</button>
+                    )}
+                    <Saved show={flash?.status === 'jira-updated'} label={strings.jiraSaved} />
+                    <Saved show={flash?.status === 'jira-removed'} label={strings.jiraRemoved} />
                 </div>
             </form>
         </section>

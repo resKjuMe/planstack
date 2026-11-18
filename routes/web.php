@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\ApiDocsController;
 use App\Http\Controllers\ApiTokenController;
+use App\Http\Controllers\ProfileJiraController;
 use App\Http\Controllers\ChangelogController;
 use App\Http\Controllers\ClaudetaskSetupController;
 use App\Http\Controllers\DashboardController;
@@ -60,6 +61,10 @@ Route::middleware('auth')->group(function () {
     // Personal access tokens (API / Planstack skill)
     Route::post('/profile/tokens', [ApiTokenController::class, 'store'])->name('profile.tokens.store');
     Route::delete('/profile/tokens/{token}', [ApiTokenController::class, 'destroy'])->name('profile.tokens.destroy');
+
+    // Persönlicher Jira-Zugang für den serverseitigen Jira-Abgleich
+    Route::put('/profile/jira', [ProfileJiraController::class, 'update'])->name('profile.jira.update');
+    Route::delete('/profile/jira', [ProfileJiraController::class, 'destroy'])->name('profile.jira.destroy');
 
     // Organisation (jeder User gehört höchstens einer an): gründen, beitreten
     // (per individuellem Code), einladen, austreten, löschen.

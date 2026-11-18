@@ -28,6 +28,9 @@ class ProfileController extends Controller
                 'locale' => $user->locale,
                 'notificationDisplay' => $user->notification_display,
                 'isUnverified' => $user instanceof MustVerifyEmail && ! $user->hasVerifiedEmail(),
+                'jiraBaseUrl' => $user->jira_base_url,
+                'jiraEmail' => $user->jira_email,
+                'jiraHasToken' => filled($user->jira_api_token),
             ],
             'urls' => [
                 'profileUpdate' => route('profile.update'),
@@ -36,6 +39,8 @@ class ProfileController extends Controller
                 'verificationSend' => route('verification.send'),
                 'tokenStore' => route('profile.tokens.store'),
                 'tokenDestroy' => route('profile.tokens.destroy', '__ID__'),
+                'jiraUpdate' => route('profile.jira.update'),
+                'jiraDestroy' => route('profile.jira.destroy'),
             ],
             'flash' => [
                 'status' => session('status'),
@@ -92,6 +97,16 @@ class ProfileController extends Controller
                 'deleteConfirmHint' => __('profile.once_your_account_is_deleted_all_of_its'),
                 'password' => __('common.password'),
                 'cancel' => __('common.cancel'),
+                'jira' => __('profile.jira_access'),
+                'jiraHint' => __('profile.jira_access_hint'),
+                'jiraBaseUrl' => __('profile.jira_base_url'),
+                'jiraEmail' => __('profile.jira_email'),
+                'jiraToken' => __('profile.jira_api_token'),
+                'jiraTokenKeep' => __('profile.jira_api_token_keep'),
+                'jiraTokenHint' => __('profile.jira_api_token_hint'),
+                'jiraRemove' => __('profile.jira_remove'),
+                'jiraSaved' => __('flash.jira_credentials_saved'),
+                'jiraRemoved' => __('flash.jira_credentials_removed'),
             ],
         ]);
     }

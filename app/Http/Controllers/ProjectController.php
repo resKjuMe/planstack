@@ -230,6 +230,7 @@ class ProjectController extends Controller
                     'description' => $project->description,
                     'github_repo' => $project->github_repo,
                     'jira_epic_key' => $project->jira_epic_key,
+                    'jira_auto_sync' => $project->jira_sync_user_id !== null,
                     'completed' => $project->completed_at !== null,
                     'archived' => $project->archived_at !== null,
                 ],
@@ -243,6 +244,10 @@ class ProjectController extends Controller
                 'githubRepo' => __('projects.github_repository'),
                 'jiraEpic' => __('projects.jira_epic'),
                 'jiraEpicHint' => __('projects.jira_epic_hint'),
+                'jiraAutoSync' => __('projects.jira_auto_sync'),
+                'jiraAutoSyncHint' => $project->jiraSyncUser
+                    ? __('projects.jira_auto_sync_active', ['name' => $project->jiraSyncUser->name])
+                    : __('projects.jira_auto_sync_hint'),
                 'githubHintPre' => __('projects.format'),
                 'githubHintPost' => __('projects.for_pr_linking_and_the_sync_prs_button'),
                 'completedLabel' => __('projects.project_completed'),
@@ -274,7 +279,19 @@ class ProjectController extends Controller
             ? ($project->completed_at ?? now())
             : null;
 
-        $project->update($data);
+        // Jira-Abgleich: läuft mit dem Jira-Zugang dessen, der ihn einschaltet.
+        if (! $request->boolean('jira_auto_sync')) {
+            $data['jira_sync_user_id'] = null;
+        } elseif ($project->jira_sync_user_id === null) {
+            if (! $request->user()->hasJiraCredentials()) {
+                return back()->withErrors(['jira_auto_sync' => __('flash.jira_sync_no_credentials')]);
+            }
+            $data['jira_sync_user_id'] = $request->user()->id;
+        }
+        unset($data['jira_auto_sync']);
+
+        $project->forceFill(array_intersect_key($data, ['jira_sync_user_id' => true]));
+        $project->update(array_diff_key($data, ['jira_sync_user_id' => true]));
 
         return redirect()
             ->route('projects.show', $project)

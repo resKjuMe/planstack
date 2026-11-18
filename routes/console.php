@@ -26,6 +26,13 @@ Schedule::command('planstack:sync-pr-status --repo=clockodo-intern/main')
     ->withoutOverlapping()
     ->onOneServer();
 
+// Status und Assignee verknüpfter Tasks/Phasen nach Jira (nur Projekte mit
+// eingeschaltetem Jira-Abgleich).
+Schedule::command('planstack:sync-jira')
+    ->everyMinute()
+    ->withoutOverlapping()
+    ->onOneServer();
+
 // Offene PRs aus ps-review: gemergt/geschlossen, neuer Commit, Umfang.
 Schedule::command('planstack:sync-pull-requests')
     ->everyFiveMinutes()
