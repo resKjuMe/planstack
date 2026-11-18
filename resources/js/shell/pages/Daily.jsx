@@ -74,7 +74,7 @@ function Toggle({ count, open, onClick, title }) {
 
 // Stand-up-Zeile: PR-Ersteller · Status (vorher → nachher) · Ticket; der Pfeil
 // klappt die PRs zum Ticket auf.
-function StandupLine({ ticket, from = null, status, tone, statusTitle, note, prs = [], strings }) {
+function StandupLine({ ticket, from = null, status, tone, statusTitle, note, badges = null, prs = [], strings }) {
     const [open, setOpen] = useState(false);
     const link = ticket?.url ?? prs[0]?.url;
 
@@ -97,9 +97,10 @@ function StandupLine({ ticket, from = null, status, tone, statusTitle, note, prs
                 <a href={link} target="_blank" rel="noreferrer" className={KEY_LINK}>
                     {ticket?.key ?? `#${prs[0]?.number}`}
                 </a>
-                <span className="min-w-0 truncate text-gray-800 dark:text-gray-200" title={ticket?.summary}>
-                    {ticket?.summary}
-                    {note && <span className="ml-2 text-xs text-gray-500 dark:text-gray-400">{note}</span>}
+                <span className="flex min-w-0 items-center gap-2">
+                    <span className="min-w-0 truncate text-gray-800 dark:text-gray-200" title={ticket?.summary}>{ticket?.summary}</span>
+                    {badges}
+                    {note && <span className="shrink-0 text-xs text-gray-500 dark:text-gray-400">{note}</span>}
                 </span>
                 {prs.length > 0 ? (
                     <Toggle count={prs.length} open={open} onClick={() => setOpen((v) => !v)} title={transChoice(strings.pr_count, prs.length)} />
@@ -213,18 +214,52 @@ function ReviewsLine({ reviews, strings }) {
     );
 }
 
+// Gründe eines PRs mit Handlungsbedarf als kleine Pillen hinter dem Titel.
+function Reasons({ prs, strings }) {
+    return prs.flatMap((pr) =>
+        pr.reasons.map((reason) => (
+            <span
+                key={`${pr.number}-${reason}`}
+                className={pill(reason === 'ciFailed' || reason === 'conflict' ? 'red' : 'amber')}
+                title={reason === 'ciFailed' && pr.ciFailedChecks?.length ? pr.ciFailedChecks.join('\n') : `#${pr.number}`}
+            >
+                {strings[`reason_${reason}`]}
+            </span>
+        )),
+    );
+}
+
+const waitingNote = (prs, strings) => {
+    const opened = prs.filter((pr) => pr.openedAt && pr.reasons.includes('waitingReview')).map((pr) => pr.openedAt).sort()[0];
+    return opened ? interpolate(strings.waiting_days, { days: days(opened) }) : null;
+};
+
+// Offener PR ohne Ticket in Arbeit: Gründe hinter dem Titel, Statusspalte bleibt schmal.
 function AttentionLine({ row, strings }) {
     const ticket = row.tickets?.[0] ?? { key: `#${row.number}`, summary: row.title, url: row.pr?.url ?? row.url };
-    const urgent = row.reasons.some((reason) => reason === 'ciFailed' || reason === 'conflict');
 
     return (
         <StandupLine
             ticket={ticket}
-            status={row.reasons.map((reason) => strings[`reason_${reason}`]).join(' · ')}
-            statusTitle={row.ciFailedChecks?.length ? row.ciFailedChecks.join('\n') : undefined}
-            tone={urgent ? 'red' : 'amber'}
-            note={row.openedAt && row.reasons.includes('waitingReview') ? interpolate(strings.waiting_days, { days: days(row.openedAt) }) : null}
+            badges={<Reasons prs={[row]} strings={strings} />}
+            note={waitingNote([row], strings)}
             prs={row.pr ? [row.pr] : []}
+            strings={strings}
+        />
+    );
+}
+
+// Ticket in Arbeit, ggf. mit den Gründen seiner offenen PRs.
+function TodayLine({ row, strings }) {
+    const attention = row.attention ?? [];
+    return (
+        <StandupLine
+            ticket={row}
+            status={row.status}
+            tone={CATEGORY_TONE[row.category]}
+            badges={attention.length > 0 ? <Reasons prs={attention} strings={strings} /> : null}
+            note={waitingNote(attention, strings)}
+            prs={row.prs ?? []}
             strings={strings}
         />
     );
@@ -321,7 +356,7 @@ function PersonCard({ person, strings, limit }) {
                         item.kind === 'pr' ? (
                             <AttentionLine key={`pr-${item.row.number}`} row={item.row} strings={strings} />
                         ) : (
-                            <StandupLine key={item.row.key} ticket={item.row} status={item.row.status} tone={CATEGORY_TONE[item.row.category]} prs={item.row.prs ?? []} strings={strings} />
+                            <TodayLine key={item.row.key} row={item.row} strings={strings} />
                         )
                     }
                 />
@@ -400,6 +435,11 @@ function people(data, scope, me, strings) {
         else p.today.push(row);
     });
     data.blockers.forEach((row) => get(row.assigneeName).help.unshift({ kind: 'blocker', row }));
+    // PR mit Handlungsbedarf zu einem Ticket in Arbeit: Gründe an die Ticketzeile statt doppelt.
+    byName.forEach((p) => {
+        p.today = p.today.map((row) => ({ ...row, attention: p.attention.filter((pr) => pr.tickets?.some((t) => t.key === row.key)) }));
+        p.attention = p.attention.filter((pr) => !p.today.some((row) => row.attention.includes(pr)));
+    });
 
     return [...byName.values()]
         .map((p) => {
@@ -443,7 +483,7 @@ function standupText(cards, scope, strings) {
                 }),
                 ...(p.reviews.length ? [transChoice(strings.standup_reviews, p.reviews.length)] : []),
             ];
-            const today = [...p.attention.map((row) => `PR #${row.number} ${prTitle(row)}: ${reasons(row)}`), ...p.today.map(task)];
+            const today = [...p.attention.map((row) => `PR #${row.number} ${prTitle(row)}: ${reasons(row)}`), ...p.today.map((row) => (row.attention?.length ? `${task(row)}: ${row.attention.map(reasons).join(', ')}` : task(row)))];
             const help = p.help.map(({ kind, row }) => {
                 if (kind === 'pr') return `PR #${row.number} ${prTitle(row)}: ${reasons(row)}`;
                 if (kind === 'stale') return `${task(row)} (${interpolate(strings.stale, { days: days(row.updatedAt) })})`;
