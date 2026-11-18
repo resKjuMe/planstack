@@ -72,6 +72,8 @@ class RetroPresenter
             ->unique()
             ->count();
 
+        $prs = TicketPullRequests::forKeys($user, $issues->pluck('key')->all());
+
         $done = $issues->where('done', true);
         $stats = [
             'committed' => $issues->count(),
@@ -99,9 +101,9 @@ class RetroPresenter
             'period' => ['from' => $from->toDateString(), 'until' => $until->toDateString()],
             'stats' => $stats,
             'rating' => $this->rating($stats, $done),
-            'categories' => $this->categories($stats, $issues, $merged, $stuckPrs),
+            'categories' => $this->withPullRequests($this->categories($stats, $issues, $merged, $stuckPrs), $prs),
             'improve' => $this->improvements($stats),
-            'learned' => $this->learned($issues, $critical),
+            'learned' => $this->withPullRequests($this->learned($issues, $critical), $prs),
         ];
     }
 
@@ -461,6 +463,27 @@ class RetroPresenter
                 : [],
             'findings' => $critical->take(self::LIST_LIMIT)->values()->all(),
         ];
+    }
+
+    /**
+     * Hängt an Ticket-Belege (Label = Jira-Key) die PRs samt Ersteller.
+     *
+     * @param  array<string, array<int, array<string, mixed>>>  $groups
+     * @param  array<string, array<int, array<string, mixed>>>  $prs
+     * @return array<string, array<int, array<string, mixed>>>
+     */
+    private function withPullRequests(array $groups, array $prs): array
+    {
+        $attach = fn (array $ref) => isset($prs[strtoupper((string) $ref['label'])])
+            ? [...$ref, 'prs' => $prs[strtoupper((string) $ref['label'])]]
+            : $ref;
+
+        return array_map(fn (array $rows) => array_map(
+            fn (array $row) => isset($row['refs'])
+                ? [...$row, 'refs' => array_map($attach, $row['refs'])]
+                : $attach($row),
+            $rows,
+        ), $groups);
     }
 
     /**

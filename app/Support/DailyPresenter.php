@@ -55,7 +55,7 @@ class DailyPresenter
 
         $pullRequests = $this->pullRequests($user, $userIds, $from, $until);
         $reviews = $this->reviews($user, $userIds, $from, $until);
-        $jira = $this->jira($user, $teamIds, $userIds, $day);
+        $jira = $this->withPullRequests($user, $this->jira($user, $teamIds, $userIds, $day));
         $issueChanges = $jira['issueChanges'];
 
         $done = collect($issueChanges)->where('isDone', true);
@@ -150,6 +150,25 @@ class DailyPresenter
             'dayIssues' => $dayIssues,
             'accounts' => $accounts,
         ];
+    }
+
+    /**
+     * Hängt an jedes Ticket die zugehörigen PRs samt Ersteller (Jira-Avatar).
+     *
+     * @param  array<string, mixed>  $jira
+     * @return array<string, mixed>
+     */
+    private function withPullRequests(User $user, array $jira): array
+    {
+        $lists = ['issueChanges', 'blockers', 'waiting', 'today'];
+        $keys = collect($lists)->flatMap(fn (string $list) => array_column($jira[$list], 'key'))->all();
+        $prs = TicketPullRequests::forKeys($user, $keys);
+
+        foreach ($lists as $list) {
+            $jira[$list] = array_map(fn (array $row) => [...$row, 'prs' => $prs[strtoupper($row['key'])] ?? []], $jira[$list]);
+        }
+
+        return $jira;
     }
 
     /**

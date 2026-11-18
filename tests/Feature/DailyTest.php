@@ -66,7 +66,7 @@ class DailyTest extends TestCase
                 'repository' => 'acme/app',
                 'pull_request_id' => $number,
                 'author_id' => $author->id,
-                'title' => "PR {$number}",
+                'title' => "MN-1: PR {$number}",
                 'state' => 'MERGED',
                 'description' => "<!-- KUNDENSICHT-START -->\n- [x] Ab Deploy sichtbar\n\n**Was ändert sich?**\nExporte laufen im Hintergrund.\n<!-- KUNDENSICHT-END -->",
                 'opened_at' => '2026-11-17 09:00:00',
@@ -95,6 +95,7 @@ class DailyTest extends TestCase
                 ['id' => 'customfield_10021', 'name' => 'Flagged'],
                 ['id' => 'customfield_10020', 'name' => 'Sprint', 'schema' => ['custom' => 'com.pyxis.greenhopper.jira:gh-sprint']],
             ]),
+            '*/rest/api/3/user?accountId*' => Http::response(['avatarUrls' => ['48x48' => 'https://avatar.test/ada.png']]),
             '*/rest/api/3/user/search*' => Http::response([
                 ['accountId' => 'acc-ada', 'active' => true, 'accountType' => 'atlassian', 'displayName' => 'Ada Lovelace'],
             ]),
@@ -127,6 +128,9 @@ class DailyTest extends TestCase
 
         $this->assertSame(['MN-1'], array_column($data['issueChanges'], 'key'));
         $this->assertTrue($data['issueChanges'][0]['isDone']);
+        $this->assertEqualsCanonicalizing([101, 102], array_column($data['issueChanges'][0]['prs'], 'number'));
+        $this->assertSame('https://avatar.test/ada.png', $data['issueChanges'][0]['prs'][0]['avatar']);
+        $this->assertSame([], $data['blockers'][0]['prs']);
         $this->assertSame(['MN-2', 'MN-3'], array_column($data['blockers'], 'key'));
         $this->assertSame(['MN-4'], array_column($data['waiting'], 'key'));
         $this->assertSame(['MN-5'], array_column($data['today'], 'key'));

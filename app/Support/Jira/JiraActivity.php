@@ -65,6 +65,30 @@ class JiraActivity
     }
 
     /**
+     * Jira-Avatar (48px) eines Planstack-Nutzers; einen Tag gecacht, null ohne
+     * Jira-Account.
+     */
+    public function avatar(User $person): ?string
+    {
+        $cacheKey = 'jira-avatar:'.md5($this->baseUrl().'|'.$person->id);
+        $cached = Cache::get($cacheKey);
+        if ($cached !== null) {
+            return $cached ?: null;
+        }
+
+        $account = $this->sync->accountId($this->client(), $this->viewer, $person);
+        $avatar = null;
+        if ($account !== null) {
+            $response = $this->client()->get('/rest/api/3/user', ['accountId' => $account]);
+            $avatar = $response->successful() ? $response->json('avatarUrls.48x48') : null;
+        }
+
+        Cache::put($cacheKey, $avatar ?? '', now()->addDay());
+
+        return $avatar;
+    }
+
+    /**
      * Tickets per JQL, inklusive Änderungsverlauf.
      *
      * @return Collection<int, array<string, mixed>>
