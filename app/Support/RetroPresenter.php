@@ -101,7 +101,7 @@ class RetroPresenter
             'period' => ['from' => $from->toDateString(), 'until' => $until->toDateString()],
             'stats' => $stats,
             'rating' => $this->rating($stats, $done),
-            'categories' => $this->withPullRequests($this->categories($stats, $issues, $merged, $stuckPrs), $prs),
+            'categories' => $this->withPullRequests($this->withTickets($user, $this->categories($stats, $issues, $merged, $stuckPrs)), $prs),
             'improve' => $this->improvements($stats),
             'learned' => $this->withPullRequests($this->learned($issues, $critical), $prs),
         ];
@@ -352,7 +352,7 @@ class RetroPresenter
         $item = fn (string $key, array $params, Collection $refs) => [
             'key' => $key,
             'params' => $params,
-            'refs' => $refs->map(fn (array $ref) => Arr::only($ref, ['id', 'label', 'title', 'url']))->take(self::LIST_LIMIT)->values()->all(),
+            'refs' => $refs->map(fn (array $ref) => Arr::only($ref, ['id', 'prId', 'label', 'title', 'url']))->take(self::LIST_LIMIT)->values()->all(),
             'more' => max(0, $refs->count() - self::LIST_LIMIT),
         ];
         $ticket = fn (Collection $rows) => $rows->map(fn (array $issue) => [
@@ -475,6 +475,45 @@ class RetroPresenter
     }
 
     /**
+     * PR-Belege zeigen das Ticket statt des PR-Titels: Label = Jira-Key, Titel =
+     * Jira-Titel, Link nach Jira; der PR samt Ersteller hängt am Ticket. PRs ohne
+     * Jira-Key behalten PR-Nummer und -Titel.
+     *
+     * @param  array<string, array<int, array<string, mixed>>>  $groups
+     * @return array<string, array<int, array<string, mixed>>>
+     */
+    private function withTickets(User $user, array $groups): array
+    {
+        $ids = collect($groups)->flatten(1)->flatMap(fn (array $row) => $row['refs'] ?? [])->pluck('prId')->filter()->unique()->values()->all();
+        if ($ids === []) {
+            return $groups;
+        }
+        $resolved = TicketPullRequests::ticketsFor($user, PullRequest::query()->whereIn('id', $ids)->with('author:id,name,email')->get());
+
+        $ticket = function (array $ref) use ($resolved) {
+            $data = isset($ref['prId']) ? ($resolved[$ref['prId']] ?? null) : null;
+            if ($data === null) {
+                return $ref;
+            }
+            $first = $data['tickets'][0] ?? null;
+
+            return [
+                ...$ref,
+                'label' => $first['key'] ?? $ref['label'],
+                'title' => $first['summary'] ?? $ref['title'],
+                'url' => $first['url'] ?? $ref['url'],
+                'prs' => [$data['pr']],
+                'isPr' => true,
+            ];
+        };
+
+        return array_map(fn (array $rows) => array_map(
+            fn (array $row) => isset($row['refs']) ? [...$row, 'refs' => array_map($ticket, $row['refs'])] : $row,
+            $rows,
+        ), $groups);
+    }
+
+    /**
      * Hängt an Ticket-Belege (Label = Jira-Key) die PRs samt Ersteller.
      *
      * @param  array<string, array<int, array<string, mixed>>>  $groups
@@ -483,7 +522,7 @@ class RetroPresenter
      */
     private function withPullRequests(array $groups, array $prs): array
     {
-        $attach = fn (array $ref) => isset($prs[strtoupper((string) $ref['label'])])
+        $attach = fn (array $ref) => empty($ref['isPr']) && isset($prs[strtoupper((string) $ref['label'])])
             ? [...$ref, 'prs' => $prs[strtoupper((string) $ref['label'])]]
             : $ref;
 
@@ -502,6 +541,7 @@ class RetroPresenter
     {
         return [
             'id' => 'p'.$pr->id,
+            'prId' => $pr->id,
             'label' => '#'.$pr->pull_request_id,
             'title' => $pr->title,
             'url' => route('pull-requests.show', $pr),
