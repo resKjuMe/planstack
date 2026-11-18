@@ -1,10 +1,15 @@
-import React, { useMemo, useState } from 'react';
+import React, { createContext, useContext, useMemo, useState } from 'react';
 import { Head } from '@inertiajs/react';
 import AppShell from '../AppShell.jsx';
 import PageBands from '../components/PageBands.jsx';
 import PrAuthors from '../components/PrAuthors.jsx';
 import { interpolate, transChoice } from '../../summary/i18n.js';
 import { relativeTime } from '../../stats/format.js';
+import { useNow } from '../../board/useNow.js';
+import { ApprovalChips, ColumnIcon, DecisionIcon, FindingCounts, ScoreBar, StateBadge, formatDate, formatRelative } from '../components/PullRequestParts.jsx';
+
+// Strings der PR-Liste (/pull-requests) für die aufgeklappten PR-Details.
+const PrStrings = createContext({});
 
 // Stand-up-Ansicht: je Person eine kompakte Karte (Gestern / Heute / Blocker),
 // daneben ein Panel mit Tabs für alles, was nur bei Bedarf gebraucht wird
@@ -78,7 +83,6 @@ function PrLine({ row, status, tone }) {
     );
 }
 
-const PR_STATE = { OPEN: 'opened', MERGED: 'merged', CLOSED: 'closed' };
 // Ein Raster je Karte, die Zeilen hängen per Subgrid daran: Spalten fluchten und
 // sind nur so breit wie nötig. Avatar · vorher · → · nachher · Key · Titel · PRs.
 const CARD_GRID = 'grid grid-cols-[auto_auto_auto_auto_auto_minmax(0,1fr)_auto] items-center gap-x-2 gap-y-1';
@@ -138,18 +142,99 @@ function StandupLine({ ticket, from = null, status, tone, prs = [], strings }) {
                     <span aria-hidden="true" />
                 )}
             </div>
-            {open && (
-                <div className="col-span-full mb-1 ml-[0.6rem] flex flex-col gap-1 border-l border-gray-200 pl-[1.15rem] dark:border-gray-700">
-                    {prs.map((pr) => (
-                        <div key={pr.url} className="flex min-w-0 items-center gap-2 text-xs text-gray-600 dark:text-gray-400">
-                            <Avatar pr={pr} />
-                            <a href={pr.url} className="font-mono font-semibold text-indigo-700 hover:underline dark:text-indigo-400">#{pr.number}</a>
-                            <span className="truncate">{pr.author}</span>
-                            {PR_STATE[pr.state] && <span className={pill(PR_TONE[PR_STATE[pr.state]])}>{strings[`pr_${PR_STATE[pr.state]}`]}</span>}
-                        </div>
-                    ))}
-                </div>
-            )}
+            {open && <PrDetails prs={prs} />}
+        </div>
+    );
+}
+
+function ConflictIcon({ title }) {
+    return (
+        <span className="shrink-0 text-red-600 dark:text-red-400" title={title}>
+            <svg viewBox="0 0 24 24" fill="currentColor" className="h-4 w-4" aria-hidden="true">
+                <path fillRule="evenodd" d="M10.27 3.5a2 2 0 0 1 3.46 0l8.04 13.93A2 2 0 0 1 20.04 20.5H3.96a2 2 0 0 1-1.73-3.07L10.27 3.5zM12 9a1 1 0 0 0-1 1v4a1 1 0 1 0 2 0v-4a1 1 0 0 0-1-1zm0 9a1.25 1.25 0 1 0 0-2.5A1.25 1.25 0 0 0 12 18z" clipRule="evenodd" />
+            </svg>
+        </span>
+    );
+}
+
+// Aufgeklappte PRs eines Tickets mit den Spalten der PR-Liste (/pull-requests):
+// Zustand, Konflikt/CI, Umfang, Freigaben (inkl. ungelöster Kommentare), Empfehlung,
+// Befunde, Kritikalität, KI-Prüfbarkeit, PO-Sichtung, Handlungsbedarf, Reviewt.
+function PrDetails({ prs }) {
+    const t = useContext(PrStrings);
+    const now = useNow();
+    const head = 'w-px whitespace-nowrap px-2 py-1 text-center font-medium';
+    const cell = 'w-px whitespace-nowrap px-2 py-1';
+
+    return (
+        <div className="col-span-full mb-2 ml-[0.6rem] overflow-x-auto border-l border-gray-200 pl-[1.15rem] dark:border-gray-700">
+            <table className="text-xs">
+                <thead className="text-[10px] uppercase tracking-wide text-gray-400 dark:text-gray-500">
+                    <tr>
+                        <th className="px-2 py-1 text-left font-medium">{t.col_pr}</th>
+                        <th className={head} title={t.col_size}><ColumnIcon name="size" /></th>
+                        <th className={head} title={`${t.approvals}: ${t.approvals_hint}`}><ColumnIcon name="approvals" /></th>
+                        <th className={head} title={t.col_decision}><ColumnIcon name="decision" /></th>
+                        <th className={head} title={`${t.findings}: ${t.level_CRITICAL} / ${t.level_IMPORTANT} / ${t.level_HINT}`}><ColumnIcon name="findings" /></th>
+                        <th className={head} title={t.col_criticality}><ColumnIcon name="criticality" /></th>
+                        <th className={head} title={t.col_ai_reviewability}><ColumnIcon name="aiReviewability" /></th>
+                        <th className={head} title={`${t.col_po_review_likelihood}: ${t.po_review_likelihood_hint}`}><ColumnIcon name="poReviewLikelihood" /></th>
+                        <th className={head} title={`${t.col_need}: ${t.need_hint}`}><ColumnIcon name="need" /></th>
+                        <th className={head} title={t.col_reviewed_at}><ColumnIcon name="reviewedAt" /></th>
+                    </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100 dark:divide-gray-700/60">
+                    {prs.map((pr) => {
+                        const d = pr.details;
+                        const review = d?.review;
+                        const open = pr.state === 'OPEN';
+                        const ciFailed = open && d?.ciState === 'failed';
+
+                        return (
+                            <tr key={pr.url} className={ciFailed ? 'bg-red-50 dark:bg-red-900/20' : undefined}>
+                                <td className="whitespace-nowrap px-2 py-1">
+                                    <div className="flex items-center gap-2">
+                                        <Avatar pr={pr} />
+                                        <a href={pr.url} className="font-mono font-semibold text-indigo-700 hover:underline dark:text-indigo-400">#{pr.number}</a>
+                                        <StateBadge state={pr.state} strings={t} />
+                                        {open && d?.conflicting && <ConflictIcon title={t.conflicting} />}
+                                        {ciFailed && (
+                                            <span className="rounded bg-red-600 px-1.5 py-0.5 text-[11px] font-semibold text-white" title={(d.ciFailedChecks ?? []).join('\n') || t.ci_failed}>
+                                                {t.status_ci_failed}
+                                            </span>
+                                        )}
+                                        <span className="text-gray-600 dark:text-gray-400">{pr.author}</span>
+                                    </div>
+                                </td>
+                                {d ? (
+                                    <>
+                                        <td className={`${cell} text-right font-mono text-[11px] leading-tight`} title={`${d.changedFiles} ${t.files}`}>
+                                            <span className="text-green-600 dark:text-green-400">+{d.additions}</span>{' '}
+                                            <span className="text-red-600 dark:text-red-400">−{d.deletions}</span>
+                                        </td>
+                                        <td className={cell}><ApprovalChips approvals={d.approvals} unresolvedThreads={open ? d.unresolvedThreads : 0} strings={t} /></td>
+                                        {review ? (
+                                            <>
+                                                <td className={`${cell} text-center`}><DecisionIcon decision={review.decision} strings={t} /></td>
+                                                <td className={cell}><FindingCounts review={review} /></td>
+                                                <td className={cell}><ScoreBar value={review.criticality} title={review.criticalityReason} tone="risk" /></td>
+                                                <td className={cell}><ScoreBar value={review.aiReviewability} title={review.aiReviewabilityReason} tone="ai" /></td>
+                                                <td className={cell}><ScoreBar value={review.poReviewLikelihood} title={review.poReviewLikelihoodReason} tone="po" /></td>
+                                                <td className={`${cell} text-right font-mono text-gray-700 dark:text-gray-300`} title={t.need_hint}>{Math.round(review.needScore / 100)}</td>
+                                                <td className={`${cell} text-gray-500 dark:text-gray-400`} title={formatDate(review.reviewedAt)}>{formatRelative(review.reviewedAt, now, t)}</td>
+                                            </>
+                                        ) : (
+                                            <td colSpan={7} className={`${cell} text-gray-400 dark:text-gray-500`}>{t.not_reviewed}</td>
+                                        )}
+                                    </>
+                                ) : (
+                                    <td colSpan={9} />
+                                )}
+                            </tr>
+                        );
+                    })}
+                </tbody>
+            </table>
         </div>
     );
 }
@@ -474,7 +559,7 @@ function standupText(data, strings) {
     return [section(strings.standup_yesterday, yesterday), section(strings.standup_today, today), section(strings.standup_blockers, blockers)].join('\n\n');
 }
 
-export default function Daily({ day, scope, data, urls, strings, me }) {
+export default function Daily({ day, scope, data, urls, strings, prStrings = {}, me }) {
     const locale = (typeof document !== 'undefined' && document.documentElement.getAttribute('lang')) || 'de';
     const [copied, setCopied] = useState(false);
     const text = useMemo(() => standupText(data, strings), [data, strings]);
@@ -503,7 +588,7 @@ export default function Daily({ day, scope, data, urls, strings, me }) {
     ];
 
     return (
-        <>
+        <PrStrings.Provider value={prStrings}>
             <Head><title>{strings.title}</title></Head>
 
             <PageBands
@@ -583,7 +668,7 @@ export default function Daily({ day, scope, data, urls, strings, me }) {
                     </div>
                 </div>
             </div>
-        </>
+        </PrStrings.Provider>
     );
 }
 
