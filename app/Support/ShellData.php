@@ -47,16 +47,6 @@ final class ShellData
                     'active' => request()->routeIs('pull-requests.*'),
                 ],
                 [
-                    'label' => __('daily.nav'),
-                    'href' => route('daily'),
-                    'active' => request()->routeIs('daily'),
-                ],
-                [
-                    'label' => __('retro.nav'),
-                    'href' => route('retro'),
-                    'active' => request()->routeIs('retro'),
-                ],
-                [
                     'label' => __('nav.planstack_skill'),
                     'href' => route('skill.setup'),
                     'active' => request()->routeIs('skill.*'),
