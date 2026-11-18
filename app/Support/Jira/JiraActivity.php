@@ -22,6 +22,9 @@ class JiraActivity
 
     private const STORY_POINT_FIELDS = ['Story Points', 'Story point estimate', 'Story-Punkte', 'Storypoints'];
 
+    /** Fallback für instanzeigene Namen: Zahlenfeld, das nach Punkten/Schätzung klingt. */
+    private const STORY_POINT_PATTERN = '/story.?point|punkte|estimat|schätz|aufwand/i';
+
     private const FLAG_FIELDS = ['Flagged', 'Markiert', 'Gekennzeichnet'];
 
     private const SPRINT_SCHEMA = 'com.pyxis.greenhopper.jira:gh-sprint';
@@ -216,13 +219,16 @@ class JiraActivity
      */
     private function fields(): array
     {
-        return $this->fields ??= Cache::remember('jira-fields:'.md5($this->baseUrl()), now()->addDay(), function () {
+        return $this->fields ??= Cache::remember('jira-fields:v2:'.md5($this->baseUrl()), now()->addDay(), function () {
             $response = $this->client()->get('/rest/api/3/field');
             $this->assertOk($response);
             $all = collect($response->json());
 
             return [
-                'storyPoints' => $all->first(fn ($f) => in_array($f['name'] ?? '', self::STORY_POINT_FIELDS, true))['id'] ?? null,
+                'storyPoints' => ($all->first(fn ($f) => in_array($f['name'] ?? '', self::STORY_POINT_FIELDS, true))
+                    ?? $all->first(fn ($f) => data_get($f, 'schema.type') === 'number'
+                        && str_starts_with((string) ($f['id'] ?? ''), 'customfield_')
+                        && preg_match(self::STORY_POINT_PATTERN, (string) ($f['name'] ?? '')) === 1))['id'] ?? null,
                 'flagged' => $all->first(fn ($f) => in_array($f['name'] ?? '', self::FLAG_FIELDS, true))['id'] ?? null,
                 'sprint' => $all->first(fn ($f) => data_get($f, 'schema.custom') === self::SPRINT_SCHEMA)['id'] ?? null,
             ];

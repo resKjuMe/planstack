@@ -488,6 +488,7 @@ class DailyPresenter
             ->get()
             ->map(fn (PullRequestReview $review) => [
                 'key' => 'ps-'.$review->id,
+                'prId' => $review->pull_request_id,
                 'source' => 'ps-review',
                 'number' => $review->pullRequest->pull_request_id,
                 'title' => $review->pullRequest->title,
@@ -514,6 +515,7 @@ class DailyPresenter
             ->reject(fn (PullRequestApproval $approval) => in_array($approval->pullRequest->pull_request_id, $covered, true))
             ->map(fn (PullRequestApproval $approval) => [
                 'key' => 'gh-'.$approval->id,
+                'prId' => $approval->pull_request_id,
                 'source' => 'github',
                 'number' => $approval->pullRequest->pull_request_id,
                 'title' => $approval->pullRequest->title,
@@ -532,8 +534,10 @@ class DailyPresenter
                 'hour' => $this->hour($approval->submitted_at),
             ]);
 
+        // Je PR nur das letzte Review: Re-Reviews desselben PRs zählen nicht doppelt.
         return $psReviews->concat($approvals)
             ->sortByDesc('at')
+            ->unique('prId')
             ->take(self::LIST_LIMIT)
             ->values()
             ->all();
@@ -631,6 +635,8 @@ class DailyPresenter
         $visibility = collect($lines)
             ->first(fn (string $line) => preg_match('/^\s*[-*]\s*\[[xX]\]/', $line) === 1);
         $visibility = $visibility !== null ? $clean(preg_replace('/\[[xX]\]/', '', $visibility, 1)) : null;
+        // Nur der Kurztext der Option, ohne Erläuterung in Klammern bzw. nach Gedankenstrich.
+        $visibility = $visibility !== null ? trim(preg_split('/\s+[(\x{2013}\x{2014}]|,\s*„/u', $visibility)[0], " \t:.") : null;
 
         $change = null;
         foreach ($lines as $index => $line) {

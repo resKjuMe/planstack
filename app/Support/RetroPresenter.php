@@ -60,14 +60,17 @@ class RetroPresenter
         $merged = $this->mergedPullRequests($user, $userIds, $from->utc(), $until->utc());
         $stuckPrs = $this->stuckPullRequests($user, $userIds, $until->utc());
         $critical = $this->criticalFindings($user, $userIds, $from->utc(), $until->utc());
+        // Reviewte PRs, nicht Review-Läufe: Re-Reviews desselben PRs zählen einmal.
         $reviewsGiven = PullRequestReview::query()
             ->whereIn('reviewer_id', $userIds)
             ->whereBetween('review_finished_at', [$from->utc(), $until->utc()])
-            ->count()
-            + PullRequestApproval::query()
+            ->pluck('pull_request_id')
+            ->merge(PullRequestApproval::query()
                 ->whereIn('user_id', $userIds)
                 ->whereBetween('submitted_at', [$from->utc(), $until->utc()])
-                ->count();
+                ->pluck('pull_request_id'))
+            ->unique()
+            ->count();
 
         $done = $issues->where('done', true);
         $stats = [
