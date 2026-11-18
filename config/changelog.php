@@ -6,6 +6,26 @@
 return [
     'releases' => [
         [
+            'version' => '2.11.2',
+            'date' => '2026-11-18',
+            'tldr' => [
+                'de' => ['Daily: PRs und Reviews wieder in der Karte, mehr Zeilen in „Ich“'],
+                'en' => ['Daily: PRs and reviews back in the card, more rows in "Me"'],
+            ],
+            'changes' => [
+                'de' => [
+                    'Geändert: Die Stand-up-Karte zeigt unter „PRs & Reviews“ wieder, welche PRs gemergt oder eröffnet und welche reviewt wurden.',
+                    'Geändert: In „Ich“ stehen je Abschnitt bis zu 10 Zeilen, die Karte nutzt die volle Breite; Ticket-Titel werden nicht mehr abgeschnitten.',
+                    'Geändert: Pro Ticket stehen höchstens zwei PR-Nummern, der Rest als „+n“; das Seitenpanel öffnet den ersten Tab mit Einträgen.',
+                ],
+                'en' => [
+                    'Changed: The stand-up card again lists under "PRs & reviews" which PRs were merged or opened and which were reviewed.',
+                    'Changed: "Me" shows up to 10 rows per section and the card uses the full width; ticket titles are no longer cut off.',
+                    'Changed: At most two PR numbers per ticket, the rest as "+n"; the side panel opens the first tab with entries.',
+                ],
+            ],
+        ],
+        [
             'version' => '2.11.1',
             'date' => '2026-11-18',
             'tldr' => [

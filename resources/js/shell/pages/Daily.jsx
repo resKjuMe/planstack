@@ -27,7 +27,7 @@ const CATEGORY_TONE = { new: 'gray', indeterminate: 'blue', done: 'green' };
 const PR_TONE = { merged: 'emerald', opened: 'blue', closed: 'gray', ciFailed: 'red' };
 const DECISION_TONE = { APPROVE: 'green', REQUEST_CHANGES: 'amber' };
 const HEAT = ['bg-gray-100 dark:bg-gray-700/60', 'bg-indigo-200 dark:bg-indigo-900', 'bg-indigo-400 dark:bg-indigo-700', 'bg-indigo-600 dark:bg-indigo-500'];
-const PER_SECTION = 3;
+const PER_SECTION = { me: 10, team: 3 };
 const PER_TAB = 5;
 
 const pill = (tone) => `${PILL} ${TONE[tone] ?? TONE.gray}`;
@@ -53,7 +53,7 @@ function TicketLine({ ticket, status, tone }) {
             </a>
             <span className="min-w-0 flex-1 truncate text-gray-800 dark:text-gray-200" title={ticket.summary}>{ticket.summary}</span>
             {status && <span className={pill(tone)}>{status}</span>}
-            <PrAuthors prs={ticket.prs} compact className="shrink-0" />
+            <PrAuthors prs={ticket.prs} compact limit={2} className="shrink-0" />
         </div>
     );
 }
@@ -87,22 +87,22 @@ function More({ count, open, onClick, strings }) {
     );
 }
 
-function Section({ label, rows, render, strings, empty = null }) {
+function Section({ label, rows, render, strings, limit, empty = null }) {
     const [open, setOpen] = useState(false);
     if (!rows.length && !empty) return null;
-    const shown = open ? rows : rows.slice(0, PER_SECTION);
+    const shown = open ? rows : rows.slice(0, limit);
 
     return (
         <div className="flex flex-col gap-1">
             <span className="text-[11px] font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">{label}</span>
             {rows.length ? shown.map(render) : <span className="text-xs text-gray-400 dark:text-gray-500">{empty}</span>}
-            <More count={rows.length - PER_SECTION} open={open} onClick={() => setOpen((v) => !v)} strings={strings} />
+            <More count={rows.length - limit} open={open} onClick={() => setOpen((v) => !v)} strings={strings} />
         </div>
     );
 }
 
 // Karte einer Person: Gestern / Heute / Blocker.
-function PersonCard({ person, strings }) {
+function PersonCard({ person, strings, limit }) {
     return (
         <article className={`${CARD} flex flex-col gap-3 p-4`}>
             <div className="flex items-center gap-2.5">
@@ -122,13 +122,28 @@ function PersonCard({ person, strings }) {
                 label={strings.standup_yesterday}
                 rows={person.yesterday}
                 strings={strings}
-                empty={strings.standup_none}
+                limit={limit}
+                empty={person.activity.length ? null : strings.standup_none}
                 render={(row) => <TicketLine key={row.key} ticket={row} status={row.to} tone={CATEGORY_TONE[row.toCategory]} />}
+            />
+            <Section
+                label={strings.section_prs}
+                rows={person.activity}
+                strings={strings}
+                limit={limit}
+                render={(row) =>
+                    row.kind === 'pr' ? (
+                        <PrLine key={`pr-${row.number}-${row.event}`} row={row} status={strings[`pr_${row.event}`]} tone={PR_TONE[row.event]} />
+                    ) : (
+                        <PrLine key={`review-${row.prId ?? row.number}`} row={row} status={`${strings.review_short}: ${strings[`decision_${row.decision}`] ?? strings.decision_none}`} tone={DECISION_TONE[row.decision]} />
+                    )
+                }
             />
             <Section
                 label={strings.standup_today}
                 rows={person.today}
                 strings={strings}
+                limit={limit}
                 render={(row) => <TicketLine key={row.key} ticket={row} status={row.status} tone={row.isStale ? 'amber' : CATEGORY_TONE[row.category]} />}
             />
             {person.blockers.length > 0 && (
@@ -148,7 +163,7 @@ function people(data, scope, me, strings) {
     const byName = new Map();
     const get = (name) => {
         const key = scope === 'team' ? name || strings.unassigned : me;
-        if (!byName.has(key)) byName.set(key, { name: key, yesterday: [], today: [], blockers: [], last: '' });
+        if (!byName.has(key)) byName.set(key, { name: key, yesterday: [], today: [], blockers: [], activity: [], last: '' });
         return byName.get(key);
     };
     data.issueChanges.forEach((row) => {
@@ -157,6 +172,13 @@ function people(data, scope, me, strings) {
         if (row.at > p.last) p.last = row.at;
     });
     data.today.forEach((row) => get(row.assigneeName).today.push(row));
+    // PRs und Reviews des Tags; PRs nur, wenn ihr Ticket nicht schon unter „Gestern“ steht.
+    data.pullRequests.forEach((pr) => {
+        const p = get(pr.authorName);
+        const known = pr.tickets?.length > 0 && pr.tickets.every((t) => p.yesterday.some((row) => row.key === t.key));
+        if (!known || pr.event === 'ciFailed') p.activity.push({ ...pr, kind: 'pr' });
+    });
+    data.reviews.forEach((review) => get(review.reviewerName).activity.push({ ...review, kind: 'review' }));
     data.blockers.forEach((row) => get(row.assigneeName).blockers.push(row));
 
     const team = new Map(data.team.map((m) => [m.name, m]));
@@ -179,6 +201,7 @@ function people(data, scope, me, strings) {
                 ].filter(Boolean).join(' · '),
             };
         })
+        .filter((p) => p.yesterday.length || p.today.length || p.blockers.length || p.activity.length)
         .sort((a, b) => (b.blockers.length > 0) - (a.blockers.length > 0) || (b.last > a.last ? 1 : -1));
 }
 
@@ -231,7 +254,7 @@ function SidePanel({ data, strings, locale }) {
         { key: 'prs', count: data.pullRequests.length + data.reviews.length },
         { key: 'timeline', count: null },
     ];
-    const [active, setActive] = useState(data.blockers.length ? 'blockers' : 'waiting');
+    const [active, setActive] = useState(tabs.find((tab) => tab.count > 0)?.key ?? 'timeline');
 
     return (
         <aside className={`${CARD} self-start px-4 pb-4`}>
@@ -463,8 +486,8 @@ export default function Daily({ day, scope, data, urls, strings, me }) {
                             {cards.length === 0 ? (
                                 <p className={`${CARD} px-4 py-8 text-center text-sm text-gray-500 dark:text-gray-400`}>{strings.activity_empty}</p>
                             ) : (
-                                <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-                                    {cards.map((person) => <PersonCard key={person.name} person={person} strings={strings} />)}
+                                <div className="grid grid-cols-1 gap-3">
+                                    {cards.map((person) => <PersonCard key={person.name} person={person} strings={strings} limit={PER_SECTION[scope] ?? PER_SECTION.team} />)}
                                 </div>
                             )}
                             {quiet.length > 0 && (
