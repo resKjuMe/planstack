@@ -1,8 +1,9 @@
 import React from 'react';
 
 // Ersteller der PRs zu einem Jira-Ticket, je Person gruppiert: Jira-Avatar (sonst
-// Initialen), Name und die PR-Nummern. `compact` lässt den Namen weg (Tooltip).
-export default function PrAuthors({ prs, compact = false, className = '' }) {
+// Initialen), Name und die PR-Nummern. `compact` lässt den Namen weg (Tooltip),
+// `limit` kürzt die Nummern je Person auf „+n“.
+export default function PrAuthors({ prs, compact = false, limit = null, className = '' }) {
     if (!prs?.length) return null;
 
     const authors = [];
@@ -28,11 +29,14 @@ export default function PrAuthors({ prs, compact = false, className = '' }) {
                         </span>
                     )}
                     {!compact && <span className="font-medium">{entry.author}</span>}
-                    {entry.prs.map((pr) => (
+                    {(limit ? entry.prs.slice(0, limit) : entry.prs).map((pr) => (
                         <a key={pr.url} href={pr.url} className="font-mono hover:text-indigo-600 hover:underline dark:hover:text-indigo-400">
                             #{pr.number}
                         </a>
                     ))}
+                    {limit && entry.prs.length > limit && (
+                        <span className="font-mono" title={entry.prs.slice(limit).map((pr) => `#${pr.number}`).join(' ')}>+{entry.prs.length - limit}</span>
+                    )}
                 </span>
             ))}
         </span>

@@ -144,4 +144,7 @@ return [
     'kpi_blockers_short' => 'Blocker',
     'po_decisions' => ':count offene PO-Entscheidung|:count offene PO-Entscheidungen',
     'review_by' => 'Review von :name',
+
+    'section_prs' => 'PRs & Reviews',
+    'review_short' => 'Review',
 ];
