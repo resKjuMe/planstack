@@ -79,9 +79,10 @@ function PrLine({ row, status, tone }) {
 }
 
 const PR_STATE = { OPEN: 'opened', MERGED: 'merged', CLOSED: 'closed' };
-// Feste Spalten, damit die Stand-up-Zeilen untereinander fluchten:
-// Avatar · vorher · → · nachher · Key · Titel · PRs.
-const STANDUP_GRID = 'grid grid-cols-[1.25rem_7.5rem_0.75rem_9rem_5.5rem_minmax(0,1fr)_2.5rem] items-center gap-x-2';
+// Ein Raster je Karte, die Zeilen hängen per Subgrid daran: Spalten fluchten und
+// sind nur so breit wie nötig. Avatar · vorher · → · nachher · Key · Titel · PRs.
+const CARD_GRID = 'grid grid-cols-[auto_auto_auto_auto_auto_minmax(0,1fr)_auto] items-center gap-x-2 gap-y-1';
+const STANDUP_GRID = 'col-span-full grid grid-cols-subgrid items-center';
 const CELL_PILL = 'max-w-full justify-self-start truncate';
 
 function Avatar({ pr }) {
@@ -103,7 +104,7 @@ function StandupLine({ ticket, from = null, status, tone, prs = [], strings }) {
     const link = ticket?.url ?? prs[0]?.url;
 
     return (
-        <div className="flex flex-col">
+        <div className="contents">
             <div className={`${STANDUP_GRID} text-sm`}>
                 <Avatar pr={prs[0]} />
                 {from && from !== status ? (
@@ -138,7 +139,7 @@ function StandupLine({ ticket, from = null, status, tone, prs = [], strings }) {
                 )}
             </div>
             {open && (
-                <div className="ml-[0.6rem] mt-1 flex flex-col gap-1 border-l border-gray-200 pl-[1.15rem] dark:border-gray-700">
+                <div className="col-span-full mb-1 ml-[0.6rem] flex flex-col gap-1 border-l border-gray-200 pl-[1.15rem] dark:border-gray-700">
                     {prs.map((pr) => (
                         <div key={pr.url} className="flex min-w-0 items-center gap-2 text-xs text-gray-600 dark:text-gray-400">
                             <Avatar pr={pr} />
@@ -168,10 +169,14 @@ function Section({ label, rows, render, strings, limit, empty = null }) {
     const shown = open ? rows : rows.slice(0, limit);
 
     return (
-        <div className="flex flex-col gap-1">
-            <span className="text-[11px] font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">{label}</span>
-            {rows.length ? shown.map(render) : <span className="text-xs text-gray-400 dark:text-gray-500">{empty}</span>}
-            <More count={rows.length - limit} open={open} onClick={() => setOpen((v) => !v)} strings={strings} />
+        <div className="contents">
+            <span className="col-span-full pt-2 text-[11px] font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">{label}</span>
+            {rows.length ? shown.map(render) : <span className="col-span-full text-xs text-gray-400 dark:text-gray-500">{empty}</span>}
+            {rows.length > limit && (
+                <span className="col-span-full">
+                    <More count={rows.length - limit} open={open} onClick={() => setOpen((v) => !v)} strings={strings} />
+                </span>
+            )}
         </div>
     );
 }
@@ -179,7 +184,7 @@ function Section({ label, rows, render, strings, limit, empty = null }) {
 // Karte einer Person: Gestern / Heute / Blocker.
 function PersonCard({ person, strings, limit }) {
     return (
-        <article className={`${CARD} flex flex-col gap-3 p-4`}>
+        <article className={`${CARD} flex flex-col gap-2 p-4`}>
             <div className="flex items-center gap-2.5">
                 {person.avatar ? (
                     <img src={person.avatar} alt="" className="h-8 w-8 rounded-full" />
@@ -193,6 +198,7 @@ function PersonCard({ person, strings, limit }) {
                     <p className="truncate text-xs text-gray-500 dark:text-gray-400">{person.stats}</p>
                 </div>
             </div>
+            <div className={CARD_GRID}>
             <Section
                 label={strings.standup_yesterday}
                 rows={person.yesterday}
@@ -222,12 +228,13 @@ function PersonCard({ person, strings, limit }) {
                 render={(row) => <StandupLine key={row.key} ticket={row} status={row.status} tone={row.isStale ? 'amber' : CATEGORY_TONE[row.category]} prs={row.prs ?? []} strings={strings} />}
             />
             {person.blockers.length > 0 && (
-                <div className="flex flex-col gap-1 rounded-md bg-red-50 p-2 dark:bg-red-900/20">
+                <div className="col-span-full mt-2 grid grid-cols-subgrid gap-y-1 rounded-md bg-red-50 py-2 dark:bg-red-900/20">
                     {person.blockers.map((row) => (
                         <StandupLine key={row.key} ticket={row} status={row.flagged ? strings.flagged : row.status} tone="red" prs={row.prs ?? []} strings={strings} />
                     ))}
                 </div>
             )}
+            </div>
         </article>
     );
 }
