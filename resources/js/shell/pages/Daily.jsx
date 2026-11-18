@@ -78,6 +78,81 @@ function PrLine({ row, status, tone }) {
     );
 }
 
+const PR_STATE = { open: 'opened', merged: 'merged', closed: 'closed' };
+// Feste Spalten, damit die Stand-up-Zeilen untereinander fluchten:
+// Avatar · vorher · → · nachher · Key · Titel · PRs.
+const STANDUP_GRID = 'grid grid-cols-[1.25rem_7.5rem_0.75rem_9rem_5.5rem_minmax(0,1fr)_2.5rem] items-center gap-x-2';
+const CELL_PILL = 'max-w-full justify-self-start truncate';
+
+function Avatar({ pr }) {
+    if (pr?.avatar) return <img src={pr.avatar} alt="" title={pr.author ?? ''} className="h-5 w-5 shrink-0 rounded-full ring-1 ring-gray-200 dark:ring-gray-600" loading="lazy" />;
+    if (pr) {
+        return (
+            <span title={pr.author ?? ''} className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-indigo-100 text-[9px] font-semibold text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300">
+                {pr.initials}
+            </span>
+        );
+    }
+    return <span className="h-5 w-5 shrink-0" aria-hidden="true" />;
+}
+
+// Stand-up-Zeile: PR-Ersteller · Status (vorher → nachher) · Jira-Titel; der Pfeil
+// klappt die PRs zum Ticket auf.
+function StandupLine({ ticket, from = null, status, tone, prs = [], strings }) {
+    const [open, setOpen] = useState(false);
+    const link = ticket?.url ?? prs[0]?.url;
+
+    return (
+        <div className="flex flex-col">
+            <div className={`${STANDUP_GRID} text-sm`}>
+                <Avatar pr={prs[0]} />
+                {from && from !== status ? (
+                    <>
+                        <span className={`${pill('gray')} ${CELL_PILL}`} title={from}>{from}</span>
+                        <span className="text-center text-xs text-gray-400" aria-hidden="true">→</span>
+                    </>
+                ) : (
+                    <>
+                        <span />
+                        <span />
+                    </>
+                )}
+                {status ? <span className={`${pill(tone)} ${CELL_PILL}`} title={status}>{status}</span> : <span />}
+                <a href={link} target="_blank" rel="noreferrer" className="truncate font-mono text-xs font-semibold text-indigo-700 hover:underline dark:text-indigo-400">
+                    {ticket?.key ?? `#${prs[0]?.number}`}
+                </a>
+                <span className="min-w-0 truncate text-gray-800 dark:text-gray-200" title={ticket?.summary}>{ticket?.summary}</span>
+                {prs.length > 0 ? (
+                    <button
+                        type="button"
+                        onClick={() => setOpen((v) => !v)}
+                        aria-expanded={open}
+                        title={transChoice(strings.pr_count, prs.length)}
+                        className="inline-flex items-center justify-end gap-1 rounded px-1 text-xs text-gray-500 hover:bg-gray-100 hover:text-gray-800 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-gray-200"
+                    >
+                        {prs.length}
+                        <span className={`inline-block transition-transform ${open ? 'rotate-90' : ''}`} aria-hidden="true">▸</span>
+                    </button>
+                ) : (
+                    <span aria-hidden="true" />
+                )}
+            </div>
+            {open && (
+                <div className="ml-[0.6rem] mt-1 flex flex-col gap-1 border-l border-gray-200 pl-[1.15rem] dark:border-gray-700">
+                    {prs.map((pr) => (
+                        <div key={pr.url} className="flex min-w-0 items-center gap-2 text-xs text-gray-600 dark:text-gray-400">
+                            <Avatar pr={pr} />
+                            <a href={pr.url} className="font-mono font-semibold text-indigo-700 hover:underline dark:text-indigo-400">#{pr.number}</a>
+                            <span className="truncate">{pr.author}</span>
+                            {PR_STATE[pr.state] && <span className={pill(PR_TONE[PR_STATE[pr.state]])}>{strings[`pr_${PR_STATE[pr.state]}`]}</span>}
+                        </div>
+                    ))}
+                </div>
+            )}
+        </div>
+    );
+}
+
 function More({ count, open, onClick, strings }) {
     if (count <= 0) return null;
     return (
@@ -124,7 +199,7 @@ function PersonCard({ person, strings, limit }) {
                 strings={strings}
                 limit={limit}
                 empty={person.activity.length ? null : strings.standup_none}
-                render={(row) => <TicketLine key={row.key} ticket={row} status={row.to} tone={CATEGORY_TONE[row.toCategory]} />}
+                render={(row) => <StandupLine key={row.key} ticket={row} from={row.from} status={row.to} tone={CATEGORY_TONE[row.toCategory]} prs={row.prs ?? []} strings={strings} />}
             />
             <Section
                 label={strings.section_prs}
@@ -133,9 +208,9 @@ function PersonCard({ person, strings, limit }) {
                 limit={limit}
                 render={(row) =>
                     row.kind === 'pr' ? (
-                        <PrLine key={`pr-${row.number}-${row.event}`} row={row} status={strings[`pr_${row.event}`]} tone={PR_TONE[row.event]} />
+                        <StandupLine key={`pr-${row.number}-${row.event}`} ticket={row.tickets?.[0] ?? { key: `#${row.number}`, summary: row.title, url: row.pr?.url ?? row.url }} status={strings[`pr_${row.event}`]} tone={PR_TONE[row.event]} prs={row.pr ? [row.pr] : []} strings={strings} />
                     ) : (
-                        <PrLine key={`review-${row.prId ?? row.number}`} row={row} status={`${strings.review_short}: ${strings[`decision_${row.decision}`] ?? strings.decision_none}`} tone={DECISION_TONE[row.decision]} />
+                        <StandupLine key={`review-${row.prId ?? row.number}`} ticket={row.tickets?.[0] ?? { key: `#${row.number}`, summary: row.title, url: row.pr?.url ?? row.url }} status={`${strings.review_short}: ${strings[`decision_${row.decision}`] ?? strings.decision_none}`} tone={DECISION_TONE[row.decision]} prs={row.pr ? [row.pr] : []} strings={strings} />
                     )
                 }
             />
@@ -144,12 +219,12 @@ function PersonCard({ person, strings, limit }) {
                 rows={person.today}
                 strings={strings}
                 limit={limit}
-                render={(row) => <TicketLine key={row.key} ticket={row} status={row.status} tone={row.isStale ? 'amber' : CATEGORY_TONE[row.category]} />}
+                render={(row) => <StandupLine key={row.key} ticket={row} status={row.status} tone={row.isStale ? 'amber' : CATEGORY_TONE[row.category]} prs={row.prs ?? []} strings={strings} />}
             />
             {person.blockers.length > 0 && (
                 <div className="flex flex-col gap-1 rounded-md bg-red-50 p-2 dark:bg-red-900/20">
                     {person.blockers.map((row) => (
-                        <TicketLine key={row.key} ticket={row} status={row.flagged ? strings.flagged : row.status} tone="red" />
+                        <StandupLine key={row.key} ticket={row} status={row.flagged ? strings.flagged : row.status} tone="red" prs={row.prs ?? []} strings={strings} />
                     ))}
                 </div>
             )}

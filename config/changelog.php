@@ -6,6 +6,24 @@
 return [
     'releases' => [
         [
+            'version' => '2.11.3',
+            'date' => '2026-11-18',
+            'tldr' => [
+                'de' => ['Daily: Stand-up-Zeilen mit Avatar, Statuswechsel und aufklappbaren PRs'],
+                'en' => ['Daily: stand-up rows with avatar, status change and expandable PRs'],
+            ],
+            'changes' => [
+                'de' => [
+                    'Geändert: Jede Stand-up-Zeile beginnt mit dem Avatar des PR-Erstellers, dann der Status (vorher → nachher) und der Jira-Titel.',
+                    'Geändert: Die PRs zu einem Ticket klappen über den Pfeil am Zeilenende auf; die Spalten fluchten tabellarisch.',
+                ],
+                'en' => [
+                    'Changed: Each stand-up row starts with the PR author\'s avatar, then the status (before → after) and the Jira title.',
+                    'Changed: The PRs of a ticket expand via the arrow at the end of the row; columns are aligned like a table.',
+                ],
+            ],
+        ],
+        [
             'version' => '2.11.2',
             'date' => '2026-11-18',
             'tldr' => [
