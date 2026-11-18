@@ -62,7 +62,7 @@ Lehnt Jira das Sprint-Feld ab (nicht auf der Maske), ohne anlegen und danach `PO
 
 Fachlich, **kurz und präzise, aber vollständig**: jedes Detail aus Planstack muss drinstehen, nichts dazuerfinden. Keine Planstack-Interna (Gates, Claim, Status, Unlocks, Token), keine PR-Nummern; Code-/Dateinamen nur, wenn sie für das Verständnis nötig sind. Deutsch mit echten Umlauten. Leere Abschnitte weglassen.
 
-**Titel:** Aufgabe = Phasenname, sprechend formuliert (ohne „Phase 1"-Präfix, wenn der Name sonst nichts sagt, ergänzen, worum es geht). Unteraufgabe = `<Task-Name>: <summary>` (max. 255 Zeichen) — der Name hält die Zuordnung zu Planstack sichtbar.
+**Titel:** Aufgabe = Phasenname, sprechend formuliert (ohne „Phase 1"-Präfix, wenn der Name sonst nichts sagt, ergänzen, worum es geht). Unteraufgabe = `<Task-Name>: <Kurztitel>` — der Name hält die Zuordnung zu Planstack sichtbar. Den Kurztitel **nicht** aus `summary` übernehmen, sondern für den PO verdichten: höchstens ~50 Zeichen, sagt in Alltagssprache, was entsteht oder sich ändert (z. B. `F3: Neues Formular: Speichern und Fehlermeldungen`, `R1: Intern freischalten und eine Woche beobachten`). Keine Aufzählungen, Begründungen oder Klassennamen im Titel — die gehören in die Beschreibung.
 
 **Beschreibung Aufgabe (Phase):**
 
