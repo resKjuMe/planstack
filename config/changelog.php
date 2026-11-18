@@ -6,6 +6,22 @@
 return [
     'releases' => [
         [
+            'version' => '2.12.1',
+            'date' => '2026-11-18',
+            'tldr' => [
+                'de' => ['Jira-Abgleich: gemergt → „Closed“, in Review → „In Review“, nie „Product-Review“'],
+                'en' => ['Jira sync: merged → "Closed", in review → "In Review", never "Product-Review"'],
+            ],
+            'changes' => [
+                'de' => [
+                    'Behoben: Der Jira-Abgleich setzt Tickets nicht mehr auf „Product-Review“. Erledigte bzw. gemergte Tasks landen in „Closed“, reviewbare und Tasks in Review in „In Review“.',
+                ],
+                'en' => [
+                    'Fixed: The Jira sync no longer moves tickets to "Product-Review". Done or merged tasks go to "Closed", reviewable and in-review tasks to "In Review".',
+                ],
+            ],
+        ],
+        [
             'version' => '2.12.0',
             'date' => '2026-11-18',
             'tldr' => [

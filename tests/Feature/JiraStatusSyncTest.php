@@ -64,6 +64,10 @@ class JiraStatusSyncTest extends TestCase
             self::JB.'/rest/api/3/issue/MN-1/transitions' => fn (Request $r) => $r->method() === 'GET'
                 ? Http::response(['transitions' => [
                     ['id' => '21', 'to' => ['name' => 'In Progress', 'statusCategory' => ['key' => 'indeterminate']]],
+                    ['id' => '101', 'to' => ['name' => 'Product-Review', 'statusCategory' => ['key' => 'done']]],
+                    ['id' => '31', 'to' => ['name' => 'Code Review', 'statusCategory' => ['key' => 'indeterminate']]],
+                    ['id' => '41', 'to' => ['name' => 'In Review', 'statusCategory' => ['key' => 'indeterminate']]],
+                    ['id' => '102', 'to' => ['name' => 'Done', 'statusCategory' => ['key' => 'done']]],
                     ['id' => '111', 'to' => ['name' => 'Closed', 'statusCategory' => ['key' => 'done']]],
                     ['id' => '121', 'to' => ['name' => 'Abgelehnt', 'statusCategory' => ['key' => 'done']]],
                 ]])
@@ -144,5 +148,18 @@ class JiraStatusSyncTest extends TestCase
 
         Http::assertNotSent(fn (Request $r) => $r->method() === 'POST' && str_ends_with($r->url(), '/transitions'));
         $this->assertSame('todo', JiraStatusSync::classOfTask($task->refresh()->load('orgStatus')));
+    }
+
+    public function test_in_review_goes_to_jira_in_review_never_product_review(): void
+    {
+        [$project] = $this->setUpProject();
+        $this->task($project, StatusRole::IN_REVIEW, ['jira_sync_base' => ['class' => 'progress', 'account' => null]]);
+        $this->fakeJira(['status' => 'In Progress', 'category' => 'indeterminate', 'assignee' => null]);
+
+        $result = app(JiraStatusSync::class)->sync($project);
+
+        $this->assertSame([], $result['errors']);
+        Http::assertSent(fn (Request $r) => $r->method() === 'POST' && str_ends_with($r->url(), '/transitions') && $r['transition']['id'] === '41');
+        Http::assertNotSent(fn (Request $r) => $r->method() === 'POST' && str_ends_with($r->url(), '/transitions') && $r['transition']['id'] === '101');
     }
 }

@@ -37,6 +37,14 @@ class JiraStatusSync
 
     public const DONE = 'done';
 
+    private const NEVER_TARGET = '/product[\s_-]*review/i';
+
+    /** Bevorzugter Zielstatus je Klasse: gemergt → „Closed“, reviewbar/in Review → „In Review“. */
+    private const PREFERRED = [
+        self::DONE => '/^(closed|geschlossen)$/i',
+        self::REVIEW => '/^in[\s_-]*review$/i',
+    ];
+
     private const ROLE_FOR_CLASS = [
         self::TODO => StatusRole::PICKABLE,
         self::PROGRESS => StatusRole::IN_PROGRESS,
@@ -270,6 +278,12 @@ class JiraStatusSync
         return in_array(mb_strtolower($name), ['abgelehnt', 'rejected', "won't do", 'declined'], true);
     }
 
+    /** Status, die der Abgleich nie selbst setzt (Product-Review macht der PO). */
+    private function isNeverTarget(string $name): bool
+    {
+        return preg_match(self::NEVER_TARGET, $name) === 1;
+    }
+
     private function planstackStatusChangedAt(Task $task): CarbonImmutable
     {
         $events = $this->history->changeEvents(collect([$task->id]));
@@ -338,10 +352,13 @@ class JiraStatusSync
         for ($i = 0; $i < 3; $i++) {
             $response = $client->get("/rest/api/3/issue/{$key}/transitions");
             $this->assertOk($response);
-            $transitions = collect($response->json('transitions', []));
+            $transitions = collect($response->json('transitions', []))
+                ->reject(fn ($t) => $this->isRejected($t['to']['name']) || $this->isNeverTarget($t['to']['name']));
+            $matching = $transitions->filter(fn ($t) => $this->classify($t['to']['name'], $t['to']['statusCategory']['key']) === $wanted);
 
-            $direct = $transitions->first(fn ($t) => $this->classify($t['to']['name'], $t['to']['statusCategory']['key']) === $wanted
-                && ! $this->isRejected($t['to']['name']));
+            $preferred = self::PREFERRED[$wanted] ?? null;
+            $direct = ($preferred ? $matching->first(fn ($t) => preg_match($preferred, $t['to']['name']) === 1) : null)
+                ?? $matching->first();
             $step = $direct ?? $transitions->first(fn ($t) => $this->classify($t['to']['name'], $t['to']['statusCategory']['key']) === self::PROGRESS);
 
             if (! $step) {
