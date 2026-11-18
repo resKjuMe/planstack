@@ -2,7 +2,7 @@
 
 Spiegelt das Board in ein **Jira-Epic**: jede **Phase** wird eine **Aufgabe** des Epics, jeder **Task** dieser Phase eine **Unteraufgabe** dieser Aufgabe. Alles landet im **Sprint des Epics**. Planstack bleibt die Quelle; Jira bekommt eine für den PO lesbare Fassung. Die Verknüpfung steht danach in Planstack: Projekt `jira_epic_key`, Phase `jira_key`, Task `jira_key`.
 
-Statuszeile: `⚙ Sync (<Phase> <%>) <PROJECT> — <Schritt>` mit den Phasen `Lade`, `Plane`, `Lege an`, `Aktualisiere`. `sync` claimt keinen Task — es gibt also kein Task-Event; die Zeile direkt nach `$ST` schreiben.
+Statuszeile: `⚙ Sync (<Phase> <%>) <PROJECT> — <Schritt>` mit den Phasen `Lade`, `Plane`, `Lege an`, `Aktualisiere`, `Status`. `sync` claimt keinen Task — es gibt also kein Task-Event; die Zeile direkt nach `$ST` schreiben.
 
 ### 1. Daten holen
 
@@ -62,7 +62,7 @@ Lehnt Jira das Sprint-Feld ab (nicht auf der Maske), ohne anlegen und danach `PO
 
 Fachlich, **kurz und präzise, aber vollständig**: jedes Detail aus Planstack muss drinstehen, nichts dazuerfinden. Keine Planstack-Interna (Gates, Claim, Status, Unlocks, Token), keine PR-Nummern; Code-/Dateinamen nur, wenn sie für das Verständnis nötig sind. Deutsch mit echten Umlauten. Leere Abschnitte weglassen.
 
-**Titel:** Aufgabe = Phasenname, sprechend formuliert (ohne „Phase 1"-Präfix, wenn der Name sonst nichts sagt, ergänzen, worum es geht). Unteraufgabe = `<Task-Name>: <Kurztitel>` — der Name hält die Zuordnung zu Planstack sichtbar. Den Kurztitel **nicht** aus `summary` übernehmen, sondern für den PO verdichten: höchstens ~50 Zeichen, sagt in Alltagssprache, was entsteht oder sich ändert (z. B. `F3: Neues Formular: Speichern und Fehlermeldungen`, `R1: Intern freischalten und eine Woche beobachten`). Keine Aufzählungen, Begründungen oder Klassennamen im Titel — die gehören in die Beschreibung.
+**Titel:** Aufgabe = `<Phasen-Kürzel>: <Kurztitel>` (z. B. `P2: Neues Formular in React`, `P3: Freischalten und beobachten`) — Kürzel aus dem Phasennamen, Kurztitel nach denselben Regeln wie bei Unteraufgaben. Unteraufgabe = `<Task-Name>: <Kurztitel>` — der Name hält die Zuordnung zu Planstack sichtbar. Den Kurztitel **nicht** aus `summary` übernehmen, sondern für den PO verdichten: höchstens ~50 Zeichen, sagt in Alltagssprache, was entsteht oder sich ändert (z. B. `F3: Neues Formular: Speichern und Fehlermeldungen`, `R1: Intern freischalten und eine Woche beobachten`). Keine Aufzählungen, Begründungen oder Klassennamen im Titel — die gehören in die Beschreibung.
 
 **Beschreibung Aufgabe (Phase):**
 
@@ -83,6 +83,15 @@ Fachlich, **kurz und präzise, aber vollständig**: jedes Detail aus Planstack m
 
 **Format:** Jira v3 erwartet **ADF**. Abschnittstitel als `heading` (Level 3), Fließtext als `paragraph`, Punkte als `bulletList`/`listItem`, Schritte als `orderedList`, Code-/Dateinamen als Text mit `code`-Mark.
 
-### 6. Ergebnis
+### 6. Status und Assignee
 
-Tabelle: Phase/Task → Jira-Key (als Link `<JB>/browse/<KEY>`) → Aktion (angelegt / übernommen / geprüft / aktualisiert / Fehler), darunter Epic, Sprint (oder „ohne Sprint" mit Grund), übersprungene Tasks ohne Phase und alle Abweichungen (falscher Parent, `404`). Danach die Statuszeile leeren.
+Bei **jedem** Lauf (neu angelegte und vorhandene Tickets) Status und Bearbeiter aus Planstack übernehmen. Planstack ist führend; Jira-Änderungen daran werden überschrieben.
+
+- **Status Unteraufgabe** nach Planstack-`status`: `MERGED`/`COMPLETED` → Erledigt-Status (Kategorie `done`, nicht „Abgelehnt"), `IN_REVIEW`/`REVIEWBAR`/`APPROVED` → „In Review", `CLAIMED`/`ANALYZING`/`IN_PROGRESS`/`BEREINIGEN` → „In Progress", sonst → Anfangsstatus. Unbekannte Org-Status nach ihrer Rolle einordnen. Übergänge über `GET/POST $JB/rest/api/3/issue/<KEY>/transitions`; fehlt ein direkter Übergang, über „In Progress" gehen.
+- **Status Aufgabe** aus ihren Unteraufgaben: alle erledigt → erledigt, mindestens eine begonnen/erledigt → „In Progress", sonst Anfangsstatus.
+- **Assignee Unteraufgabe** = `claimed_by` des Tasks (`GET .../tasks?fields=full`), aufgelöst per `GET $JB/rest/api/3/user/assignable/search?project=<PROJEKT>&query=<Name>` (genau ein aktiver Treffer mit gleichem Anzeigenamen, sonst leer lassen und melden); ohne Claim → niemand. **Aufgabe** = die Person, wenn alle beanspruchten Unteraufgaben dieselbe haben, sonst niemand.
+- **Reihenfolge:** erst Status-Übergang, **danach** Assignee setzen — Jira-Automationen (z. B. „Arbeit starten") weisen das Ticket sonst dem ausführenden Nutzer zu.
+
+### 7. Ergebnis
+
+Tabelle: Phase/Task → Jira-Key (als Link `<JB>/browse/<KEY>`) → Aktion (angelegt / übernommen / geprüft / aktualisiert / Fehler) → Status → Assignee, darunter Epic, Sprint (oder „ohne Sprint" mit Grund), übersprungene Tasks ohne Phase und alle Abweichungen (falscher Parent, `404`). Danach die Statuszeile leeren.
