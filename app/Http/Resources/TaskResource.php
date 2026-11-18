@@ -54,7 +54,7 @@ class TaskResource extends JsonResource
         'reviewed_by', 'reviewed_by_name',
         'last_reviewed_at', 'last_review_recommendation', 'last_review_summary',
         'target_actual', 'test_cases', 'criticality', 'criticality_label',
-        'custom_fields',
+        'jira_key', 'custom_fields',
     ];
 
     /**
@@ -107,6 +107,7 @@ class TaskResource extends JsonResource
             'test_cases' => $this->description_test_cases,
             'criticality' => $this->criticality?->value,
             'criticality_label' => $this->criticality?->label(),
+            'jira_key' => $this->jira_key,
             // status may be null when the task sits in a custom (org-defined)
             // status with no canonical ENUM value — fall back to the org status
             // key/label (status_id is the authority).

@@ -802,6 +802,12 @@ export default function TaskShow(props) {
                                         <span className={'inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ' + task.criticality.badgeClasses}>{task.criticality.label}</span>
                                     </div>
                                 )}
+                                {task.jiraKey && (
+                                    <div className="flex items-center justify-between">
+                                        <span className="text-gray-400 dark:text-gray-500">{strings.jiraKey}</span>
+                                        <span className="font-mono text-xs text-gray-700 dark:text-gray-300">{task.jiraKey}</span>
+                                    </div>
+                                )}
                                 {task.hasReview && (
                                     <div className="flex items-center justify-between">
                                         <span className="text-gray-400 dark:text-gray-500">{strings.review}</span>

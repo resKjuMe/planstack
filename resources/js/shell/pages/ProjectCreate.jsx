@@ -5,7 +5,7 @@ import PageBands from '../components/PageBands.jsx';
 
 // Projekt anlegen (ehemals projects/create.blade.php) als React-Inertia-Formular.
 export default function ProjectCreate({ storeUrl, cancelUrl, strings }) {
-    const form = useForm({ alias: '', name: '', description: '', github_repo: '' });
+    const form = useForm({ alias: '', name: '', description: '', github_repo: '', jira_epic_key: '' });
 
     const submit = (e) => {
         e.preventDefault();
@@ -50,6 +50,13 @@ export default function ProjectCreate({ storeUrl, cancelUrl, strings }) {
                                 <input id="github_repo" type="text" value={form.data.github_repo} onChange={(e) => form.setData('github_repo', e.target.value)} maxLength={255} placeholder="owner/repo" className={field + ' font-mono'} />
                                 <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">{strings.githubHintPre} <span className="font-mono">owner/repo</span> {strings.githubHintPost}</p>
                                 {err('github_repo')}
+                            </div>
+
+                            <div>
+                                <label htmlFor="jira_epic_key" className={label}>{strings.jiraEpic}</label>
+                                <input id="jira_epic_key" type="text" value={form.data.jira_epic_key} onChange={(e) => form.setData('jira_epic_key', e.target.value)} maxLength={32} placeholder="MN-1234" className={field + ' font-mono'} />
+                                <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">{strings.jiraEpicHint}</p>
+                                {err('jira_epic_key')}
                             </div>
 
                             <div className="flex items-center justify-end gap-3">

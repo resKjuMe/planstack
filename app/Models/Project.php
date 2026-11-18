@@ -43,6 +43,7 @@ class Project extends Model
         'name',
         'description',
         'github_repo',
+        'jira_epic_key',
         'skill_description',
         'config',
         'config_version',
@@ -57,6 +58,7 @@ class Project extends Model
     {
         return [
             'config' => 'array',
+            'jira_epic_key' => \App\Casts\JiraKey::class,
             'archived_at' => 'datetime',
             'completed_at' => 'datetime',
         ];

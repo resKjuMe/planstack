@@ -29,6 +29,8 @@ return [
     'created' => 'Angelegt',
     'creator' => 'Ersteller',
     'criticality' => 'Kritikalität',
+    'jira_key' => 'Jira-Ticket',
+    'jira_key_hint' => 'Unteraufgabe in Jira, z. B. MN-1234 – wird von „/planstack sync“ gesetzt.',
     'days_pd' => ':days PT',
     'decision' => 'Entscheidung',
     'decisions_made' => 'Getroffene Entscheidungen:',

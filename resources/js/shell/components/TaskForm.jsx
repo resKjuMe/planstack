@@ -37,13 +37,21 @@ export default function TaskForm({ form, statuses, criticalities, recommendation
                 {err('summary')}
             </div>
 
-            <div className="sm:w-60">
-                <label htmlFor="criticality" className={label}>{strings.criticality}</label>
-                <select id="criticality" value={form.data.criticality} onChange={set('criticality')} className={input}>
-                    <option value="">—</option>
-                    {criticalities.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
-                </select>
-                {err('criticality')}
+            <div className="grid gap-5 sm:grid-cols-2">
+                <div>
+                    <label htmlFor="criticality" className={label}>{strings.criticality}</label>
+                    <select id="criticality" value={form.data.criticality} onChange={set('criticality')} className={input}>
+                        <option value="">—</option>
+                        {criticalities.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
+                    </select>
+                    {err('criticality')}
+                </div>
+                <div>
+                    <label htmlFor="jira_key" className={label}>{strings.jiraKey}</label>
+                    <input id="jira_key" type="text" value={form.data.jira_key ?? ''} onChange={set('jira_key')} maxLength={32} placeholder="MN-1234" className={input + ' font-mono'} />
+                    <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">{strings.jiraKeyHint}</p>
+                    {err('jira_key')}
+                </div>
             </div>
 
             <div>

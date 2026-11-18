@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\ChangelogController;
 use App\Http\Controllers\Api\EventController;
+use App\Http\Controllers\Api\JiraSyncController;
 use App\Http\Controllers\Api\McpController;
 use App\Http\Controllers\Api\NextActionController;
 use App\Http\Controllers\Api\NextActionsController;
@@ -86,6 +87,10 @@ Route::middleware('auth:sanctum')->group(function () {
     // Tasks in einem Aufruf, serverseitig gegen Doppelvergabe gesichert (und die
     // Kommando-Anleitung kommt einmal statt N-mal mit).
     Route::post('projects/{project}/next-actions', NextActionsController::class)
+        ->middleware(AttachCommandInstructions::class);
+
+    // „/planstack sync": Epic, Phasen und Tasks samt Jira-Keys in einem Aufruf.
+    Route::get('projects/{project}/jira-sync', JiraSyncController::class)
         ->middleware(AttachCommandInstructions::class);
 
     // Org-weite Status-Konfiguration für den geteilten React-Store (einmal laden,

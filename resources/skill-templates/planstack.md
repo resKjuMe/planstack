@@ -1,7 +1,7 @@
 ---
 name: planstack
 description: Planstack-Boards über die REST-API abarbeiten — projektübergreifend. Aufruf „/planstack work <PROJECT>" (ganzes Board) oder „/planstack work <PROJECT> <TASK>" (ein Task). Das Projekt kommt aus dem Argument, der Zugang aus config.json. Einziger Zustandsspeicher ist die API.
-argument-hint: work <project> [task] · auto <project> · review [project] [task] · fix [project] <task|pr> · plan [project] · settings · update-config [project]
+argument-hint: work <project> [task] · auto <project> · review [project] [task] · fix [project] <task|pr> · sync <project> · plan [project] · settings · update-config [project]
 ---
 
 # Planstack (Remote, projektübergreifend)
@@ -15,13 +15,14 @@ Ein Planstack-Board wird über die **REST-API** abgearbeitet: Board lesen, Task 
 - `/planstack auto <PROJECT>` — **Auto-Modus**: das Board von `<PROJECT>` dauerhaft und unbeaufsichtigt abarbeiten (reviewen → eigene Tasks fertigstellen → pickbaren Task umsetzen; bei Leerlauf 5 min warten, dann weiter). `auto` steht in der **Sub-Kommando-Position** (erstes Argument), gefolgt vom Projekt. Arbeitet mit **mehreren Workern gleichzeitig**, wenn die Einstellung `auto_workers` und der Projekt-Knopf `parallelism.max_workers` das zulassen. Die ausführliche Anleitung ist serverseitig gepflegt (siehe „Auto-Modus").
 - `/planstack review [<PROJECT>] [<TASK>]` — in-review Task(s) mit PR reviewen (übernimmt Review, führt den Review-Skill aus, erfasst das Ergebnis; ohne Argumente projektübergreifend; siehe „Review").
 - `/planstack fix [<PROJECT>] <TASK|PR-NUMMER>` — offenen PR reparieren (Task/PR erforderlich): Merge-Konflikte auflösen, Kommentare + Review-Kommentare beantworten/fixen/resolven, rote CI korrigieren (siehe „Fix").
+- `/planstack sync <PROJECT> [--refresh] [--yes]` — Board in das Jira-Epic des Projekts spiegeln: Phasen → Aufgaben, Tasks → Unteraufgaben, alles im Sprint des Epics, Beschreibungen in PO-Sprache; die Jira-Keys landen an Phase/Task (siehe „Kommando-Anleitungen kommen zur Laufzeit").
 - `/planstack plan [<PROJECT>]` — Projekte, Phasen und Tasks anlegen (Planung). Die Anleitung dazu ist serverseitig gepflegt und wird bei **jedem** Aufruf frisch geladen (siehe „Plan").
 - `/planstack settings` — lokale Einstellungen (Tests, PHPStan, PHPCS, Babysit-PRs, parallele Worker) anzeigen/ändern (nur lokal gespeichert; siehe „Lokale Einstellungen").
 - `/planstack update-config [<PROJECT>]` — neueste allgemeine (+ Projekt-)Konfiguration ziehen und die Versionsnummern anzeigen (siehe „Konfiguration ziehen").
 
 `<PROJECT>` ist der Projekt-Alias (z. B. `L2L`, `LOG`). Dasselbe installierte Skill bedient **alle** Projekte, auf die dein Token Zugriff hat.
 
-> **Rückwärtskompatibilität (bis v3.0.0):** Die alte Kurzform ohne `work` — `/planstack <PROJECT>` bzw. `/planstack <PROJECT> <TASK>` — funktioniert weiterhin und ist gleichbedeutend mit `work`. Sie ist **veraltet** und wird mit **v3.0.0 abgeschafft**; ab dann ist `work` verpflichtend. Das frühere Alias `/planstack do <PROJECT> [<TASK>]` bleibt als Synonym für `work` bestehen (nützlich bei Namenskollision mit einem reservierten Sub-Kommando: `work`, `auto`, `review`, `fix`, `settings`, `update-config`, `plan`).
+> **Rückwärtskompatibilität (bis v3.0.0):** Die alte Kurzform ohne `work` — `/planstack <PROJECT>` bzw. `/planstack <PROJECT> <TASK>` — funktioniert weiterhin und ist gleichbedeutend mit `work`. Sie ist **veraltet** und wird mit **v3.0.0 abgeschafft**; ab dann ist `work` verpflichtend. Das frühere Alias `/planstack do <PROJECT> [<TASK>]` bleibt als Synonym für `work` bestehen (nützlich bei Namenskollision mit einem reservierten Sub-Kommando: `work`, `auto`, `review`, `fix`, `sync`, `settings`, `update-config`, `plan`).
 
 ## Zugang
 
@@ -37,18 +38,20 @@ AUTH=(-H "Authorization: Bearer $TOKEN" -H "Accept: application/json" -H "Conten
 # Sub-Kommando fuer den Abarbeitungs-Modus und wird verworfen; PROJ = zweites
 # Argument (Alias oder id), TASK = optionales drittes (Name oder id).
 # /planstack auto <PROJECT>  →  Auto-Modus, PROJ = zweites Argument.
+# /planstack sync <PROJECT> [--refresh] [--yes]  →  Jira-Sync, PROJ = zweites Argument.
 # Rueckwaertskompatibel bis v3.0.0: fehlt "work"/"do", ist A1 direkt das PROJEKT
 # (veraltet, wird mit v3.0.0 abgeschafft).
 read -r A1 A2 A3 <<<"$ARGUMENTS"
 if [ "$A1" = "work" ] || [ "$A1" = "do" ]; then PROJ=$A2; TASK=$A3
 elif [ "$A1" = "auto" ]; then MODE=auto; PROJ=$A2
+elif [ "$A1" = "sync" ]; then MODE=sync; PROJ=$A2
 else PROJ=$A1; TASK=$A2; fi   # <- veraltete Kurzform (ohne work), bis v3.0.0
 
 # Sprechende Kennung DIESER Session fuers Board. Mehrere Sessions arbeiten unter
 # demselben Token; ohne das Label zeigt das Board nur den Nutzer und man sieht
 # nicht, welche Session welchen Task haelt. Ab hier tragen alle Aufrufe mit
 # "${AUTH[@]}" die Kennung automatisch mit.
-case "$A1" in work|do|auto) CMD=$A1 ;; *) CMD=work ;; esac
+case "$A1" in work|do|auto|sync) CMD=$A1 ;; *) CMD=work ;; esac
 AUTH+=(-H "X-Planstack-Session: $CMD ${PROJ}${TASK:+/$TASK}")
 
 # Fortschritt faehrt huckepack: PS_STEP/PS_PCT setzt der sp-Helfer (s. u.), und
@@ -80,13 +83,14 @@ Alle Endpunkte laufen unter `$BASE/projects/$PROJ` (siehe Betriebshandbuch). Feh
 
 ## Kommando-Anleitungen kommen zur Laufzeit
 
-`review`, `fix` und `auto` haben eine eigene, ausführliche Anleitung, die **absichtlich nicht** in dieser Datei steht: sie wird an die Antwort des Aufrufs gehängt, ohne den das Kommando nicht stattfinden kann, im Feld **`command_instructions`**.
+`review`, `fix`, `auto` und `sync` haben eine eigene, ausführliche Anleitung, die **absichtlich nicht** in dieser Datei steht: sie wird an die Antwort des Aufrufs gehängt, ohne den das Kommando nicht stattfinden kann, im Feld **`command_instructions`**.
 
 | Kommando | Aufruf, der die Anleitung mitbringt |
 |---|---|
 | `review` | `POST .../review-next` bzw. `POST .../tasks/<TASK>/review-claim` |
 | `fix` | `GET .../tasks/<TASK>` |
 | `auto` | `POST .../next-action` |
+| `sync` | `GET .../jira-sync` |
 
 Ausgelöst wird das vom Header `X-Planstack-Session`, dessen **erstes Wort** das laufende Kommando nennt (`review DCE/A1`) — er wird im Zugang oben ohnehin gesetzt. Zwei Konsequenzen, die zu beachten sind:
 

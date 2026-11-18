@@ -29,6 +29,7 @@ class StoreTaskRequest extends FormRequest
             'description_target_actual' => ['nullable', 'string'],
             'description_test_cases' => ['nullable', 'string'],
             'criticality' => ['nullable', Rule::enum(\App\Enums\Criticality::class)],
+            'jira_key' => \App\Casts\JiraKey::rules(),
             'phase_id' => ['nullable', Rule::exists('phases', 'id')->where('project_id', $project->id)],
             'effort_man_days' => ['nullable', 'numeric', 'min:0'],
             'effort_story_points' => ['nullable', 'integer', 'min:0'],

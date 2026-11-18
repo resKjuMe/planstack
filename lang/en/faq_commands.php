@@ -74,6 +74,11 @@ return [
     'cmd_fix_6' => 'Reproduce red checks locally, fix them, push — until the CI is green.',
     'cmd_fix_7' => 'Polishing done: CI green, comments answered and resolved. This makes the task reviewable again.',
 
+    'cmd_sync_purpose' => 'Mirrors the board into the project\'s Jira epic: each phase becomes a task, each task a sub-task — all in the epic\'s sprint, with descriptions written like a PO would. Jira access is local only (settings.json + JIRA_API_TOKEN).',
+    'cmd_sync_1' => 'The project\'s epic key, phases and tasks including existing Jira keys in one call.',
+    'cmd_sync_2' => 'Determine the epic\'s project, sprint and issue types; show the plan and get confirmation before writing.',
+    'cmd_sync_3' => 'Create missing tasks/sub-tasks; existing ones are only checked (with --refresh their texts are updated).',
+    'cmd_sync_4' => 'Write the new Jira key back to the phase or task right after each created ticket.',
     'cmd_plan_purpose' => 'Creates projects, phases and tasks. Its instructions are versioned independently and fetched fresh on every call — before planning, not after.',
     'cmd_plan_1' => 'Mandatory first: read `plan_instructions`. They describe the flow, the endpoints and the field-by-field guide for tasks. If no project exists yet, any accessible one will do, just to pull the instructions.',
     'cmd_plan_2' => 'Create a new project (optional).',

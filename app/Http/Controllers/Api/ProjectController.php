@@ -141,6 +141,7 @@ class ProjectController extends ApiController
             'name' => ['sometimes', 'required', 'string', 'max:100'],
             'description' => ['nullable', 'string'],
             'github_repo' => ['nullable', 'string', 'max:255', 'regex:#^[\w.-]+/[\w.-]+$#'],
+            'jira_epic_key' => \App\Casts\JiraKey::rules(),
         ]);
 
         $project->update($data);

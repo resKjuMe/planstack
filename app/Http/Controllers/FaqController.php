@@ -119,6 +119,12 @@ class FaqController extends Controller
                 ['gh pr checks', 'cmd_fix_6', '⚙ Fix (Fix 80 %) L2L · G5 — 4/5 Checks'],
                 ['POST …/tasks/{t}/events {POLISHED}', 'cmd_fix_7', '⚙ Fix (Fix 100 %) L2L · G5 — 5/5 Checks'],
             ], '⚙ Fix (Fix 40 %) L2L · G5 — 3/7 Kommentare'],
+            ['/planstack sync <PROJECT> [--refresh] [--yes]', 'cmd_sync_purpose', [
+                ['GET /projects/{p}/jira-sync', 'cmd_sync_1', '⚙ Sync (Lade) EGF — Phasen und Tasks'],
+                ['GET <jira>/rest/api/3/issue/{epic}', 'cmd_sync_2', '⚙ Sync (Plane) EGF — Sprint des Epics'],
+                ['POST <jira>/rest/api/3/issue', 'cmd_sync_3', '⚙ Sync (Lege an 40 %) EGF — 6/15 Tickets'],
+                ['PATCH /projects/{p}/phases/{id} · …/tasks/{id} {jira_key}', 'cmd_sync_4', null],
+            ], '⚙ Sync (Lege an 40 %) EGF — 6/15 Tickets'],
             ['/planstack plan [<PROJECT>]', 'cmd_plan_purpose', [
                 ['GET /projects/{p}/config', 'cmd_plan_1', '⚙ Plan (Lade Config) DCE — plan_instructions'],
                 ['POST /projects', 'cmd_plan_2', '⚙ Plan (Plane) — Projekt anlegen'],

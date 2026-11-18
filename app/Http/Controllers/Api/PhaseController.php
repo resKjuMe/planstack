@@ -31,11 +31,13 @@ class PhaseController extends ApiController
         $data = $request->validate([
             'name' => ['required', 'string', 'max:100'],
             'position' => ['nullable', 'integer', 'min:0'],
+            'jira_key' => \App\Casts\JiraKey::rules(),
         ]);
 
         $phase = $project->phases()->create([
             'name' => $data['name'],
             'position' => $data['position'] ?? (((int) $project->phases()->max('position')) + 1),
+            'jira_key' => $data['jira_key'] ?? null,
         ]);
 
         return (new PhaseResource($phase))->response()->setStatusCode(201);
@@ -51,6 +53,7 @@ class PhaseController extends ApiController
         $data = $request->validate([
             'name' => ['sometimes', 'required', 'string', 'max:100'],
             'position' => ['sometimes', 'required', 'integer', 'min:0'],
+            'jira_key' => \App\Casts\JiraKey::rules(),
         ]);
 
         $phase->update($data);

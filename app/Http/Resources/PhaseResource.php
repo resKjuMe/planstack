@@ -20,6 +20,7 @@ class PhaseResource extends JsonResource
             'id' => $this->id,
             'name' => $this->name,
             'position' => $this->position,
+            'jira_key' => $this->jira_key,
         ];
     }
 }

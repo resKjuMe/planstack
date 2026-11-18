@@ -36,6 +36,8 @@ return [
     'for_technical_planning_slicing_tasks' => 'for technical planning — slicing tasks, defining phases and dependencies and estimating effort (story points). Technically the same rights as a contributor, no access/role management.',
     'format' => 'Format',
     'github_repository' => 'GitHub repository',
+    'jira_epic' => 'Jira epic',
+    'jira_epic_hint' => 'e.g. MN-1234 – “/planstack sync” creates the phases as tasks and the tasks as sub-tasks of this epic.',
     'hides_the_project_from_the_project_list' => 'Hides the project from the project list – it remains visible only via the “Archived” filter pill.',
     'in_progress' => 'In progress',
     'key_unique' => 'Key (unique)',

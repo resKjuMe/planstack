@@ -29,6 +29,8 @@ return [
     'created' => 'Created',
     'creator' => 'Creator',
     'criticality' => 'Criticality',
+    'jira_key' => 'Jira ticket',
+    'jira_key_hint' => 'Sub-task in Jira, e.g. MN-1234 – set by “/planstack sync”.',
     'days_pd' => ':days PD',
     'decision' => 'Decision',
     'decisions_made' => 'Decisions made:',
