@@ -6,22 +6,6 @@
 return [
     'releases' => [
         [
-            'version' => '2.12.2',
-            'date' => '2026-11-18',
-            'tldr' => [
-                'de' => ['Daily (Team): nur noch Karten für Teammitglieder'],
-                'en' => ['Daily (team): cards for team members only'],
-            ],
-            'changes' => [
-                'de' => [
-                    'Geändert: Die Team-Ansicht im Daily zeigt unter „Gestern“ nur noch Tickets, die einem Teammitglied zugewiesen sind. Karten für Personen außerhalb des Teams und „Ohne Zuständigen“ entfallen.',
-                ],
-                'en' => [
-                    'Changed: The team view in Daily lists under "Yesterday" only tickets assigned to a team member. Cards for people outside the team and "Unassigned" are gone.',
-                ],
-            ],
-        ],
-        [
             'version' => '2.12.1',
             'date' => '2026-11-18',
             'tldr' => [
@@ -38,122 +22,18 @@ return [
             ],
         ],
         [
-            'version' => '2.12.0',
-            'date' => '2026-11-18',
-            'tldr' => [
-                'de' => ['Daily: aufgeklappte PRs mit allen Spalten der PR-Liste'],
-                'en' => ['Daily: expanded PRs with all columns of the PR list'],
-            ],
-            'changes' => [
-                'de' => [
-                    'Neu: Aufgeklappte PRs im Daily zeigen Zustand (offen/gemergt/geschlossen), Umfang, Freigaben, Empfehlung, Befunde, Kritikalität, KI-Prüfbarkeit, PO-Sichtung, Handlungsbedarf und wann reviewt wurde.',
-                    'Neu: Ungelöste Kommentare, rote CI und Merge-Konflikte sind direkt am PR markiert.',
-                ],
-                'en' => [
-                    'New: Expanded PRs in Daily show state (open/merged/closed), size, approvals, recommendation, findings, criticality, AI reviewability, PO attention, need for action and when they were reviewed.',
-                    'New: Unresolved comments, failed CI and merge conflicts are marked directly on the PR.',
-                ],
-            ],
-        ],
-        [
-            'version' => '2.11.3',
-            'date' => '2026-11-18',
-            'tldr' => [
-                'de' => ['Daily: Stand-up-Zeilen mit Avatar, Statuswechsel und aufklappbaren PRs'],
-                'en' => ['Daily: stand-up rows with avatar, status change and expandable PRs'],
-            ],
-            'changes' => [
-                'de' => [
-                    'Geändert: Jede Stand-up-Zeile beginnt mit dem Avatar des PR-Erstellers, dann der Status (vorher → nachher) und der Jira-Titel.',
-                    'Geändert: Die PRs zu einem Ticket klappen über den Pfeil am Zeilenende auf; die Spalten fluchten tabellarisch.',
-                ],
-                'en' => [
-                    'Changed: Each stand-up row starts with the PR author\'s avatar, then the status (before → after) and the Jira title.',
-                    'Changed: The PRs of a ticket expand via the arrow at the end of the row; columns are aligned like a table.',
-                ],
-            ],
-        ],
-        [
-            'version' => '2.11.2',
-            'date' => '2026-11-18',
-            'tldr' => [
-                'de' => ['Daily: PRs und Reviews wieder in der Karte, mehr Zeilen in „Ich“'],
-                'en' => ['Daily: PRs and reviews back in the card, more rows in "Me"'],
-            ],
-            'changes' => [
-                'de' => [
-                    'Geändert: Die Stand-up-Karte zeigt unter „PRs & Reviews“ wieder, welche PRs gemergt oder eröffnet und welche reviewt wurden.',
-                    'Geändert: In „Ich“ stehen je Abschnitt bis zu 10 Zeilen, die Karte nutzt die volle Breite; Ticket-Titel werden nicht mehr abgeschnitten.',
-                    'Geändert: Pro Ticket stehen höchstens zwei PR-Nummern, der Rest als „+n“; das Seitenpanel öffnet den ersten Tab mit Einträgen.',
-                ],
-                'en' => [
-                    'Changed: The stand-up card again lists under "PRs & reviews" which PRs were merged or opened and which were reviewed.',
-                    'Changed: "Me" shows up to 10 rows per section and the card uses the full width; ticket titles are no longer cut off.',
-                    'Changed: At most two PR numbers per ticket, the rest as "+n"; the side panel opens the first tab with entries.',
-                ],
-            ],
-        ],
-        [
             'version' => '2.11.1',
             'date' => '2026-11-18',
             'tldr' => [
-                'de' => ['Daily/Retro: Story Points aus Jira, Reviews je PR gezählt'],
-                'en' => ['Daily/Retro: story points from Jira, reviews counted per PR'],
+                'de' => ['„Für den PO“: nur noch der Kurztext zur Sichtbarkeit'],
+                'en' => ['"For the PO": only the short visibility text'],
             ],
             'changes' => [
                 'de' => [
-                    'Behoben: Story Points werden auch erkannt, wenn das Jira-Feld anders heißt (z. B. „Schätzung“).',
-                    'Geändert: „Reviews abgegeben“ zählt reviewte PRs statt einzelner Review-Läufe; im Daily steht je PR nur das letzte Review.',
                     'Geändert: „Für den PO“ zeigt bei der Sichtbarkeit nur noch den Kurztext.',
                 ],
                 'en' => [
-                    'Fixed: Story points are also recognised when the Jira field has a different name (e.g. "Estimate").',
-                    'Changed: "Reviews given" counts reviewed PRs instead of single review runs; Daily lists only the latest review per PR.',
                     'Changed: "For the PO" shows only the short visibility text.',
-                ],
-            ],
-        ],
-        [
-            'version' => '2.11.0',
-            'date' => '2026-11-18',
-            'tldr' => [
-                'de' => ['Neu: „Retro“ – Vorschläge für die Sprint-Retro aus Jira und GitHub', 'Daily zeigt jetzt Jira-Tickets statt Planstack-Tasks'],
-                'en' => ['New: "Retro" – suggestions for the sprint retro from Jira and GitHub', 'Daily now shows Jira tickets instead of Planstack tasks'],
-            ],
-            'changes' => [
-                'de' => [
-                    'Neu: Die Seite „Retro“ bereitet die Fragen der Sprint-Retro vor: Bewertung des Sprints in % (Vorschlag aus Lieferquote, Erstwurf-Quote der PRs und Fluss, per Regler anpassbar), was lief hervorragend, gut, schlecht oder grausam, was können wir besser machen und was haben wir gelernt.',
-                    'Neu: Grundlage ist der zuletzt abgeschlossene Jira-Sprint mit Sprint-Ziel; mit den Pfeilen blätterst du zu früheren Sprints. Ohne Jira-Sprint gilt ein Zeitraum von 1 bis 4 Wochen.',
-                    'Neu: Zu jeder Frage kannst du eigene Punkte notieren; „Retro als Text kopieren“ nimmt Bewertung, Vorschläge und Notizen mit.',
-                    'Geändert: Daily zeigt Statuswechsel, Blocker, Tickets im Review/Test und Tickets in Arbeit jetzt aus Jira statt aus Planstack. Dafür wird der Jira-Zugang im Profil genutzt.',
-                ],
-                'en' => [
-                    'New: The "Retro" page prepares the questions of the sprint retro: rating of the sprint in % (suggested from delivery, first-pass rate of PRs and flow, adjustable with a slider), what went excellent, good, bad or terrible, what can we do better and what did we learn.',
-                    'New: It is based on the last closed Jira sprint including its goal; the arrows page to earlier sprints. Without a Jira sprint a period of 1 to 4 weeks applies.',
-                    'New: You can note your own points for every question; "Copy retro as text" includes rating, suggestions and notes.',
-                    'Changed: Daily now takes status changes, blockers, tickets in review/test and tickets in progress from Jira instead of Planstack, using the Jira access from your profile.',
-                ],
-            ],
-        ],
-        [
-            'version' => '2.10.0',
-            'date' => '2026-11-18',
-            'tldr' => [
-                'de' => ['Neu: „Daily“ – dein Stand-up vom letzten Arbeitstag auf einen Blick'],
-                'en' => ['New: "Daily" – your stand-up for the last working day at a glance'],
-            ],
-            'changes' => [
-                'de' => [
-                    'Neu: Die Seite „Daily“ in der Hauptnavigation zeigt, was am letzten Arbeitstag passiert ist: Statuswechsel der Tasks, eröffnete und gemergte Pull Requests, abgegebene Reviews und einen Tagesverlauf pro Stunde.',
-                    'Neu: Mit „Ich | Team“ wechselst du zwischen deinen eigenen Einträgen und denen deines Teams; mit den Pfeilen blätterst du durch die Arbeitstage.',
-                    'Neu: Die Filter „Team“, „PO“ und „UX“ blenden die passenden Karten ein – Blocker, wartende Reviews und laufende Tasks, die Kundensicht der PRs samt offener PO-Entscheidungen bzw. PRs mit Frontend- oder Textänderungen.',
-                    'Neu: „Stand-up-Text kopieren“ erzeugt Gestern/Heute/Blocker als Text für Slack.',
-                ],
-                'en' => [
-                    'New: The "Daily" page in the main navigation shows what happened on the last working day: task status changes, opened and merged pull requests, reviews given and an hourly timeline.',
-                    'New: "Me | Team" switches between your own entries and your team\'s; the arrows page through the working days.',
-                    'New: The filters "Team", "PO" and "UX" show the matching cards – blockers, waiting reviews and running tasks, the customer view of PRs with open PO decisions, or PRs with frontend or text changes.',
-                    'New: "Copy stand-up text" creates yesterday/today/blockers as text for Slack.',
                 ],
             ],
         ],
