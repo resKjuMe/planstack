@@ -293,7 +293,19 @@ export default function Retro({ period, scope, data, urls, strings }) {
                                         <span className={`h-2.5 w-2.5 rounded-full ${cat.dot}`} />
                                         {strings[`cat_${cat.key}`]}
                                     </h3>
-                                    <div className="mt-3 space-y-3">
+                                    {data.categories[cat.key].length > 0 && (
+                                        <div className="mt-3 grid grid-cols-2 gap-2">
+                                            {data.categories[cat.key].map((item) => (
+                                                <div key={item.key} className="rounded-md bg-gray-50 px-2.5 py-2 dark:bg-gray-900/40">
+                                                    <div className={`text-2xl font-bold leading-none ${cat.head}`}>
+                                                        {item.params.total ? `${item.params.count}/${item.params.total}` : item.params.count}
+                                                    </div>
+                                                    <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">{strings[`kpi_${item.key}`]}</div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                    <div className="mt-4 space-y-3">
                                         {data.categories[cat.key].length === 0 && (
                                             <p className="text-sm text-gray-400 dark:text-gray-500">{strings.cat_empty}</p>
                                         )}
