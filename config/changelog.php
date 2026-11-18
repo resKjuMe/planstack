@@ -6,6 +6,22 @@
 return [
     'releases' => [
         [
+            'version' => '2.12.2',
+            'date' => '2026-11-18',
+            'tldr' => [
+                'de' => ['Daily (Team): nur noch Karten für Teammitglieder'],
+                'en' => ['Daily (team): cards for team members only'],
+            ],
+            'changes' => [
+                'de' => [
+                    'Geändert: Die Team-Ansicht im Daily zeigt unter „Gestern“ nur noch Tickets, die einem Teammitglied zugewiesen sind. Karten für Personen außerhalb des Teams und „Ohne Zuständigen“ entfallen.',
+                ],
+                'en' => [
+                    'Changed: The team view in Daily lists under "Yesterday" only tickets assigned to a team member. Cards for people outside the team and "Unassigned" are gone.',
+                ],
+            ],
+        ],
+        [
             'version' => '2.12.1',
             'date' => '2026-11-18',
             'tldr' => [
