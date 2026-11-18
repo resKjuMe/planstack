@@ -370,7 +370,7 @@ class JiraStatusSync
      * Jira-Account zu einem Planstack-Nutzer: erst per E-Mail, dann per Anzeigename
      * (genau ein aktiver Treffer). Einen Tag gecacht.
      */
-    private function accountId(PendingRequest $client, User $syncUser, User $person): ?string
+    public function accountId(PendingRequest $client, User $syncUser, User $person): ?string
     {
         $cacheKey = 'jira-account:'.md5($syncUser->jira_base_url.'|'.$person->id);
 

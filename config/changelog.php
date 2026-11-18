@@ -6,6 +6,28 @@
 return [
     'releases' => [
         [
+            'version' => '2.11.0',
+            'date' => '2026-11-18',
+            'tldr' => [
+                'de' => ['Neu: „Retro“ – Vorschläge für die Sprint-Retro aus Jira und GitHub', 'Daily zeigt jetzt Jira-Tickets statt Planstack-Tasks'],
+                'en' => ['New: "Retro" – suggestions for the sprint retro from Jira and GitHub', 'Daily now shows Jira tickets instead of Planstack tasks'],
+            ],
+            'changes' => [
+                'de' => [
+                    'Neu: Die Seite „Retro“ bereitet die Fragen der Sprint-Retro vor: Bewertung des Sprints in % (Vorschlag aus Lieferquote, Erstwurf-Quote der PRs und Fluss, per Regler anpassbar), was lief hervorragend, gut, schlecht oder grausam, was können wir besser machen und was haben wir gelernt.',
+                    'Neu: Grundlage ist der zuletzt abgeschlossene Jira-Sprint mit Sprint-Ziel; mit den Pfeilen blätterst du zu früheren Sprints. Ohne Jira-Sprint gilt ein Zeitraum von 1 bis 4 Wochen.',
+                    'Neu: Zu jeder Frage kannst du eigene Punkte notieren; „Retro als Text kopieren“ nimmt Bewertung, Vorschläge und Notizen mit.',
+                    'Geändert: Daily zeigt Statuswechsel, Blocker, Tickets im Review/Test und Tickets in Arbeit jetzt aus Jira statt aus Planstack. Dafür wird der Jira-Zugang im Profil genutzt.',
+                ],
+                'en' => [
+                    'New: The "Retro" page prepares the questions of the sprint retro: rating of the sprint in % (suggested from delivery, first-pass rate of PRs and flow, adjustable with a slider), what went excellent, good, bad or terrible, what can we do better and what did we learn.',
+                    'New: It is based on the last closed Jira sprint including its goal; the arrows page to earlier sprints. Without a Jira sprint a period of 1 to 4 weeks applies.',
+                    'New: You can note your own points for every question; "Copy retro as text" includes rating, suggestions and notes.',
+                    'Changed: Daily now takes status changes, blockers, tickets in review/test and tickets in progress from Jira instead of Planstack, using the Jira access from your profile.',
+                ],
+            ],
+        ],
+        [
             'version' => '2.10.0',
             'date' => '2026-11-18',
             'tldr' => [

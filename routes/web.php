@@ -31,6 +31,7 @@ use App\Http\Controllers\ProjectPrSyncController;
 use App\Http\Controllers\ProjectSummaryController;
 use App\Http\Controllers\ProjectTimelineController;
 use App\Http\Controllers\PullRequestController;
+use App\Http\Controllers\RetroController;
 use App\Http\Controllers\SkillDownloadController;
 use App\Http\Controllers\ProjectTeamController;
 use App\Http\Controllers\TaskChecklistController;
@@ -148,6 +149,9 @@ Route::middleware('auth')->group(function () {
 
     // Stand-up-Ansicht: was ist am letzten Arbeitstag passiert
     Route::get('/daily', DailyController::class)->name('daily');
+
+    // Retro-Ansicht: Vorschläge für die Sprint-Retro
+    Route::get('/retro', RetroController::class)->name('retro');
 
     // Nutzer-Changelog der Website (Versionsübersicht in der Hauptnavi)
     Route::get('/changelog', ChangelogController::class)->name('changelog');

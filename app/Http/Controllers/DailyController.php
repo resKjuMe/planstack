@@ -39,8 +39,8 @@ class DailyController extends Controller
             ],
             'scope' => $scope,
             'data' => $presenter->payload($user, $day, $scope),
-            'jiraBaseUrl' => filled($user->jira_base_url) ? rtrim($user->jira_base_url, '/') : null,
             'urls' => [
+                'profile' => route('profile.edit'),
                 'prev' => $link(DailyPresenter::previousWorkday($day), $scope),
                 'next' => $next->lessThanOrEqualTo($today) ? $link($next, $scope) : null,
                 'me' => $link($day, 'me'),

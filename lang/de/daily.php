@@ -22,7 +22,7 @@ return [
     'you' => 'du',
 
     'kpi_done' => 'Erledigt',
-    'kpi_done_unit' => 'Tasks',
+    'kpi_done_unit' => 'Tickets',
     'kpi_done_sub' => ':sp SP · :review ins Review gegeben',
     'kpi_prs' => 'Pull Requests',
     'kpi_prs_unit' => 'gemergt',
@@ -38,7 +38,7 @@ return [
     'activity_title' => 'Was passiert ist',
     'activity_sub' => 'Alles, was sich am :day bewegt hat, nach Quelle gruppiert.',
     'activity_empty' => 'An diesem Tag ist nichts passiert.',
-    'group_tasks' => 'Planstack-Tasks',
+    'group_tasks' => 'Jira-Tickets',
     'group_prs' => 'Pull Requests',
     'group_reviews' => 'Reviews abgegeben',
     'changes' => ':count Wechsel|:count Wechsel',
@@ -69,15 +69,15 @@ return [
     'more' => 'mehr',
 
     'blockers_title' => 'Blocker & Hilfe gesucht',
-    'blockers_sub' => 'Concerns und Lieferungen ohne Reviewer, die im Stand-up geklärt werden sollten.',
+    'blockers_sub' => 'Markierte oder blockierte Tickets, die im Stand-up geklärt werden sollten.',
     'blockers_empty' => 'Keine Blocker.',
-    'blocker_noReviewer' => 'wartet auf Reviewer',
+    'flagged' => 'markiert',
     'since_days' => 'seit :days Tagen',
 
-    'waiting_title' => 'Wartet auf mich',
-    'waiting_title_team' => 'Wartet auf das Team',
-    'waiting_sub' => 'Zugewiesene Reviews fremder Arbeit.',
-    'waiting_empty' => 'Kein Review wartet.',
+    'waiting_title' => 'Review & Test bei mir',
+    'waiting_title_team' => 'Review & Test im Team',
+    'waiting_sub' => 'Zugewiesene Tickets im Review oder Test.',
+    'waiting_empty' => 'Kein Ticket im Review oder Test.',
 
     'po_title' => 'Für den PO',
     'po_sub' => 'Aus der „Kundensicht“ der PRs und offenen PO-Entscheidungen.',
@@ -91,8 +91,8 @@ return [
     'ux_empty' => 'Keine Frontend-Änderungen an diesem Tag.',
 
     'today_title' => 'Heute',
-    'today_sub' => 'Laufende Tasks und Liegengebliebenes.',
-    'today_empty' => 'Kein laufender Task.',
+    'today_sub' => 'Tickets in Arbeit und Liegengebliebenes.',
+    'today_empty' => 'Kein Ticket in Arbeit.',
     'stale' => 'liegt seit :time ohne Änderung',
 
     'standup_title' => 'Stand-up-Text',
@@ -113,8 +113,9 @@ return [
     'team_opened' => ':count PR eröffnet|:count PRs eröffnet',
     'team_reviews' => ':count Review|:count Reviews',
     'team_done' => ':count erledigt',
-    'team_tasks' => ':count Task bearbeitet|:count Tasks bearbeitet',
+    'team_issues' => ':count Ticket bewegt|:count Tickets bewegt',
 
-    'empty_title' => 'Noch keine Projekte',
-    'empty_text' => 'Sobald du in einem Projekt mitarbeitest, steht hier dein Stand-up.',
+    'jira_missing' => 'Für die Jira-Tickets braucht Daily deinen Jira-Zugang.',
+    'jira_error' => 'Jira ist gerade nicht erreichbar (:error).',
+    'jira_profile' => 'Im Profil einrichten',
 ];

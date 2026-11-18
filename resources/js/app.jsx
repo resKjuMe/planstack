@@ -4,6 +4,7 @@ import { createInertiaApp, router } from '@inertiajs/react';
 import BladePage from './shell/pages/BladePage.jsx';
 import Dashboard from './shell/pages/Dashboard.jsx';
 import Daily from './shell/pages/Daily.jsx';
+import Retro from './shell/pages/Retro.jsx';
 import ProjectWorkspace from './shell/pages/ProjectWorkspace.jsx';
 import ProjectsIndex from './shell/pages/ProjectsIndex.jsx';
 import PullRequestsIndex from './shell/pages/PullRequestsIndex.jsx';
@@ -46,6 +47,7 @@ const pages = {
     BladePage,
     Dashboard,
     Daily,
+    Retro,
     ProjectWorkspace,
     ProjectsIndex,
     PullRequestsIndex,
