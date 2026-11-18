@@ -5,7 +5,6 @@ namespace App\Support;
 use App\Models\PullRequest;
 use App\Models\PullRequestApproval;
 use App\Models\PullRequestReview;
-use App\Models\ReviewFinding;
 use App\Models\User;
 use App\Support\Jira\JiraActivity;
 use App\Support\Jira\JiraRequestFailed;
@@ -17,10 +16,9 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
 
 /**
- * Stand-up-Ansicht (/daily): was ist an EINEM Arbeitstag passiert — Statuswechsel
- * der Jira-Tickets, PRs (geöffnet/gemergt/geschlossen) und Reviews (ps-review und
- * GitHub-Approvals) — plus der aktuelle Stand für das Gespräch (Blocker, Tickets
- * im Review/Test, woran ich heute arbeite).
+ * Stand-up-Ansicht (/daily): Fortschritt an EINEM Arbeitstag (Statuswechsel der
+ * Jira-Tickets, PRs, Reviews) und der Stand fürs Gespräch: woran heute gearbeitet
+ * wird, eigene PRs mit Handlungsbedarf, Blocker.
  *
  * Tickets kommen live aus Jira, mit dem Jira-Zugang des Betrachters (Profil).
  * `me` zeigt nur Einträge mit meiner Beteiligung (Zuständiger, Melder, Auslöser
@@ -31,10 +29,13 @@ class DailyPresenter
 {
     public const TIMEZONE = 'Europe/Berlin';
 
-    private const LIST_LIMIT = 30;
+    private const LIST_LIMIT = 50;
 
     /** Ab so vielen Tagen ohne Änderung gilt ein Ticket in Arbeit als liegengeblieben. */
-    private const STALE_DAYS = 2;
+    private const STALE_DAYS = 3;
+
+    /** Ab so vielen Stunden ohne ausreichende Freigabe wartet ein PR zu lange auf ein Review. */
+    private const REVIEW_WAIT_HOURS = 24;
 
     /** Statusnamen, die als blockiert gelten (zusätzlich zum Jira-Flag). */
     public const BLOCKED_STATUS = '/block|imped|on hold|hold|warte|wait/i';
@@ -53,40 +54,21 @@ class DailyPresenter
         $from = $day->startOfDay()->utc();
         $until = $day->endOfDay()->utc();
 
-        [$pullRequests, $reviews] = $this->withTickets(
+        [$pullRequests, $reviews, $attention] = $this->withTickets(
             $user,
             $this->pullRequests($user, $userIds, $from, $until),
             $this->reviews($user, $userIds, $from, $until),
+            $this->attention($user, $userIds),
         );
         $jira = $this->withPullRequests($user, $this->jira($user, $teamIds, $userIds, $day, $scope === 'team'));
-        $issueChanges = $jira['issueChanges'];
-
-        $done = collect($issueChanges)->where('isDone', true);
 
         return [
             'jira' => Arr::only($jira, ['connected', 'error']),
-            'kpis' => [
-                'doneTasks' => $done->count(),
-                'doneSp' => (float) $done->sum('sp'),
-                'toReview' => collect($issueChanges)->where('toReview', true)->count(),
-                'prsMerged' => collect($pullRequests)->where('event', 'merged')->count(),
-                'prsOpen' => collect($pullRequests)->where('state', 'OPEN')->count(),
-                'additions' => (int) collect($pullRequests)->sum('additions'),
-                'deletions' => (int) collect($pullRequests)->sum('deletions'),
-                'reviewsGiven' => count($reviews),
-                'reviewsReceived' => $this->reviewsReceived($user, $userIds, $from, $until),
-                'waiting' => count($jira['waiting']),
-                'blockers' => count($jira['blockers']),
-                'oldestBlockerDays' => collect($jira['blockers'])->max('days'),
-            ],
-            'issueChanges' => $issueChanges,
+            'issueChanges' => $jira['issueChanges'],
             'pullRequests' => $pullRequests,
             'reviews' => $reviews,
-            'heatmap' => $this->heatmap($issueChanges, $pullRequests, $reviews),
+            'attention' => $attention,
             'blockers' => $jira['blockers'],
-            'waiting' => $jira['waiting'],
-            'forPo' => $this->forPo($pullRequests),
-            'forUx' => $this->forUx($pullRequests),
             'today' => $jira['today'],
             'team' => $this->team($user, $teamIds, $jira['dayIssues'], $jira['accounts'], $from, $until),
         ];
@@ -107,7 +89,6 @@ class DailyPresenter
             'error' => null,
             'issueChanges' => [],
             'blockers' => [],
-            'waiting' => [],
             'today' => [],
             'dayIssues' => collect(),
             'accounts' => [],
@@ -148,7 +129,6 @@ class DailyPresenter
             'error' => null,
             'issueChanges' => $this->issueChanges($dayIssues, $scopeAccounts, $from, $until, $assignedOnly),
             'blockers' => $this->blockers($open),
-            'waiting' => $this->waiting($open),
             'today' => $this->today($open),
             'dayIssues' => $dayIssues,
             'accounts' => $accounts,
@@ -161,17 +141,19 @@ class DailyPresenter
      *
      * @param  array<int, array<string, mixed>>  $pullRequests
      * @param  array<int, array<string, mixed>>  $reviews
-     * @return array{0: array<int, array<string, mixed>>, 1: array<int, array<string, mixed>>}
+     * @param  array<int, array<string, mixed>>  $attention
+     * @return array{0: array<int, array<string, mixed>>, 1: array<int, array<string, mixed>>, 2: array<int, array<string, mixed>>}
      */
-    private function withTickets(User $user, array $pullRequests, array $reviews): array
+    private function withTickets(User $user, array $pullRequests, array $reviews, array $attention): array
     {
-        $ids = array_unique([...array_column($pullRequests, 'id'), ...array_column($reviews, 'prId')]);
+        $ids = array_unique([...array_column($pullRequests, 'id'), ...array_column($reviews, 'prId'), ...array_column($attention, 'id')]);
         $resolved = TicketPullRequests::ticketsFor($user, PullRequest::query()->whereIn('id', $ids)->with('author:id,name,email')->get());
         $attach = fn (array $row, int $id) => [...$row, 'tickets' => $resolved[$id]['tickets'] ?? [], 'pr' => $resolved[$id]['pr'] ?? null];
 
         return [
             array_map(fn (array $row) => $attach($row, $row['id']), $pullRequests),
             array_map(fn (array $row) => $attach($row, $row['prId']), $reviews),
+            array_map(fn (array $row) => $attach($row, $row['id']), $attention),
         ];
     }
 
@@ -183,7 +165,7 @@ class DailyPresenter
      */
     private function withPullRequests(User $user, array $jira): array
     {
-        $lists = ['issueChanges', 'blockers', 'waiting', 'today'];
+        $lists = ['issueChanges', 'blockers', 'today'];
         $keys = collect($lists)->flatMap(fn (string $list) => array_column($jira[$list], 'key'))->all();
         $prs = TicketPullRequests::forKeys($user, $keys);
 
@@ -196,6 +178,7 @@ class DailyPresenter
 
     /**
      * Statuswechsel des Tages je Ticket (erster alter → letzter neuer Status).
+     * Tickets ohne Netto-Wechsel (z. B. nur angelegt) zählen nicht als Fortschritt.
      *
      * @param  Collection<int, array<string, mixed>>  $issues
      * @param  array<int, string>  $accounts
@@ -222,19 +205,20 @@ class DailyPresenter
                     return null;
                 }
 
+                $first = $changes->first();
                 $last = $changes->last();
+                if ($first['from'] === null || $first['from'] === $last['to']) {
+                    return null;
+                }
                 $toCategory = $last['to'] === $issue['status'] ? $issue['category'] : 'indeterminate';
 
                 return [
                     ...$this->issueRef($issue),
-                    'from' => $changes->first()['from'],
+                    'from' => $first['from'],
                     'to' => $last['to'],
                     'toCategory' => $toCategory,
                     'isDone' => $toCategory === 'done',
-                    'toReview' => preg_match(self::REVIEW_STATUS, (string) $last['to']) === 1,
-                    'changes' => $changes->count(),
                     'at' => $last['at']->toIso8601String(),
-                    'hours' => $changes->map(fn (array $t) => $this->hour($t['at']))->all(),
                 ];
             })
             ->filter()
@@ -258,26 +242,6 @@ class DailyPresenter
                 ...$this->issueRef($issue),
                 'flagged' => $issue['flagged'],
                 'days' => $issue['updated'] !== null ? round(abs($issue['updated']->diffInHours(now())) / 24, 1) : null,
-            ])
-            ->take(self::LIST_LIMIT)
-            ->values()
-            ->all();
-    }
-
-    /**
-     * Offene Tickets im Review oder Test.
-     *
-     * @param  Collection<int, array<string, mixed>>  $open
-     * @return array<int, array<string, mixed>>
-     */
-    private function waiting(Collection $open): array
-    {
-        return $open
-            ->reject(fn (array $issue) => $this->isBlocked($issue))
-            ->filter(fn (array $issue) => preg_match(self::REVIEW_STATUS, (string) $issue['status']) === 1)
-            ->map(fn (array $issue) => [
-                ...$this->issueRef($issue),
-                'since' => $issue['updated']?->toIso8601String(),
             ])
             ->take(self::LIST_LIMIT)
             ->values()
@@ -365,33 +329,6 @@ class DailyPresenter
     }
 
     /**
-     * Stunden-Heatmap (Ortszeit) je Quelle.
-     *
-     * @return array{hours: array<int, int>, rows: array<int, array{key: string, cells: array<int, int>}>}
-     */
-    private function heatmap(array $issueChanges, array $pullRequests, array $reviews): array
-    {
-        $rows = [
-            'statusChanges' => collect($issueChanges)->flatMap(fn (array $change) => $change['hours']),
-            'pullRequests' => collect($pullRequests)->pluck('hour')->filter(fn ($hour) => $hour !== null),
-            'reviews' => collect($reviews)->pluck('hour'),
-        ];
-
-        $all = collect($rows)->flatten();
-        $first = min(8, (int) ($all->min() ?? 8));
-        $last = max(18, (int) ($all->max() ?? 18));
-        $hours = range($first, $last);
-
-        return [
-            'hours' => $hours,
-            'rows' => collect($rows)->map(fn (Collection $values, string $key) => [
-                'key' => $key,
-                'cells' => array_map(fn (int $hour) => $values->filter(fn ($value) => (int) $value === $hour)->count(), $hours),
-            ])->values()->all(),
-        ];
-    }
-
-    /**
      * @param  array<string, mixed>  $issue
      */
     public static function isBlocked(array $issue): bool
@@ -410,16 +347,12 @@ class DailyPresenter
             'summary' => $issue['summary'],
             'url' => $issue['url'],
             'type' => $issue['type'],
+            'parent' => $issue['parent'] ?? null,
             'status' => $issue['status'],
             'category' => $issue['category'],
             'assigneeName' => $issue['assigneeName'],
             'sp' => $issue['sp'],
         ];
-    }
-
-    private function hour(mixed $at): int
-    {
-        return (int) CarbonImmutable::parse($at)->setTimezone(self::TIMEZONE)->format('G');
     }
 
     /**
@@ -461,8 +394,7 @@ class DailyPresenter
     }
 
     /**
-     * PRs, die am Tag geöffnet, gemergt oder geschlossen wurden, plus offene mit
-     * roter CI — die gehören in jedes Stand-up.
+     * PRs, die am Tag geöffnet, gemergt oder geschlossen wurden.
      *
      * @param  array<int, int>  $userIds
      * @return array<int, array<string, mixed>>
@@ -477,17 +409,15 @@ class DailyPresenter
             ->where(fn (Builder $q) => $q
                 ->where($inDay('opened_at'))
                 ->orWhere($inDay('merged_at'))
-                ->orWhere($inDay('closed_at'))
-                ->orWhere(fn (Builder $red) => $red->where('state', 'OPEN')->where('ci_state', 'failed')))
-            ->with(['author:id,name', 'approvals'])
+                ->orWhere($inDay('closed_at')))
+            ->with('author:id,name')
             ->get()
             ->map(function (PullRequest $pr) use ($from, $until) {
                 $between = fn ($at) => $at !== null && $at->between($from, $until);
                 [$event, $at] = match (true) {
                     $between($pr->merged_at) => ['merged', $pr->merged_at],
                     $between($pr->closed_at) => ['closed', $pr->closed_at],
-                    $between($pr->opened_at) => ['opened', $pr->opened_at],
-                    default => ['ciFailed', null],
+                    default => ['opened', $pr->opened_at],
                 };
 
                 return [
@@ -500,20 +430,59 @@ class DailyPresenter
                     'state' => $pr->state->value,
                     'event' => $event,
                     'at' => $at?->toIso8601String(),
-                    'hour' => $at !== null ? $this->hour($at) : null,
                     'authorName' => $pr->author?->name,
-                    'additions' => (int) $pr->additions,
-                    'deletions' => (int) $pr->deletions,
-                    'ciState' => $pr->ci_state,
-                    'ciFailedChecks' => $pr->ci_failed_checks ?? [],
-                    'unresolvedThreads' => (int) $pr->unresolved_threads,
-                    'approvals' => $pr->approvals->where('state', 'APPROVED')->count(),
-                    'uiFiles' => $pr->ui_files,
-                    'textFiles' => $pr->text_files,
-                    'customerView' => self::customerView($pr->description),
                 ];
             })
             ->sortByDesc(fn (array $pr) => $pr['at'] ?? '')
+            ->take(self::LIST_LIMIT)
+            ->values()
+            ->all();
+    }
+
+    /**
+     * Offene PRs, an denen etwas zu tun ist: rote CI, Merge-Konflikt, angeforderte
+     * Änderungen, ungelöste Kommentare oder zu lange ohne ausreichende Freigabe.
+     *
+     * @param  array<int, int>  $userIds
+     * @return array<int, array<string, mixed>>
+     */
+    private function attention(User $user, array $userIds): array
+    {
+        $waitingSince = now()->subHours(self::REVIEW_WAIT_HOURS);
+
+        return PullRequest::query()
+            ->where('organization_id', $user->organization_id)
+            ->whereIn('author_id', $userIds)
+            ->where('state', 'OPEN')
+            ->with(['author:id,name', 'approvals'])
+            ->get()
+            ->map(function (PullRequest $pr) use ($waitingSince) {
+                $approval = PullRequestApprovals::status($pr, $pr->approvals);
+                $reasons = array_keys(array_filter([
+                    'ciFailed' => $pr->ci_state === 'failed',
+                    'conflict' => $pr->mergeable === 'CONFLICTING',
+                    'changesRequested' => $approval['changesRequested'] > 0,
+                    'threads' => (int) $pr->unresolved_threads > 0,
+                    'waitingReview' => ! $approval['fulfilled'] && $approval['changesRequested'] === 0
+                        && ! $pr->in_merge_queue && $pr->opened_at?->lt($waitingSince),
+                ]));
+                if ($reasons === []) {
+                    return null;
+                }
+
+                return [
+                    'id' => $pr->id,
+                    'number' => $pr->pull_request_id,
+                    'title' => $pr->title,
+                    'url' => $pr->url(),
+                    'authorName' => $pr->author?->name,
+                    'reasons' => $reasons,
+                    'ciFailedChecks' => $pr->ci_failed_checks ?? [],
+                    'openedAt' => $pr->opened_at?->toIso8601String(),
+                ];
+            })
+            ->filter()
+            ->sortBy('openedAt')
             ->take(self::LIST_LIMIT)
             ->values()
             ->all();
@@ -541,13 +510,8 @@ class DailyPresenter
                 'title' => $review->pullRequest->title,
                 'url' => route('pull-requests.show', $review->pullRequest),
                 'decision' => $review->decision?->value,
-                'critical' => (int) $review->findings_critical,
-                'important' => (int) $review->findings_important,
-                'hints' => (int) $review->findings_hint,
-                'poLikelihood' => $review->po_review_likelihood,
                 'reviewerName' => $review->reviewer?->name,
                 'at' => $review->review_finished_at->toIso8601String(),
-                'hour' => $this->hour($review->review_finished_at),
             ]);
 
         $covered = $psReviews->pluck('number')->all();
@@ -572,13 +536,8 @@ class DailyPresenter
                     'CHANGES_REQUESTED' => 'REQUEST_CHANGES',
                     default => null,
                 },
-                'critical' => null,
-                'important' => null,
-                'hints' => null,
-                'poLikelihood' => null,
                 'reviewerName' => $approval->user?->name,
                 'at' => $approval->submitted_at->toIso8601String(),
-                'hour' => $this->hour($approval->submitted_at),
             ]);
 
         // Je PR nur das letzte Review: Re-Reviews desselben PRs zählen nicht doppelt.
@@ -588,129 +547,5 @@ class DailyPresenter
             ->take(self::LIST_LIMIT)
             ->values()
             ->all();
-    }
-
-    /**
-     * @param  array<int, int>  $userIds
-     */
-    private function reviewsReceived(User $user, array $userIds, CarbonImmutable $from, CarbonImmutable $until): int
-    {
-        $ownPr = fn (Builder $q) => $q->where('organization_id', $user->organization_id)->whereIn('author_id', $userIds);
-
-        return PullRequestReview::query()
-            ->whereBetween('review_finished_at', [$from, $until])
-            ->whereNotIn('reviewer_id', $userIds)
-            ->whereHas('pullRequest', $ownPr)
-            ->count()
-            + PullRequestApproval::query()
-                ->whereBetween('submitted_at', [$from, $until])
-                ->where(fn (Builder $q) => $q->whereNull('user_id')->orWhereNotIn('user_id', $userIds))
-                ->whereHas('pullRequest', $ownPr)
-                ->count();
-    }
-
-    /**
-     * Für den PO: die Kundensicht der PRs des Tages und offene PO-Entscheidungen
-     * aus den Review-Befunden.
-     *
-     * @param  array<int, array<string, mixed>>  $pullRequests
-     * @return array<int, array<string, mixed>>
-     */
-    private function forPo(array $pullRequests): array
-    {
-        $prs = collect($pullRequests)->whereIn('event', ['merged', 'opened']);
-        if ($prs->isEmpty()) {
-            return [];
-        }
-
-        $poDecisions = ReviewFinding::query()
-            ->where('requires_po_decision', true)
-            ->whereNull('fix_decision')
-            ->whereHas('review', fn (Builder $q) => $q->whereIn('pull_request_id', $prs->pluck('id')))
-            ->with('review:id,pull_request_id')
-            ->get()
-            ->groupBy(fn (ReviewFinding $finding) => $finding->review->pull_request_id);
-
-        return $prs
-            ->map(fn (array $pr) => [
-                'number' => $pr['number'],
-                'title' => $pr['title'],
-                'url' => $pr['url'],
-                'event' => $pr['event'],
-                'tickets' => $pr['tickets'],
-                'pr' => $pr['pr'],
-                'customerView' => $pr['customerView'],
-                'poDecisions' => $poDecisions->get($pr['id'], collect())
-                    ->map(fn (ReviewFinding $finding) => $finding->title)
-                    ->values()
-                    ->all(),
-            ])
-            ->filter(fn (array $row) => $row['customerView'] !== null || $row['poDecisions'] !== [])
-            ->values()
-            ->all();
-    }
-
-    /**
-     * Für UX: PRs des Tages mit geänderten Frontend- oder Textdateien.
-     *
-     * @param  array<int, array<string, mixed>>  $pullRequests
-     * @return array<int, array<string, mixed>>
-     */
-    private function forUx(array $pullRequests): array
-    {
-        return collect($pullRequests)
-            ->filter(fn (array $pr) => ($pr['uiFiles'] ?? 0) > 0 || ($pr['textFiles'] ?? 0) > 0)
-            ->map(fn (array $pr) => Arr::only($pr, ['number', 'title', 'url', 'event', 'state', 'uiFiles', 'textFiles', 'tickets', 'pr']))
-            ->values()
-            ->all();
-    }
-
-    /**
-     * „📣 Kundensicht“ aus dem PR-Body: angekreuzte Sichtbarkeit und der Satz
-     * unter „Was ändert sich?“. null ohne Block.
-     *
-     * @return array{visibility: ?string, change: ?string}|null
-     */
-    public static function customerView(?string $body): ?array
-    {
-        if ($body === null || ! preg_match('/<!-- KUNDENSICHT-START[^>]*-->(.*?)<!-- KUNDENSICHT-END -->/s', $body, $match)) {
-            return null;
-        }
-
-        $block = preg_replace('/<!--.*?-->/s', '', $match[1]);
-        $lines = preg_split('/\R/', (string) $block);
-        $clean = fn (string $line) => trim(preg_replace('/^[>\-*\s]+|\*\*|__|`/', '', $line));
-
-        $visibility = collect($lines)
-            ->first(fn (string $line) => preg_match('/^\s*[-*]\s*\[[xX]\]/', $line) === 1);
-        $visibility = $visibility !== null ? $clean(preg_replace('/\[[xX]\]/', '', $visibility, 1)) : null;
-        // Nur der Kurztext der Option, ohne Erläuterung in Klammern bzw. nach Gedankenstrich.
-        $visibility = $visibility !== null ? trim(preg_split('/\s+[(\x{2013}\x{2014}]|,\s*„/u', $visibility)[0], " \t:.") : null;
-
-        $change = null;
-        foreach ($lines as $index => $line) {
-            if (Str::contains($line, ['Was ändert sich', 'What changes'])) {
-                $rest = trim(Str::after($line, '?'));
-                $candidates = $rest !== '' && ! Str::startsWith($rest, ['*', '_']) ? [$rest] : array_slice($lines, $index + 1);
-                foreach ($candidates as $candidate) {
-                    $text = $clean($candidate);
-                    if ($text === '' || Str::startsWith(trim($candidate), '#')) {
-                        continue;
-                    }
-                    if (Str::contains($candidate, ['Was sagen wir', 'What do we tell'])) {
-                        break;
-                    }
-                    $change = $text;
-                    break;
-                }
-                break;
-            }
-        }
-
-        if ($visibility === null && $change === null) {
-            return null;
-        }
-
-        return ['visibility' => $visibility ?: null, 'change' => $change];
     }
 }

@@ -2,20 +2,14 @@ import React, { createContext, useContext, useMemo, useState } from 'react';
 import { Head } from '@inertiajs/react';
 import AppShell from '../AppShell.jsx';
 import PageBands from '../components/PageBands.jsx';
-import PrAuthors from '../components/PrAuthors.jsx';
 import { interpolate, transChoice } from '../../summary/i18n.js';
-import { relativeTime } from '../../stats/format.js';
-import { useNow } from '../../board/useNow.js';
-import { ApprovalChips, ColumnIcon, DecisionIcon, FindingCounts, ScoreBar, StateBadge, formatDate, formatRelative } from '../components/PullRequestParts.jsx';
+import { ApprovalChips, StateBadge } from '../components/PullRequestParts.jsx';
 
-// Strings der PR-Liste (/pull-requests) für die aufgeklappten PR-Details.
+// Strings der PR-Liste (/pull-requests) für die aufgeklappten PRs.
 const PrStrings = createContext({});
 
-// Stand-up-Ansicht: je Person eine kompakte Karte (Gestern / Heute / Blocker),
-// daneben ein Panel mit Tabs für alles, was nur bei Bedarf gebraucht wird
-// (Blocker, Review & Test, PO, UX, PRs, Verlauf). Listen zeigen wenige Zeilen und
-// klappen auf Wunsch auf. Die Auswertung kommt fertig vom Server
-// (App\Support\DailyPresenter).
+// Stand-up-Ansicht: je Person eine Karte mit Fortschritt, Heute und „Braucht Hilfe“.
+// Die Auswertung kommt fertig vom Server (App\Support\DailyPresenter).
 
 const CARD = 'rounded-lg bg-white dark:bg-gray-800 ring-1 ring-gray-200 dark:ring-gray-700';
 const PILL = 'inline-flex shrink-0 items-center rounded-full px-2 py-0.5 text-[11px] font-medium whitespace-nowrap';
@@ -26,16 +20,16 @@ const TONE = {
     green: 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300',
     emerald: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300',
     blue: 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300',
-    purple: 'bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300',
 };
 const CATEGORY_TONE = { new: 'gray', indeterminate: 'blue', done: 'green' };
-const PR_TONE = { merged: 'emerald', opened: 'blue', closed: 'gray', ciFailed: 'red' };
-const DECISION_TONE = { APPROVE: 'green', REQUEST_CHANGES: 'amber' };
-const HEAT = ['bg-gray-100 dark:bg-gray-700/60', 'bg-indigo-200 dark:bg-indigo-900', 'bg-indigo-400 dark:bg-indigo-700', 'bg-indigo-600 dark:bg-indigo-500'];
-const PER_SECTION = { me: 10, team: 3 };
-const PER_TAB = 5;
+const PR_TONE = { merged: 'emerald', opened: 'blue', closed: 'gray' };
+const DECISION_TEXT = { APPROVE: 'text-green-700 dark:text-green-400', REQUEST_CHANGES: 'text-amber-700 dark:text-amber-400' };
+// Gründe, bei denen der PR-Ersteller selbst etwas tun muss (sonst: wartet auf andere).
+const ACTION_REASONS = ['ciFailed', 'conflict', 'changesRequested', 'threads'];
+const PER_SECTION = { me: 10, team: 4 };
 
 const pill = (tone) => `${PILL} ${TONE[tone] ?? TONE.gray}`;
+const days = (iso) => Math.max(1, Math.floor((Date.now() - Date.parse(iso)) / 86400000));
 const initials = (name) =>
     String(name ?? '?')
         .split(' ')
@@ -44,50 +38,12 @@ const initials = (name) =>
         .map((part) => part[0].toUpperCase())
         .join('');
 
-function time(iso, locale) {
-    if (!iso) return '';
-    return new Date(iso).toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Berlin' });
-}
-
-// Ein Ticket als einzeilige Zeile: Key · Titel · Status · PR-Ersteller.
-function TicketLine({ ticket, status, tone }) {
-    return (
-        <div className="flex min-w-0 items-center gap-2 text-sm">
-            <a href={ticket.url} target="_blank" rel="noreferrer" className="shrink-0 font-mono text-xs font-semibold text-indigo-700 hover:underline dark:text-indigo-400">
-                {ticket.key}
-            </a>
-            <span className="min-w-0 flex-1 truncate text-gray-800 dark:text-gray-200" title={ticket.summary}>{ticket.summary}</span>
-            {status && <span className={pill(tone)}>{status}</span>}
-            <PrAuthors prs={ticket.prs} compact limit={2} className="shrink-0" />
-        </div>
-    );
-}
-
-// PR- bzw. Review-Zeile, aber mit dem Ticket statt des PR-Titels.
-function PrLine({ row, status, tone }) {
-    const ticket = row.tickets?.[0];
-
-    return (
-        <div className="flex min-w-0 items-center gap-2 text-sm">
-            {ticket ? (
-                <a href={ticket.url} target="_blank" rel="noreferrer" className="shrink-0 font-mono text-xs font-semibold text-indigo-700 hover:underline dark:text-indigo-400">
-                    {ticket.key}
-                </a>
-            ) : (
-                <a href={row.pr?.url ?? row.url} className="shrink-0 font-mono text-xs font-semibold text-indigo-700 hover:underline dark:text-indigo-400">#{row.number}</a>
-            )}
-            <span className="min-w-0 flex-1 truncate text-gray-800 dark:text-gray-200" title={ticket?.summary ?? row.title}>{ticket?.summary ?? row.title}</span>
-            {status && <span className={pill(tone)}>{status}</span>}
-            {row.pr && <PrAuthors prs={[row.pr]} compact className="shrink-0" />}
-        </div>
-    );
-}
-
 // Ein Raster je Karte, die Zeilen hängen per Subgrid daran: Spalten fluchten und
 // sind nur so breit wie nötig. Avatar · vorher · → · nachher · Key · Titel · PRs.
 const CARD_GRID = 'grid grid-cols-[auto_auto_auto_auto_auto_minmax(0,1fr)_auto] items-center gap-x-2 gap-y-1';
 const STANDUP_GRID = 'col-span-full grid grid-cols-subgrid items-center';
 const CELL_PILL = 'max-w-full justify-self-start truncate';
+const KEY_LINK = 'truncate font-mono text-xs font-semibold text-indigo-700 hover:underline dark:text-indigo-400';
 
 function Avatar({ pr }) {
     if (pr?.avatar) return <img src={pr.avatar} alt="" title={pr.author ?? ''} className="h-5 w-5 shrink-0 rounded-full ring-1 ring-gray-200 dark:ring-gray-600" loading="lazy" />;
@@ -101,9 +57,24 @@ function Avatar({ pr }) {
     return <span className="h-5 w-5 shrink-0" aria-hidden="true" />;
 }
 
-// Stand-up-Zeile: PR-Ersteller · Status (vorher → nachher) · Jira-Titel; der Pfeil
+function Toggle({ count, open, onClick, title }) {
+    return (
+        <button
+            type="button"
+            onClick={onClick}
+            aria-expanded={open}
+            title={title}
+            className="inline-flex items-center justify-end gap-1 rounded px-1 text-xs text-gray-500 hover:bg-gray-100 hover:text-gray-800 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-gray-200"
+        >
+            {count}
+            <span className={`inline-block transition-transform ${open ? 'rotate-90' : ''}`} aria-hidden="true">▸</span>
+        </button>
+    );
+}
+
+// Stand-up-Zeile: PR-Ersteller · Status (vorher → nachher) · Ticket; der Pfeil
 // klappt die PRs zum Ticket auf.
-function StandupLine({ ticket, from = null, status, tone, prs = [], strings }) {
+function StandupLine({ ticket, from = null, status, tone, statusTitle, note, prs = [], strings }) {
     const [open, setOpen] = useState(false);
     const link = ticket?.url ?? prs[0]?.url;
 
@@ -122,22 +93,16 @@ function StandupLine({ ticket, from = null, status, tone, prs = [], strings }) {
                         <span />
                     </>
                 )}
-                {status ? <span className={`${pill(tone)} ${CELL_PILL}`} title={status}>{status}</span> : <span />}
-                <a href={link} target="_blank" rel="noreferrer" className="truncate font-mono text-xs font-semibold text-indigo-700 hover:underline dark:text-indigo-400">
+                {status ? <span className={`${pill(tone)} ${CELL_PILL}`} title={statusTitle ?? status}>{status}</span> : <span />}
+                <a href={link} target="_blank" rel="noreferrer" className={KEY_LINK}>
                     {ticket?.key ?? `#${prs[0]?.number}`}
                 </a>
-                <span className="min-w-0 truncate text-gray-800 dark:text-gray-200" title={ticket?.summary}>{ticket?.summary}</span>
+                <span className="min-w-0 truncate text-gray-800 dark:text-gray-200" title={ticket?.summary}>
+                    {ticket?.summary}
+                    {note && <span className="ml-2 text-xs text-gray-500 dark:text-gray-400">{note}</span>}
+                </span>
                 {prs.length > 0 ? (
-                    <button
-                        type="button"
-                        onClick={() => setOpen((v) => !v)}
-                        aria-expanded={open}
-                        title={transChoice(strings.pr_count, prs.length)}
-                        className="inline-flex items-center justify-end gap-1 rounded px-1 text-xs text-gray-500 hover:bg-gray-100 hover:text-gray-800 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-gray-200"
-                    >
-                        {prs.length}
-                        <span className={`inline-block transition-transform ${open ? 'rotate-90' : ''}`} aria-hidden="true">▸</span>
-                    </button>
+                    <Toggle count={prs.length} open={open} onClick={() => setOpen((v) => !v)} title={transChoice(strings.pr_count, prs.length)} />
                 ) : (
                     <span aria-hidden="true" />
                 )}
@@ -145,6 +110,41 @@ function StandupLine({ ticket, from = null, status, tone, prs = [], strings }) {
             {open && <PrDetails prs={prs} />}
         </div>
     );
+}
+
+// Mehrere Unteraufgaben einer Story in einer Zeile; der Pfeil zeigt die einzelnen Tickets.
+function GroupLine({ group, strings }) {
+    const [open, setOpen] = useState(false);
+    const done = group.rows.every((row) => row.isDone);
+    const counts = [...group.rows.reduce((map, row) => map.set(row.to, (map.get(row.to) ?? 0) + 1), new Map())]
+        .map(([to, count]) => `${count} → ${to}`)
+        .join(' · ');
+
+    return (
+        <div className="contents">
+            <div className={`${STANDUP_GRID} text-sm`}>
+                <Avatar pr={group.rows.flatMap((row) => row.prs ?? [])[0]} />
+                <span />
+                <span />
+                <span className={`${pill(done ? 'green' : 'blue')} ${CELL_PILL}`}>{transChoice(strings.group_count, group.rows.length)}</span>
+                <a href={group.parent.url} target="_blank" rel="noreferrer" className={KEY_LINK}>{group.parent.key}</a>
+                <span className="min-w-0 truncate text-gray-800 dark:text-gray-200" title={group.parent.summary}>
+                    {group.parent.summary}
+                    <span className="ml-2 text-xs text-gray-500 dark:text-gray-400">{counts}</span>
+                </span>
+                <Toggle count={group.rows.length} open={open} onClick={() => setOpen((v) => !v)} title={transChoice(strings.group_count, group.rows.length)} />
+            </div>
+            {open && (
+                <div className="col-span-full grid grid-cols-subgrid gap-y-1 rounded-md bg-gray-50 py-1 dark:bg-gray-900/40">
+                    {group.rows.map((row) => <ChangeLine key={row.key} row={row} strings={strings} />)}
+                </div>
+            )}
+        </div>
+    );
+}
+
+function ChangeLine({ row, strings }) {
+    return <StandupLine ticket={row} from={row.from} status={row.to} tone={CATEGORY_TONE[row.toCategory]} prs={row.prs ?? []} strings={strings} />;
 }
 
 function ConflictIcon({ title }) {
@@ -157,84 +157,76 @@ function ConflictIcon({ title }) {
     );
 }
 
-// Aufgeklappte PRs eines Tickets mit den Spalten der PR-Liste (/pull-requests):
-// Zustand, Konflikt/CI, Umfang, Freigaben (inkl. ungelöster Kommentare), Empfehlung,
-// Befunde, Kritikalität, KI-Prüfbarkeit, PO-Sichtung, Handlungsbedarf, Reviewt.
+// Aufgeklappte PRs: Zustand, Konflikt, CI und Freigaben (inkl. ungelöster Kommentare).
 function PrDetails({ prs }) {
     const t = useContext(PrStrings);
-    const now = useNow();
-    const head = 'w-px whitespace-nowrap px-1.5 py-1 text-center font-medium';
-    const cell = 'w-px whitespace-nowrap px-1.5 py-1';
 
     return (
-        <div className="col-span-full mb-2 ml-[0.6rem] overflow-x-auto border-l border-gray-200 pl-[1.15rem] dark:border-gray-700">
-            <table className="text-xs">
-                <thead className="text-[10px] uppercase tracking-wide text-gray-400 dark:text-gray-500">
-                    <tr>
-                        <th className="px-2 py-1 text-left font-medium">{t.col_pr}</th>
-                        <th className={head} title={t.col_size}><ColumnIcon name="size" /></th>
-                        <th className={head} title={`${t.approvals}: ${t.approvals_hint}`}><ColumnIcon name="approvals" /></th>
-                        <th className={head} title={t.col_decision}><ColumnIcon name="decision" /></th>
-                        <th className={head} title={`${t.findings}: ${t.level_CRITICAL} / ${t.level_IMPORTANT} / ${t.level_HINT}`}><ColumnIcon name="findings" /></th>
-                        <th className={head} title={t.col_criticality}><ColumnIcon name="criticality" /></th>
-                        <th className={head} title={t.col_ai_reviewability}><ColumnIcon name="aiReviewability" /></th>
-                        <th className={head} title={`${t.col_po_review_likelihood}: ${t.po_review_likelihood_hint}`}><ColumnIcon name="poReviewLikelihood" /></th>
-                        <th className={head} title={`${t.col_need}: ${t.need_hint}`}><ColumnIcon name="need" /></th>
-                        <th className={head} title={t.col_reviewed_at}><ColumnIcon name="reviewedAt" /></th>
-                    </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100 dark:divide-gray-700/60">
-                    {prs.map((pr) => {
-                        const d = pr.details;
-                        const review = d?.review;
-                        const open = pr.state === 'OPEN';
-                        const ciFailed = open && d?.ciState === 'failed';
+        <div className="col-span-full mb-2 ml-[0.6rem] flex flex-col gap-1 border-l border-gray-200 py-1 pl-[1.15rem] text-xs dark:border-gray-700">
+            {prs.map((pr) => {
+                const d = pr.details;
+                const open = pr.state === 'OPEN';
+                const ciFailed = open && d?.ciState === 'failed';
 
-                        return (
-                            <tr key={pr.url} className={ciFailed ? 'bg-red-50 dark:bg-red-900/20' : undefined}>
-                                <td className="whitespace-nowrap px-2 py-1">
-                                    <div className="flex items-center gap-2">
-                                        <Avatar pr={pr} />
-                                        <a href={pr.url} className="font-mono font-semibold text-indigo-700 hover:underline dark:text-indigo-400">#{pr.number}</a>
-                                        <StateBadge state={pr.state} strings={t} />
-                                        {open && d?.conflicting && <ConflictIcon title={t.conflicting} />}
-                                        {ciFailed && (
-                                            <span className="rounded bg-red-600 px-1.5 py-0.5 text-[11px] font-semibold text-white" title={(d.ciFailedChecks ?? []).join('\n') || t.ci_failed}>
-                                                {t.status_ci_failed}
-                                            </span>
-                                        )}
-                                    </div>
-                                </td>
-                                {d ? (
-                                    <>
-                                        <td className={`${cell} text-right font-mono text-[11px] leading-tight`} title={`${d.changedFiles} ${t.files}`}>
-                                            <div className="text-green-600 dark:text-green-400">+{d.additions}</div>
-                                            <div className="text-red-600 dark:text-red-400">−{d.deletions}</div>
-                                        </td>
-                                        <td className={cell}><ApprovalChips approvals={d.approvals} unresolvedThreads={open ? d.unresolvedThreads : 0} strings={t} /></td>
-                                        {review ? (
-                                            <>
-                                                <td className={`${cell} text-center`}><DecisionIcon decision={review.decision} strings={t} /></td>
-                                                <td className={cell}><FindingCounts review={review} /></td>
-                                                <td className={cell}><ScoreBar value={review.criticality} title={review.criticalityReason} tone="risk" /></td>
-                                                <td className={cell}><ScoreBar value={review.aiReviewability} title={review.aiReviewabilityReason} tone="ai" /></td>
-                                                <td className={cell}><ScoreBar value={review.poReviewLikelihood} title={review.poReviewLikelihoodReason} tone="po" /></td>
-                                                <td className={`${cell} text-right font-mono text-gray-700 dark:text-gray-300`} title={t.need_hint}>{Math.round(review.needScore / 100)}</td>
-                                                <td className={`${cell} text-gray-500 dark:text-gray-400`} title={formatDate(review.reviewedAt)}>{formatRelative(review.reviewedAt, now, t)}</td>
-                                            </>
-                                        ) : (
-                                            <td colSpan={7} className={`${cell} text-gray-400 dark:text-gray-500`}>{t.not_reviewed}</td>
-                                        )}
-                                    </>
-                                ) : (
-                                    <td colSpan={9} />
-                                )}
-                            </tr>
-                        );
-                    })}
-                </tbody>
-            </table>
+                return (
+                    <div key={pr.url} className="flex flex-wrap items-center gap-2">
+                        <Avatar pr={pr} />
+                        <a href={pr.url} className="font-mono font-semibold text-indigo-700 hover:underline dark:text-indigo-400">#{pr.number}</a>
+                        <StateBadge state={pr.state} strings={t} />
+                        {open && d?.conflicting && <ConflictIcon title={t.conflicting} />}
+                        {ciFailed && (
+                            <span className="rounded bg-red-600 px-1.5 py-0.5 text-[11px] font-semibold text-white" title={(d.ciFailedChecks ?? []).join('\n') || t.ci_failed}>
+                                {t.status_ci_failed}
+                            </span>
+                        )}
+                        {d && <ApprovalChips approvals={d.approvals} unresolvedThreads={open ? d.unresolvedThreads : 0} strings={t} />}
+                    </div>
+                );
+            })}
         </div>
+    );
+}
+
+// Reviews für andere: eine Zeile statt einer Zeile je PR.
+function ReviewsLine({ reviews, strings }) {
+    if (!reviews.length) return null;
+
+    return (
+        <div className="col-span-full flex flex-wrap items-baseline gap-x-2 gap-y-0.5 pt-1 text-xs text-gray-600 dark:text-gray-400">
+            <span className="font-medium text-gray-800 dark:text-gray-200">{transChoice(strings.reviews_line, reviews.length)}:</span>
+            {reviews.map((review) => {
+                const ticket = review.tickets?.[0];
+                return (
+                    <a
+                        key={review.key}
+                        href={ticket?.url ?? review.pr?.url ?? review.url}
+                        target="_blank"
+                        rel="noreferrer"
+                        title={`${ticket?.summary ?? review.title} · ${strings[`decision_${review.decision}`] ?? strings.decision_none}`}
+                        className={`font-mono font-semibold hover:underline ${DECISION_TEXT[review.decision] ?? 'text-gray-600 dark:text-gray-400'}`}
+                    >
+                        {ticket?.key ?? `#${review.number}`}
+                    </a>
+                );
+            })}
+        </div>
+    );
+}
+
+function AttentionLine({ row, strings }) {
+    const ticket = row.tickets?.[0] ?? { key: `#${row.number}`, summary: row.title, url: row.pr?.url ?? row.url };
+    const urgent = row.reasons.some((reason) => reason === 'ciFailed' || reason === 'conflict');
+
+    return (
+        <StandupLine
+            ticket={ticket}
+            status={row.reasons.map((reason) => strings[`reason_${reason}`]).join(' · ')}
+            statusTitle={row.ciFailedChecks?.length ? row.ciFailedChecks.join('\n') : undefined}
+            tone={urgent ? 'red' : 'amber'}
+            note={row.openedAt && row.reasons.includes('waitingReview') ? interpolate(strings.waiting_days, { days: days(row.openedAt) }) : null}
+            prs={row.pr ? [row.pr] : []}
+            strings={strings}
+        />
     );
 }
 
@@ -247,25 +239,52 @@ function More({ count, open, onClick, strings }) {
     );
 }
 
-function Section({ label, rows, render, strings, limit, empty = null }) {
+function Section({ label, rows, render, strings, limit, empty = null, children = null }) {
     const [open, setOpen] = useState(false);
-    if (!rows.length && !empty) return null;
+    if (!rows.length && !empty && !children) return null;
     const shown = open ? rows : rows.slice(0, limit);
 
     return (
         <div className="contents">
             <span className="col-span-full pt-2 text-[11px] font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">{label}</span>
-            {rows.length ? shown.map(render) : <span className="col-span-full text-xs text-gray-400 dark:text-gray-500">{empty}</span>}
+            {rows.length ? shown.map(render) : !children && <span className="col-span-full text-xs text-gray-400 dark:text-gray-500">{empty}</span>}
             {rows.length > limit && (
                 <span className="col-span-full">
                     <More count={rows.length - limit} open={open} onClick={() => setOpen((v) => !v)} strings={strings} />
                 </span>
             )}
+            {children}
         </div>
     );
 }
 
-// Karte einer Person: Gestern / Heute / Blocker.
+function ProgressItem({ item, strings }) {
+    if (item.kind === 'group') return <GroupLine group={item} strings={strings} />;
+    if (item.kind === 'change') return <ChangeLine row={item.row} strings={strings} />;
+    const pr = item.row;
+    return (
+        <StandupLine
+            ticket={pr.tickets?.[0] ?? { key: `#${pr.number}`, summary: pr.title, url: pr.pr?.url ?? pr.url }}
+            status={strings[`pr_${pr.event}`]}
+            tone={PR_TONE[pr.event]}
+            prs={pr.pr ? [pr.pr] : []}
+            strings={strings}
+        />
+    );
+}
+
+function HelpItem({ item, strings }) {
+    const row = item.row;
+    if (item.kind === 'pr') return <AttentionLine row={row} strings={strings} />;
+    if (item.kind === 'stale') {
+        return <StandupLine ticket={row} status={row.status} tone="amber" note={row.updatedAt ? interpolate(strings.stale, { days: days(row.updatedAt) }) : null} prs={row.prs ?? []} strings={strings} />;
+    }
+    return <StandupLine ticket={row} status={row.flagged ? strings.flagged : row.status} tone="red" prs={row.prs ?? []} strings={strings} />;
+}
+
+const itemKey = (item) => (item.kind === 'group' ? `g-${item.parent.key}` : item.kind === 'change' ? item.row.key : `${item.kind}-${item.row.key ?? item.row.number}`);
+
+// Karte einer Person: Fortschritt / Heute / Braucht Hilfe.
 function PersonCard({ person, strings, limit }) {
     return (
         <article className={`${CARD} flex flex-col gap-2 p-4`}>
@@ -283,286 +302,164 @@ function PersonCard({ person, strings, limit }) {
                 </div>
             </div>
             <div className={CARD_GRID}>
-            <Section
-                label={strings.standup_yesterday}
-                rows={person.yesterday}
-                strings={strings}
-                limit={limit}
-                empty={person.activity.length ? null : strings.standup_none}
-                render={(row) => <StandupLine key={row.key} ticket={row} from={row.from} status={row.to} tone={CATEGORY_TONE[row.toCategory]} prs={row.prs ?? []} strings={strings} />}
-            />
-            <Section
-                label={strings.section_prs}
-                rows={person.activity}
-                strings={strings}
-                limit={limit}
-                render={(row) =>
-                    row.kind === 'pr' ? (
-                        <StandupLine key={`pr-${row.number}-${row.event}`} ticket={row.tickets?.[0] ?? { key: `#${row.number}`, summary: row.title, url: row.pr?.url ?? row.url }} status={strings[`pr_${row.event}`]} tone={PR_TONE[row.event]} prs={row.pr ? [row.pr] : []} strings={strings} />
-                    ) : (
-                        <StandupLine key={`review-${row.prId ?? row.number}`} ticket={row.tickets?.[0] ?? { key: `#${row.number}`, summary: row.title, url: row.pr?.url ?? row.url }} status={`${strings.review_short}: ${strings[`decision_${row.decision}`] ?? strings.decision_none}`} tone={DECISION_TONE[row.decision]} prs={row.pr ? [row.pr] : []} strings={strings} />
-                    )
-                }
-            />
-            <Section
-                label={strings.standup_today}
-                rows={person.today}
-                strings={strings}
-                limit={limit}
-                render={(row) => <StandupLine key={row.key} ticket={row} status={row.status} tone={row.isStale ? 'amber' : CATEGORY_TONE[row.category]} prs={row.prs ?? []} strings={strings} />}
-            />
-            {person.blockers.length > 0 && (
-                <div className="col-span-full mt-2 grid grid-cols-subgrid gap-y-1 rounded-md bg-red-50 py-2 dark:bg-red-900/20">
-                    {person.blockers.map((row) => (
-                        <StandupLine key={row.key} ticket={row} status={row.flagged ? strings.flagged : row.status} tone="red" prs={row.prs ?? []} strings={strings} />
-                    ))}
-                </div>
-            )}
+                <Section
+                    label={strings.section_progress}
+                    rows={person.progress}
+                    strings={strings}
+                    limit={limit}
+                    empty={strings.standup_none}
+                    render={(item) => <ProgressItem key={itemKey(item)} item={item} strings={strings} />}
+                >
+                    <ReviewsLine reviews={person.reviews} strings={strings} />
+                </Section>
+                <Section
+                    label={strings.section_today}
+                    rows={[...person.attention.map((row) => ({ kind: 'pr', row })), ...person.today.map((row) => ({ kind: 'today', row }))]}
+                    strings={strings}
+                    limit={limit}
+                    render={(item) =>
+                        item.kind === 'pr' ? (
+                            <AttentionLine key={`pr-${item.row.number}`} row={item.row} strings={strings} />
+                        ) : (
+                            <StandupLine key={item.row.key} ticket={item.row} status={item.row.status} tone={CATEGORY_TONE[item.row.category]} prs={item.row.prs ?? []} strings={strings} />
+                        )
+                    }
+                />
+                {person.help.length > 0 && (
+                    <>
+                        <span className="col-span-full pt-2 text-[11px] font-semibold uppercase tracking-wide text-red-700 dark:text-red-400">{strings.section_help}</span>
+                        <div className="col-span-full grid grid-cols-subgrid gap-y-1 rounded-md bg-red-50 py-2 dark:bg-red-900/20">
+                            {person.help.map((item) => <HelpItem key={itemKey(item)} item={item} strings={strings} />)}
+                        </div>
+                    </>
+                )}
             </div>
         </article>
     );
 }
 
-// Personen aus den Ticket-Listen: im Team nach Zuständigem gruppiert, sonst eine
-// Karte für mich. Blocker zuerst, sonst nach letzter Aktivität.
+// Statuswechsel nach Story zusammengefasst; Tickets ohne Story bzw. allein unter ihrer Story einzeln.
+function progress(rows) {
+    const groups = new Map();
+    const items = [];
+    rows.forEach((row) => {
+        const key = row.parent?.key;
+        if (!key) {
+            items.push({ kind: 'change', row });
+            return;
+        }
+        if (!groups.has(key)) {
+            const group = { kind: 'group', parent: row.parent, rows: [] };
+            groups.set(key, group);
+            items.push(group);
+        }
+        groups.get(key).rows.push(row);
+    });
+
+    return items.map((item) => (item.kind === 'group' && item.rows.length === 1 ? { kind: 'change', row: item.rows[0] } : item));
+}
+
+// Personen aus den Listen: im Team nach Zuständigem bzw. PR-Ersteller gruppiert,
+// sonst eine Karte für mich. Wer Hilfe braucht zuerst, sonst nach letzter Aktivität.
 function people(data, scope, me, strings) {
     const byName = new Map();
     const get = (name) => {
         const key = scope === 'team' ? name || strings.unassigned : me;
-        if (!byName.has(key)) byName.set(key, { name: key, yesterday: [], today: [], blockers: [], activity: [], last: '' });
+        if (!byName.has(key)) byName.set(key, { name: key, changes: [], prs: [], reviews: [], today: [], attention: [], help: [], last: '' });
         return byName.get(key);
     };
+    const touch = (p, at) => {
+        if (at && at > p.last) p.last = at;
+    };
+
     data.issueChanges.forEach((row) => {
         const p = get(row.assigneeName);
-        p.yesterday.push(row);
-        if (row.at > p.last) p.last = row.at;
+        p.changes.push(row);
+        touch(p, row.at);
     });
-    data.today.forEach((row) => get(row.assigneeName).today.push(row));
-    // PRs und Reviews des Tags; PRs nur, wenn ihr Ticket nicht schon unter „Gestern“ steht.
+    // PRs des Tages nur, wenn ihr Ticket nicht schon als Statuswechsel dasteht.
     data.pullRequests.forEach((pr) => {
         const p = get(pr.authorName);
-        const known = pr.tickets?.length > 0 && pr.tickets.every((t) => p.yesterday.some((row) => row.key === t.key));
-        if (!known || pr.event === 'ciFailed') p.activity.push({ ...pr, kind: 'pr' });
+        const known = pr.tickets?.length > 0 && pr.tickets.every((t) => p.changes.some((row) => row.key === t.key));
+        if (!known) p.prs.push({ kind: 'pr', row: pr });
+        touch(p, pr.at);
     });
-    data.reviews.forEach((review) => get(review.reviewerName).activity.push({ ...review, kind: 'review' }));
-    data.blockers.forEach((row) => get(row.assigneeName).blockers.push(row));
-
-    const team = new Map(data.team.map((m) => [m.name, m]));
+    data.reviews.forEach((review) => {
+        const p = get(review.reviewerName);
+        p.reviews.push(review);
+        touch(p, review.at);
+    });
+    data.attention.forEach((row) => {
+        const p = get(row.authorName);
+        if (row.reasons.some((reason) => ACTION_REASONS.includes(reason))) p.attention.push(row);
+        else p.help.push({ kind: 'pr', row });
+    });
+    data.today.forEach((row) => {
+        const p = get(row.assigneeName);
+        if (row.isStale) p.help.push({ kind: 'stale', row });
+        else p.today.push(row);
+    });
+    data.blockers.forEach((row) => get(row.assigneeName).help.unshift({ kind: 'blocker', row }));
 
     return [...byName.values()]
         .map((p) => {
-            const done = p.yesterday.filter((r) => r.isDone).length;
+            const done = p.changes.filter((r) => r.isDone).length;
             const merged = data.pullRequests.filter((pr) => pr.event === 'merged' && (scope !== 'team' || pr.authorName === p.name)).length;
-            const reviews = scope === 'team' ? team.get(p.name)?.reviews ?? 0 : data.kpis.reviewsGiven;
-            const avatar = [...p.yesterday, ...p.today, ...p.blockers].flatMap((r) => r.prs ?? []).find((pr) => pr.author === p.name && pr.avatar)?.avatar;
+            const avatar = [...p.changes, ...p.today].flatMap((r) => r.prs ?? []).find((pr) => pr.author === p.name && pr.avatar)?.avatar;
 
             return {
                 ...p,
                 avatar,
+                progress: [...progress(p.changes), ...p.prs],
                 stats: [
-                    transChoice(strings.person_moved, p.yesterday.length),
+                    transChoice(strings.person_moved, p.changes.length),
                     done > 0 && interpolate(strings.person_done, { count: done }),
                     merged > 0 && interpolate(strings.person_merged, { count: merged }),
-                    reviews > 0 && transChoice(strings.person_reviews, reviews),
+                    p.reviews.length > 0 && transChoice(strings.person_reviews, p.reviews.length),
                 ].filter(Boolean).join(' · '),
             };
         })
-        .filter((p) => p.yesterday.length || p.today.length || p.blockers.length || p.activity.length)
-        .sort((a, b) => (b.blockers.length > 0) - (a.blockers.length > 0) || (b.last > a.last ? 1 : -1));
+        .filter((p) => p.changes.length || p.prs.length || p.reviews.length || p.today.length || p.attention.length || p.help.length)
+        .sort((a, b) => (b.help.length > 0) - (a.help.length > 0) || (b.last > a.last ? 1 : -1));
 }
 
-function TabList({ rows, render, empty, strings }) {
-    const [open, setOpen] = useState(false);
-    if (!rows.length) return <p className="py-6 text-center text-sm text-gray-400 dark:text-gray-500">{empty}</p>;
-    const shown = open ? rows : rows.slice(0, PER_TAB);
-
-    return (
-        <div className="flex flex-col">
-            {shown.map((row, index) => (
-                <div key={index} className="border-b border-gray-100 py-2 last:border-0 dark:border-gray-700/60">{render(row)}</div>
-            ))}
-            <div className="pt-2">
-                <More count={rows.length - PER_TAB} open={open} onClick={() => setOpen((v) => !v)} strings={strings} />
-            </div>
-        </div>
-    );
-}
-
-function Sub({ children }) {
-    return <p className="mt-0.5 truncate text-xs text-gray-500 dark:text-gray-400">{children}</p>;
-}
-
-function Heatmap({ heatmap, strings }) {
-    const { hours, rows } = heatmap;
-
-    return (
-        <div className="grid items-center gap-1 py-2" style={{ gridTemplateColumns: `6.5rem repeat(${hours.length}, minmax(0, 1fr))` }}>
-            <span />
-            {hours.map((hour) => <span key={hour} className="text-center text-[10px] text-gray-400 dark:text-gray-500">{hour}</span>)}
-            {rows.map((row) => (
-                <React.Fragment key={row.key}>
-                    <span className="truncate text-xs text-gray-700 dark:text-gray-300">{strings[`row_${row.key}`]}</span>
-                    {row.cells.map((count, index) => (
-                        <span key={index} title={`${hours[index]}:00 · ${count}`} className={`h-4 rounded-sm ${HEAT[Math.min(count, 3)]}`} />
-                    ))}
-                </React.Fragment>
-            ))}
-        </div>
-    );
-}
-
-function SidePanel({ data, strings, locale }) {
-    const tabs = [
-        { key: 'blockers', count: data.blockers.length, danger: true },
-        { key: 'waiting', count: data.waiting.length },
-        { key: 'po', count: data.forPo.length },
-        { key: 'ux', count: data.forUx.length },
-        { key: 'prs', count: data.pullRequests.length + data.reviews.length },
-        { key: 'timeline', count: null },
-    ];
-    const [active, setActive] = useState(tabs.find((tab) => tab.count > 0)?.key ?? 'timeline');
-
-    return (
-        <aside className={`${CARD} self-start px-4 pb-4`}>
-            <div role="tablist" className="-mx-1 flex flex-wrap border-b border-gray-200 dark:border-gray-700">
-                {tabs.map((tab) => (
-                    <button
-                        key={tab.key}
-                        type="button"
-                        role="tab"
-                        aria-selected={active === tab.key}
-                        onClick={() => setActive(tab.key)}
-                        className={`-mb-px inline-flex items-center gap-1.5 border-b-2 px-2 py-2.5 text-sm font-medium ${
-                            active === tab.key
-                                ? 'border-indigo-500 text-gray-900 dark:text-gray-100'
-                                : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'
-                        }`}
-                    >
-                        {strings[`tab_${tab.key}`]}
-                        {tab.count !== null && <span className={pill(tab.danger && tab.count > 0 ? 'red' : 'gray')}>{tab.count}</span>}
-                    </button>
-                ))}
-            </div>
-
-            {active === 'blockers' && (
-                <TabList
-                    rows={data.blockers}
-                    empty={strings.blockers_empty}
-                    strings={strings}
-                    render={(row) => (
-                        <>
-                            <TicketLine ticket={row} status={row.flagged ? strings.flagged : row.status} tone="red" />
-                            <Sub>
-                                {[row.assigneeName, row.days !== null && interpolate(strings.since_days, { days: Math.max(1, Math.round(row.days)) })].filter(Boolean).join(' · ')}
-                            </Sub>
-                        </>
-                    )}
-                />
-            )}
-            {active === 'waiting' && (
-                <TabList
-                    rows={data.waiting}
-                    empty={strings.waiting_empty}
-                    strings={strings}
-                    render={(row) => (
-                        <>
-                            <TicketLine ticket={row} status={row.status} tone="purple" />
-                            <Sub>{[row.assigneeName, row.since && relativeTime(row.since, locale)].filter(Boolean).join(' · ')}</Sub>
-                        </>
-                    )}
-                />
-            )}
-            {active === 'po' && (
-                <TabList
-                    rows={data.forPo}
-                    empty={strings.po_empty}
-                    strings={strings}
-                    render={(row) => (
-                        <>
-                            <PrLine row={row} status={strings[`pr_${row.event}`]} tone={PR_TONE[row.event]} />
-                            {row.customerView?.change && <p className="mt-1 text-xs text-gray-600 dark:text-gray-400">{row.customerView.change}</p>}
-                            {(row.customerView?.visibility || row.poDecisions.length > 0) && (
-                                <div className="mt-1 flex flex-wrap gap-1">
-                                    {row.customerView?.visibility && <span className={pill('amber')}>{row.customerView.visibility}</span>}
-                                    {row.poDecisions.length > 0 && <span className={pill('red')}>{transChoice(strings.po_decisions, row.poDecisions.length)}</span>}
-                                </div>
-                            )}
-                        </>
-                    )}
-                />
-            )}
-            {active === 'ux' && (
-                <TabList
-                    rows={data.forUx}
-                    empty={strings.ux_empty}
-                    strings={strings}
-                    render={(row) => (
-                        <>
-                            <PrLine row={row} status={strings[`pr_${row.event}`]} tone={PR_TONE[row.event]} />
-                            <Sub>
-                                {[row.uiFiles > 0 && transChoice(strings.ux_files, row.uiFiles), row.textFiles > 0 && transChoice(strings.ux_texts, row.textFiles)].filter(Boolean).join(' · ')}
-                            </Sub>
-                        </>
-                    )}
-                />
-            )}
-            {active === 'prs' && (
-                <TabList
-                    rows={[...data.pullRequests.map((pr) => ({ ...pr, kind: 'pr' })), ...data.reviews.map((r) => ({ ...r, kind: 'review' }))]}
-                    empty={strings.activity_empty}
-                    strings={strings}
-                    render={(row) =>
-                        row.kind === 'pr' ? (
-                            <>
-                                <PrLine row={row} status={strings[`pr_${row.event}`]} tone={PR_TONE[row.event]} />
-                                <Sub>
-                                    {[
-                                        row.at && interpolate(strings.at, { time: time(row.at, locale) }),
-                                        `+${row.additions} / −${row.deletions}`,
-                                        row.ciState === 'failed' && interpolate(strings.ci_failed, { checks: row.ciFailedChecks.join(', ') }),
-                                        row.unresolvedThreads > 0 && transChoice(strings.threads, row.unresolvedThreads),
-                                    ].filter(Boolean).join(' · ')}
-                                </Sub>
-                            </>
-                        ) : (
-                            <>
-                                <PrLine row={row} status={strings[`decision_${row.decision}`] ?? strings.decision_none} tone={DECISION_TONE[row.decision]} />
-                                <Sub>
-                                    {[interpolate(strings.review_by, { name: row.reviewerName ?? '' }), row.critical !== null && interpolate(strings.findings, row)].filter(Boolean).join(' · ')}
-                                </Sub>
-                            </>
-                        )
-                    }
-                />
-            )}
-            {active === 'timeline' && <Heatmap heatmap={data.heatmap} strings={strings} />}
-        </aside>
-    );
-}
-
-// Gestern / Heute / Blocker als Fließtext zum Vorlesen oder für Slack.
-function standupText(data, strings) {
+// Gestern / Heute / Blocker & Hilfe als Text zum Vorlesen oder für Slack.
+function standupText(cards, scope, strings) {
     const task = (row) => `${row.key} ${row.summary}`;
-    const prTitle = (pr) => (pr.tickets?.[0] ? `${pr.tickets[0].key} ${pr.tickets[0].summary}` : pr.title);
-    const yesterday = [
-        ...data.issueChanges.slice(0, 8).map((row) => interpolate(strings.standup_status, { task: task(row), status: row.to ?? '' })),
-        ...data.pullRequests
-            .filter((pr) => pr.event !== 'ciFailed')
-            .map((pr) => interpolate(strings.standup_pr, { number: pr.number, event: strings[`pr_${pr.event}`], title: prTitle(pr) })),
-        ...(data.reviews.length ? [transChoice(strings.standup_reviews, data.reviews.length)] : []),
-    ];
-    const today = data.today.slice(0, 6).map(task);
-    const blockers = data.blockers.map((row) => `${task(row)} (${row.status})`);
+    const prTitle = (pr) => (pr.tickets?.[0] ? task(pr.tickets[0]) : pr.title);
+    const reasons = (row) => row.reasons.map((reason) => strings[`reason_${reason}`]).join(', ');
     const section = (title, items) => `${title}\n${items.length ? items.map((item) => `- ${item}`).join('\n') : `- ${strings.standup_none}`}`;
 
-    return [section(strings.standup_yesterday, yesterday), section(strings.standup_today, today), section(strings.standup_blockers, blockers)].join('\n\n');
+    return cards
+        .map((p) => {
+            const yesterday = [
+                ...p.progress.map((item) => {
+                    if (item.kind === 'change') return interpolate(strings.standup_status, { task: task(item.row), status: item.row.to ?? '' });
+                    if (item.kind === 'group') {
+                        const counts = [...item.rows.reduce((map, row) => map.set(row.to, (map.get(row.to) ?? 0) + 1), new Map())].map(([to, count]) => `${count} → ${to}`).join(', ');
+                        return `${item.parent.key} ${item.parent.summary}: ${counts}`;
+                    }
+                    return interpolate(strings.standup_pr, { number: item.row.number, event: strings[`pr_${item.row.event}`], title: prTitle(item.row) });
+                }),
+                ...(p.reviews.length ? [transChoice(strings.standup_reviews, p.reviews.length)] : []),
+            ];
+            const today = [...p.attention.map((row) => `PR #${row.number} ${prTitle(row)}: ${reasons(row)}`), ...p.today.map(task)];
+            const help = p.help.map(({ kind, row }) => {
+                if (kind === 'pr') return `PR #${row.number} ${prTitle(row)}: ${reasons(row)}`;
+                if (kind === 'stale') return `${task(row)} (${interpolate(strings.stale, { days: days(row.updatedAt) })})`;
+                return `${task(row)} (${row.flagged ? strings.flagged : row.status})`;
+            });
+            const body = [section(strings.standup_yesterday, yesterday), section(strings.standup_today, today), section(strings.standup_blockers, help)].join('\n\n');
+
+            return scope === 'team' ? `*${p.name}*\n${body}` : body;
+        })
+        .join('\n\n');
 }
 
 export default function Daily({ day, scope, data, urls, strings, prStrings = {}, me }) {
-    const locale = (typeof document !== 'undefined' && document.documentElement.getAttribute('lang')) || 'de';
     const [copied, setCopied] = useState(false);
-    const text = useMemo(() => standupText(data, strings), [data, strings]);
     const cards = useMemo(() => people(data, scope, me, strings), [data, scope, me, strings]);
+    const text = useMemo(() => standupText(cards, scope, strings), [cards, scope, strings]);
     const quiet = scope === 'team' ? data.team.filter((m) => !m.active && !cards.some((c) => c.name === m.name)) : [];
     const copy = () =>
         navigator.clipboard?.writeText(text).then(() => {
@@ -574,17 +471,6 @@ export default function Daily({ day, scope, data, urls, strings, prStrings = {},
         'rounded-md px-3.5 py-1.5 text-sm font-medium transition ' +
         (active ? 'bg-white text-gray-900 shadow-sm dark:bg-gray-600 dark:text-gray-100' : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200');
     const navButton = 'px-2.5 py-1.5 text-gray-600 hover:text-indigo-600 dark:text-gray-300 dark:hover:text-indigo-400';
-    const kpis = [
-        { value: data.kpis.doneTasks, label: strings.kpi_done_short, sub: interpolate(strings.kpi_done_sub_short, { review: data.kpis.toReview }) },
-        { value: data.kpis.prsMerged, label: strings.kpi_prs_short, sub: interpolate(strings.kpi_prs_sub_short, { open: data.kpis.prsOpen }) },
-        { value: data.kpis.reviewsGiven, label: strings.kpi_reviews_short, sub: interpolate(strings.kpi_reviews_sub_short, { waiting: data.kpis.waiting }) },
-        {
-            value: data.kpis.blockers,
-            label: strings.kpi_blockers_short,
-            sub: data.kpis.blockers > 0 ? interpolate(strings.kpi_blockers_sub, { days: Math.max(1, Math.round(data.kpis.oldestBlockerDays ?? 0)) }) : strings.kpi_blockers_none,
-            danger: data.kpis.blockers > 0,
-        },
-    ];
 
     return (
         <PrStrings.Provider value={prStrings}>
@@ -625,7 +511,7 @@ export default function Daily({ day, scope, data, urls, strings, prStrings = {},
             />
 
             <div className="py-6">
-                <div className="mx-auto max-w-7xl space-y-4 px-4 sm:px-6 lg:px-8">
+                <div className="mx-auto max-w-5xl space-y-4 px-4 sm:px-6 lg:px-8">
                     {(!data.jira.connected || data.jira.error) && (
                         <div className="rounded-lg bg-amber-50 px-4 py-3 text-sm text-amber-900 ring-1 ring-amber-200 dark:bg-amber-900/20 dark:text-amber-200 dark:ring-amber-900/60">
                             {data.jira.error ? interpolate(strings.jira_error, { error: data.jira.error }) : strings.jira_missing}{' '}
@@ -633,38 +519,24 @@ export default function Daily({ day, scope, data, urls, strings, prStrings = {},
                         </div>
                     )}
 
-                    <div className={`${CARD} grid grid-cols-2 divide-gray-100 py-2 dark:divide-gray-700 lg:grid-cols-4 lg:divide-x`}>
-                        {kpis.map((kpi) => (
-                            <div key={kpi.label} className="flex flex-wrap items-baseline gap-x-2 px-4 py-1.5">
-                                <span className={`text-2xl font-bold ${kpi.danger ? 'text-red-700 dark:text-red-400' : 'text-gray-900 dark:text-gray-100'}`}>{kpi.value}</span>
-                                <span className="text-sm text-gray-700 dark:text-gray-300">{kpi.label}</span>
-                                <span className="text-xs text-gray-400 dark:text-gray-500">{kpi.sub}</span>
+                    <section className="space-y-2">
+                        <div className="flex flex-wrap items-baseline justify-between gap-2">
+                            <h2 className="font-semibold text-gray-900 dark:text-gray-100">{transChoice(strings.standup_people, cards.length)}</h2>
+                            <span className="text-xs text-gray-500 dark:text-gray-400">{strings.standup_order}</span>
+                        </div>
+                        {cards.length === 0 ? (
+                            <p className={`${CARD} px-4 py-8 text-center text-sm text-gray-500 dark:text-gray-400`}>{strings.activity_empty}</p>
+                        ) : (
+                            <div className="grid grid-cols-1 gap-3">
+                                {cards.map((person) => <PersonCard key={person.name} person={person} strings={strings} limit={PER_SECTION[scope] ?? PER_SECTION.team} />)}
                             </div>
-                        ))}
-                    </div>
-
-                    <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-                        <section className="space-y-2 lg:col-span-2">
-                            <div className="flex flex-wrap items-baseline justify-between gap-2">
-                                <h2 className="font-semibold text-gray-900 dark:text-gray-100">{transChoice(strings.standup_people, cards.length)}</h2>
-                                <span className="text-xs text-gray-500 dark:text-gray-400">{strings.standup_order}</span>
-                            </div>
-                            {cards.length === 0 ? (
-                                <p className={`${CARD} px-4 py-8 text-center text-sm text-gray-500 dark:text-gray-400`}>{strings.activity_empty}</p>
-                            ) : (
-                                <div className="grid grid-cols-1 gap-3">
-                                    {cards.map((person) => <PersonCard key={person.name} person={person} strings={strings} limit={PER_SECTION[scope] ?? PER_SECTION.team} />)}
-                                </div>
-                            )}
-                            {quiet.length > 0 && (
-                                <p className="px-1 text-xs text-gray-500 dark:text-gray-400">
-                                    {interpolate(strings.quiet_people, { names: quiet.map((m) => m.name).join(', ') })}
-                                </p>
-                            )}
-                        </section>
-
-                        <SidePanel data={data} strings={strings} locale={locale} />
-                    </div>
+                        )}
+                        {quiet.length > 0 && (
+                            <p className="px-1 text-xs text-gray-500 dark:text-gray-400">
+                                {interpolate(strings.quiet_people, { names: quiet.map((m) => m.name).join(', ') })}
+                            </p>
+                        )}
+                    </section>
                 </div>
             </div>
         </PrStrings.Provider>

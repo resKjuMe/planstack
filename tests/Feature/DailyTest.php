@@ -68,11 +68,22 @@ class DailyTest extends TestCase
                 'author_id' => $author->id,
                 'title' => "MN-1: PR {$number}",
                 'state' => 'MERGED',
-                'description' => "<!-- KUNDENSICHT-START -->\n- [x] Ab Deploy sichtbar\n\n**Was ändert sich?**\nExporte laufen im Hintergrund.\n<!-- KUNDENSICHT-END -->",
                 'opened_at' => '2026-11-17 09:00:00',
                 'merged_at' => '2026-11-17 13:00:00',
             ]);
         }
+
+        // Offen mit roter CI und seit Tagen ohne Freigabe: Handlungsbedarf, kein Ereignis des Tages.
+        PullRequest::create([
+            'organization_id' => $organization->id,
+            'repository' => 'acme/app',
+            'pull_request_id' => 103,
+            'author_id' => $ada->id,
+            'title' => 'MN-7: PR 103',
+            'state' => 'OPEN',
+            'ci_state' => 'failed',
+            'opened_at' => '2026-11-15 09:00:00',
+        ]);
 
         $issue = fn (string $key, string $status, string $category, array $histories = [], bool $flagged = false) => [
             'key' => $key,
@@ -132,16 +143,9 @@ class DailyTest extends TestCase
         $this->assertSame('https://avatar.test/ada.png', $data['issueChanges'][0]['prs'][0]['avatar']);
         $this->assertSame([], $data['blockers'][0]['prs']);
         $this->assertSame(['MN-2', 'MN-3'], array_column($data['blockers'], 'key'));
-        $this->assertSame(['MN-4'], array_column($data['waiting'], 'key'));
         $this->assertSame(['MN-5'], array_column($data['today'], 'key'));
         $this->assertSame([101], array_column($data['pullRequests'], 'number'));
-        $this->assertSame('Exporte laufen im Hintergrund.', $data['forPo'][0]['customerView']['change']);
-        $this->assertSame('Ab Deploy sichtbar', $data['forPo'][0]['customerView']['visibility']);
-    }
-
-    public function test_customer_view_is_null_without_block(): void
-    {
-        $this->assertNull(DailyPresenter::customerView('Nur Text'));
-        $this->assertNull(DailyPresenter::customerView(null));
+        $this->assertSame([103], array_column($data['attention'], 'number'));
+        $this->assertSame(['ciFailed', 'waitingReview'], $data['attention'][0]['reasons']);
     }
 }
