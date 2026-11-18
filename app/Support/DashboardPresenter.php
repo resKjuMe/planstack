@@ -77,7 +77,7 @@ class DashboardPresenter
      */
     public function payload(User $user): array
     {
-        $projectIds = $this->visibleProjectIds($user);
+        $projectIds = VisibleProjects::idsFor($user);
 
         if ($projectIds === []) {
             return $this->emptyPayload();
@@ -95,29 +95,6 @@ class DashboardPresenter
             'projects' => $this->projects($user, $activeIds, $items),
             'activity' => $this->activity($user, $projectIds),
         ];
-    }
-
-    /**
-     * Projekte, die der Nutzer sehen darf — dieselbe Regel wie in Projektübersicht
-     * und Statistik (Org-Owner sieht alle, sonst eigene + Team-Projekte).
-     *
-     * @return array<int, int>
-     */
-    private function visibleProjectIds(User $user): array
-    {
-        if ($user->organization_id === null) {
-            return [];
-        }
-
-        $isOrgOwner = $user->organization?->isOwner($user) === true;
-
-        return Project::query()
-            ->where('organization_id', $user->organization_id)
-            ->when(! $isOrgOwner, fn ($q) => $q->where(fn ($inner) => $inner
-                ->where('created_by_id', $user->id)
-                ->orWhereHas('teams.members', fn ($m) => $m->where('users.id', $user->id))))
-            ->pluck('id')
-            ->all();
     }
 
     /**

@@ -5,6 +5,7 @@ use App\Http\Controllers\ApiTokenController;
 use App\Http\Controllers\ProfileJiraController;
 use App\Http\Controllers\ChangelogController;
 use App\Http\Controllers\ClaudetaskSetupController;
+use App\Http\Controllers\DailyController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\FaqController;
 use App\Http\Controllers\GitWebhookController;
@@ -144,6 +145,9 @@ Route::middleware('auth')->group(function () {
     Route::get('/dashboard', DashboardController::class)
         ->middleware('verified')
         ->name('dashboard');
+
+    // Stand-up-Ansicht: was ist am letzten Arbeitstag passiert
+    Route::get('/daily', DailyController::class)->name('daily');
 
     // Nutzer-Changelog der Website (Versionsübersicht in der Hauptnavi)
     Route::get('/changelog', ChangelogController::class)->name('changelog');

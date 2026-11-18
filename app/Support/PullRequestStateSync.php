@@ -26,7 +26,16 @@ class PullRequestStateSync
 
     private const FIELDS = 'state mergeable isInMergeQueue mergedAt closedAt title headRefOid additions deletions changedFiles commitCount: commits { totalCount } comments { totalCount } reviewThreads(first: 100) { nodes { isResolved } } '
         .'ci: commits(last: 1) { nodes { commit { statusCheckRollup { contexts(first: 100) { nodes { __typename '
-        .'... on CheckRun { name status conclusion } ... on StatusContext { context state } } } } } } }';
+        .'... on CheckRun { name status conclusion } ... on StatusContext { context state } } } } } } } '
+        .'files(first: 100) { nodes { path } }';
+
+    /** Frontend-Dateien (Markup, Komponenten, Styles), Tests ausgenommen. */
+    private const UI_FILE = '~(\.(jsx?|tsx?|vue|svelte|css|scss|less)|\.blade\.php)$~i';
+
+    private const TEST_FILE = '~(^|/)(tests?|__tests__|e2e)/|\.(test|spec)\.~i';
+
+    /** Übersetzungen und Texte. */
+    private const TEXT_FILE = '~(^|/)(lang|locales?|i18n|translations)/|\.(po|xlf|xliff)$~i';
 
     /** Fehlgeschlagene Checks wie im Tampermonkey-Skript git-colors; CANCELLED zählt nicht. */
     private const FAILED = ['FAILURE', 'ERROR', 'TIMED_OUT', 'STARTUP_FAILURE', 'ACTION_REQUIRED'];
@@ -263,6 +272,13 @@ class PullRequestStateSync
         if (array_key_exists('ci', $node)) {
             [$pullRequest->ci_state, $failed] = $this->ciState(data_get($node, 'ci.nodes.0.commit.statusCheckRollup.contexts.nodes'));
             $pullRequest->ci_failed_checks = $failed ?: null;
+        }
+
+        if (is_array(data_get($node, 'files.nodes'))) {
+            $paths = collect($node['files']['nodes'])->pluck('path')->filter()
+                ->reject(fn (string $path) => preg_match(self::TEST_FILE, $path) === 1);
+            $pullRequest->ui_files = $paths->filter(fn (string $path) => preg_match(self::UI_FILE, $path) === 1)->count();
+            $pullRequest->text_files = $paths->filter(fn (string $path) => preg_match(self::TEXT_FILE, $path) === 1)->count();
         }
 
         if (array_key_exists('isInMergeQueue', $node)) {

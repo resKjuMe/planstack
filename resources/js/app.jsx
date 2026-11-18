@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client';
 import { createInertiaApp, router } from '@inertiajs/react';
 import BladePage from './shell/pages/BladePage.jsx';
 import Dashboard from './shell/pages/Dashboard.jsx';
+import Daily from './shell/pages/Daily.jsx';
 import ProjectWorkspace from './shell/pages/ProjectWorkspace.jsx';
 import ProjectsIndex from './shell/pages/ProjectsIndex.jsx';
 import PullRequestsIndex from './shell/pages/PullRequestsIndex.jsx';
@@ -44,6 +45,7 @@ import OrganizationEventsEffects from './shell/pages/OrganizationEventsEffects.j
 const pages = {
     BladePage,
     Dashboard,
+    Daily,
     ProjectWorkspace,
     ProjectsIndex,
     PullRequestsIndex,
