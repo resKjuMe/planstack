@@ -58,7 +58,7 @@ class DailyPresenter
             $this->pullRequests($user, $userIds, $from, $until),
             $this->reviews($user, $userIds, $from, $until),
         );
-        $jira = $this->withPullRequests($user, $this->jira($user, $teamIds, $userIds, $day));
+        $jira = $this->withPullRequests($user, $this->jira($user, $teamIds, $userIds, $day, $scope === 'team'));
         $issueChanges = $jira['issueChanges'];
 
         $done = collect($issueChanges)->where('isDone', true);
@@ -100,7 +100,7 @@ class DailyPresenter
      * @param  array<int, int>  $userIds
      * @return array<string, mixed>
      */
-    private function jira(User $user, array $teamIds, array $userIds, CarbonImmutable $day): array
+    private function jira(User $user, array $teamIds, array $userIds, CarbonImmutable $day, bool $assignedOnly = false): array
     {
         $empty = [
             'connected' => $user->hasJiraCredentials(),
@@ -146,7 +146,7 @@ class DailyPresenter
         return [
             'connected' => true,
             'error' => null,
-            'issueChanges' => $this->issueChanges($dayIssues, $scopeAccounts, $from, $until),
+            'issueChanges' => $this->issueChanges($dayIssues, $scopeAccounts, $from, $until, $assignedOnly),
             'blockers' => $this->blockers($open),
             'waiting' => $this->waiting($open),
             'today' => $this->today($open),
@@ -201,12 +201,17 @@ class DailyPresenter
      * @param  array<int, string>  $accounts
      * @return array<int, array<string, mixed>>
      */
-    private function issueChanges(Collection $issues, array $accounts, CarbonImmutable $from, CarbonImmutable $until): array
+    private function issueChanges(Collection $issues, array $accounts, CarbonImmutable $from, CarbonImmutable $until, bool $assignedOnly = false): array
     {
         return $issues
-            ->map(function (array $issue) use ($accounts, $from, $until) {
+            ->map(function (array $issue) use ($accounts, $from, $until, $assignedOnly) {
                 $changes = collect($issue['transitions'])->filter(fn (array $t) => $t['at']->between($from, $until))->values();
                 if ($changes->isEmpty()) {
+                    return null;
+                }
+
+                // Team: nur Tickets, die einem Teammitglied zugewiesen sind (Karten je Zuständigem).
+                if ($assignedOnly && ! in_array($issue['assignee'], $accounts, true)) {
                     return null;
                 }
 
