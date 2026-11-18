@@ -150,7 +150,7 @@ class JiraActivity
     {
         $fields = $this->fields();
         $wanted = array_values(array_filter([
-            'summary', 'status', 'assignee', 'reporter', 'issuetype', 'updated', 'created', 'resolutiondate',
+            'summary', 'status', 'assignee', 'reporter', 'issuetype', 'parent', 'updated', 'created', 'resolutiondate',
             $fields['storyPoints'], $fields['flagged'], $fields['sprint'],
         ]));
 
@@ -251,6 +251,11 @@ class JiraActivity
             'summary' => $f['summary'] ?? '',
             'url' => $this->baseUrl().'/browse/'.$issue['key'],
             'type' => data_get($f, 'issuetype.name'),
+            'parent' => data_get($f, 'parent.key') !== null ? [
+                'key' => data_get($f, 'parent.key'),
+                'summary' => data_get($f, 'parent.fields.summary', ''),
+                'url' => $this->baseUrl().'/browse/'.data_get($f, 'parent.key'),
+            ] : null,
             'status' => data_get($f, 'status.name'),
             'category' => data_get($f, 'status.statusCategory.key'),
             'assignee' => data_get($f, 'assignee.accountId'),
