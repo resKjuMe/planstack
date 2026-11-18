@@ -6,6 +6,28 @@
 return [
     'releases' => [
         [
+            'version' => '2.10.0',
+            'date' => '2026-11-18',
+            'tldr' => [
+                'de' => ['Neu: „Daily“ – dein Stand-up vom letzten Arbeitstag auf einen Blick'],
+                'en' => ['New: "Daily" – your stand-up for the last working day at a glance'],
+            ],
+            'changes' => [
+                'de' => [
+                    'Neu: Die Seite „Daily“ in der Hauptnavigation zeigt, was am letzten Arbeitstag passiert ist: Statuswechsel der Tasks, eröffnete und gemergte Pull Requests, abgegebene Reviews und einen Tagesverlauf pro Stunde.',
+                    'Neu: Mit „Ich | Team“ wechselst du zwischen deinen eigenen Einträgen und denen deines Teams; mit den Pfeilen blätterst du durch die Arbeitstage.',
+                    'Neu: Die Filter „Team“, „PO“ und „UX“ blenden die passenden Karten ein – Blocker, wartende Reviews und laufende Tasks, die Kundensicht der PRs samt offener PO-Entscheidungen bzw. PRs mit Frontend- oder Textänderungen.',
+                    'Neu: „Stand-up-Text kopieren“ erzeugt Gestern/Heute/Blocker als Text für Slack.',
+                ],
+                'en' => [
+                    'New: The "Daily" page in the main navigation shows what happened on the last working day: task status changes, opened and merged pull requests, reviews given and an hourly timeline.',
+                    'New: "Me | Team" switches between your own entries and your team\'s; the arrows page through the working days.',
+                    'New: The filters "Team", "PO" and "UX" show the matching cards – blockers, waiting reviews and running tasks, the customer view of PRs with open PO decisions, or PRs with frontend or text changes.',
+                    'New: "Copy stand-up text" creates yesterday/today/blockers as text for Slack.',
+                ],
+            ],
+        ],
+        [
             'version' => '2.9.3',
             'date' => '2026-11-18',
             'tldr' => [

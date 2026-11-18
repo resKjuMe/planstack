@@ -60,6 +60,8 @@ class PullRequest extends Model
             'pull_request_id' => 'integer',
             'state' => PullRequestState::class,
             'changed_files' => 'integer',
+            'ui_files' => 'integer',
+            'text_files' => 'integer',
             'additions' => 'integer',
             'deletions' => 'integer',
             'commits' => 'integer',
