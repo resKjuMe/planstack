@@ -19,7 +19,7 @@ export default function PrAuthors({ prs, compact = false, className = '' }) {
     return (
         <span className={`inline-flex flex-wrap items-center gap-x-3 gap-y-1 ${className}`}>
             {authors.map((entry) => (
-                <span key={entry.key} className="inline-flex items-center gap-1.5 text-xs text-gray-600 dark:text-gray-400" title={entry.author ?? ''}>
+                <span key={entry.key} className="inline-flex min-w-0 max-w-full flex-wrap items-center gap-x-1.5 gap-y-0.5 text-xs text-gray-600 dark:text-gray-400" title={entry.author ?? ''}>
                     {entry.avatar ? (
                         <img src={entry.avatar} alt="" className="h-5 w-5 shrink-0 rounded-full ring-1 ring-gray-200 dark:ring-gray-600" loading="lazy" />
                     ) : (
