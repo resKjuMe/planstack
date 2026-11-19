@@ -6,6 +6,24 @@
 return [
     'releases' => [
         [
+            'version' => '2.13.1',
+            'date' => '2026-11-19',
+            'tldr' => [
+                'de' => ['ps-review 1.5.0: Vorschläge werden vor dem Review-Abschluss geprüft'],
+                'en' => ['ps-review 1.5.0: suggestions are checked before the review is finished'],
+            ],
+            'changes' => [
+                'de' => [
+                    'Geändert: ps-review spielt jeden Lösungsvorschlag gegen den Normalfall durch, gleicht ihn mit einem vergleichbaren Bauteil ab und nennt den passenden Test. Browser-Tests und Testvorschläge werden gegen typische Stolperfallen geprüft. Das spart Korrekturrunden, die ein fehlerhafter Vorschlag sonst auslöst.',
+                    'Geändert: Der herunterladbare Skill enthält jetzt auch die Prüfung der Kundensicht und das Beantworten übernommener Review-Threads.',
+                ],
+                'en' => [
+                    'Changed: ps-review walks every suggested fix through the normal case, compares it with a similar component and names the matching test. Browser tests and test suggestions are checked against common pitfalls. This saves correction rounds that a faulty suggestion would otherwise trigger.',
+                    'Changed: The downloadable skill now also checks the customer view and answers adopted review threads.',
+                ],
+            ],
+        ],
+        [
             'version' => '2.13.0',
             'date' => '2026-11-19',
             'tldr' => [
