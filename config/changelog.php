@@ -6,6 +6,22 @@
 return [
     'releases' => [
         [
+            'version' => '2.13.0',
+            'date' => '2026-11-19',
+            'tldr' => [
+                'de' => ['Alle Befunde fixen: Freifeld „Sonstige Anweisungen“ auf der letzten Seite'],
+                'en' => ['Fix all findings: free-text "Other instructions" on the last page'],
+            ],
+            'changes' => [
+                'de' => [
+                    'Neu: Auf der Übersichtsseite von „Alle Befunde fixen“ lassen sich sonstige Anweisungen für den ganzen Fix-Lauf eintragen (z. B. Tests ergänzen). Sie werden mit „Lösungen speichern“ gesichert und von ps-review beim Fix verbindlich umgesetzt.',
+                ],
+                'en' => [
+                    'New: The overview page of "Fix all findings" takes other instructions for the whole fix run (e.g. add tests). They are kept with "Save decisions" and applied by ps-review during the fix.',
+                ],
+            ],
+        ],
+        [
             'version' => '2.12.1',
             'date' => '2026-11-18',
             'tldr' => [

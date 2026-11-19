@@ -844,6 +844,7 @@ function FixDialog({ review, pr, strings, onClose }) {
     const [step, setStep] = useState(0);
     const form = useForm({
         findings: findings.map((f) => ({ id: f.id, ...initialChoice(f) })),
+        instructions: review.fixInstructions ?? '',
     });
     const overview = step === findings.length;
 
@@ -896,7 +897,15 @@ function FixDialog({ review, pr, strings, onClose }) {
 
                 <div className="overflow-y-auto p-6">
                     {overview ? (
-                        <FixOverview findings={findings} data={form.data.findings} strings={strings} onPick={setStep} />
+                        <FixOverview
+                            findings={findings}
+                            data={form.data.findings}
+                            instructions={form.data.instructions}
+                            error={form.errors.instructions}
+                            strings={strings}
+                            onPick={setStep}
+                            onInstructions={(value) => form.setData('instructions', value)}
+                        />
                     ) : (
                         <FixStep
                             finding={findings[step]}
@@ -1156,7 +1165,7 @@ function FindingFixDialog({ finding, pr, strings, onClose }) {
     );
 }
 
-function FixOverview({ findings, data, strings, onPick }) {
+function FixOverview({ findings, data, instructions, error, strings, onPick, onInstructions }) {
     return (
         <div className="space-y-3">
             <h3 className="font-semibold text-gray-900 dark:text-gray-100">{strings.fix_overview}</h3>
@@ -1173,6 +1182,23 @@ function FixOverview({ findings, data, strings, onPick }) {
                     </li>
                 ))}
             </ul>
+            <div className="space-y-1.5 pt-2">
+                <div className="flex items-baseline justify-between gap-3">
+                    <label htmlFor="fix-instructions" className="font-semibold text-gray-900 dark:text-gray-100">
+                        {strings.fix_instructions}
+                    </label>
+                    <span className="text-[13px] leading-5 text-gray-500 dark:text-gray-400">{strings.fix_optional}</span>
+                </div>
+                <textarea
+                    id="fix-instructions"
+                    rows={4}
+                    value={instructions}
+                    onChange={(e) => onInstructions(e.target.value)}
+                    placeholder={strings.fix_instructions_placeholder}
+                    className="block w-full rounded-lg border-gray-400 px-3.5 py-2.5 text-[15px] leading-6 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100 focus:border-indigo-500 focus:ring-indigo-500"
+                />
+                {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
+            </div>
             <p className="text-sm text-gray-600 dark:text-gray-400">{strings.fix_overview_hint}</p>
         </div>
     );

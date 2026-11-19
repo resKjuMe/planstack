@@ -8,9 +8,9 @@ use Tests\TestCase;
 class PsReviewSkillVersionTest extends TestCase
 {
     // Bei jeder Änderung an der SKILL.md: `version` im Frontmatter erhöhen und beides hier nachziehen.
-    private const VERSION = '1.2.0';
+    private const VERSION = '1.2.2';
 
-    private const CONTENT_HASH = '872eec0f976f9deaffd162cc30784e0f98e84635420257c52fae662cac73f688';
+    private const CONTENT_HASH = 'da0299b2544b6c526eb3c96cd40db76cd846395634fdf5b3dacd2bc461b3e921';
 
     public function test_every_change_to_the_skill_gets_a_new_version(): void
     {

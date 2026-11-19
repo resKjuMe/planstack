@@ -146,6 +146,8 @@ return [
     'fix_po_note_required' => 'This finding needs a PO decision.',
     'fix_overview' => 'Overview',
     'fix_overview_hint' => 'ps-review applies the fixes on the PR branch, records the decisions (incl. PO) in the PR description, pushes and then starts a new review.',
+    'fix_instructions' => 'Other instructions',
+    'fix_instructions_placeholder' => 'Guidance for the whole fix run, e.g. add tests, commit style, things to leave untouched',
     'fix_save' => 'Save decisions',
     'fix_submit' => 'Start fix',
     'fix_back' => 'Back',
