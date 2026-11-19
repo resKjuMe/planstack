@@ -1,7 +1,7 @@
 ---
 name: ps-review
-description: Code-Review eines GitHub-PR mit Ablage in Planstack — reviewt den PR (inklusive Prüfung der Code-Kommentare auf Richtigkeit, Mehrwert und Knappheit), bewertet Kritikalität, KI-Prüfbarkeit und PO-Sichtung, sendet PR-Daten und Review samt Findings an die Planstack-API (sichtbar unter planstack.eskju.net/pull-requests), gibt die Review im Chat aus und schließt mit Findings-/Kritisch-/Wichtig-/Hinweis-/Empfehlung-Zeilen ab. Am PR wird nur nach ausdrücklicher Rückfrage gepostet. Mit „fix“ setzt er die in Planstack je Befund getroffenen Entscheidungen um, hält sie im PR-Body fest, pusht und reviewt neu; mit „resolve“ löst er den Merge-Konflikt, fixt rote CI und offene (Review-)Kommentare, pusht und reviewt neu; mit „convert“ übernimmt er die Changes-Requested-Review eines Kollegen als ps-review mit Befunden, beantwortet deren Kommentare mit dem Planstack-Link und löst die Threads auf; mit „create“ setzt er ein Jira-Ticket oder eine beschriebene Aufgabe als neuen PR um, füllt die Kundensicht, reviewt ihn und bringt die CI auf grün. Nutze diesen Skill bei „ps-review 1234", „review PR 1234 nach Planstack", „/ps-review", „/ps-review fix 1234", „/ps-review resolve 1234", „/ps-review convert 1234 --from <login>", „/ps-review create MN-1234".
-version: 1.2.2
+description: Code-Review eines GitHub-PR mit Ablage in Planstack — reviewt den PR (inklusive Prüfung der Code-Kommentare auf Richtigkeit, Mehrwert und Knappheit sowie der Kundensicht im PR-Body auf Verständlichkeit nach den Regeln des kundensicht-Skills), bewertet Kritikalität, KI-Prüfbarkeit und PO-Sichtung, sendet PR-Daten und Review samt Findings an die Planstack-API (sichtbar unter planstack.eskju.net/pull-requests), gibt die Review im Chat aus und schließt mit Findings-/Kritisch-/Wichtig-/Hinweis-/Empfehlung-Zeilen ab. Am PR wird nur nach ausdrücklicher Rückfrage gepostet. Mit „fix“ setzt er die in Planstack je Befund getroffenen Entscheidungen um, hält sie im PR-Body fest, pusht und reviewt neu; mit „resolve“ löst er den Merge-Konflikt, fixt rote CI und offene (Review-)Kommentare, pusht und reviewt neu; mit „convert“ übernimmt er die Changes-Requested-Review eines Kollegen als ps-review mit Befunden, beantwortet deren Kommentare mit dem Planstack-Link und löst die Threads auf; mit „create“ setzt er ein Jira-Ticket oder eine beschriebene Aufgabe als neuen PR um, füllt die Kundensicht, reviewt ihn und bringt die CI auf grün. Nutze diesen Skill bei „ps-review 1234", „review PR 1234 nach Planstack", „/ps-review", „/ps-review fix 1234", „/ps-review resolve 1234", „/ps-review convert 1234 --from <login>", „/ps-review create MN-1234".
+version: 1.5.0
 argument-hint: "[fix|resolve|convert|create] [<pr-nummer|pr-url|branch|jira-key|beschreibung>] [--from <login>] [--lenient|--strict] [--relaxed|--meticulous] [--post|--comment|--no-post]"
 ---
 
@@ -13,7 +13,7 @@ Ein vollständiges Code-Review; das Ergebnis landet **nicht** als Datei, sondern
 
 ## Harte Regeln (nicht verhandelbar)
 
-1. **Nichts am PR posten, bevor der Nutzer zugestimmt hat.** Während des Reviews sind nur lesende `gh`-Aufrufe erlaubt (`gh pr view`, `gh pr diff`, `gh pr checks`, `gh api` mit `GET`). Geschrieben wird am PR erst in Schritt 8 — nach expliziter Zustimmung, und nur das, was der Nutzer in Schritt 7 ausgewählt hat. Ohne Antwort wird nichts gepostet; Schweigen ist kein Ja. Ausnahme: im Übernahme-Modus (`/ps-review convert`) ist der Klick auf den Button die Zustimmung zu den Antworten und dem Auflösen der übernommenen Threads (C4), im Fix-Modus einer übernommenen Review die Zustimmung zum Dismissen der ursprünglichen Review (F4).
+1. **Nichts am PR posten, bevor der Nutzer zugestimmt hat.** Während des Reviews sind nur lesende `gh`-Aufrufe erlaubt (`gh pr view`, `gh pr diff`, `gh pr checks`, `gh api` mit `GET`). Geschrieben wird am PR erst in Schritt 8 — nach expliziter Zustimmung, und nur das, was der Nutzer in Schritt 7 ausgewählt hat. Ohne Antwort wird nichts gepostet; Schweigen ist kein Ja. Ausnahme: offene Review-Threads, die das Review als Befund übernimmt, werden nach dem Abschluss in Planstack beantwortet und aufgelöst (Schritt 5a) — in jedem Modus, der ein Review abschließt, ohne Rückfrage. Weitere Ausnahme: im Übernahme-Modus (`/ps-review convert`) ist der Klick auf den Button die Zustimmung zu den Antworten und dem Auflösen der übernommenen Threads (C4), im Fix-Modus einer übernommenen Review die Zustimmung zum Dismissen der ursprünglichen Review (F4).
 2. **Planstack nur über drei Aufrufe**: `PUT /api/pull-requests` und `POST /api/pull-requests/{id}/reviews` (Start) in Schritt 1, `PUT /api/pull-requests/{id}/reviews/{review}` (Abschluss) in Schritt 5. Im Fix-Modus kommen `POST /api/pull-requests/{id}/fix/claim` und `PUT /api/pull-requests/{id}/reviews/{review}/fix` dazu. Keine Board-Aufrufe (`review-claim`, `review-next`, Events) — dieser Skill kennt kein Board.
 3. **Keine lokale Report-Datei.** Die Payload-Dateien für `curl` liegen nur temporär (Scratchpad bzw. `mktemp -d`) und werden nach dem Senden gelöscht. Schlägt die API fehl, wird das gemeldet — nicht als Datei abgelegt.
 4. **Nichts am Code ändern.** Das Review ist rein lesend: keine Edits, keine Commits, kein Push, kein Checkout, der lokale Änderungen gefährdet. Ausnahmen: der Nutzer wählt in Schritt 7 „Fixe Findings im gleichen PR“ — dann gilt Schritt 9; oder der Aufruf ist `/ps-review fix`, `/ps-review resolve` bzw. `/ps-review create` — dann gilt der Fix-, Konflikt- bzw. Erstell-Modus. Der Übernahme-Modus (`/ps-review convert`) ändert keinen Code.
@@ -84,6 +84,8 @@ gh api "repos/$REPO/commits/<head.sha>/check-runs?check_name=pr-bot%20%2F%20Revi
   --jq '.check_runs[0].output.summary // empty'
 gh pr diff <pr>
 gh pr checks <pr>                 # CI-Stand gehört in die Summary, wird aber nicht repariert
+# offene Review-Threads (Übernahme als Befund, siehe unten):
+gh api graphql -f query='query($o:String!,$r:String!,$n:Int!){repository(owner:$o,name:$r){pullRequest(number:$n){reviewThreads(first:100){nodes{id isResolved isOutdated path line originalLine comments(first:50){nodes{databaseId author{login} body url}}}}}}}' -F o=<owner> -F r=<repo> -F n=<pr>
 ```
 
 **Sofort danach — noch vor dem Lesen des Diffs — den Start in Planstack vermerken:** UPSERT des PR (Zuordnung in Schritt 5, „Aufruf 1“), dann den Review-Start:
@@ -127,8 +129,10 @@ Ist `/code-review` nicht verfügbar, das Review selbst durchführen — an derse
 - **Sicherheit**: Injection, fehlende Autorisierung, Mandanten-/Company-Grenzen, Secrets im Code oder Log, unsichere Deserialisierung.
 - **Daten & Migrationen**: destruktive DDL (DROP/RENAME) braucht zwei Deploys; Indizes, Sperren, Laufzeit auf großen Tabellen.
 - **Performance**: N+1, fehlende Indizes, unnötige Volllisten, Arbeit in der Schleife, die davor gehört.
-- **Tests**: decken sie den geänderten Pfad? Fehlt der Negativfall? Nichtdeterministische Tests (Wanduhr-/Timing-Assertions) sind ein Befund.
+- **Neue Module**: Legt der PR einen neuen Ordner direkt unter einem `module/`-Verzeichnis an (z. B. `backend/module/<Neu>/`), ist das ohne PO-Freigabe nicht erlaubt → je neuem Modul ein Befund `CRITICAL` mit `requires_po_decision: true`. Steht die PO-Freigabe nachweislich im Ticket oder PR-Body, entfällt der Befund (Quelle in der Summary nennen).
+- **Tests**: decken sie den geänderten Pfad? Fehlt der Negativfall? Nichtdeterministische Tests (Wanduhr-/Timing-Assertions) sind ein Befund. Browser-Tests zusätzlich gegen die Anti-Muster unter „Vorschläge prüfen“ lesen.
 - **Kommentare**: siehe eigener Abschnitt unten — jeder Kommentar im Diff wird einzeln geprüft.
+- **Kundensicht**: siehe eigener Abschnitt unten — der Block „📣 Kundensicht“ im PR-Body wird gegen die Regeln des `kundensicht`-Skills geprüft.
 - **Lesbarkeit & Konventionen**: Projektstil, Namen, tote Reste.
 
 Bei `strict` zählen auch Stil- und Konventionsverstöße als Befund; bei `lenient` nur, was tatsächlich bricht.
@@ -156,6 +160,55 @@ Einstufung: Kommentar-Befunde sind **immer Hinweis** — auch falsche/veraltete 
 
 Im Vorschlag konkret werden: die gekürzte Fassung hinschreiben oder „streichen" sagen — nicht nur „Kommentar überarbeiten".
 
+#### Kundensicht prüfen
+
+Enthält der PR-Body den Block `<!-- KUNDENSICHT-START … -->` … `<!-- KUNDENSICHT-END -->`, wird er geprüft. Maßstab sind die Regeln aus `~/.claude/skills/kundensicht/SKILL.md` (Harte Regel 5 sowie Ablauf Schritt 3 und 4) — die Datei vor der Prüfung lesen, sie ist die verbindliche Quelle. Fehlt der Block, entfällt die Prüfung.
+
+Als Befund melden (je Mangel ein Befund, `type: SUMMARY`):
+
+- **Nicht ausgefüllt** — Texte leer, nur Platzhalter-Kommentare oder kein Häkchen bei der Sichtbarkeit.
+- **Nicht verständlich ohne PR-Kontext** — „Was ändert sich?“ ist nicht genau ein Satz, benennt den Bereich in clockodo nicht konkret (Seite/Menü/Funktion), lässt mehrdeutige Begriffe stehen („Gruppe“) oder besteht die Gegenprobe nicht (Kollege aus Support/Vertrieb versteht ihn allein, in einer Liste mit 20 anderen).
+- **Fachjargon** — Klassen-, Datei-, Tabellen-, Endpunktnamen oder Regelnummern in einem der beiden Texte; Begriffe weichen von der Oberfläche ab.
+- **Negativformulierung** — bei „Keine Kundenauswirkung“/„Vorbereitung“ Sätze wie „Für Nutzer ändert sich nichts“ statt positiver Beschreibung, was gemacht wurde und wofür; oder der Satz beginnt mit einer Antwort auf die Überschrift („Nichts.“, „Nur …“).
+- **Entferntes Feature-Flag ohne Endstand** — es fehlt, ob das Verhalten danach „Flag an“ oder „Flag aus“ entspricht.
+- **„Was sagen wir dem Kunden?“** — nicht genau ein Satz, nicht direkt verwendbar, nicht positiv/konkret; Bugfix ohne „Wir haben behoben, dass …“.
+- **Widerspruch zum Diff** — Häkchen passen nicht zum Code (Feature-Flag schaltet die Logik, aber „Ab Deploy“ angehakt; Rechte-/API-Abhängigkeit nicht vermerkt; „Keine Kundenauswirkung“ trotz Verhaltensänderung).
+- Ersatzumlaute (ae/oe/ue/ss) in den Texten.
+
+Im Vorschlag die verbesserte Fassung des Satzes bzw. die richtigen Häkchen konkret hinschreiben. Einstufung: immer **Hinweis** (Deckelung in Schritt 3); bei `lenient` nur „Nicht ausgefüllt“ und „Widerspruch zum Diff“ melden.
+
+#### Vorschläge prüfen
+
+Der Fix-Modus setzt Vorschläge (bei `SUGGESTED` Option A) wörtlich um. Ein fehlerhafter Vorschlag erzeugt damit den nächsten Befund und eine weitere Runde. Deshalb prüft das Review jeden Vorschlag, bevor er in den Befund geht:
+
+1. **Durchspielen:** Den Vorschlag gedanklich gegen den Normalfall und die Nachbarfälle des Befunds laufen lassen, nicht nur gegen das Fehlszenario. Beispiel: `key={dataUpdatedAt}` behebt „Werte folgen dem Refetch nicht“, setzt aber bei jedem Refetch mit gleicher Antwort das Formular zurück.
+2. **Vorbild abgleichen:** Ein vergleichbares Bauteil im Repo suchen und lesen (gleicher Komponententyp, gleiche Library), bei Nachbauten zusätzlich die Altfassung. Der Vorschlag folgt dem etablierten Muster und nennt das Vorbild (`wie in CreateBillDialog`). Weicht er ab, steht der Grund im Vorschlag.
+3. **Test benennen:** Ändert der Vorschlag Verhalten, nennt er den Test, der Befund **und** Normalfall festhält (z. B. „Refetch mit neuer Antwort übernimmt die Werte“ und „Refetch mit gleicher Antwort behält die Eingaben“). Kommentare in der Nähe, die der Fix überholt, nennt er mit.
+4. **Testvorschläge gegen Anti-Muster:** Vorschläge für Tests und Testfixes vermeiden die Muster unten und berücksichtigen die Wirkung auf die übrigen Tests der Datei (kein Setup für ein ganzes `describe`, wenn es nur ein Test braucht).
+
+Anti-Muster in Browser-Tests (im Diff ein Befund, im Vorschlag tabu):
+
+- Tastatur-Events (`Escape`, Tab) zum Schließen von Popups: Bei parallelen Testdateien landen sie im falschen Frame. Stattdessen gezielt auf ein neutrales Element klicken.
+- `unhover` und das Warten auf verschwindende Tooltips oder geöffnete Listen: hängt am Layout. Zeiger gezielt auf ein neutrales Element legen.
+- Annahmen über den Viewport: Elemente, die per Media Query ausgeblendet werden, nicht ohne gesetzten Viewport prüfen. Viewport nur im betroffenen Test setzen und zurücksetzen.
+- Mehrdeutige Rollen-Namen (z. B. „Schließen“ für X und Fußzeilen-Button): Strict Mode bricht ab.
+- Fest verdrahtete UI-Texte, die aus einem Katalog kommen.
+- Tests, die viele Bedienschritte nacheinander machen, ohne Zeitbudget.
+
+Lässt sich ein Vorschlag nach diesen Punkten nicht sicher formulieren, sinkt seine Prozentzahl deutlich, und die Unsicherheit steht im Halbsatz dahinter. Ein unsicherer Vorschlag mit ehrlicher Prozentzahl ist besser als ein sicher klingender, der die nächste Runde auslöst.
+
+#### Offene Review-Kommentare übernehmen
+
+Jeder offene, nicht veraltete Review-Thread (`isResolved=false`, `isOutdated=false`) wird ein eigener Befund — von Kollegen wie von Review-Bots (z. B. CodeRabbit). Ausgenommen: Threads, die aus einem geposteten ps-review stammen (erster Kommentar mit der Zeile `**Konfidenz:**`) — die stehen schon in Planstack.
+
+- `type`: Zeile im Diff (`line`, sonst `originalLine`) → `INLINE` mit `file`/`line`, sonst `SUMMARY`.
+- `message`: zuerst der Originalkommentar gekürzt als Zitat mit Autor und Link (`> **<login>:** …` + `[auf GitHub](<url>)`; Bot-Beiwerk wie HTML-Kommentare, Icons, Agenten-Prompts weglassen), danach die eigene Einordnung am Code nachgeprüft und der Vorschlag mit Prozent. Folgekommentare im Thread fließen in die Einordnung ein.
+- Trifft der Einwand nicht zu oder ist er schon erledigt: sachlich festhalten, Befund bleibt als `HINT` stehen, damit „Findings fixen“ ihn mit „Nicht fixen“ schließen kann.
+- Deckt sich ein eigener Befund mit dem Thread, nur **ein** Befund (der übernommene, mit eigener Einordnung).
+- Einstufung, Konfidenz und PO-Entscheidung wie jeder andere Befund.
+
+Die Übernahme-Befunde in Schritt 5 in derselben Reihenfolge merken; Schritt 5a braucht die Zuordnung Thread → Befund.
+
 **Jeder Befund braucht ein konkretes Fehlszenario** — Eingabe/Zustand → falsches Ergebnis. Was sich nicht so formulieren lässt, ist kein Befund, sondern eine Anmerkung.
 
 ### 3. Befunde einstufen
@@ -170,11 +223,13 @@ Im Vorschlag konkret werden: die gekürzte Fassung hinschreiben oder „streiche
 
 - Code-Kommentare (falsch, veraltet, redundant, fehlend)
 - `AGENTS.md` (fehlende oder veraltete Einträge, Verstöße gegen dessen Konventionen)
-- PR-Beschreibung (unvollständig, veraltet, falsch)
+- PR-Beschreibung (unvollständig, veraltet, falsch), inklusive Kundensicht-Block
 - Merge-Konflikte mit dem Parent-/Base-Branch
 - Tests (fehlend, lückenhaft, nichtdeterministisch, falsche Assertions)
 
 Diese Befunde zählen nie zu `Wichtig`/`Kritisch` und beeinflussen damit die Empfehlung nicht.
+
+**Fest Kritisch**: ein neues Modul ohne PO-Freigabe (siehe Checkliste „Neue Module“) ist immer `CRITICAL` mit `requires_po_decision: true`.
 
 **Konfidenz je Befund** (`confidence`, 0–100): wie sicher der Befund zutrifft — unabhängig von der Schwere. Dazu `confidence_reason`, ein Satz: was nachvollzogen wurde, was offen bleibt.
 
@@ -316,7 +371,7 @@ Schließt das in Schritt 1 gestartete Review ab (`PUT …/reviews/$REVIEWID`); d
 **Vorschlag (<n> %):** <konkreter Fix, ggf. mit Codeblock>
 ```
 
-**Prozent am Vorschlag** (0–100): wie sinnvoll und sicher der vorgeschlagene Fix ist — getrennt von `confidence` (die bewertet, ob der Befund zutrifft). Hoch: Fix ist lokal, ohne Nebenwirkung, durch Tests absicherbar und deckt sich mit dem Ticket. Runter: berührt Aufrufer/Bestandsdaten, ändert Kundenverhalten, hängt an einer Fachregel oder **widerspricht bzw. überschreitet die Ticket-Anforderungen** (dann im Vorschlag kurz sagen, welcher Ticket-Punkt betroffen ist). Ist ein Ticket verknüpft, jeden Vorschlag gegen dessen Anforderungen prüfen.
+**Prozent am Vorschlag** (0–100): wie sinnvoll und sicher der vorgeschlagene Fix ist — getrennt von `confidence` (die bewertet, ob der Befund zutrifft). Hoch: Fix ist lokal, ohne Nebenwirkung, durch Tests absicherbar und deckt sich mit dem Ticket. Runter: berührt Aufrufer/Bestandsdaten, ändert Kundenverhalten, hängt an einer Fachregel oder **widerspricht bzw. überschreitet die Ticket-Anforderungen** (dann im Vorschlag kurz sagen, welcher Ticket-Punkt betroffen ist). Ist ein Ticket verknüpft, jeden Vorschlag gegen dessen Anforderungen prüfen. Jeder Vorschlag hat die Prüfung aus „Vorschläge prüfen“ (Schritt 2) durchlaufen.
 
 Sobald es mehr als einen Vorschlag gibt (Alternativen oder mehrere Teil-Fixes), **immer** als A, B, C … nummerieren, jeden einzeln bewerten, den empfohlenen als A:
 
@@ -341,10 +396,23 @@ curl -s -w '\n%{http_code}\n' -X PUT "$BASE/pull-requests/$PRID/reviews/$REVIEWI
 rm -rf "$T"
 ```
 
+Die Antwort enthält unter `data.finding_items[]` je Befund (in der gesendeten Reihenfolge) die `id` und den Direktlink `url`.
+
 - **422**: Die Antwort nennt das Feld. Payload korrigieren und **einmal** erneut senden.
 - **409**: Das Review ist schon abgeschlossen (z. B. doppelt gesendet) — nicht wiederholen.
 - **401/403**: Token ungültig, keine Organisation oder fremdes Review — melden, nicht wiederholen.
 - **Andere Fehler/Timeout**: Status und Antwort im Chat melden. Die Review steht trotzdem vollständig im Chat; nichts lokal ablegen.
+
+### 5a. Übernommene Threads beantworten und auflösen
+
+Nur wenn Aufruf 2 erfolgreich war, je übernommenem Thread (Schritt 2):
+
+```bash
+gh api "repos/$REPO/pulls/<pr>/comments/<databaseId des ersten Kommentars>/replies"   -f body='In Planstack als Befund übernommen: <finding_items[i].url>'
+gh api graphql -f query='mutation($id:ID!){resolveReviewThread(input:{threadId:$id}){thread{isResolved}}}' -F id=<thread-id>
+```
+
+Antwort in der Sprache des Kommentars, keine weiteren Worte. Scheitert Aufruf 2, wird nichts beantwortet und nichts aufgelöst. Scheitert eine Antwort oder das Auflösen, im Chat melden, nicht abbrechen. Im Chat eine Zeile nach dem Link-Block: `Übernommen: <n> Threads beantwortet und aufgelöst`.
 
 ### 6. Review und Abschluss im Chat
 
@@ -550,6 +618,7 @@ Planstack zeigt den Fix damit als laufend. Ein laufender Fix darf erneut abgehol
 - `decision = FIX`: beheben (Kritisch → Wichtig → Hinweis). Die Anmerkung ist **verbindlich** und geht dem Vorschlag im Befund vor. Bei PO-Befunden genau die PO-Entscheidung umsetzen — nicht die eigene Lesart.
 - Beginnt die Anmerkung mit `Vorschlag <X>:` bzw. `Vorschlag:` (im Dialog gewählte Option), genau diese Option aus dem Befund umsetzen; Text darunter ergänzt sie (bei PO-Befunden ist er die PO-Entscheidung).
 - `decision = SUGGESTED`: beheben wie `FIX`, und zwar genau so, wie der **Vorschlag** im Befund (`message`) es beschreibt — keine eigene Alternative; bei mehreren Optionen die empfohlene (A). Bei PO-Befunden ist der Vorschlag die PO-Entscheidung.
+- Kundensicht-Befunde ändern keinen Code: den Block im PR-Body nach dem Ablauf des `kundensicht`-Skills anpassen (Schritt 5–6 dort, `fill.py`, Umlaute nur über `--input`); Anmerkung bzw. Vorschlag aus dem Befund geht vor.
 - `data.instructions` (Freifeld „Sonstige Anweisungen“ auf der letzten Dialogseite) gilt **verbindlich für den ganzen Lauf** — z. B. Tests ergänzen, Commit-Stil, Bereiche nicht anfassen. Widerspricht es einer Anmerkung zu einem Befund, geht die Anmerkung vor.
 - `decision = SKIP`: Code nicht anfassen. Ergebnis `SKIPPED`, Grund = Anmerkung (fehlt sie: „bewusst nicht umgesetzt“).
 - Lässt sich ein `FIX` nicht sinnvoll umsetzen (Anmerkung widerspricht dem Code, Fix bräche etwas anderes): `SKIPPED` mit konkretem Grund — nicht raten.
