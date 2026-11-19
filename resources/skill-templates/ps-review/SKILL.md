@@ -1,7 +1,7 @@
 ---
 name: ps-review
 description: Code-Review eines GitHub-PR mit Ablage in Planstack — reviewt den PR (inklusive Prüfung der Code-Kommentare auf Richtigkeit, Mehrwert und Knappheit), bewertet Kritikalität, KI-Prüfbarkeit und PO-Sichtung, sendet PR-Daten und Review samt Findings an die Planstack-API (sichtbar unter planstack.eskju.net/pull-requests), gibt die Review im Chat aus und schließt mit Findings-/Kritisch-/Wichtig-/Hinweis-/Empfehlung-Zeilen ab. Am PR wird nur nach ausdrücklicher Rückfrage gepostet. Mit „fix“ setzt er die in Planstack je Befund getroffenen Entscheidungen um, hält sie im PR-Body fest, pusht und reviewt neu; mit „resolve“ löst er den Merge-Konflikt, fixt rote CI und offene (Review-)Kommentare, pusht und reviewt neu; mit „convert“ übernimmt er die Changes-Requested-Review eines Kollegen als ps-review mit Befunden, beantwortet deren Kommentare mit dem Planstack-Link und löst die Threads auf; mit „create“ setzt er ein Jira-Ticket oder eine beschriebene Aufgabe als neuen PR um, füllt die Kundensicht, reviewt ihn und bringt die CI auf grün. Nutze diesen Skill bei „ps-review 1234", „review PR 1234 nach Planstack", „/ps-review", „/ps-review fix 1234", „/ps-review resolve 1234", „/ps-review convert 1234 --from <login>", „/ps-review create MN-1234".
-version: 1.2.1
+version: 1.2.2
 argument-hint: "[fix|resolve|convert|create] [<pr-nummer|pr-url|branch|jira-key|beschreibung>] [--from <login>] [--lenient|--strict] [--relaxed|--meticulous] [--post|--comment|--no-post]"
 ---
 
@@ -535,6 +535,7 @@ PR auflösen und UPSERT wie in Schritt 1 (rein lesend, `PRID` aus der Antwort), 
 ```bash
 curl -s -w '\n%{http_code}\n' -X POST "$BASE/pull-requests/$PRID/fix/claim" "${AUTH[@]}"
 # 200: data.review_id, data.commit_sha (geprüfter Stand), data.requested_by, data.requested_at,
+#      data.instructions (sonstige Anweisungen für den ganzen Lauf oder null),
 #      data.findings[] mit id, level, type, requires_po_decision, file, line, title, message, confidence, decision, note
 #      (nur noch offene Entscheidungen — bei „Fixen“ an einem einzelnen Befund ggf. nur einer)
 # 404: kein Fix angefordert → abbrechen und das melden
@@ -549,6 +550,7 @@ Planstack zeigt den Fix damit als laufend. Ein laufender Fix darf erneut abgehol
 - `decision = FIX`: beheben (Kritisch → Wichtig → Hinweis). Die Anmerkung ist **verbindlich** und geht dem Vorschlag im Befund vor. Bei PO-Befunden genau die PO-Entscheidung umsetzen — nicht die eigene Lesart.
 - Beginnt die Anmerkung mit `Vorschlag <X>:` bzw. `Vorschlag:` (im Dialog gewählte Option), genau diese Option aus dem Befund umsetzen; Text darunter ergänzt sie (bei PO-Befunden ist er die PO-Entscheidung).
 - `decision = SUGGESTED`: beheben wie `FIX`, und zwar genau so, wie der **Vorschlag** im Befund (`message`) es beschreibt — keine eigene Alternative; bei mehreren Optionen die empfohlene (A). Bei PO-Befunden ist der Vorschlag die PO-Entscheidung.
+- `data.instructions` (Freifeld „Sonstige Anweisungen“ auf der letzten Dialogseite) gilt **verbindlich für den ganzen Lauf** — z. B. Tests ergänzen, Commit-Stil, Bereiche nicht anfassen. Widerspricht es einer Anmerkung zu einem Befund, geht die Anmerkung vor.
 - `decision = SKIP`: Code nicht anfassen. Ergebnis `SKIPPED`, Grund = Anmerkung (fehlt sie: „bewusst nicht umgesetzt“).
 - Lässt sich ein `FIX` nicht sinnvoll umsetzen (Anmerkung widerspricht dem Code, Fix bräche etwas anderes): `SKIPPED` mit konkretem Grund — nicht raten.
 - Repo-Konventionen wie in Schritt 9 (Hooks, Tooling, Commit-Message-Stil, Attribution). Ein Commit; die Message nennt die behobenen Befunde.

@@ -365,7 +365,7 @@ class PullRequestApiTest extends TestCase
         $this->putJson("/api/pull-requests/{$id}/reviews/{$reviewId}", $this->reviewPayload())->assertOk();
 
         $review = PullRequestReview::findOrFail($reviewId);
-        $review->update(['fix_requested_by_id' => $requester->id, 'fix_requested_at' => now()]);
+        $review->update(['fix_requested_by_id' => $requester->id, 'fix_requested_at' => now(), 'fix_instructions' => 'Bitte Tests ergänzen.']);
         $review->findingItems()->where('requires_po_decision', true)->update(['fix_decision' => 'FIX', 'fix_note' => 'Bestandsdaten bleiben.']);
         $review->findingItems()->where('requires_po_decision', false)->update(['fix_decision' => 'SKIP']);
 
@@ -382,6 +382,7 @@ class PullRequestApiTest extends TestCase
             ->assertOk()
             ->assertJsonPath('data.review_id', $review->id)
             ->assertJsonPath('data.requested_by', $user->name)
+            ->assertJsonPath('data.instructions', 'Bitte Tests ergänzen.')
             ->assertJsonCount(4, 'data.findings')
             ->assertJsonFragment(['title' => 'Verhalten für Bestandsdaten', 'decision' => 'FIX', 'note' => 'Bestandsdaten bleiben.']);
 

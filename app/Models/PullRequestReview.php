@@ -46,6 +46,7 @@ class PullRequestReview extends Model
         'fix_started_at',
         'fix_finished_at',
         'fix_commit_sha',
+        'fix_instructions',
     ];
 
     protected function casts(): array

@@ -197,9 +197,11 @@ class PullRequestController extends Controller
             'findings.*.id' => ['required', 'integer', 'distinct', Rule::in($findings->keys()->all())],
             'findings.*.decision' => ['required', Rule::enum(FindingFixDecision::class)],
             'findings.*.note' => ['nullable', 'string', 'max:5000'],
+            'instructions' => ['nullable', 'string', 'max:5000'],
             'start' => ['sometimes', 'boolean'],
         ]);
         $start = $data['start'] ?? true;
+        $instructions = trim((string) ($data['instructions'] ?? ''));
 
         // PO-Befunde lassen sich nur mit festgehaltener Entscheidung fixen (oder wie vorgeschlagen).
         $missing = collect($start ? $data['findings'] : [])
@@ -210,7 +212,7 @@ class PullRequestController extends Controller
             throw ValidationException::withMessages($missing->all());
         }
 
-        DB::transaction(function () use ($review, $findings, $data, $user, $start) {
+        DB::transaction(function () use ($review, $findings, $data, $user, $start, $instructions) {
             foreach ($data['findings'] as $item) {
                 // „Wie vorgeschlagen“ trägt keine Anmerkung.
                 $note = $item['decision'] === FindingFixDecision::SUGGESTED->value ? '' : trim((string) ($item['note'] ?? ''));
@@ -219,6 +221,8 @@ class PullRequestController extends Controller
                     'fix_note' => $note === '' ? null : $note,
                 ] + ($start ? ['fix_outcome' => null, 'fix_outcome_note' => null] : []));
             }
+
+            $review->update(['fix_instructions' => $instructions === '' ? null : $instructions]);
 
             // Nur speichern: Fix-Lauf bleibt unberührt.
             if (! $start) {
@@ -304,6 +308,7 @@ class PullRequestController extends Controller
                     'fix_started_at' => null,
                     'fix_finished_at' => null,
                     'fix_commit_sha' => null,
+                    'fix_instructions' => null,
                 ]);
             }
         });
@@ -353,6 +358,7 @@ class PullRequestController extends Controller
                     'finishedAt' => $review->fix_finished_at?->toIso8601String(),
                     'commitSha' => $review->fix_commit_sha,
                 ],
+                'fixInstructions' => $review->fix_instructions,
                 'fixUrl' => ($fixable = $this->isFixable($pullRequest, $review)) ? route('pull-requests.fix', [$pullRequest, $review]) : null,
                 'findings' => $review->findingItems
                     ->sortBy(fn (ReviewFinding $f) => [array_search($f->level->value, ['CRITICAL', 'IMPORTANT', 'HINT'], true), $f->file, $f->line])

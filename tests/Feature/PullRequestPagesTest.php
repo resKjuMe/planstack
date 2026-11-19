@@ -550,11 +550,12 @@ class PullRequestPagesTest extends TestCase
                 ->where('reviews.0.fix', null));
 
         $this->actingAs($me)
-            ->post(route('pull-requests.fix', [$pullRequest, $review]), ['findings' => $this->decisions($review, 'Bestandsdaten bleiben.')])
+            ->post(route('pull-requests.fix', [$pullRequest, $review]), ['findings' => $this->decisions($review, 'Bestandsdaten bleiben.'), 'instructions' => '  Bitte Tests ergänzen.  '])
             ->assertRedirect();
 
         $review->refresh();
         $this->assertSame('requested', $review->fixStatus());
+        $this->assertSame('Bitte Tests ergänzen.', $review->fix_instructions);
         $this->assertSame($me->id, $review->fix_requested_by_id);
         $po = $review->findingItems()->where('requires_po_decision', true)->sole();
         $this->assertSame('FIX', $po->fix_decision->value);
@@ -565,7 +566,8 @@ class PullRequestPagesTest extends TestCase
             ->get(route('pull-requests.show', $pullRequest))
             ->assertInertia(fn (Assert $page) => $page
                 ->where('reviews.0.fix.status', 'requested')
-                ->where('reviews.0.fix.requestedBy', 'Ich Selbst'));
+                ->where('reviews.0.fix.requestedBy', 'Ich Selbst')
+                ->where('reviews.0.fixInstructions', 'Bitte Tests ergänzen.'));
     }
 
     public function test_a_po_finding_needs_a_recorded_decision(): void
@@ -587,12 +589,13 @@ class PullRequestPagesTest extends TestCase
         $review->findingItems()->update(['fix_outcome' => 'FIXED']);
 
         $this->actingAs($me)
-            ->post(route('pull-requests.fix', [$pullRequest, $review]), ['findings' => $this->decisions($review, ''), 'start' => false])
+            ->post(route('pull-requests.fix', [$pullRequest, $review]), ['findings' => $this->decisions($review, ''), 'instructions' => 'Nur Backend.', 'start' => false])
             ->assertSessionHasNoErrors()
             ->assertRedirect();
 
         $review->refresh();
         $this->assertNull($review->fixStatus());
+        $this->assertSame('Nur Backend.', $review->fix_instructions);
         $this->assertSame('SKIP', $review->findingItems()->where('requires_po_decision', false)->sole()->fix_decision->value);
         $po = $review->findingItems()->where('requires_po_decision', true)->sole();
         $this->assertSame('FIX', $po->fix_decision->value);

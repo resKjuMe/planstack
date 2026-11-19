@@ -219,6 +219,7 @@ class PullRequestController extends ApiController
             'requested_by' => $review->fixRequestedBy?->name,
             'requested_at' => $review->fix_requested_at?->toIso8601String(),
             'converted_from_login' => $review->converted_from_login,
+            'instructions' => $review->fix_instructions,
             'findings' => $review->findingItems->map(fn (ReviewFinding $f) => [
                 'id' => $f->id,
                 'level' => $f->level->value,
