@@ -876,9 +876,9 @@ function FixDialog({ review, pr, strings, onClose }) {
     const primary = `${button} bg-indigo-600 text-white hover:bg-indigo-500 disabled:opacity-50`;
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-8 lg:p-12">
             <div className="fixed inset-0 bg-gray-500/75 dark:bg-gray-900/75" onClick={onClose}></div>
-            <div role="dialog" aria-modal="true" aria-labelledby="fix-dialog-title" className="relative flex max-h-[90vh] w-full max-w-[1280px] flex-col rounded-lg bg-white dark:bg-gray-800 shadow-xl">
+            <div role="dialog" aria-modal="true" aria-labelledby="fix-dialog-title" className="relative flex h-full max-h-[1100px] w-full max-w-[1280px] flex-col rounded-lg bg-white dark:bg-gray-800 shadow-xl">
                 <header className="border-b border-gray-100 dark:border-gray-700 px-6 py-4">
                     <h2 id="fix-dialog-title" className="text-lg font-medium text-gray-900 dark:text-gray-100">{strings.fix}</h2>
                     <ol className="mt-3 flex gap-1" aria-hidden="true">
@@ -895,7 +895,7 @@ function FixDialog({ review, pr, strings, onClose }) {
                     </ol>
                 </header>
 
-                <div className="overflow-y-auto p-6">
+                <div className="min-h-0 flex-1 overflow-y-auto p-6">
                     {overview ? (
                         <FixOverview
                             findings={findings}
