@@ -6,6 +6,22 @@
 return [
     'releases' => [
         [
+            'version' => '2.13.2',
+            'date' => '2026-11-20',
+            'tldr' => [
+                'de' => ['planstack und ps-review setzen keine Planstack-Links mehr auf GitHub'],
+                'en' => ['planstack and ps-review no longer put Planstack links on GitHub'],
+            ],
+            'changes' => [
+                'de' => [
+                    'Geändert: PR-Beschreibungen, Kommentare, Antworten auf Review-Threads und Reviews auf GitHub enthalten keine Links auf Planstack mehr. Die Links stehen nur noch im Chat.',
+                ],
+                'en' => [
+                    'Changed: Pull-request descriptions, comments, review-thread replies and reviews on GitHub no longer contain links to Planstack. The links only appear in the chat.',
+                ],
+            ],
+        ],
+        [
             'version' => '2.13.1',
             'date' => '2026-11-19',
             'tldr' => [

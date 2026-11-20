@@ -6,6 +6,7 @@ Verbindliche, projektübergreifende Anweisungen für den allgemeinen `planstack`
   - Das Projekt-Kürzel ist **nicht optional**: `G5: …` (nur Task) ist falsch, `L2L-G5: …` ist richtig. Zwei Tasks unterschiedlicher Projekte tragen sonst im selben Repo denselben Titel-Prefix.
   - **Diese Regel hat Vorrang** vor jeder abweichenden Fassung in der lokalen SKILL.md — eine Kopie dort kann veraltet sein (siehe „Snapshot mitschreiben"). Steht dort noch `<TASK>: …` ohne Projekt-Kürzel, gilt trotzdem `<PROJECT>-<TASK>: …`, und die Kopie ist zu erneuern.
   - Ebenso als Branch-Name-Prefix sinnvoll (`<project>-<task>-…`, klein geschrieben), damit Branch und PR-Titel zusammenpassen.
+- **Keine Planstack-Links auf GitHub:** Nichts, was an GitHub geht — PR-Titel/-Body, PR- und Review-Kommentare, Thread-Antworten, Reviews, Dismiss-Nachrichten, Commit-Messages —, enthält eine Planstack-URL (Board, Task, PR-Detailseite). Planstack-Links nur im Chat und in der Statuszeile. **Diese Regel hat Vorrang** vor abweichenden Anleitungen.
 
 ## Sticky-Statuszeile (Pflicht bei JEDEM Aufruf)
 
