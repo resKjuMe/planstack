@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         Planstack-Jira-Status
 // @namespace    https://planstack.eskju.net/
-// @version      2026-10-30.1
-// @description  Färbt die Jira-Pills in Planstack-PR-Titeln nach dem Ticket-Status (grau To Do, blau in Arbeit, violett In Review, indigo Product-Review, grün erledigt). Abruf über die eingeloggte Jira-Session, kein Token nötig.
+// @version      2026-11-24.1
+// @description  Färbt die Jira-Pills in Planstack-PR-Titeln nach dem Ticket-Status (grau To Do, blau in Arbeit, violett In Review und approved, indigo Product-Review, grün erledigt). Abruf über die eingeloggte Jira-Session, kein Token nötig.
 // @author       Christian Mietze <christian.mietze@clockodo.com>
 // @match        https://planstack.eskju.net/*
 // @icon         https://planstack.eskju.net/favicon.svg
@@ -24,7 +24,7 @@
     const BATCH = 50;
 
     // Erst der Statusname, sonst die Jira-Statuskategorie.
-    const NAME_TONES = { 'product-review': 'po', 'in review': 'review' };
+    const NAME_TONES = { 'product-review': 'po', 'in review': 'review', approved: 'review' };
     const CATEGORY_TONES = { new: 'new', indeterminate: 'progress', done: 'done' };
 
     const cache = new Map(); // 'MN-1234' -> { tone, name, ts }
