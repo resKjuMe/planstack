@@ -204,33 +204,43 @@ function TaskPill({ task }) {
     );
 }
 
+function JiraPill({ jiraKey }) {
+    return (
+        <>
+            <JiraIcon />
+            <a
+                href={JIRA_URL + jiraKey}
+                target="_blank"
+                rel="noreferrer"
+                title={`Jira: ${jiraKey}`}
+                data-jira-key={jiraKey}
+                className="jira-pill mr-0.5 inline-block rounded-full border px-1.5 align-[1px] font-mono text-[11px] font-semibold leading-4 hover:underline"
+            >
+                {jiraKey}
+            </a>
+        </>
+    );
+}
+
 export function JiraTitle({ title, renderText, task }) {
     const text = title ?? '';
     const at = task ? text.indexOf(task.key) : -1;
     if (at !== -1 && !text.slice(0, at).trim()) {
+        const rest = text.slice(at + task.key.length);
+        // Jira-Ticket des Tasks direkt dahinter, außer der Titel nennt es selbst.
+        const jira = task.jiraKey && !rest.includes(task.jiraKey) ? task.jiraKey : null;
         return (
             <>
                 <TaskPill task={task} />
-                <JiraTitle title={text.slice(at + task.key.length)} renderText={renderText} />
+                {jira && <JiraPill jiraKey={jira} />}
+                <JiraTitle title={rest} renderText={renderText} />
             </>
         );
     }
     return text.split(JIRA_KEY).map((part, i) => (
         i % 2
             ? (
-                <React.Fragment key={i}>
-                    <JiraIcon />
-                    <a
-                        href={JIRA_URL + part}
-                        target="_blank"
-                        rel="noreferrer"
-                        title={`Jira: ${part}`}
-                        data-jira-key={part}
-                        className="jira-pill mr-0.5 inline-block rounded-full border px-1.5 align-[1px] font-mono text-[11px] font-semibold leading-4 hover:underline"
-                    >
-                        {part}
-                    </a>
-                </React.Fragment>
+                <JiraPill key={i} jiraKey={part} />
             )
             : part && <React.Fragment key={i}>{renderText ? renderText(part) : part}</React.Fragment>
     ));

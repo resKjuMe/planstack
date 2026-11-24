@@ -49,7 +49,7 @@ class PullRequestTaskRefs
      * Task je PR-ID; nur Tasks aus Projekten, die der Nutzer sehen darf.
      *
      * @param  iterable<PullRequest>  $pullRequests
-     * @return array<int, array{key: string, url: string, status: string|null, summary: string|null, tone: string}>
+     * @return array<int, array{key: string, url: string, status: string|null, summary: string|null, jiraKey: string|null, tone: string}>
      */
     public static function forPullRequests(iterable $pullRequests, User $user): array
     {
@@ -98,7 +98,7 @@ class PullRequestTaskRefs
     /**
      * @param  array{project: string, task: string}  $ref
      * @param  Collection<int, Collection<int, Task>>  $tasks
-     * @return array{key: string, url: string, status: string|null, summary: string|null, tone: string}|null
+     * @return array{key: string, url: string, status: string|null, summary: string|null, jiraKey: string|null, tone: string}|null
      */
     private static function present(array $ref, ?Project $project, Collection $tasks): ?array
     {
@@ -114,6 +114,7 @@ class PullRequestTaskRefs
             'url' => route('projects.tasks.show', [$project, $task]),
             'status' => $status?->label,
             'summary' => $task->summary,
+            'jiraKey' => $task->jira_key,
             'tone' => self::TONES[$status?->key] ?? self::KIND_TONES[$status?->kind] ?? 'new',
         ];
     }
