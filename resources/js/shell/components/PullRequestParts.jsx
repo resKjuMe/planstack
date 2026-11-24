@@ -182,15 +182,17 @@ const JIRA_KEY = /\b((?:MN|AR|CON|EI)-\d+)\b/;
 function TaskPill({ task }) {
     const hint = ['Planstack', task.status, task.summary].filter(Boolean).join(' — ');
     return (
-        <a
-            href={task.url}
-            title={hint}
-            data-ps-tone={task.tone}
-            className="ps-pill mr-0.5 inline-flex items-center gap-1 rounded-full border pl-0.5 pr-1.5 align-[-2px] font-mono text-[11px] font-semibold leading-4 hover:underline"
-        >
-            <img src="/images/planstack-logo.png" alt="" aria-hidden="true" className="h-3 w-3 shrink-0 rounded-full" />
-            {task.key}
-        </a>
+        <>
+            <img src="/images/planstack-logo.png" alt="" aria-hidden="true" className="mr-1 inline-block h-3.5 w-3.5 rounded-sm align-[-2px]" />
+            <a
+                href={task.url}
+                title={hint}
+                data-ps-tone={task.tone}
+                className="ps-pill mr-0.5 inline-block rounded-full border px-1.5 align-[1px] font-mono text-[11px] font-semibold leading-4 hover:underline"
+            >
+                {task.key}
+            </a>
+        </>
     );
 }
 
