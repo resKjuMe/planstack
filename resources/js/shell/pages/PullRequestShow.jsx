@@ -123,7 +123,7 @@ function PrHeader({ pr, current, backUrl, strings }) {
             <div className="flex flex-wrap items-start justify-between gap-3">
                 <h2 className="font-semibold text-xl text-gray-800 dark:text-gray-100 leading-tight">
                     <StackedIcon pr={pr} strings={strings} className="h-5 w-5" />
-                    <JiraTitle title={pr.title} />
+                    <JiraTitle title={pr.title} task={pr.task} />
                 </h2>
                 <HideToggle pr={pr} strings={strings} />
             </div>

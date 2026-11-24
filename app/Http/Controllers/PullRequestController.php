@@ -15,6 +15,7 @@ use App\Support\PullRequestCommits;
 use App\Support\PullRequestRows;
 use App\Support\PullRequestSkippedFindings;
 use App\Support\PullRequestStateSync;
+use App\Support\PullRequestTaskRefs;
 use App\Support\TicketMatch;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
@@ -52,6 +53,7 @@ class PullRequestController extends Controller
             ->get();
 
         PullRequestRows::withPoCounts($pullRequests);
+        $tasks = PullRequestTaskRefs::forPullRequests($pullRequests, $user);
 
         return Inertia::render('PullRequestsIndex', [
             'filters' => ['state' => $state, 'role' => $role, 'hidden' => $hidden],
@@ -63,6 +65,7 @@ class PullRequestController extends Controller
             'hiddenCount' => $hidden ? $pullRequests->count() : $this->listQuery($user, $role, $state, true)->count(),
             'pullRequests' => $pullRequests->map(fn (PullRequest $pr) => [
                 ...$this->pullRequestRow($pr),
+                'task' => $tasks[$pr->id] ?? null,
                 'reviewsCount' => $pr->reviews_count,
                 'approvals' => $this->approvals($pr),
                 'mine' => $this->viewerState($pr, $user),
@@ -326,6 +329,7 @@ class PullRequestController extends Controller
         return Inertia::render('PullRequestShow', [
             'pullRequest' => [
                 ...$this->pullRequestRow($pullRequest),
+                'task' => PullRequestTaskRefs::forPullRequests([$pullRequest], $user)[$pullRequest->id] ?? null,
                 'descriptionHtml' => $this->md((string) $pullRequest->description),
                 'commits' => $pullRequest->commits,
                 'comments' => $pullRequest->comments,
