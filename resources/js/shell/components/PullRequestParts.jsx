@@ -186,8 +186,9 @@ function TaskPill({ task }) {
             href={task.url}
             title={hint}
             data-ps-tone={task.tone}
-            className="ps-pill mr-0.5 inline-block rounded-full border px-1.5 align-[1px] font-mono text-[11px] font-semibold leading-4 hover:underline"
+            className="ps-pill mr-0.5 inline-flex items-center gap-1 rounded-full border pl-0.5 pr-1.5 align-[-2px] font-mono text-[11px] font-semibold leading-4 hover:underline"
         >
+            <img src="/images/planstack-logo.png" alt="" aria-hidden="true" className="h-3 w-3 shrink-0 rounded-full" />
             {task.key}
         </a>
     );
