@@ -7,6 +7,7 @@ use App\Models\PullRequest;
 use App\Models\Task;
 use App\Models\User;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 
 /**
  * Planstack-Task aus dem PR-Titel nach der Konvention „<PROJEKT>-<TASK>: …“
@@ -71,7 +72,8 @@ class PullRequestTaskRefs
         $tasks = Task::query()
             ->with('orgStatus')
             ->whereIn('project_id', $projects->pluck('id'))
-            ->whereIn('name', $refs->pluck('task')->unique()->values())
+            // Groß-/Kleinschreibung egal: Titel „EGF-S1c“ trifft Task „S1C“.
+            ->whereIn(DB::raw('UPPER(name)'), $refs->map(fn (array $ref) => strtoupper($ref['task']))->unique()->values())
             ->get()
             ->groupBy('project_id');
 
@@ -100,7 +102,7 @@ class PullRequestTaskRefs
      */
     private static function present(array $ref, ?Project $project, Collection $tasks): ?array
     {
-        $task = $project ? $tasks->get($project->id)?->firstWhere('name', $ref['task']) : null;
+        $task = $project ? $tasks->get($project->id)?->first(fn (Task $t) => strtoupper($t->name) === strtoupper($ref['task'])) : null;
         if ($task === null) {
             return null;
         }

@@ -512,7 +512,7 @@ class PullRequestPagesTest extends TestCase
     {
         $me = $this->member('Ich Selbst');
         $project = Project::factory()->create(['organization_id' => $this->organization->id, 'created_by_id' => $me->id, 'alias' => 'CYA']);
-        $task = Task::factory()->create(['project_id' => $project->id, 'created_by_id' => $me->id, 'name' => 'A1c', 'summary' => 'Aufräumen', 'status' => TaskStatus::IN_PROGRESS]);
+        $task = Task::factory()->create(['project_id' => $project->id, 'created_by_id' => $me->id, 'name' => 'A1C', 'summary' => 'Aufräumen', 'status' => TaskStatus::IN_PROGRESS]);
         $foreign = Project::factory()->create(['alias' => 'XYZ']);
         Task::factory()->create(['project_id' => $foreign->id, 'name' => 'B2']);
 
