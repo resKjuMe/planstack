@@ -178,8 +178,33 @@ export function ReviewStartLink({ pr, strings }) {
 export const JIRA_URL = 'https://clickbits.atlassian.net/browse/';
 const JIRA_KEY = /\b((?:MN|AR|CON|EI)-\d+)\b/;
 
-export function JiraTitle({ title, renderText }) {
-    return (title ?? '').split(JIRA_KEY).map((part, i) => (
+// Planstack-Task aus dem Titelanfang „<PROJEKT>-<TASK>: …“ (vom Server aufgelöst).
+function TaskPill({ task }) {
+    const hint = ['Planstack', task.status, task.summary].filter(Boolean).join(' — ');
+    return (
+        <a
+            href={task.url}
+            title={hint}
+            data-ps-tone={task.tone}
+            className="ps-pill mr-0.5 inline-block rounded-full border px-1.5 align-[1px] font-mono text-[11px] font-semibold leading-4 hover:underline"
+        >
+            {task.key}
+        </a>
+    );
+}
+
+export function JiraTitle({ title, renderText, task }) {
+    const text = title ?? '';
+    const at = task ? text.indexOf(task.key) : -1;
+    if (at !== -1 && !text.slice(0, at).trim()) {
+        return (
+            <>
+                <TaskPill task={task} />
+                <JiraTitle title={text.slice(at + task.key.length)} renderText={renderText} />
+            </>
+        );
+    }
+    return text.split(JIRA_KEY).map((part, i) => (
         i % 2
             ? (
                 <a

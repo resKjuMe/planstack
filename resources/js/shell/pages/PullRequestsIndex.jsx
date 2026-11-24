@@ -377,6 +377,7 @@ function Row({ pr, level, stack, canShare, strings }) {
                             <span title={pr.title} className="truncate font-medium text-gray-900 dark:text-gray-100">
                                 <JiraTitle
                                     title={pr.title}
+                                    task={pr.task}
                                     renderText={(text) => <Link href={pr.showUrl} className="hover:text-indigo-600 dark:hover:text-indigo-400">{text}</Link>}
                                 />
                             </span>

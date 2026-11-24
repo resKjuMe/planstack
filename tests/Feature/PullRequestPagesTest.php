@@ -2,9 +2,12 @@
 
 namespace Tests\Feature;
 
+use App\Enums\TaskStatus;
 use App\Models\Organization;
+use App\Models\Project;
 use App\Models\PullRequest;
 use App\Models\PullRequestReview;
+use App\Models\Task;
 use App\Models\User;
 use App\Support\PsReviewSkill;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -503,6 +506,37 @@ class PullRequestPagesTest extends TestCase
         $this->actingAs($me)
             ->get(route('pull-requests.show', $pullRequest))
             ->assertInertia(fn (Assert $page) => $page->where('reviews.0.id', $newest->id));
+    }
+
+    public function test_list_and_detail_resolve_the_planstack_task_from_the_title(): void
+    {
+        $me = $this->member('Ich Selbst');
+        $project = Project::factory()->create(['organization_id' => $this->organization->id, 'created_by_id' => $me->id, 'alias' => 'CYA']);
+        $task = Task::factory()->create(['project_id' => $project->id, 'created_by_id' => $me->id, 'name' => 'A1', 'summary' => 'Aufräumen', 'status' => TaskStatus::IN_PROGRESS]);
+        $foreign = Project::factory()->create(['alias' => 'XYZ']);
+        Task::factory()->create(['project_id' => $foreign->id, 'name' => 'B2']);
+
+        $pullRequest = $this->pullRequest(1, ['author_id' => $me->id, 'title' => 'CYA-A1: Toten Code entfernen']);
+        $this->pullRequest(2, ['author_id' => $me->id, 'title' => 'XYZ-B2: Fremdes Projekt']);
+        $this->pullRequest(3, ['author_id' => $me->id, 'title' => 'MN-1234: Jira-Ticket']);
+
+        $this->actingAs($me)
+            ->get(route('pull-requests.index', ['role' => 'authored']))
+            ->assertInertia(fn (Assert $page) => $page
+                ->has('pullRequests', 3)
+                ->where('pullRequests', fn ($rows) => collect($rows)->firstWhere('number', 1)['task'] === [
+                    'key' => 'CYA-A1',
+                    'url' => route('projects.tasks.show', [$project, $task]),
+                    'status' => $task->fresh()->orgStatus->label,
+                    'summary' => 'Aufräumen',
+                    'tone' => 'active',
+                ]
+                    && collect($rows)->firstWhere('number', 2)['task'] === null
+                    && collect($rows)->firstWhere('number', 3)['task'] === null));
+
+        $this->actingAs($me)
+            ->get(route('pull-requests.show', $pullRequest))
+            ->assertInertia(fn (Assert $page) => $page->where('pullRequest.task.key', 'CYA-A1'));
     }
 
     public function test_detail_page_of_another_organization_is_not_found(): void
