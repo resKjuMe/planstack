@@ -178,19 +178,29 @@ export function ReviewStartLink({ pr, strings }) {
 export const JIRA_URL = 'https://clickbits.atlassian.net/browse/';
 const JIRA_KEY = /\b((?:MN|AR|CON|EI)-\d+)\b/;
 
+function JiraIcon() {
+    return (
+        <svg viewBox="0 0 24 24" aria-hidden="true" className="mr-1 inline-block h-3.5 w-3.5 align-[-2px] text-[#0052CC] dark:text-[#4C9AFF]" fill="currentColor">
+            <path d="M11.571 11.513H0a5.218 5.218 0 0 0 5.232 5.215h2.13v2.057A5.215 5.215 0 0 0 12.575 24V12.518a1.005 1.005 0 0 0-1.005-1.005zm5.723-5.756H5.736a5.215 5.215 0 0 0 5.215 5.214h2.129v2.058a5.218 5.218 0 0 0 5.215 5.214V6.758a1.001 1.001 0 0 0-1.001-1.001zM23.013 0H11.455a5.215 5.215 0 0 0 5.215 5.215h2.129v2.057A5.215 5.215 0 0 0 24 12.483V1.005A1.001 1.001 0 0 0 23.013 0Z" />
+        </svg>
+    );
+}
+
 // Planstack-Task aus dem Titelanfang „<PROJEKT>-<TASK>: …“ (vom Server aufgelöst).
 function TaskPill({ task }) {
     const hint = ['Planstack', task.status, task.summary].filter(Boolean).join(' — ');
     return (
-        <a
-            href={task.url}
-            title={hint}
-            data-ps-tone={task.tone}
-            className="ps-pill mr-0.5 inline-flex items-center gap-1 rounded-full border pl-0.5 pr-1.5 align-[-2px] font-mono text-[11px] font-semibold leading-4 hover:underline"
-        >
-            <img src="/images/planstack-logo.png" alt="" aria-hidden="true" className="h-3 w-3 shrink-0 rounded-full" />
-            {task.key}
-        </a>
+        <>
+            <img src="/images/planstack-logo.png" alt="" aria-hidden="true" className="mr-1 inline-block h-3.5 w-3.5 rounded-sm align-[-2px]" />
+            <a
+                href={task.url}
+                title={hint}
+                data-ps-tone={task.tone}
+                className="ps-pill mr-0.5 inline-block rounded-full border px-1.5 align-[1px] font-mono text-[11px] font-semibold leading-4 hover:underline"
+            >
+                {task.key}
+            </a>
+        </>
     );
 }
 
@@ -208,17 +218,19 @@ export function JiraTitle({ title, renderText, task }) {
     return text.split(JIRA_KEY).map((part, i) => (
         i % 2
             ? (
-                <a
-                    key={i}
-                    href={JIRA_URL + part}
-                    target="_blank"
-                    rel="noreferrer"
-                    title={`Jira: ${part}`}
-                    data-jira-key={part}
-                    className="jira-pill mr-0.5 inline-block rounded-full border px-1.5 align-[1px] font-mono text-[11px] font-semibold leading-4 hover:underline"
-                >
-                    {part}
-                </a>
+                <React.Fragment key={i}>
+                    <JiraIcon />
+                    <a
+                        href={JIRA_URL + part}
+                        target="_blank"
+                        rel="noreferrer"
+                        title={`Jira: ${part}`}
+                        data-jira-key={part}
+                        className="jira-pill mr-0.5 inline-block rounded-full border px-1.5 align-[1px] font-mono text-[11px] font-semibold leading-4 hover:underline"
+                    >
+                        {part}
+                    </a>
+                </React.Fragment>
             )
             : part && <React.Fragment key={i}>{renderText ? renderText(part) : part}</React.Fragment>
     ));
