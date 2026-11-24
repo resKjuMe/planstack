@@ -29,7 +29,7 @@ class PullRequestTaskRefs
         'BEREINIGEN' => 'active',
         'REVIEWBAR' => 'review',
         'IN_REVIEW' => 'review',
-        'APPROVED' => 'done',
+        'APPROVED' => 'review',
         'MERGED' => 'done',
         'COMPLETED' => 'done',
         'BLOCKED' => 'blocked',
