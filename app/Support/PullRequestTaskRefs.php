@@ -10,11 +10,11 @@ use Illuminate\Support\Collection;
 
 /**
  * Planstack-Task aus dem PR-Titel nach der Konvention „<PROJEKT>-<TASK>: …“
- * (z. B. „CYA-A1: …“), wie die Task-Pill des GitHub-Userscripts.
+ * (z. B. „CYA-A1: …“ oder „EGF-S1c: …“), wie die Task-Pill des GitHub-Userscripts.
  */
 class PullRequestTaskRefs
 {
-    private const KEY = '/^\s*([A-Z0-9]+)-([A-Z0-9]+):/';
+    private const KEY = '/^\s*([A-Z0-9]+)-([A-Za-z0-9]+):/';
 
     /** Jira-Projekte, deren Keys dasselbe Muster haben. */
     private const JIRA_PROJECTS = ['MN', 'AR', 'CON', 'EI'];
