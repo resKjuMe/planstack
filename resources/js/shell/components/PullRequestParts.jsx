@@ -178,14 +178,6 @@ export function ReviewStartLink({ pr, strings }) {
 export const JIRA_URL = 'https://clickbits.atlassian.net/browse/';
 const JIRA_KEY = /\b((?:MN|AR|CON|EI)-\d+)\b/;
 
-function JiraIcon() {
-    return (
-        <svg viewBox="0 0 24 24" aria-hidden="true" className="mr-1 inline-block h-3.5 w-3.5 align-[-2px] text-[#0052CC] dark:text-[#4C9AFF]" fill="currentColor">
-            <path d="M11.571 11.513H0a5.218 5.218 0 0 0 5.232 5.215h2.13v2.057A5.215 5.215 0 0 0 12.575 24V12.518a1.005 1.005 0 0 0-1.005-1.005zm5.723-5.756H5.736a5.215 5.215 0 0 0 5.215 5.214h2.129v2.058a5.218 5.218 0 0 0 5.215 5.214V6.758a1.001 1.001 0 0 0-1.001-1.001zM23.013 0H11.455a5.215 5.215 0 0 0 5.215 5.215h2.129v2.057A5.215 5.215 0 0 0 24 12.483V1.005A1.001 1.001 0 0 0 23.013 0Z" />
-        </svg>
-    );
-}
-
 // Planstack-Task aus dem Titelanfang „<PROJEKT>-<TASK>: …“ (vom Server aufgelöst).
 function TaskPill({ task }) {
     const hint = ['Planstack', task.status, task.summary].filter(Boolean).join(' — ');
@@ -206,19 +198,16 @@ function TaskPill({ task }) {
 
 function JiraPill({ jiraKey }) {
     return (
-        <>
-            <JiraIcon />
-            <a
-                href={JIRA_URL + jiraKey}
-                target="_blank"
-                rel="noreferrer"
-                title={`Jira: ${jiraKey}`}
-                data-jira-key={jiraKey}
-                className="jira-pill mr-0.5 inline-block rounded-full border px-1.5 align-[1px] font-mono text-[11px] font-semibold leading-4 hover:underline"
-            >
-                {jiraKey}
-            </a>
-        </>
+        <a
+            href={JIRA_URL + jiraKey}
+            target="_blank"
+            rel="noreferrer"
+            title={`Jira: ${jiraKey}`}
+            data-jira-key={jiraKey}
+            className="jira-pill mr-0.5 inline-block rounded-full border px-1.5 align-[1px] font-mono text-[11px] font-semibold leading-4 hover:underline"
+        >
+            {jiraKey}
+        </a>
     );
 }
 
