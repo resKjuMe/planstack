@@ -306,9 +306,10 @@
 .ps-graph foreignObject > div { overflow: visible; }
 .ps-graph.has-focus .node,
 .ps-graph.has-focus .ps-edge { transition: opacity .12s ease; }
-.ps-graph.has-focus .node:not(.ps-hl) { opacity: .12; }
-.ps-graph.has-focus .ps-edge:not(.ps-hl) { opacity: .07; }
+.ps-graph.has-focus .node:not(.ps-hl) { opacity: .5; }
+.ps-graph.has-focus .ps-edge:not(.ps-hl) { opacity: .3; }
 .ps-graph .node.ps-done { opacity: .45; }
+.ps-graph.has-focus .node.ps-done:not(.ps-hl) { opacity: .3; }
 .ps-graph.has-focus .node.ps-done.ps-hl { opacity: .8; }
 .ps-graph .marker,
 .ps-graph marker path { fill: #64748b; stroke: #64748b; }
