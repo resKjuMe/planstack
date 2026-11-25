@@ -94,6 +94,7 @@ export default function DiagramView({ project, currentUserId, strings, viewSwitc
             graphRef.current.update({
                 nodes: diagram.nodes,
                 edges: diagram.edges,
+                phases: diagram.phases,
                 hiddenStatuses,
                 showDesc,
                 phaseFilter,

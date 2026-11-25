@@ -196,26 +196,59 @@ export function deriveDiagram({
  * @returns {Array<{id: number, short: string, name: string, pct: number}>}
  */
 export function derivePhaseProgress({ tasks, phases, statusConfig }) {
-    const doneKeys = new Set(
-        (statusConfig?.statuses || []).filter((s) => s.counts_as_done).map((s) => s.key),
-    );
+    const byKey = new Map((statusConfig?.statuses || []).map((s) => [s.key, s]));
     const roleKey = statusConfig?.roleKey || {};
-    const isDone = (t) => doneKeys.has(roleKey[t.display_status] || t.display_status);
+    const statusOf = (t) => byKey.get(roleKey[t.display_status] || t.display_status);
+    const isDone = (t) => !!statusOf(t)?.counts_as_done;
+    const catOf = (t) => categoryOf(statusOf(t)?.role, statusOf(t)?.kind);
     const sp = (t) => Number(t.effort?.story_points || 0);
+    const byId = new Map(tasks.map((t) => [t.id, t]));
 
     return [...(phases || [])]
         .sort((a, b) => (a.position ?? 0) - (b.position ?? 0))
         .map((phase) => {
             const pt = tasks.filter((t) => t.phase_id === phase.id);
-            const total = Math.max(1, pt.reduce((a, t) => a + sp(t), 0));
-            const done = pt.filter(isDone).reduce((a, t) => a + sp(t), 0);
+            const totalSp = Math.max(1, pt.reduce((a, t) => a + sp(t), 0));
+            const doneSp = pt.filter(isDone).reduce((a, t) => a + sp(t), 0);
+            const [short, ...rest] = String(phase.name).split(/\s+·\s+|\s+/);
             return {
                 id: phase.id,
-                short: String(phase.name).split(' ')[0],
+                short,
+                title: rest.join(' ') || null,
                 name: phase.name,
-                pct: Math.round((done / total) * 100),
+                pct: Math.round((doneSp / totalSp) * 100),
+                done: pt.filter(isDone).length,
+                total: pt.length,
+                note: phaseNote(pt, { isDone, catOf, byId }),
             };
         });
+}
+
+// Kurzer Zustand einer Phase für das Phasenband im Diagramm: was gerade läuft,
+// was als Nächstes geht oder worauf sie wartet.
+function phaseNote(pt, { isDone, catOf, byId }) {
+    const open = pt.filter((t) => !isDone(t));
+    if (pt.length === 0) return null;
+    if (open.length === 0) return 'fertig';
+
+    const active = open.filter((t) => ['claimed', 'analyzing', 'inprogress', 'inreview'].includes(catOf(t)));
+    if (active.length) return `${active.length} in Arbeit`;
+
+    const names = (list) => list.slice(0, 3).join(', ') + (list.length > 3 ? ' …' : '');
+    const pickable = open.filter((t) => catOf(t) === 'pickable');
+    if (pickable.length) return `${names(pickable.map((t) => t.name))} pickbar`;
+
+    const own = new Set(pt.map((t) => t.id));
+    const waiting = new Set();
+    for (const t of open) {
+        for (const pre of t.prerequisites || []) {
+            const parent = byId.get(pre.id);
+            if (!own.has(pre.id) && parent && !isDone(parent)) waiting.add(parent.name);
+        }
+    }
+    if (waiting.size) return `wartet auf ${names([...waiting])}`;
+    const concerns = open.filter((t) => catOf(t) === 'concern');
+    return concerns.length ? `${concerns.length} mit Einwand` : `${open.length} offen`;
 }
 
 /**
