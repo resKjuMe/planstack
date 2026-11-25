@@ -268,6 +268,10 @@ export class DependencyGraph {
         this.zoom = 1;
         this._zoomWired = false;
         this._canvasClickWired = false;
+        this.fit = null;
+        if (typeof ResizeObserver !== 'undefined') {
+            new ResizeObserver(() => this.fitWidth()).observe(this.canvas);
+        }
     }
 
     /**
@@ -379,7 +383,9 @@ export class DependencyGraph {
     drawPhaseBands(nodes) {
         const svg = this.canvas.querySelector('svg');
         const vb = svg?.viewBox?.baseVal;
+        this.fit = null;
         if (!svg || !vb) return;
+        this.fit = { svg, x: vb.x, y: vb.y, w: vb.width, h: vb.height, labelW: 0, bands: [], labels: [] };
 
         const rects = [...svg.querySelectorAll('g.cluster')].map((g) => {
             const r = g.querySelector('rect');
@@ -404,7 +410,10 @@ export class DependencyGraph {
             if (box) bands.push({ phase, top: box.y, bottom: box.y + box.h });
         }
         rects.forEach((r) => r.g.classList.add('ps-phase-cluster'));
-        if (!bands.length) return;
+        if (!bands.length) {
+            this.fitWidth();
+            return;
+        }
 
         // Lücken zwischen den Clustern teilen, damit die Bänder lückenlos anschließen.
         bands.sort((a, b) => a.top - b.top);
@@ -414,8 +423,7 @@ export class DependencyGraph {
         });
 
         const LABEL_W = 200;
-        const x0 = vb.x - LABEL_W;
-        const width = vb.width + LABEL_W;
+        this.fit.labelW = LABEL_W;
         const NS = 'http://www.w3.org/2000/svg';
         const layer = document.createElementNS(NS, 'g');
         layer.setAttribute('class', 'ps-phase-bands');
@@ -423,16 +431,14 @@ export class DependencyGraph {
         bands.forEach((b, i) => {
             const rect = document.createElementNS(NS, 'rect');
             rect.setAttribute('class', `ps-phase-band${i % 2 ? ' is-alt' : ''}`);
-            rect.setAttribute('x', x0);
             rect.setAttribute('y', b.y0);
-            rect.setAttribute('width', width);
             rect.setAttribute('height', b.y1 - b.y0);
             layer.appendChild(rect);
+            this.fit.bands.push(rect);
 
             const p = b.phase;
             const pct = p.total ? Math.round((p.done / p.total) * 100) : 0;
             const fo = document.createElementNS(NS, 'foreignObject');
-            fo.setAttribute('x', x0 + 16);
             fo.setAttribute('y', b.y0 + 14);
             fo.setAttribute('width', LABEL_W - 40);
             fo.setAttribute('height', Math.max(0, b.y1 - b.y0 - 14));
@@ -443,12 +449,30 @@ export class DependencyGraph {
                 + `<div class='bar'><span style='width:${pct}%'></span></div>`
                 + '</div>';
             layer.appendChild(fo);
+            this.fit.labels.push(fo);
         });
 
         svg.insertBefore(layer, svg.querySelector(':scope > g'));
-        svg.setAttribute('viewBox', `${x0} ${vb.y} ${width} ${vb.height}`);
-        if (svg.style.maxWidth) svg.style.maxWidth = `${width}px`;
-        if (svg.getAttribute('width')) svg.setAttribute('width', width);
+        this.fitWidth();
+    }
+
+    // Zieht das SVG auf die Breite der Card: Beschriftungsspalte bleibt links, der
+    // Graph mittig im Rest. Breitere Graphen behalten ihre Breite (Scrollen).
+    fitWidth() {
+        const f = this.fit;
+        if (!f || !f.svg.isConnected) return;
+        const natural = f.w + f.labelW;
+        const width = Math.max(natural, this.canvas.clientWidth || 0);
+        const x0 = f.x - f.labelW - (width - natural) / 2;
+
+        f.bands.forEach((r) => {
+            r.setAttribute('x', x0);
+            r.setAttribute('width', width);
+        });
+        f.labels.forEach((fo) => fo.setAttribute('x', x0 + 16));
+        f.svg.setAttribute('viewBox', `${x0} ${f.y} ${width} ${f.h}`);
+        f.svg.setAttribute('width', width);
+        f.svg.style.maxWidth = 'none';
     }
 
     buildAdjacency(edges) {
