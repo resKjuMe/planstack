@@ -313,6 +313,24 @@
 .ps-graph .marker,
 .ps-graph marker path { fill: #64748b; stroke: #64748b; }
 
+/* Phasenbänder (DependencyGraph.drawPhaseBands). */
+.ps-phase-cluster > rect { fill: none !important; stroke: none !important; }
+.ps-phase-cluster .cluster-label { display: none; }
+.ps-phase-band { fill: #ffffff; stroke: #e5e7eb; stroke-width: 1px; }
+.ps-phase-band.is-alt { fill: #f8fafc; }
+.ps-phase-label { font-size: 11px; line-height: 1.35; color: #374151; }
+.ps-phase-label .k { font-size: 13px; font-weight: 600; color: #111827; }
+.ps-phase-label .n { font-weight: 500; }
+.ps-phase-label .m { margin-top: 2px; color: #6b7280; }
+.ps-phase-label .bar { margin-top: 8px; height: 4px; border-radius: 9999px; background: #e5e7eb; overflow: hidden; }
+.ps-phase-label .bar span { display: block; height: 100%; background: #16a34a; }
+.dark .ps-phase-band { fill: #1f2937; stroke: #374151; }
+.dark .ps-phase-band.is-alt { fill: #111827; }
+.dark .ps-phase-label { color: #d1d5db; }
+.dark .ps-phase-label .k { color: #f9fafb; }
+.dark .ps-phase-label .m { color: #9ca3af; }
+.dark .ps-phase-label .bar { background: #374151; }
+
 .ps-node,
 .ps-diagram-legend { --bn-bg:#FEF3C7; --bn-border:#F59E0B; --bn-icon:#92400E; }
 

@@ -98,7 +98,7 @@ function collectDiagramCss() {
         }
         if (!rules) continue;
         for (const rule of rules) {
-            if (rule.cssText && rule.cssText.includes('ps-node')) {
+            if (rule.cssText && (rule.cssText.includes('ps-node') || rule.cssText.includes('ps-phase'))) {
                 css += rule.cssText + '\n';
             }
         }
@@ -191,18 +191,35 @@ function independentColumnLinks(nodes, edges) {
     }
     const loose = nodes.filter((n) => !connected.has(n.key));
 
+    // Nur innerhalb einer Phase verketten, sonst zieht die Kette Knoten aus ihrem Band.
     const links = [];
     for (let i = 1; i < loose.length; i++) {
+        if (String(loose[i - 1].phase) !== String(loose[i].phase)) continue;
         links.push(`${loose[i - 1].key} ~~~ ${loose[i].key}`);
     }
     return links;
 }
 
-function buildSource(nodes, edges, showDesc = false) {
-    const lines = ['flowchart TB', CLASS_DEFS];
+const phaseKey = (id) => `ph${id}`;
 
+function buildSource(nodes, edges, showDesc = false, phases = []) {
+    const lines = ['flowchart TB', CLASS_DEFS];
+    const label = (n) => `${n.key}["${nodeLabel(n, showDesc)}"]:::plain`;
+
+    // Je Phase ein Subgraph; render() macht daraus die Phasenbänder.
+    const lanes = phases.filter((p) => nodes.some((n) => String(n.phase) === String(p.id)));
+    const inLane = new Set();
+    for (const p of lanes) {
+        lines.push(`subgraph ${phaseKey(p.id)}[" "]`, 'direction TB');
+        for (const n of nodes) {
+            if (String(n.phase) !== String(p.id)) continue;
+            lines.push(label(n));
+            inLane.add(n.key);
+        }
+        lines.push('end');
+    }
     for (const n of nodes) {
-        lines.push(`${n.key}["${nodeLabel(n, showDesc)}"]:::plain`);
+        if (!inLane.has(n.key)) lines.push(label(n));
     }
 
     const styles = [];
@@ -212,6 +229,9 @@ function buildSource(nodes, edges, showDesc = false) {
     });
     lines.push(...styles);
     lines.push(...independentColumnLinks(nodes, edges));
+    for (let i = 1; i < lanes.length; i++) {
+        lines.push(`${phaseKey(lanes[i - 1].id)} ~~~ ${phaseKey(lanes[i].id)}`);
+    }
 
     return lines.join('\n');
 }
@@ -254,9 +274,10 @@ export class DependencyGraph {
      * Daten + Optionen setzen und neu rendern. Wird von der React-View bei jeder
      * Store- oder Optionsänderung aufgerufen.
      */
-    async update({ nodes, edges, hiddenStatuses, showDesc, phaseFilter }) {
+    async update({ nodes, edges, phases, hiddenStatuses, showDesc, phaseFilter }) {
         this.allNodes = nodes || [];
         this.allEdges = edges || [];
+        this.phases = phases || [];
         this.hiddenStatuses = new Set(hiddenStatuses || []);
         this.showDesc = !!showDesc;
         this.phaseFilter = phaseFilter ?? null;
@@ -301,7 +322,7 @@ export class DependencyGraph {
 
     async render() {
         const { nodes, edges } = this.activeGraph();
-        const source = buildSource(nodes, edges, this.showDesc);
+        const source = buildSource(nodes, edges, this.showDesc, this.phases);
 
         let svg;
         try {
@@ -315,6 +336,7 @@ export class DependencyGraph {
 
         this.canvas.innerHTML = svg;
         this.mapElements(nodes, edges);
+        this.drawPhaseBands(nodes);
         this.buildAdjacency(edges);
         this.wireInteraction();
 
@@ -331,7 +353,7 @@ export class DependencyGraph {
         const doneKeys = new Set(nodes.filter((n) => n.done).map((n) => n.key));
 
         this.canvas.querySelectorAll('g.node').forEach((g) => {
-            const m = /^flowchart-(.+)-\d+$/.exec(g.id);
+            const m = /flowchart-(.+)-\d+$/.exec(g.id);
             if (!m) return;
             const key = m[1];
             this.nodeEls.set(key, g);
@@ -349,6 +371,84 @@ export class DependencyGraph {
             el.classList.add('ps-edge');
             this.edgeEls.push({ from: e.from, to: e.to, el });
         });
+    }
+
+    // Macht aus den Phasen-Subgraphen horizontale Bänder über die volle Breite mit
+    // einer Beschriftungsspalte links. Mermaid vergibt den Clustern keine brauchbare
+    // id, daher wird jede Phase über die Lage eines ihrer Knoten zugeordnet.
+    drawPhaseBands(nodes) {
+        const svg = this.canvas.querySelector('svg');
+        const vb = svg?.viewBox?.baseVal;
+        if (!svg || !vb) return;
+
+        const rects = [...svg.querySelectorAll('g.cluster')].map((g) => {
+            const r = g.querySelector('rect');
+            return {
+                g,
+                x: +r.getAttribute('x'), y: +r.getAttribute('y'),
+                w: +r.getAttribute('width'), h: +r.getAttribute('height'),
+            };
+        });
+        const center = (key) => {
+            const t = /translate\(\s*([-\d.]+)[ ,]+([-\d.]+)/.exec(this.nodeEls.get(key)?.getAttribute('transform') || '');
+            return t ? { x: +t[1], y: +t[2] } : null;
+        };
+
+        const bands = [];
+        for (const phase of this.phases) {
+            const c = nodes.filter((n) => String(n.phase) === String(phase.id)).map((n) => center(n.key)).find(Boolean);
+            if (!c) continue;
+            const box = rects
+                .filter((r) => c.x >= r.x && c.x <= r.x + r.w && c.y >= r.y && c.y <= r.y + r.h)
+                .sort((a, b) => a.w * a.h - b.w * b.h)[0];
+            if (box) bands.push({ phase, top: box.y, bottom: box.y + box.h });
+        }
+        rects.forEach((r) => r.g.classList.add('ps-phase-cluster'));
+        if (!bands.length) return;
+
+        // Lücken zwischen den Clustern teilen, damit die Bänder lückenlos anschließen.
+        bands.sort((a, b) => a.top - b.top);
+        bands.forEach((b, i) => {
+            b.y0 = i === 0 ? vb.y : (bands[i - 1].bottom + b.top) / 2;
+            b.y1 = i === bands.length - 1 ? vb.y + vb.height : (b.bottom + bands[i + 1].top) / 2;
+        });
+
+        const LABEL_W = 200;
+        const x0 = vb.x - LABEL_W;
+        const width = vb.width + LABEL_W;
+        const NS = 'http://www.w3.org/2000/svg';
+        const layer = document.createElementNS(NS, 'g');
+        layer.setAttribute('class', 'ps-phase-bands');
+
+        bands.forEach((b, i) => {
+            const rect = document.createElementNS(NS, 'rect');
+            rect.setAttribute('class', `ps-phase-band${i % 2 ? ' is-alt' : ''}`);
+            rect.setAttribute('x', x0);
+            rect.setAttribute('y', b.y0);
+            rect.setAttribute('width', width);
+            rect.setAttribute('height', b.y1 - b.y0);
+            layer.appendChild(rect);
+
+            const p = b.phase;
+            const pct = p.total ? Math.round((p.done / p.total) * 100) : 0;
+            const fo = document.createElementNS(NS, 'foreignObject');
+            fo.setAttribute('x', x0 + 16);
+            fo.setAttribute('y', b.y0 + 14);
+            fo.setAttribute('width', LABEL_W - 40);
+            fo.setAttribute('height', Math.max(0, b.y1 - b.y0 - 14));
+            fo.innerHTML = `<div xmlns='http://www.w3.org/1999/xhtml' class='ps-phase-label'>`
+                + `<div class='k'>${esc(p.short)}</div>`
+                + (p.title ? `<div class='n'>${esc(p.title)}</div>` : '')
+                + `<div class='m'>${p.done} / ${p.total} PRs${p.note ? ` · ${esc(p.note)}` : ''}</div>`
+                + `<div class='bar'><span style='width:${pct}%'></span></div>`
+                + '</div>';
+            layer.appendChild(fo);
+        });
+
+        svg.insertBefore(layer, svg.querySelector(':scope > g'));
+        svg.setAttribute('viewBox', `${x0} ${vb.y} ${width} ${vb.height}`);
+        if (svg.style.maxWidth) svg.style.maxWidth = `${width}px`;
+        if (svg.getAttribute('width')) svg.setAttribute('width', width);
     }
 
     buildAdjacency(edges) {
