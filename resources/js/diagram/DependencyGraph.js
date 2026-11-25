@@ -38,7 +38,6 @@ const STATUS_ICONS = {
     done: '<path d="M5 12l5 5l10 -10"/>',
 };
 const BOTTLENECK_ICON = '<path d="M6.5 7h11"/><path d="M6.5 17h11"/><path d="M6 20v-2a6 6 0 1 1 12 0v2a1 1 0 0 1 -1 1h-10a1 1 0 0 1 -1 -1z"/><path d="M6 4v2a6 6 0 1 0 12 0v-2a1 1 0 0 0 -1 -1h-10a1 1 0 0 0 -1 1z"/>';
-const FILE_ICON = '<path d="M14 3v4a1 1 0 0 0 1 1h4"/><path d="M17 21h-10a2 2 0 0 1 -2 -2v-14a2 2 0 0 1 2 -2h7l5 5v11a2 2 0 0 1 -2 2z"/>';
 // Tooltip, wenn eine PR-Nummer ohne Ziel bleibt (Projekt ohne github_repo).
 const PR_NO_REPO = 'Nicht verlinkbar: im Projekt ist kein GitHub-Repository konfiguriert';
 const REVIEW_APPROVE_ICON = '<path d="M5 12l5 5l10 -10"/>';
@@ -107,18 +106,6 @@ function collectDiagramCss() {
     return css;
 }
 
-function subtitle(n) {
-    const files = n.files === null ? '---' : n.files;
-    const sp = `${n.sp} SP · ${svgIcon(FILE_ICON)}${files}`;
-    if (n.cat === 'pickable') {
-        return n.unlocks > 0 ? `${sp} · schaltet ${n.unlocks} frei` : sp;
-    }
-    if (n.cat === 'blocked') {
-        return n.depTotal > 0 ? `${sp} · wartet auf ${n.depOpen} von ${n.depTotal}` : sp;
-    }
-    return sp;
-}
-
 function nodeLabel(n, showDesc = false) {
     let reviewed = '';
     if (n.cat === 'inreview' && n.reviewedBy) {
@@ -149,8 +136,6 @@ function nodeLabel(n, showDesc = false) {
         title += `<span class='ps-conflict' title='Approved & CI grün, aber Merge-Konflikt'>!</span>`;
     }
     parts.push(`<div class='t'>${svgIcon(n.icon || STATUS_ICONS[n.cat] || '')}${title}</div>`);
-
-    parts.push(`<div class='s'>${subtitle(n)}</div>`);
 
     if (showDesc && n.summary) {
         parts.push(`<div class='d'>${esc(truncate(n.summary, 120))}</div>`);

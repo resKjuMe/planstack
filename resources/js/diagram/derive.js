@@ -127,12 +127,6 @@ export function deriveDiagram({
     const nodes = tasks.map((t) => {
         const st = statusOf(t);
         const cat = categoryOf(st?.role, st?.kind);
-        const prereqs = t.prerequisites || [];
-        const depTotal = prereqs.length;
-        const depMet = prereqs.filter((p) => {
-            const parent = byId.get(p.id);
-            return parent ? isDelivered(parent) : false;
-        }).length;
         const reason = t.concern?.summary || t.concern?.blocker || null;
         const direct = (children[t.id] || []).length;
 
@@ -149,15 +143,9 @@ export function deriveDiagram({
             statusKey: st?.key || null,
             ciStatus: t.pr_ci_status ?? null,
             mergeable: t.pr_mergeable ?? null,
-            sp: sp(t),
-            files: t.affected_files ?? null,
             pr: t.pr_number,
             prUrl: t.pr_url,
             statusLabel: st?.label,
-            unlocks: Number(t.unlocks || 0),
-            depOpen: depTotal - depMet,
-            depTotal,
-            depMet,
             reason: cat === 'concern' ? reason : null,
             reviewedBy: t.reviewed_by_name || null,
             reviewRecommendation: t.last_review_recommendation || null,

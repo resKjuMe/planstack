@@ -368,8 +368,6 @@
 /* Approved + CI grün, aber Merge-Konflikt: rotes „!" rechtsbündig in der PR-Zeile. */
 .ps-node .ps-conflict { float: right; margin-left: 8px; color: #dc2626 !important; font-weight: 800; }
 .ps-node .t .who { font-weight: 400; color: var(--ps-sub); }
-.ps-node .s { font-size: 10px; margin-top: 2px; color: var(--ps-sub); }
-.ps-node .s .ps-ico { width: 11px; height: 11px; margin-right: 2px; vertical-align: -0.1em; }
 .ps-node .r { font-size: 10px; margin-top: 2px; font-style: normal; }
 .ps-node .rv { font-size: 10px; margin-top: 12px; font-style: italic; color: var(--ps-sub); overflow-wrap: anywhere; }
 .ps-node .rv-claim { margin-top: 12px; }
